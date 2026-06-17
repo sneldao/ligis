@@ -184,6 +184,10 @@ After an internal audit, the following improvements were applied without changin
   build the score).
 - Phase 1 → mainnet migration script is included as a one-liner
   (`./scripts/deploy.sh mainnet` once we have a mainnet deployer key).
+- ENS / off-chain identity bridging: agent metadata can resolve an ENS name
+  for human-readable issuer identification; web3.bio and similar services can
+  enrich agent profiles with social reputation without touching the on-chain
+  credential layer.
 
 ## Demo script (60–90s Loom)
 
