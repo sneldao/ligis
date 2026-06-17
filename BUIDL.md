@@ -109,23 +109,44 @@ layer.
   rotate, sign) — every command prints JSON for downstream Skills to consume.
 - **MCP server** (`dist/mcp/server.js`): 6 tools that an agent can call
   directly from Claude Code or any MCP-aware IDE.
-- **SKILL.md + 6 references** (issue/verify/revoke/rotate/hash/sign) following
-  the Pharos Skill Engine's director pattern.
+- **SKILL.md + 7 references** (issue/verify/revoke/rotate/hash/sign/composability) following
+  the Pharos Skill Engine's director pattern. The composability reference is the
+  integration playbook for Aegis, Pact, FaroLink, Maestro, and x402 facilitators.
 - **install.sh** that wires the CLI + MCP into Claude Code and Codex in 30 s.
 - **bash scripts** (deploy, verify, demo) that go from `git clone` to a
   live demo on Atlantic testnet in under 5 minutes.
 
 ### Composability with the other Skills
 
-- `Aegis` escrow → check `isCapable(counterparty, "agent.commerce.escrow")`
+Every Phase 1 Skill in the hackathon needs the same answer to the same
+question: "should this agent be allowed to do X?" Today, every Skill
+implements its own ad-hoc allowlist. With this Skill, the answer is one
+external call:
+
+```solidity
+require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed");
+```
+
+- **Aegis** (escrow, BUIDL 45339) → check `isCapable(counterparty, "agent.commerce.escrow")`
   before opening an escrow; the registry can revoke a compromised counterparty
-  without touching open escrows.
-- `Pact` cross-chain → bind an agent ID on each chain to the same off-chain
-  DID; the registry's `DOMAIN_SEPARATOR` is chain-specific so a signed
+  without touching open escrows. See `references/composability.md` for the 3-line
+  Aegis contract patch.
+- **Pact** (cross-chain, BUIDL 45334) → bind an agent ID on each chain to the same
+  off-chain DID; the registry's `DOMAIN_SEPARATOR` is chain-specific so a signed
   attestation is non-replayable across chains.
-- `Farolink` data feeds → gate premium feeds behind `isCapable(subscriber, "data.premium")`.
-- Any x402 facilitator → check `isCapable(payer, "agent.commerce.x402")` before
-  signing a 402 challenge.
+- **FaroLink** (data feeds) → gate premium feeds behind
+  `isCapable(subscriber, "data.premium")` and RWA swaps behind
+  `isCapable(trader, "rwa.accredited")`.
+- **Maestro** (recurring mandates) → recurring mandate flows need
+  `isCapable(payer, "agent.commerce.recurring")`.
+- **Any x402 facilitator** (Phase 2) → check
+  `isCapable(payer, "agent.commerce.x402")` before signing a 402 challenge.
+
+The dual cascade works like this: the **identity cascade** is this Skill
+(the registry + the agent ID). The **commerce cascade** is Aegis/Pact/FaroLink
+calling `isCapable(subject, capabilityHash)` to gate their flows. With this
+Skill shipping, the other 5+ Phase 1 Skills can stop re-implementing access
+control and start composing.
 
 ### Security posture
 

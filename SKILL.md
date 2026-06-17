@@ -102,13 +102,24 @@ cast keccak "agent.commerce.escrow"
 
 ## Composes with other Phase 1 Skills
 
+The killer feature of this Skill is that **any other Skill can answer the
+question "should this agent be allowed to do X?" in one line of Solidity**:
+
+```solidity
+require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed");
+```
+
+The full integration patterns for each named Phase 1 Skill are in
+[`references/composability.md`](references/composability.md). Quick map:
+
 | Skill | Integration |
 |-------|-------------|
-| [Aegis](https://dorahacks.io/buidl/45339) | Before approving a buyer's escrow, call `verify(buyer, "kyc.basic")` |
-| [FaroLink](https://github.com/SantioNetwork/farolink-skill-engine) | RWA-capable swaps require `verify(trader, "rwa.accredited")` |
-| [Maestro](https://dorahacks.io/buidl/45343) | Recurring mandates need `verify(payer, "agent.commerce.recurring")` |
-| [Pact](https://dorahacks.io/buidl/45334) | x402 escrow credentials (`agent.commerce.escrow`) gate participation |
+| [Aegis](https://dorahacks.io/buidl/45339) (escrow) | Before approving a buyer's escrow, call `verify(buyer, "kyc.basic")` and `verify(seller, "agent.commerce.escrow")` |
+| [Pact](https://dorahacks.io/buidl/45334) (cross-chain) | Bind an agent ID on each chain; the `DOMAIN_SEPARATOR` makes credentials non-replayable across chains |
+| [FaroLink](https://github.com/SantioNetwork/farolink-skill-engine) (data feeds) | RWA-capable swaps and premium feeds require `verify(caller, "rwa.accredited")` or `verify(caller, "data.premium")` |
+| [Maestro](https://dorahacks.io/buidl/45343) (recurring mandates) | Recurring mandates need `verify(payer, "agent.commerce.recurring")` |
 | [Pharos NFT Manager](https://dorahacks.io/buidl/45327) | A creator's PharosAgentID can be set as the collection's `minter` |
+| x402 facilitators (Phase 2) | Gate 402 challenges by `verify(payer, "agent.commerce.x402")` |
 
 ## Security model
 
