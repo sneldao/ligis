@@ -45,7 +45,7 @@ if [[ ! -f "$ROOT_DIR/assets/networks.json" ]]; then
   exit 1
 fi
 
-NETWORK_KEY="$NETWORK_NAME"
+NETWORK_KEY="$NETWORK"
 if [[ "$NETWORK" == "atlantic" || "$NETWORK" == "atlantic-testnet" ]]; then
   NETWORK_KEY="atlantic-testnet"
 fi

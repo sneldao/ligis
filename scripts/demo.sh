@@ -15,7 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-RPC=$(jq -r '.networks.atlantic-testnet.rpcUrl' "$ROOT_DIR/assets/networks.json")
+RPC=$(jq -r '.networks["atlantic-testnet"].rpcUrl' "$ROOT_DIR/assets/networks.json")
 PAID=$(jq -r '.deployment["atlantic-testnet"].pharosAgentId' "$ROOT_DIR/assets/networks.json")
 CREG=$(jq -r '.deployment["atlantic-testnet"].credentialRegistry' "$ROOT_DIR/assets/networks.json")
 

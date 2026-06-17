@@ -4,10 +4,16 @@
       "name": "Pharos Atlantic Testnet",
       "chainId": 688689,
       "rpcUrl": "https://atlantic.dplabs-internal.com",
-      "fallbackRpcUrls": ["https://testnet.dplabs-internal.com"],
+      "fallbackRpcUrls": [
+        "https://testnet.dplabs-internal.com"
+      ],
       "explorerUrl": "https://atlantic.pharosscan.xyz",
       "explorerApiUrl": "https://api.socialscan.io/pharos-atlantic-testnet",
-      "nativeToken": {"symbol": "PHRS", "name": "Pharos", "decimals": 18}
+      "nativeToken": {
+        "symbol": "PHRS",
+        "name": "Pharos",
+        "decimals": 18
+      }
     },
     "mainnet": {
       "name": "Pharos Mainnet",
@@ -15,7 +21,11 @@
       "rpcUrl": "https://rpc.pharos.xyz",
       "explorerUrl": "https://www.pharosscan.xyz",
       "explorerApiUrl": "https://api.socialscan.io/pharos-mainnet",
-      "nativeToken": {"symbol": "PROS", "name": "Pharos", "decimals": 18}
+      "nativeToken": {
+        "symbol": "PROS",
+        "name": "Pharos",
+        "decimals": 18
+      }
     },
     "local-anvil": {
       "name": "Local Anvil (test only)",
@@ -23,17 +33,21 @@
       "rpcUrl": "http://127.0.0.1:8545",
       "explorerUrl": "http://localhost",
       "explorerApiUrl": "",
-      "nativeToken": {"symbol": "ETH", "name": "Ether", "decimals": 18}
+      "nativeToken": {
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18
+      }
     }
   },
   "defaultNetwork": "atlantic-testnet",
   "deployment": {
     "atlantic-testnet": {
-      "pharosAgentId": "PENDING_DEPLOYMENT",
-      "credentialRegistry": "PENDING_DEPLOYMENT",
+      "pharosAgentId": "0xBAab32536368bBD97BD9410CCE6b7d075CdcAcF8",
+      "credentialRegistry": "0xf583421A8e11aEB42d26798F285dc590A992e488",
       "chainId": 688689,
-      "deployer": "PENDING",
-      "deployedAt": "PENDING"
+      "deployer": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+      "deployedAt": "1781675551"
     }
   }
 }

@@ -31,12 +31,39 @@ ask "who are you, and who vouches for that?"
 
 `<Loom URL>` (record after deploy)
 
-## Deployed contracts (Pharos Atlantic testnet)
+## Deployed contracts (Pharos Atlantic testnet — live)
 
-- **PharosAgentID** (ERC-721 soulbound-style): `<fill after deploy>`
-- **CredentialRegistry** (EIP-712 attestations): `<fill after deploy>`
-- Pharos Scan: `https://atlantic.pharosscan.xyz/address/<PharosAgentID>`
-- Source verification: pending (SOCIALSCAN_API_KEY needed)
+- **PharosAgentID** (ERC-721 soulbound-style): `0xBAab32536368bBD97BD9410CCE6b7d075CdcAcF8`
+  - Deploy tx: `0x9d9577900e7328f6eb71f2c9d6bc92e18ffbdf23d34d6a9a3efdc659e56b6105`
+  - Block: 24369310 (2026-06-17 05:52:31 UTC)
+  - Pharos Scan: https://atlantic.pharosscan.xyz/address/0xBAab32536368bBD97BD9410CCE6b7d075CdcAcF8
+- **CredentialRegistry** (EIP-712 attestations): `0xf583421A8e11aEB42d26798F285dc590A992e488`
+  - Deploy tx: `0x559824557548e16366412ece341a507b2fad27064a9fe85567bd506bbc68c9b9`
+  - Block: 24369311 (2026-06-17 05:52:33 UTC)
+  - Pharos Scan: https://atlantic.pharosscan.xyz/address/0xf583421A8e11aEB42d26798F285dc590A992e488
+- **Source verification**: pending. The Pharos Atlantic explorer uses a socialscan API endpoint
+  that returned `{"detail": "Not Found"}` at submission time (2026-06-17). The contracts are
+  functionally verified via the 35 Foundry unit tests; the on-chain source-verification badge
+  can be added by re-running `bash scripts/verify.sh atlantic` once the socialscan service is
+  back online (same Etherscan-family flow, requires `SOCIALSCAN_API_KEY` in env).
+
+## End-to-end demo txs (executed live on Atlantic)
+
+The full `scripts/demo.sh` flow ran on the live testnet:
+
+| Step | Action | Tx hash | Result |
+|------|--------|---------|--------|
+| 1 | `mintSelf` for the demo subject | `0x88dd4d47bb1fcde8f8f00500d630b653a2c38a4f0410b52b364ff49367036cda` | tokenId 1 minted |
+| 2 | `issue` (EIP-712) for `agent.commerce.escrow` | `0x5998675b5fee8168ef16356ff188f33165a8c2f5aa9e8129d8470a1c0ebf4e9a` | CredentialIssued |
+| 3 | `isCapable(subject, capability)` | view call | `true` |
+| 4 | `revoke` (issuer action) | `0x80cdb76d536a837927a0a56886533a9671542c67d1b9654ce1aa6d7559f9143b` | CredentialRevoked |
+| 5 | `isCapable(subject, capability)` | view call | `false` |
+| 6 | `rotate(tokenId, newController)` | `0xdaa74640c505c2b6c4ad0c848875beeb5a153c9494bcfb6e50b6fd511b908484` | ownerOf(1) = newController |
+
+## Deployer wallet (for reference)
+
+`0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec` — used to broadcast all six demo txs. Key is in
+`.env.d/deployer.env` (gitignored). This wallet is NOT a hot wallet, do not reuse for mainnet.
 
 ## Category
 
@@ -189,14 +216,17 @@ Solo submitter: `<your name>`
 - [x] 2 Solidity contracts (ERC-721 + EIP-712 registry)
 - [x] 35/35 Foundry tests passing
 - [x] Solidity 0.8.24, no warnings, optimizer on
-- [x] Deployed to Pharos Atlantic testnet
-- [ ] Source verified on Pharos Scan (needs SOCIALSCAN_API_KEY)
-- [x] CLI: 7 commands, JSON output
+- [x] Deployed to Pharos Atlantic testnet (chainId 688689) — see tx hashes above
+- [ ] Source verified on Pharos Scan (socialscan API returned 404 at submission; re-run `bash scripts/verify.sh atlantic` once it's back)
+- [x] CLI: 7 commands, JSON output — verified live on Atlantic
 - [x] MCP server: 6 tools
 - [x] SKILL.md + 6 references
 - [x] install.sh (Claude Code + Codex)
-- [x] Bash deploy/verify/demo scripts
-- [x] End-to-end demo runs in < 5 minutes from `git clone`
+- [x] Bash deploy/verify/demo scripts (all `bash -n` clean, demo executed end-to-end on Atlantic)
+- [x] End-to-end demo runs in < 5 minutes from `git clone` — verified (mint → issue → verify → revoke → verify → rotate)
 - [x] README with architecture diagram
-- [ ] Loom demo (record after deploy)
+- [x] Pre-commit secret-scan hook (gitleaks 8.30.1 + pure-bash fallback)
+- [x] 100% of secrets in `.env.d/`, gitignored
+- [x] Git initialized, initial commit created
+- [ ] Loom demo (record from the tx hashes above)
 - [ ] GitHub repo is public

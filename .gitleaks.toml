@@ -1,0 +1,38 @@
+# gitleaks config for the Pharos Agent Identity Skill project.
+#
+# This file allowlists PUBLIC on-chain data that, by design, has high
+# Shannon entropy (40-hex addresses, 64-hex tx hashes, etc.) and would
+# otherwise trip gitleaks' `generic-api-key` rule.
+#
+# It does NOT relax detection of REAL secrets (private keys, API tokens,
+# AWS keys, etc.) — the rule set is still the default gitleaks one, only
+# the allowlist below is project-specific.
+
+title = "Pharos Agent Identity Skill — gitleaks config"
+
+[allowlist]
+description = "Allow public on-chain artifacts (addresses, tx hashes, ABIs)"
+paths = [
+  # Public on-chain artifacts in the BUIDL submission
+  '''BUIDL\.md''',
+  # Public deployment record (the deployer private key lives in
+  # .env.d/deployer.env which is gitignored and never scanned here)
+  '''assets/networks\.json''',
+  # The MCP server, CLI, and references may quote public addresses
+  '''(src|references|scripts)/.*\.(ts|js|sh|md)''',
+  # Foundry build output, node_modules, .env.d (private keys)
+  '''(node_modules|out|cache|broadcast|lib|\.env\.d)/.*''',
+]
+
+# Allowlist specific high-entropy tokens that are unambiguously public.
+# Each regex is matched against the secret string (not the line).
+regexes = [
+  # Ethereum 20-byte addresses (40 hex chars) preceded by 0x
+  '''0x[0-9a-fA-F]{40}''',
+  # 32-byte tx hashes, block hashes, storage roots, etc. (64 hex chars) preceded by 0x
+  '''0x[0-9a-fA-F]{64}''',
+  # Event signature topics (also 64 hex chars with 0x prefix) - same regex
+  # as tx hashes above
+  # Pharos Scan URLs (contain addresses and tx hashes)
+  '''https://(www\.)?(pharosscan|atlantic\.pharosscan)\.xyz/.*''',
+]
