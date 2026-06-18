@@ -23,7 +23,7 @@ Plus two helpers:
 
 | Helper | What it does |
 |---|---|
-| `pharos-agent-identity-hash` | `keccak256("agent.commerce.escrow")` → `0xBAab32536368bBD97BD9410CCE6b7d075CdcAcF8` |
+| `pharos-agent-identity-hash` | `keccak256("agent.commerce.escrow")` → `0x17775e488d090dd8527e0139b3472d4d03c3372525b10a7c1449f04027a3ebf8` |
 | `pharos-agent-identity-sign` | Issuer-side helper: build and sign an EIP-712 credential off-chain |
 
 ## Why this matters
