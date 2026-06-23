@@ -1,4 +1,4 @@
-# `pharos-agent-identity-revoke` — Revoke a Credential
+# `ligis-revoke` — Revoke a Credential
 
 Permanent, irreversible. Only the **original issuer** of a credential can revoke it.
 
@@ -89,7 +89,7 @@ cast call $CREG "isCapable(address,bytes32)(bool)" $SUBJECT $CAP_HASH --rpc-url 
 - It does **not** affect other credentials the same issuer has issued to the same
   subject for other capabilities.
 - It does **not** affect the agent's `PharosAgentID` — the ID is independent of
-  credentials. To decommission the agent entirely, use `pharos-agent-identity-rotate` to move
+  credentials. To decommission the agent entirely, use `ligis-rotate` to move
   the ID to a burn address (or add a `burn-from-registry` to the registry contract).
 - It does **not** propagate to other Skills. Downstream Skills that have already
   recorded the credential as "valid" (e.g., Aegis logging an escrow with a KYC'd buyer)
@@ -105,6 +105,6 @@ still settle, but no new ones can be opened against the seller's address.
 **Rotate a KYC re-verification.** Revoke `kyc.basic`. The user re-runs the KYC flow,
 gets a new signed attestation, and `issue(...)` is called with the next nonce.
 
-**Burn a stolen key.** The user calls `pharos-agent-identity-rotate` to move their ID to a
+**Burn a stolen key.** The user calls `ligis-rotate` to move their ID to a
 new wallet, then revokes all old credentials (issued under the old wallet as subject)
 by asking the original issuers to revoke. New credentials are issued to the new wallet.

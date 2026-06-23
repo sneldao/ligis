@@ -1,4 +1,4 @@
-# Pharos Agent Identity Skill
+# Ligis
 
 > **Portable on-chain identity and verifiable credentials for agents on the Pharos Network.**
 >
@@ -10,21 +10,21 @@
 
 ## What this is
 
-The **Pharos Agent Identity Skill** is the portable identity and credential layer for AI agents on the Pharos Network. It ships as four on-chain **Skills** that other agents and contracts can compose:
+**Ligis** is the portable identity and credential layer for AI agents on the Pharos Network. It ships as four on-chain **Skills** that other agents and contracts can compose:
 
 | Skill | What it does | On-chain action |
 |---|---|---|
-| `pharos-agent-identity-issue` | Mint a portable Agent ID NFT; issue an EIP-712 capability credential | `PharosAgentID.mintSelf/mint`, `CredentialRegistry.issue` |
-| `pharos-agent-identity-verify` | Read-only check: does a subject hold a valid credential for a capability? | `CredentialRegistry.isCapable` |
-| `pharos-agent-identity-revoke` | Issuer revokes a previously-issued credential | `CredentialRegistry.revoke` |
-| `pharos-agent-identity-rotate` | Move the Agent ID to a new controller key (compromised-key recovery) | `PharosAgentID.rotate` |
+| `ligis-issue` | Mint a portable Agent ID NFT; issue an EIP-712 capability credential | `PharosAgentID.mintSelf/mint`, `CredentialRegistry.issue` |
+| `ligis-verify` | Read-only check: does a subject hold a valid credential for a capability? | `CredentialRegistry.isCapable` |
+| `ligis-revoke` | Issuer revokes a previously-issued credential | `CredentialRegistry.revoke` |
+| `ligis-rotate` | Move the Agent ID to a new controller key (compromised-key recovery) | `PharosAgentID.rotate` |
 
 Plus two helpers:
 
 | Helper | What it does |
 |---|---|
-| `pharos-agent-identity-hash` | `keccak256("agent.commerce.escrow")` → `0x17775e488d090dd8527e0139b3472d4d03c3372525b10a7c1449f04027a3ebf8` |
-| `pharos-agent-identity-sign` | Issuer-side helper: build and sign an EIP-712 credential off-chain |
+| `ligis-hash` | `keccak256("agent.commerce.escrow")` → `0x17775e488d090dd8527e0139b3472d4d03c3372525b10a7c1449f04027a3ebf8` |
+| `ligis-sign` | Issuer-side helper: build and sign an EIP-712 credential off-chain |
 
 ## Why this matters
 
@@ -85,7 +85,7 @@ wallet). The source of truth for chain config and deployment addresses is
 │   ├── PharosAgentID.sol           # ERC-721 portable agent identity
 │   ├── CredentialRegistry.sol      # EIP-712 verifiable credential registry
 │   ├── mcp/server.ts               # MCP server (6 tools)
-│   └── cli/index.ts                # CLI (pharos-agent-identity)
+│   └── cli/index.ts                # CLI (ligis)
 │
 ├── test/
 │   ├── PharosAgentID.t.sol         # 19 tests (including Transfer events + safeTransferFrom)
@@ -208,16 +208,91 @@ CertiK pre-scan: the Skill package invokes only documented `cast`/`forge` comman
 | **Documentation** | Director entry point + 6 reference docs with `cast` command templates, error tables, and integration patterns. README with quickstart. |
 | **Pharos alignment** | Direct support for the AI Agent economy thesis: portable identity, portable credentials, key rotation, no admin. Phase 2 (Agent Arena) composes directly: a Procurement Steward Agent uses this Skill to verify counterparties before engaging Aegis / FaroLink / Maestro. |
 
-## Phase 2 preview (Agent Arena)
+## Phase 2 — Trust Steward Agent (Agent Arena + 0G)
 
-A Procurement Steward Agent (per OoJae's Aegis Phase 2 plan) would:
-1. **Mint its own `PharosAgentID`** on first boot.
-2. **Discover required capabilities** for the user (e.g., "I want to trade DEXs, swap tokens, and bridge to Arbitrum").
-3. **Walk the issuer list** (KYC provider, RWA registry, marketplace operator) and submit signed attestations via `CredentialRegistry.issue`.
-4. **Before any Aegis / FaroLink / Maestro action**, call `isCapable(...)` to gate.
-5. **On user request**, call `rotate(...)` to migrate to a hardware wallet or Safe multi-sig.
+Phase 2 builds **one Agent** that qualifies for both the Pharos Agent Arena and the
+0G AI-native tournament. The Agent is the **Trust Steward**: an autonomous agent
+whose natural-language → capability reasoning runs as an LLM call on **0G Compute**
+(TEE-verified inference; the attestation is captured and recorded as evidence) and
+whose state and credential evidence live on **0G Storage**, gated end-to-end by
+this Skill's on-chain identity and credentials.
 
-This Skill is the **onboarding flow** that makes the Phase 2 demo runnable.
+> **0G does real work (not a bolt-on).** The goal→capability mapping is performed
+> by an LLM running on 0G Compute, not by a hardcoded lookup — the TEE attestation
+> is captured and recorded as evidence. Remove 0G Compute and the Agent loses its
+> reasoning step; remove 0G Storage and it loses its verifiable evidence store.
+> Either way it cannot complete the loop.
+
+### Steward loop
+
+1. **Boot** → `mintSelf` its own `PharosAgentID`.
+2. **Take a natural-language goal** (e.g. "open an escrow with counterparty X").
+3. **Reason on 0G Compute** → map the goal to the required capabilities.
+4. **Gate on-chain** → `isCapable(subject, cap)` via this Skill before any action.
+5. **Act** → execute one on-chain vertical. The primary demo path is
+   **self-contained**: the Steward issues itself a capability credential, gates a
+   self-test action via `isCapable`, then records it — no external contract
+   dependency. Composing with another team's escrow / x402 on Atlantic is a stretch
+   goal, not the demo path.
+6. **Record** → write the decision + evidence manifest to 0G Storage; anchor its
+   root hash on-chain via the Agent's `tokenURI` (no contract change required).
+
+### Architecture (domain-driven, built on `src/lib` as the single source of truth)
+
+```
+src/
+  lib/        SSOT — on-chain primitives shared by CLI, MCP, and the Agent
+    client.ts    viem client bootstrap (consolidated from CLI + MCP)
+    identity.ts  issue/verify/revoke/rotate/sign (consolidated from CLI + MCP)
+    abi.ts  types.ts  util.ts  index.ts
+  zerog/      0G integration — the "real work"
+    compute.ts   0G Compute broker: TEE-verified inference (the brain)
+    storage.ts   0G Storage: agent state + credential evidence (anchored on-chain)
+  agent/      autonomous Trust Steward
+    steward.ts   boot → reason(0G) → gate(isCapable) → act → record(0G)
+    policy.ts    capability → action gating table (single source)
+  cli/index.ts   thin: parse args → call lib/agent
+  mcp/server.ts  thin: tools → call lib/agent
+```
+
+The Agent **reuses** `lib/identity` rather than re-implementing chain logic; the
+CLI and MCP server are refactored to share the same `lib` functions first
+(consolidation), so there is exactly one implementation of each on-chain
+operation across all three surfaces.
+
+### 0G dependencies (verified)
+
+| Layer | Package | Notes |
+|-------|---------|-------|
+| Compute | `@0glabs/0g-serving-broker` | Programmatic serving-broker SDK for TEE-verified inference. One-time setup via `0g-compute-cli` (login → deposit → acknowledge-provider). |
+| Storage | `@0gfoundation/0g-ts-sdk` (v1.2.1) | 0G Storage SDK for uploading/retrieving agent state and evidence manifests. |
+
+> `@0gfoundation/0g-cc` is an **MCP server**, not an importable library — it is
+> not used as a dependency. The Agent calls the underlying SDKs directly.
+
+### Build phases
+
+| Phase | Work | Verification |
+|-------|------|--------------|
+| 0 | Consolidate CLI + MCP on-chain ops into `lib/client.ts` + `lib/identity.ts`; delete duplicates | `forge test`, `npx tsc`, live CLI run |
+| 1 | `zerog/compute.ts` — TEE-verified inference as the Agent's brain | mocked unit test + live inference |
+| 2 | `zerog/storage.ts` — agent state/evidence on 0G Storage, root in `tokenURI` | mocked unit test + live upload/retrieve |
+| 3 | `agent/steward.ts` + `agent/policy.ts` — full loop, self-contained vertical (self-issue → `isCapable` gate → record) on Atlantic | end-to-end demo run |
+| 4 | `agent run` CLI cmd + `run-steward` MCP tool; `node:test` units (new second runner alongside `forge`); Pharos Scan verify badge | full suite |
+
+### Design constraints (Core Principles)
+
+- **Enhancement first / DRY** — consolidate shared ops into `lib` and delete the
+  CLI/MCP duplicates before adding the Agent; no third copy of chain logic.
+- **No contract changes** — 0G Storage is anchored via the existing `tokenURI` /
+  `MetadataUpdated` path, so the 41 Foundry tests stay green.
+- **Clean / modular** — `zerog` and `agent` are independent domains depending only
+  on `lib`; 0G clients sit behind interfaces so they are testable offline.
+- **Testable** — `forge test` for contracts (41 tests); `node:test` for `zerog/`
+  and `agent/` (clients behind interfaces, mocked offline — a new second runner
+  alongside Foundry).
+- **Performant** — reuse one viem client and one 0G broker/account; cache provider
+  metadata and 0G Storage retrievals by root hash.
 
 ## License
 

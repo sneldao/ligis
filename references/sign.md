@@ -1,4 +1,4 @@
-# `pharos-agent-identity-sign` — Build and Sign an EIP-712 Credential Attestation
+# `ligis-sign` — Build and Sign an EIP-712 Credential Attestation
 
 The credential is an EIP-712 typed-data signature. This reference shows how to build
 the digest and sign it with the issuer's key. Use it for issuers (KYC providers, DAOs,

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the Pharos Agent Identity Skill for Claude Code, Codex, or other Agent Skills-compatible
+# Install the Ligis Skill for Claude Code, Codex, or other Agent Skills-compatible
 # coding agents. Idempotent. Skips same-named skills unless --force is passed.
 #
 # Usage:
@@ -122,7 +122,7 @@ Next steps:
   1. Open $label/SKILL.md - the entry point the Agent reads first.
   2. Run \`bash scripts/deploy.sh atlantic\` to deploy the contracts to Pharos Atlantic.
   3. The deployed addresses will be written to assets/deployment.json.
-  4. The Agent can now use \`pharos-agent-identity-{issue,verify,revoke,rotate}\` from any task.
+  4. The Agent can now use \`ligis-{issue,verify,revoke,rotate}\` from any task.
 
 EOF
 }

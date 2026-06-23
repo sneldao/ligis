@@ -48,7 +48,7 @@ if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
   echo
   echo "→ Making first commit..."
   git add -A
-  if git commit -m "Initial commit: Pharos Agent Identity Skill
+  if git commit -m "Initial commit: Ligis
 
   - 2 Solidity contracts (PharosAgentID + CredentialRegistry)
   - 35 Foundry tests, all passing

@@ -1,11 +1,11 @@
 {
-  "name": "pharos-agent-identity-skill",
+  "name": "ligis",
   "version": "0.1.0",
-  "description": "Agent Identity & Verifiable Credentials Skill for the Pharos AI Agent ecosystem. Issue portable agent IDs (ERC-721), sign and verify EIP-712 capability credentials, rotate keys, and revoke. Built for the Pharos Skill-to-Agent Dual Cascade Hackathon (Phase 1).",
+  "description": "Ligis — Identity & Verifiable Credentials Skill for the Pharos AI Agent ecosystem. Issue portable agent IDs (ERC-721), sign and verify EIP-712 capability credentials, rotate keys, and revoke. Built for the Pharos Skill-to-Agent Dual Cascade Hackathon (Phase 1).",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "pharos-agent-identity": "./dist/cli/index.js"
+    "ligis": "./dist/cli/index.js"
   },
   "main": "./dist/cli/index.js",
   "scripts": {

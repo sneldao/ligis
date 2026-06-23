@@ -1,4 +1,4 @@
-# `pharos-agent-identity-rotate` — Rotate the Controller Key
+# `ligis-rotate` — Rotate the Controller Key
 
 Move the agent's `PharosAgentID` NFT from the current controller wallet to a new
 controller wallet. This is the canonical "key rotation" path: a compromised key can be
@@ -20,7 +20,7 @@ TOKEN_ID=$(cast call $PAID "walletOfAgent(address)(uint256)" $CURRENT_CONTROLLER
 # Returns 0 if the wallet has no ID
 ```
 
-If `TOKEN_ID == 0`, the wallet has no ID. Use `pharos-agent-identity-issue` instead.
+If `TOKEN_ID == 0`, the wallet has no ID. Use `ligis-issue` instead.
 
 ## Step 2 — Verify the new wallet has no ID
 

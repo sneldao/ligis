@@ -1,8 +1,8 @@
 ---
-name: pharos-agent-identity-director
+name: ligis-director
 description: >
  REQUIRED for any task involving agent identity, capability credentials, or access-gated
- Skills on Pharos. This skill is the entry point for the Pharos Agent Identity Skill suite — it
+ Skills on Pharos. This skill is the entry point for the Ligis suite — it
  issues portable agent IDs (ERC-721 NFTs), signs and verifies EIP-712 capability credentials
  (KYC, commerce permissions, RWA eligibility), rotates agent keys, and revokes. Use it
  whenever an agent needs to (a) register a portable on-chain identity, (b) prove it holds a
@@ -17,9 +17,9 @@ requires:
   - forge
 ---
 
-# Pharos Agent Identity Director
+# Ligis Director
 
-Entry point for the **Pharos Agent Identity Skill** — the portable identity and credential layer
+Entry point for **Ligis** — the portable identity and credential layer
 for agents operating in the Pharos AI Agent economy. Loads specialist skills for `issue`,
 `verify`, `revoke`, and `rotate`.
 
@@ -55,12 +55,12 @@ four specialist skills:
 
 | User need | Specialist skill | Spec |
 |-----------|------------------|------|
-| "I want my agent to have an on-chain identity" | `pharos-agent-identity-issue` | → `references/issue.md` |
-| "Does this agent hold a credential for X?" | `pharos-agent-identity-verify` | → `references/verify.md` |
-| "Revoke a credential I issued" | `pharos-agent-identity-revoke` | → `references/revoke.md` |
-| "Rotate my agent's controller key" | `pharos-agent-identity-rotate` | → `references/rotate.md` |
-| "Hash a capability name" (helper) | `pharos-agent-identity-hash` | → `references/hash.md` |
-| "Sign and submit a credential attestation" (helper) | `pharos-agent-identity-sign` | → `references/sign.md` |
+| "I want my agent to have an on-chain identity" | `ligis-issue` | → `references/issue.md` |
+| "Does this agent hold a credential for X?" | `ligis-verify` | → `references/verify.md` |
+| "Revoke a credential I issued" | `ligis-revoke` | → `references/revoke.md` |
+| "Rotate my agent's controller key" | `ligis-rotate` | → `references/rotate.md` |
+| "Hash a capability name" (helper) | `ligis-hash` | → `references/hash.md` |
+| "Sign and submit a credential attestation" (helper) | `ligis-sign` | → `references/sign.md` |
 
 When the user asks a high-level question, the director should:
 1. Read this file to load the table.
@@ -71,20 +71,20 @@ When the user asks a high-level question, the director should:
 
 ## The four skills at a glance
 
-### `pharos-agent-identity-issue` — mint + issue
+### `ligis-issue` — mint + issue
 Mint a portable agent ID NFT to the caller's wallet, and (separately) submit a signed
 EIP-712 credential attestation from an issuer. Returns the token ID and the credential nonce.
 
-### `pharos-agent-identity-verify` — read-only
+### `ligis-verify` — read-only
 Given a subject wallet and a capability hash, returns whether the subject currently holds a
 valid (non-revoked, non-expired) credential. Use this *before* letting an agent use a gated
 Skill (Aegis escrow, FaroLink swap, etc.).
 
-### `pharos-agent-identity-revoke` — write
+### `ligis-revoke` — write
 Revoke a previously-issued credential. Only the original issuer can revoke. Revocation is
 permanent and the credential stops being valid immediately.
 
-### `pharos-agent-identity-rotate` — write
+### `ligis-rotate` — write
 Move the agent ID NFT to a new controller wallet. This is the canonical "key rotation"
 path for preserving the portable Agent ID. Credentials are wallet-bound attestations, so
 issuers should reissue any required credentials to the new controller after rotation.
@@ -92,7 +92,7 @@ issuers should reissue any required credentials to the new controller after rota
 ## Capability namespace
 
 Capabilities are `keccak256(humanReadableName)` (Solidity-friendly, 32 bytes). A starter
-set is in `assets/credentials.example.json`. Use `pharos-agent-identity-hash` to compute the
+set is in `assets/credentials.example.json`. Use `ligis-hash` to compute the
 hash of any new capability name off-chain (so the issuer and the verifier agree on bytes).
 
 ```bash
@@ -153,7 +153,7 @@ If any check fails, stop and ask the user.
 | Scenario | CLI signature | Handling |
 |----------|---------------|----------|
 | Wallet already has an ID | `AlreadyHasID(controller)` | Return existing `tokenId`, do not mint again |
-| Address has no ID | `DoesNotExist(tokenId)` | Tell the user to `pharos-agent-identity-issue` first |
+| Address has no ID | `DoesNotExist(tokenId)` | Tell the user to `ligis-issue` first |
 | Not the controller | `NotController(caller, tokenId)` | Tell the user; cannot rotate/burn someone else's ID |
 | Credential signature invalid | `InvalidSignature()` | Re-derive the EIP-712 digest and check the signer; ensure the issuer used the right nonce |
 | Credential expired | `Expired(expiresAt, now)` | Tell the user; reissue with a later `expiresAt` |

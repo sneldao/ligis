@@ -1,6 +1,6 @@
-# `pharos-agent-identity-issue` — Mint an Agent ID + Issue a Credential
+# `ligis-issue` — Mint an Agent ID + Issue a Credential
 
-Two related operations, both anchored on the Pharos Agent Identity Skill. Read this before any
+Two related operations, both anchored on Ligis. Read this before any
 "register my agent", "mint me an ID", or "issue a credential" task.
 
 ## Step 0 — Load addresses and RPC
@@ -154,7 +154,7 @@ cast send $CREG "issue(address,address,bytes32,uint64,uint64,uint256,bytes)(uint
    issuer for the given capability.
 3. Any downstream Skill that calls `isCapable(subject, capHash)` will see `true` until
    the credential expires or is revoked.
-4. The agent can rotate its controller key (via `pharos-agent-identity-rotate`) without losing
+4. The agent can rotate its controller key (via `ligis-rotate`) without losing
    the credential, because the credential is bound to the controller wallet, not the
    private key — the ID NFT carries the controller, and rotating the ID moves the
    "controller" pointer.

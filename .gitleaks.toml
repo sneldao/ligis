@@ -1,4 +1,4 @@
-# gitleaks config for the Pharos Agent Identity Skill project.
+# gitleaks config for the Ligis project.
 #
 # This file allowlists PUBLIC on-chain data that, by design, has high
 # Shannon entropy (40-hex addresses, 64-hex tx hashes, etc.) and would
@@ -8,7 +8,7 @@
 # AWS keys, etc.) — the rule set is still the default gitleaks one, only
 # the allowlist below is project-specific.
 
-title = "Pharos Agent Identity Skill — gitleaks config"
+title = "Ligis — gitleaks config"
 
 [allowlist]
 description = "Allow public on-chain artifacts (addresses, tx hashes, ABIs)"

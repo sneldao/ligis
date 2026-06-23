@@ -1,4 +1,4 @@
-# Pharos Agent Identity Skill — BUIDL Submission Draft
+# Ligis — BUIDL Submission Draft
 
 > Copy/paste this into the DoraHacks BUIDL form for the
 > **Pharos Skill-to-Agent Dual Cascade Hackathon (Phase 1)**.
@@ -8,7 +8,7 @@
 
 ## Title
 
-**Pharos Agent Identity Skill** — on-chain agent ID + EIP-712 capability credentials, on Atlantic testnet
+**Ligis** — on-chain agent ID + EIP-712 capability credentials, on Atlantic testnet
 
 ## Tagline (one-liner)
 

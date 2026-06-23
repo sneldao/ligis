@@ -1,4 +1,4 @@
-# `pharos-agent-identity-composability` — Integrating with Other Pharos Skills
+# `ligis-composability` — Integrating with Other Pharos Skills
 
 This reference shows how a downstream Skill composes with `PharosAgentID` and
 `CredentialRegistry` to gate access by agent identity and capability. Any
@@ -26,7 +26,7 @@ issuer. `isCapableFromIssuer` narrows the check to a specific issuer (useful
 for whitelisted KYC providers, accredited-investor registries, etc.).
 
 The capability hash is `keccak256("your.capability.name")`. Use the
-`pharos-agent-identity-hash` helper to compute it offline.
+`ligis-hash` helper to compute it offline.
 
 ---
 
@@ -37,7 +37,7 @@ wallet must hold a valid `agent.commerce.escrow` credential issued by a known
 marketplace operator. Three lines of Solidity in your escrow contract:
 
 ```solidity
-import {ICredentialRegistry} from "pharos-agent-identity/interfaces/ICredentialRegistry.sol";
+import {ICredentialRegistry} from "ligis/interfaces/ICredentialRegistry.sol";
 
 contract AegisEscrow {
     ICredentialRegistry public immutable creds;
@@ -167,10 +167,10 @@ re-implementing access control and start composing.
 If you're a Skill developer and want to test against a real `CredentialRegistry`:
 
 1. Deploy: `bash scripts/deploy.sh atlantic` (with a funded deployer)
-2. Issue a test credential: `pharos-agent-identity issue --controller <your-wallet> --token-uri "ipfs://test"`
-3. Sign: `pharos-agent-identity sign --issuer-key <issuer> --subject <your-wallet> --capability "your.capability" --expires-in 3600`
+2. Issue a test credential: `ligis issue --controller <your-wallet> --token-uri "ipfs://test"`
+3. Sign: `ligis sign --issuer-key <issuer> --subject <your-wallet> --capability "your.capability" --expires-in 3600`
 4. Submit: run the generated `cast send ...` line
-5. Verify: `pharos-agent-identity verify --subject <your-wallet> --capability "your.capability"`
+5. Verify: `ligis verify --subject <your-wallet> --capability "your.capability"`
 6. Use the same `verify` call inside your Skill's contract
 
 Total: 4 commands, ~2 minutes from `git clone` to "my Skill is gated by

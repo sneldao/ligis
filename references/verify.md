@@ -1,4 +1,4 @@
-# `pharos-agent-identity-verify` — Check if an Agent Holds a Capability
+# `ligis-verify` — Check if an Agent Holds a Capability
 
 Read-only. Safe to call without a private key. Use this *before* letting an agent use a
 gated Skill (Aegis escrow, FaroLink swap, Maestro mandates, Pact x402, Pharos NFT
@@ -88,7 +88,7 @@ off-chain via `cast call`, and very cheap when called on-chain by another contra
   the capability from at least one issuer. The downstream Skill may proceed.
 - `false` — either no credential was issued, the credential was revoked, or the
   credential expired. The downstream Skill should reject the action and tell the user to
-  get a fresh credential via `pharos-agent-identity-issue`.
+  get a fresh credential via `ligis-issue`.
 - For a per-issuer check, `isCapableFromIssuer` returns `false` if the specific issuer
   has not issued a valid credential, even if some other issuer has. This is the right
   primitive for Skills that have a trust list of issuers.

@@ -1,4 +1,4 @@
-# `pharos-agent-identity-hash` — Compute a Capability Hash
+# `ligis-hash` — Compute a Capability Hash
 
 Capability strings are hashed to `bytes32` with `keccak256` (the Solidity default). The
 hash is the on-chain identifier. The hash is the same on every chain.
