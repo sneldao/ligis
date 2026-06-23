@@ -92,3 +92,48 @@ export declare function signCredential(ctx: ClientContext, opts: {
     signature: `0x${string}`;
     submitCommand: string;
 }>;
+/** Read the agent ID (tokenId) for a controller wallet, or 0n if none. */
+export declare function getAgentId(ctx: ClientContext, controller: string): Promise<bigint>;
+/**
+ * Submit a signed EIP-712 credential attestation on-chain.
+ *
+ * Takes the output of {@link signCredential} and broadcasts the `issue(...)`
+ * transaction. Anyone can submit — the signature is the authorization.
+ */
+export declare function submitCredential(ctx: ClientContext, signed: {
+    issuer: string;
+    subject: string;
+    capabilityHash: Hex;
+    issuedAt: string;
+    expiresAt: string;
+    nonce: string;
+    signature: Hex;
+}): Promise<{
+    ok: boolean;
+    action: string;
+    issuer: `0x${string}`;
+    subject: `0x${string}`;
+    capabilityHash: `0x${string}`;
+    nonce: string;
+    txHash: `0x${string}`;
+    blockNumber: string;
+    explorer: string;
+}>;
+/**
+ * Update the off-chain metadata URI of an Agent ID.
+ *
+ * Used by the Trust Steward to anchor a 0G Storage root hash on-chain:
+ * `updateTokenUri(ctx, { tokenId, tokenUri: \`0g://${rootHash}\` })`.
+ */
+export declare function updateTokenUri(ctx: ClientContext, opts: {
+    tokenId: string;
+    tokenUri: string;
+}): Promise<{
+    ok: boolean;
+    action: string;
+    tokenId: string;
+    tokenUri: string;
+    txHash: `0x${string}`;
+    blockNumber: string;
+    explorer: string;
+}>;

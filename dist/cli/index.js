@@ -11,6 +11,9 @@
  *   ligis info
  */
 import { CREDENTIAL_REGISTRY_ABI, PHAROS_AGENT_ID_ABI, capabilityHash, getClients, issueId, loadConfig, revoke, rotate, signCredential, verify, } from "../lib/index.js";
+import { TrustSteward } from "../agent/index.js";
+import { ZeroGCompute, loadZeroGConfig } from "../zerog/compute.js";
+import { ZeroGStorage, loadZeroGStorageConfig } from "../zerog/storage.js";
 // Re-export for downstream consumers (e.g. integration tests)
 export { PHAROS_AGENT_ID_ABI, CREDENTIAL_REGISTRY_ABI };
 /** Read a --flag <value> or --flag=value argument. */
@@ -37,6 +40,7 @@ Usage:
   ligis revoke --subject <addr> --capability <name|hash> --nonce <n> [--issuer-key <key>]
   ligis rotate --token-id <id> --new-controller <addr>
   ligis sign --issuer-key <key> --subject <addr> --capability <name|hash> [--expires-in <seconds>]
+  ligis agent run --goal <text> [--dry-run]
 
 Environment:
   PRIVATE_KEY           wallet private key (for write operations)
@@ -105,6 +109,18 @@ async function cmdSign() {
     const result = await signCredential(ctx, { issuerKey, subject, capability: cap, expiresInSeconds: expiresIn });
     console.log(JSON.stringify(result, null, 2));
 }
+async function cmdAgentRun() {
+    const goal = arg("goal");
+    if (!goal)
+        throw new Error("--goal required");
+    const dryRun = process.argv.includes("--dry-run");
+    const ctx = getClients();
+    const reasoner = new ZeroGCompute(loadZeroGConfig());
+    const store = new ZeroGStorage(loadZeroGStorageConfig());
+    const steward = new TrustSteward(ctx, reasoner, store);
+    const result = await steward.run(goal, { dryRun });
+    console.log(JSON.stringify(result, null, 2));
+}
 // ---------- Main ----------
 async function main() {
     const cmd = process.argv[2];
@@ -127,6 +143,12 @@ async function main() {
             return cmdRotate();
         case "sign":
             return cmdSign();
+        case "agent":
+            if (process.argv[3] === "run")
+                return cmdAgentRun();
+            console.error(`Unknown agent subcommand: ${process.argv[3] ?? "(none)"}`);
+            console.error("Usage: ligis agent run --goal <text> [--dry-run]");
+            process.exit(1);
         default:
             console.error(`Unknown command: ${cmd}`);
             usage();

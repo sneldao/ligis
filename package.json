@@ -14,7 +14,9 @@
     "dev": "tsx src/cli/index.ts",
     "mcp": "node --enable-source-maps dist/mcp/server.js",
     "mcp:dev": "tsx src/mcp/server.ts",
-    "test": "forge test -vvv",
+    "test": "~/.foundry/bin/forge test -vvv",
+    "test:ts": "node --import tsx --test test/ts/*.test.ts",
+    "test:all": "~/.foundry/bin/forge test -vvv && npm run test:ts",
     "test:coverage": "forge coverage",
     "deploy:atlantic": "bash scripts/deploy.sh atlantic",
     "verify:atlantic": "bash scripts/verify.sh atlantic",
@@ -35,7 +37,10 @@
     "web3"
   ],
   "dependencies": {
+    "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.6",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "ethers": "^6.13.1",
     "viem": "^2.21.0",
     "zod": "^3.23.0"
   },

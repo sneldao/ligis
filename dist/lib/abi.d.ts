@@ -122,6 +122,30 @@ export declare const PHAROS_AGENT_ID_ABI: readonly [{
     }];
     readonly outputs: readonly [];
 }, {
+    readonly type: "function";
+    readonly name: "setTokenURI";
+    readonly stateMutability: "nonpayable";
+    readonly inputs: readonly [{
+        readonly name: "tokenId";
+        readonly type: "uint256";
+    }, {
+        readonly name: "newURI";
+        readonly type: "string";
+    }];
+    readonly outputs: readonly [];
+}, {
+    readonly type: "function";
+    readonly name: "exists";
+    readonly stateMutability: "view";
+    readonly inputs: readonly [{
+        readonly name: "tokenId";
+        readonly type: "uint256";
+    }];
+    readonly outputs: readonly [{
+        readonly name: "";
+        readonly type: "bool";
+    }];
+}, {
     readonly type: "event";
     readonly name: "Transfer";
     readonly inputs: readonly [{

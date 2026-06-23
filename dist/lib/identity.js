@@ -214,4 +214,79 @@ export async function signCredential(ctx, opts) {
         submitCommand: `cast send ${ctx.deployment.credentialRegistry} "issue(address,address,bytes32,uint64,uint64,uint256,bytes)" ${issuer} ${subject} ${capHash} ${issuedAt} ${expiresAt} ${nonce} ${signature} --rpc-url ${ctx.rpc} --private-key <SUBMITTER_KEY>`,
     };
 }
+// ---------- getAgentId ----------
+/** Read the agent ID (tokenId) for a controller wallet, or 0n if none. */
+export async function getAgentId(ctx, controller) {
+    const addr = parseAddress(controller);
+    return (await ctx.publicClient.readContract({
+        address: ctx.deployment.pharosAgentId,
+        abi: PHAROS_AGENT_ID_ABI,
+        functionName: "walletOfAgent",
+        args: [addr],
+    }));
+}
+// ---------- submitCredential ----------
+/**
+ * Submit a signed EIP-712 credential attestation on-chain.
+ *
+ * Takes the output of {@link signCredential} and broadcasts the `issue(...)`
+ * transaction. Anyone can submit — the signature is the authorization.
+ */
+export async function submitCredential(ctx, signed) {
+    const { walletClient, account } = requireWallet(ctx);
+    const issuer = parseAddress(signed.issuer);
+    const subject = parseAddress(signed.subject);
+    const issuedAt = BigInt(signed.issuedAt);
+    const expiresAt = BigInt(signed.expiresAt);
+    const nonce = BigInt(signed.nonce);
+    const hash = await walletClient.writeContract({
+        address: ctx.deployment.credentialRegistry,
+        abi: CREDENTIAL_REGISTRY_ABI,
+        functionName: "issue",
+        args: [issuer, subject, signed.capabilityHash, issuedAt, expiresAt, nonce, signed.signature],
+        chain: ctx.chain,
+        account: account.address,
+    });
+    const receipt = await ctx.publicClient.waitForTransactionReceipt({ hash });
+    return {
+        ok: true,
+        action: "submit-credential",
+        issuer,
+        subject,
+        capabilityHash: signed.capabilityHash,
+        nonce: nonce.toString(),
+        txHash: hash,
+        blockNumber: receipt.blockNumber.toString(),
+        explorer: `${ctx.network.explorerUrl}tx/${hash}`,
+    };
+}
+// ---------- updateTokenUri ----------
+/**
+ * Update the off-chain metadata URI of an Agent ID.
+ *
+ * Used by the Trust Steward to anchor a 0G Storage root hash on-chain:
+ * `updateTokenUri(ctx, { tokenId, tokenUri: \`0g://${rootHash}\` })`.
+ */
+export async function updateTokenUri(ctx, opts) {
+    const { walletClient, account } = requireWallet(ctx);
+    const tokenId = BigInt(opts.tokenId);
+    const hash = await walletClient.writeContract({
+        address: ctx.deployment.pharosAgentId,
+        abi: PHAROS_AGENT_ID_ABI,
+        functionName: "setTokenURI",
+        args: [tokenId, opts.tokenUri],
+        chain: ctx.chain,
+        account: account.address,
+    });
+    const receipt = await ctx.publicClient.waitForTransactionReceipt({ hash });
+    return {
+        ok: true,
+        action: "update-token-uri",
+        tokenId: tokenId.toString(),
+        tokenUri: opts.tokenUri,
+        txHash: hash,
+        blockNumber: receipt.blockNumber.toString(),
+        explorer: `${ctx.network.explorerUrl}tx/${hash}`,
+    };
+}
 //# sourceMappingURL=identity.js.map

@@ -26,6 +26,9 @@ import {
   signCredential,
   verify,
 } from "../lib/index.js";
+import { TrustSteward } from "../agent/index.js";
+import { ZeroGCompute, loadZeroGConfig } from "../zerog/compute.js";
+import { ZeroGStorage, loadZeroGStorageConfig } from "../zerog/storage.js";
 
 export { PHAROS_AGENT_ID_ABI, CREDENTIAL_REGISTRY_ABI };
 
@@ -184,6 +187,27 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["issuerKey", "subject", "capability"],
       },
     },
+    {
+      name: "ligis-run-steward",
+      description:
+        "Run the Trust Steward Agent loop: boot (mint Agent ID if needed) → reason (0G Compute maps the natural-language goal to required capabilities) → gate (isCapable check) → act (self-issue any missing credentials) → record (write evidence manifest to 0G Storage, anchor the root hash on-chain via setTokenURI). Returns the full evidence manifest with all tx hashes. Requires PRIVATE_KEY and ZEROG_PRIVATE_KEY in env.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          goal: {
+            type: "string",
+            description:
+              "Natural-language goal (e.g. 'open an escrow with counterparty X'). The 0G Compute LLM maps this to required capabilities.",
+          },
+          dryRun: {
+            type: "boolean",
+            description:
+              "If true, reason + gate only — no on-chain writes or 0G Storage upload. Useful for testing the reasoning step.",
+          },
+        },
+        required: ["goal"],
+      },
+    },
   ],
 }));
 
@@ -223,6 +247,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }
           )
         );
+      case "ligis-run-steward": {
+        const { goal, dryRun } = args as { goal: string; dryRun?: boolean };
+        const reasoner = new ZeroGCompute(loadZeroGConfig());
+        const store = new ZeroGStorage(loadZeroGStorageConfig());
+        const steward = new TrustSteward(ctx, reasoner, store);
+        return ok(await steward.run(goal, { dryRun }));
+      }
       default:
         return {
           content: [{ type: "text", text: `Unknown tool: ${name}` }],

@@ -61,6 +61,7 @@ four specialist skills:
 | "Rotate my agent's controller key" | `ligis-rotate` | → `references/rotate.md` |
 | "Hash a capability name" (helper) | `ligis-hash` | → `references/hash.md` |
 | "Sign and submit a credential attestation" (helper) | `ligis-sign` | → `references/sign.md` |
+| "Run the autonomous Trust Steward agent" | `ligis-run-steward` | → CLI: `ligis agent run --goal <text>` |
 
 When the user asks a high-level question, the director should:
 1. Read this file to load the table.
@@ -88,6 +89,25 @@ permanent and the credential stops being valid immediately.
 Move the agent ID NFT to a new controller wallet. This is the canonical "key rotation"
 path for preserving the portable Agent ID. Credentials are wallet-bound attestations, so
 issuers should reissue any required credentials to the new controller after rotation.
+
+### `ligis-run-steward` — autonomous agent
+The Trust Steward runs the full loop autonomously:
+
+1. **Boot** → `mintSelf` its own `PharosAgentID` (if it doesn't already have one).
+2. **Reason** → sends the natural-language goal to 0G Compute (TEE-verified LLM inference), which maps it to required capabilities.
+3. **Gate** → checks `isCapable` for each required capability.
+4. **Act** → self-issues any missing credentials (signs with its own key, submits on-chain).
+5. **Record** → writes the full evidence manifest (goal, reasoning, capabilities, tx hashes) to 0G Storage, then anchors the Merkle root hash on-chain via `setTokenURI`.
+
+```bash
+# CLI
+ligis agent run --goal "open an escrow with counterparty X" [--dry-run]
+
+# MCP tool
+ligis-run-steward { goal: "open an escrow with counterparty X", dryRun: false }
+```
+
+Use `--dry-run` to test the reasoning + gating steps without any on-chain writes or 0G Storage upload. Requires `PRIVATE_KEY` (Pharos Atlantic wallet) and `ZEROG_PRIVATE_KEY` (0G testnet wallet) in env.
 
 ## Capability namespace
 

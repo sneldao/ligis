@@ -85,6 +85,23 @@ export const PHAROS_AGENT_ID_ABI = [
         inputs: [{ name: "tokenId", type: "uint256" }],
         outputs: [],
     },
+    {
+        type: "function",
+        name: "setTokenURI",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "tokenId", type: "uint256" },
+            { name: "newURI", type: "string" },
+        ],
+        outputs: [],
+    },
+    {
+        type: "function",
+        name: "exists",
+        stateMutability: "view",
+        inputs: [{ name: "tokenId", type: "uint256" }],
+        outputs: [{ name: "", type: "bool" }],
+    },
     // Events
     {
         type: "event",

@@ -105,10 +105,24 @@ layer.
 
 - **2 Solidity contracts** (`PharosAgentID.sol`, `CredentialRegistry.sol`)
   on Pharos Atlantic (chainId 688689), 100% Foundry test coverage (41 tests, including fuzz tests).
-- **CLI** (`dist/cli/index.js`): 7 commands (info, hash, issue, verify, revoke,
-  rotate, sign) — every command prints JSON for downstream Skills to consume.
-- **MCP server** (`dist/mcp/server.js`): 6 tools that an agent can call
+- **CLI** (`dist/cli/index.js`): 8 commands (info, hash, issue, verify, revoke,
+  rotate, sign, agent run) — every command prints JSON for downstream Skills to consume.
+- **MCP server** (`dist/mcp/server.js`): 7 tools that an agent can call
   directly from Claude Code or any MCP-aware IDE.
+- **Trust Steward Agent** (`src/agent/`): an autonomous agent that runs the full
+  loop — boot (mint Agent ID) → reason (0G Compute TEE-verified LLM maps a
+  natural-language goal to required capabilities) → gate (`isCapable`) → act
+  (self-issue missing credentials) → record (write evidence manifest to 0G
+  Storage, anchor the Merkle root on-chain via `setTokenURI`). 17 TypeScript
+  unit tests (node:test) with mocked clients verify the full loop offline.
+- **0G integration** (`src/zerog/`): `compute.ts` wraps the 0G Compute serving
+  broker for TEE-verified inference; `storage.ts` wraps the 0G Storage SDK for
+  verifiable evidence storage. Both sit behind interfaces (`Reasoner`,
+  `EvidenceStore`) so the agent is testable offline.
+- **Shared library** (`src/lib/`): single source of truth for all on-chain
+  operations — `issueId`, `verify`, `revoke`, `rotate`, `signCredential`,
+  `getAgentId`, `submitCredential`, `updateTokenUri`. CLI, MCP, and Agent all
+  import from here (no duplicated chain logic).
 - **SKILL.md + 7 references** (issue/verify/revoke/rotate/hash/sign/composability) following
   the Pharos Skill Engine's director pattern. The composability reference is the
   integration playbook for Aegis, Pact, FaroLink, Maestro, and x402 facilitators.
@@ -251,12 +265,15 @@ Solo submitter: `<your name>`
 
 - [x] 2 Solidity contracts (ERC-721 + EIP-712 registry)
 - [x] 41/41 Foundry tests passing (including fuzz tests)
+- [x] 17/17 TypeScript unit tests passing (node:test, mocked clients)
 - [x] Solidity 0.8.24, no warnings, optimizer on
 - [x] Deployed to Pharos Atlantic testnet (chainId 688689) — see tx hashes above
 - [ ] Source verified on Pharos Scan (socialscan API returned 404 at submission; re-run `bash scripts/verify.sh atlantic` once it's back)
-- [x] CLI: 7 commands, JSON output — verified live on Atlantic
-- [x] MCP server: 6 tools
-- [x] SKILL.md + 6 references
+- [x] CLI: 8 commands, JSON output — verified live on Atlantic
+- [x] MCP server: 7 tools (including `ligis-run-steward`)
+- [x] Trust Steward Agent: full loop (boot → reason → gate → act → record) with 0G Compute + 0G Storage
+- [x] Shared library (`src/lib/`): single source of truth for CLI, MCP, and Agent
+- [x] SKILL.md + 7 references
 - [x] install.sh (Claude Code + Codex)
 - [x] Bash deploy/verify/demo scripts (all `bash -n` clean, demo executed end-to-end on Atlantic)
 - [x] End-to-end demo runs in < 5 minutes from `git clone` — verified (mint → issue → verify → revoke → verify → rotate)

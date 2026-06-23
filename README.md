@@ -4,7 +4,7 @@
 >
 > Built for the [Pharos Skill-to-Agent Dual Cascade Hackathon](https://dorahacks.io/hackathon/pharos-phase1) — Phase 1 (Skill Hackathon).
 >
-> 41 Foundry tests passing (including fuzz tests). 6 reference docs. 4 on-chain Skills + 2 helpers. MCP server. CLI. Director-routing `SKILL.md`. MIT.
+> 41 Foundry tests + 17 TypeScript tests passing. 7 reference docs. 4 on-chain Skills + 2 helpers + Trust Steward Agent. MCP server. CLI. Director-routing `SKILL.md`. MIT.
 
 ---
 
@@ -25,6 +25,12 @@ Plus two helpers:
 |---|---|
 | `ligis-hash` | `keccak256("agent.commerce.escrow")` → `0x17775e488d090dd8527e0139b3472d4d03c3372525b10a7c1449f04027a3ebf8` |
 | `ligis-sign` | Issuer-side helper: build and sign an EIP-712 credential off-chain |
+
+Plus the **Trust Steward Agent** — an autonomous agent that completes the loop:
+
+| Agent | What it does |
+|---|---|
+| `ligis agent run` | boot (mint Agent ID) → reason (0G Compute maps a natural-language goal to required capabilities) → gate (`isCapable`) → act (self-issue missing credentials) → record (write evidence manifest to 0G Storage, anchor the root hash on-chain via `setTokenURI`) |
 
 ## Why this matters
 
@@ -57,7 +63,7 @@ wallet). The source of truth for chain config and deployment addresses is
 ├── SKILL.md                        # director entry point (the file Agents read first)
 ├── README.md                       # you are here
 ├── LICENSE                         # MIT
-├── package.json                    # Node CLI + MCP server
+├── package.json                    # Node CLI + MCP server + Agent
 ├── tsconfig.json
 ├── foundry.toml                    # Foundry config (Pharos Atlantic + mainnet)
 ├── remappings.txt
@@ -74,7 +80,8 @@ wallet). The source of truth for chain config and deployment addresses is
 │   ├── revoke.md
 │   ├── rotate.md
 │   ├── hash.md
-│   └── sign.md
+│   ├── sign.md
+│   └── composability.md
 │
 ├── scripts/
 │   ├── deploy.sh                   # forge script Deploy.s.sol → writes assets/deployment.json
@@ -84,12 +91,30 @@ wallet). The source of truth for chain config and deployment addresses is
 ├── src/
 │   ├── PharosAgentID.sol           # ERC-721 portable agent identity
 │   ├── CredentialRegistry.sol      # EIP-712 verifiable credential registry
-│   ├── mcp/server.ts               # MCP server (6 tools)
+│   ├── lib/                        # SSOT — on-chain primitives shared by CLI, MCP, and Agent
+│   │   ├── abi.ts                  # ABI fragments for both contracts
+│   │   ├── types.ts                # shared TypeScript types
+│   │   ├── util.ts                 # parseAddress, capabilityHash, loadConfig
+│   │   ├── client.ts               # viem client bootstrap
+│   │   ├── identity.ts             # issue/verify/revoke/rotate/sign + getAgentId/submitCredential/updateTokenUri
+│   │   └── index.ts                # barrel re-export
+│   ├── zerog/                      # 0G integration — the "real work"
+│   │   ├── compute.ts              # 0G Compute broker: TEE-verified inference (the brain)
+│   │   ├── storage.ts              # 0G Storage: agent state + credential evidence (anchored on-chain)
+│   │   └── index.ts                # barrel re-export
+│   ├── agent/                      # autonomous Trust Steward
+│   │   ├── policy.ts               # capability → action gating table + reasoning prompt/parser
+│   │   ├── steward.ts              # boot → reason(0G) → gate(isCapable) → act → record(0G)
+│   │   └── index.ts                # barrel re-export
+│   ├── mcp/server.ts               # MCP server (7 tools)
 │   └── cli/index.ts                # CLI (ligis)
 │
 ├── test/
 │   ├── PharosAgentID.t.sol         # 19 tests (including Transfer events + safeTransferFrom)
-│   └── CredentialRegistry.t.sol    # 22 tests (including fuzz tests + exact nonce)
+│   ├── CredentialRegistry.t.sol    # 22 tests (including fuzz tests + exact nonce)
+│   └── ts/                         # TypeScript unit tests (node:test)
+│       ├── policy.test.ts          # reasoning prompt + JSON parser tests
+│       └── steward.test.ts         # full steward loop tests (mocked clients)
 │
 └── script/
     └── Deploy.s.sol                # forge deployment script
@@ -116,6 +141,27 @@ PRIVATE_KEY=0x<YOUR_TESTNET_PRIVATE_KEY> npx tsx src/cli/index.ts sign \
   --capability "agent.commerce.escrow" \
   --expires-in 2592000
 ```
+
+### Run the Trust Steward Agent
+
+The Steward runs the full autonomous loop: boot → reason (0G Compute) → gate → act → record (0G Storage).
+
+```bash
+# Dry run — reason + gate only, no on-chain writes or 0G Storage
+PRIVATE_KEY=0x<YOUR_TESTNET_PRIVATE_KEY> \
+ZEROG_PRIVATE_KEY=0x<YOUR_0G_TESTNET_PRIVATE_KEY> \
+npx tsx src/cli/index.ts agent run --goal "open an escrow with counterparty X" --dry-run
+
+# Full run — mints/boots, reasons on 0G Compute, self-issues missing credentials,
+# writes evidence to 0G Storage, anchors the root hash on-chain via setTokenURI
+PRIVATE_KEY=0x<YOUR_TESTNET_PRIVATE_KEY> \
+ZEROG_PRIVATE_KEY=0x<YOUR_0G_TESTNET_PRIVATE_KEY> \
+npx tsx src/cli/index.ts agent run --goal "open an escrow with counterparty X"
+```
+
+Requires a funded Pharos Atlantic wallet (`PRIVATE_KEY`) and a funded 0G testnet wallet
+(`ZEROG_PRIVATE_KEY`). The 0G wallet needs a one-time `setupProvider()` initialization
+(see `src/zerog/compute.ts`).
 
 ## Quick start (from scratch)
 
@@ -242,17 +288,17 @@ this Skill's on-chain identity and credentials.
 ```
 src/
   lib/        SSOT — on-chain primitives shared by CLI, MCP, and the Agent
-    client.ts    viem client bootstrap (consolidated from CLI + MCP)
-    identity.ts  issue/verify/revoke/rotate/sign (consolidated from CLI + MCP)
-    abi.ts  types.ts  util.ts  index.ts
+    client.ts    viem client bootstrap (consolidated from CLI + MCP)          ✅ DONE
+    identity.ts  issue/verify/revoke/rotate/sign + getAgentId/submitCredential/updateTokenUri  ✅ DONE
+    abi.ts  types.ts  util.ts  index.ts                                        ✅ DONE
   zerog/      0G integration — the "real work"
-    compute.ts   0G Compute broker: TEE-verified inference (the brain)
-    storage.ts   0G Storage: agent state + credential evidence (anchored on-chain)
+    compute.ts   0G Compute broker: TEE-verified inference (the brain)         ✅ DONE
+    storage.ts   0G Storage: agent state + credential evidence (anchored on-chain)  ✅ DONE
   agent/      autonomous Trust Steward
-    steward.ts   boot → reason(0G) → gate(isCapable) → act → record(0G)
-    policy.ts    capability → action gating table (single source)
-  cli/index.ts   thin: parse args → call lib/agent
-  mcp/server.ts  thin: tools → call lib/agent
+    steward.ts   boot → reason(0G) → gate(isCapable) → act → record(0G)        ✅ DONE
+    policy.ts    capability → action gating table (single source)              ✅ DONE
+  cli/index.ts   thin: parse args → call lib/agent                             ✅ DONE
+  mcp/server.ts  thin: tools → call lib/agent                                  ✅ DONE
 ```
 
 The Agent **reuses** `lib/identity` rather than re-implementing chain logic; the
@@ -264,21 +310,21 @@ operation across all three surfaces.
 
 | Layer | Package | Notes |
 |-------|---------|-------|
-| Compute | `@0glabs/0g-serving-broker` | Programmatic serving-broker SDK for TEE-verified inference. One-time setup via `0g-compute-cli` (login → deposit → acknowledge-provider). |
-| Storage | `@0gfoundation/0g-ts-sdk` (v1.2.1) | 0G Storage SDK for uploading/retrieving agent state and evidence manifests. |
+| Compute | `@0gfoundation/0g-compute-ts-sdk` | Programmatic serving-broker SDK for TEE-verified inference. One-time setup via `setupProvider()` (login → deposit → acknowledge-provider). |
+| Storage | `@0gfoundation/0g-storage-ts-sdk` (v1.2.6) | 0G Storage SDK for uploading/retrieving agent state and evidence manifests. Uses `Indexer` + `MemData` for in-memory JSON uploads; returns a Merkle root hash anchored on-chain via `setTokenURI`. |
 
 > `@0gfoundation/0g-cc` is an **MCP server**, not an importable library — it is
 > not used as a dependency. The Agent calls the underlying SDKs directly.
 
 ### Build phases
 
-| Phase | Work | Verification |
-|-------|------|--------------|
-| 0 | Consolidate CLI + MCP on-chain ops into `lib/client.ts` + `lib/identity.ts`; delete duplicates | `forge test`, `npx tsc`, live CLI run |
-| 1 | `zerog/compute.ts` — TEE-verified inference as the Agent's brain | mocked unit test + live inference |
-| 2 | `zerog/storage.ts` — agent state/evidence on 0G Storage, root in `tokenURI` | mocked unit test + live upload/retrieve |
-| 3 | `agent/steward.ts` + `agent/policy.ts` — full loop, self-contained vertical (self-issue → `isCapable` gate → record) on Atlantic | end-to-end demo run |
-| 4 | `agent run` CLI cmd + `run-steward` MCP tool; `node:test` units (new second runner alongside `forge`); Pharos Scan verify badge | full suite |
+| Phase | Work | Verification | Status |
+|-------|------|--------------|--------|
+| 0 | Consolidate CLI + MCP on-chain ops into `lib/client.ts` + `lib/identity.ts`; delete duplicates | `forge test`, `npx tsc`, live CLI run | ✅ DONE |
+| 1 | `zerog/compute.ts` — TEE-verified inference as the Agent's brain | mocked unit test + live inference | ✅ DONE |
+| 2 | `zerog/storage.ts` — agent state/evidence on 0G Storage, root in `tokenURI` | mocked unit test + live upload/retrieve | ✅ DONE |
+| 3 | `agent/steward.ts` + `agent/policy.ts` — full loop, self-contained vertical (self-issue → `isCapable` gate → record) on Atlantic | end-to-end demo run | ✅ DONE |
+| 4 | `agent run` CLI cmd + `run-steward` MCP tool; `node:test` units; Pharos Scan verify badge | full suite | ✅ DONE |
 
 ### Design constraints (Core Principles)
 
