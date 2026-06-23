@@ -40,6 +40,18 @@ html {
   color: var(--color-ink);
 }
 
+:focus-visible {
+  outline: 1px solid var(--color-terra);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 .font-serif {
   font-family: var(--font-serif);
 }
