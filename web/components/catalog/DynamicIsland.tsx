@@ -69,8 +69,11 @@ export function DynamicIsland({ totalCount }: { totalCount: number }) {
               <span className="font-mono text-sm tabular text-paper">
                 {totalCount.toString().padStart(2, "0")} agents
               </span>
-              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/70">
-                drag · scroll · click
+              <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/70 sm:inline">
+                drag · scroll · WASD · click
+              </span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/70 sm:hidden">
+                drag · pinch · tap
               </span>
             </motion.div>
           )}

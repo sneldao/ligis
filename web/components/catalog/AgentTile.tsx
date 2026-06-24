@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group, Mesh } from "three";
+import type { Group, Material, Mesh } from "three";
 import { easing } from "maath";
 import { Text } from "@react-three/drei";
 import { useRouter } from "next/navigation";
@@ -14,48 +14,34 @@ import {
   setHoveredId,
 } from "./catalogState";
 import type { CatalogAgent } from "./agentSeed";
+import type { CatalogPosition } from "./positions";
 
 const PORTRAIT_W = 2.6;
 const PORTRAIT_H = 3.25;
 const TILE_DEPTH = 0.18;
 
-function bytes(addr: string): number[] {
-  const hex = addr.toLowerCase().replace(/^0x/, "").padEnd(40, "0");
-  const out: number[] = [];
-  for (let i = 0; i < 20; i++) out.push(parseInt(hex.slice(i * 2, i * 2 + 2), 16));
-  return out;
-}
+const FADE_START = 18;
+const FADE_END = 38;
 
-export function AgentTile({
-  agent,
-  position,
-  enterDelay,
-}: {
+type Props = {
   agent: CatalogAgent;
-  position: [number, number, number];
+  layout: CatalogPosition;
   enterDelay: number;
-}) {
+};
+
+export function AgentTile({ agent, layout, enterDelay }: Props) {
   const router = useRouter();
   const group = useRef<Group>(null);
   const baseMesh = useRef<Mesh>(null);
   const startTime = useRef(performance.now());
 
   const params = useMemo(() => portraitParams(agent.address), [agent.address]);
-  const jitter = useMemo(() => {
-    const b = bytes(agent.address);
-    return {
-      zOffset: ((b[14]! % 32) - 16) / 200,
-      rotZ: ((b[15]! % 32) - 16) / 600,
-      rotX: ((b[16]! % 16) - 8) / 800,
-    };
-  }, [agent.address]);
-
   const id = agent.address;
 
-  useFrame((_state, delta) => {
+  useFrame((state, delta) => {
     if (!group.current) return;
     const elapsed = performance.now() - startTime.current - enterDelay;
-    const reveal = Math.max(0, Math.min(1, elapsed / 700));
+    const reveal = Math.max(0, Math.min(1, elapsed / 800));
     const isActive = rigState.activeId === id;
     const isAnyActive = rigState.activeId !== null;
 
@@ -67,17 +53,41 @@ export function AgentTile({
     const eased = reveal * targetScale;
     easing.damp3(group.current.scale, [eased, eased, eased], 0.22, delta);
 
-    const focusZ = isActive ? 1.6 : 0;
-    const distFromCenter = Math.sqrt(position[0] ** 2 + position[1] ** 2);
-    const curveBack = distFromCenter * CATALOG_CONFIG.curvatureStrength;
-    const targetZ = position[2] + focusZ + jitter.zOffset - curveBack;
-    easing.damp(group.current.position, "z", targetZ, 0.28, delta);
+    const focusBoost = isActive ? 1.2 : 0;
+    const liftIn = (1 - reveal) * -1.6;
+    const bob =
+      Math.sin(state.clock.elapsedTime * 0.55 + layout.bobPhase) * layout.bobAmp;
 
-    const liftIn = (1 - reveal) * -2;
-    easing.damp(group.current.position, "y", position[1] + liftIn, 0.22, delta);
+    easing.damp(group.current.position, "x", layout.pos[0], 0.28, delta);
+    easing.damp(group.current.position, "y", layout.pos[1] + bob + liftIn, 0.22, delta);
+    easing.damp(group.current.position, "z", layout.pos[2] + focusBoost, 0.28, delta);
 
-    easing.damp(group.current.rotation, "z", jitter.rotZ, 0.4, delta);
-    easing.damp(group.current.rotation, "x", jitter.rotX, 0.4, delta);
+    easing.damp(group.current.rotation, "z", layout.rotZ, 0.4, delta);
+    easing.damp(group.current.rotation, "x", layout.rotX, 0.4, delta);
+
+    const dist = state.camera.position.distanceTo(group.current.position);
+    const fade =
+      dist <= FADE_START
+        ? 1
+        : dist >= FADE_END
+          ? 0
+          : 1 - (dist - FADE_START) / (FADE_END - FADE_START);
+    const opacity = Math.max(0, Math.min(1, fade)) * reveal;
+    group.current.visible = opacity > 0.02;
+
+    group.current.traverse((obj) => {
+      const mat = (obj as Mesh).material as Material | Material[] | undefined;
+      if (!mat) return;
+      const apply = (m: Material) => {
+        if ("opacity" in m) {
+          m.transparent = true;
+          (m as Material & { opacity: number }).opacity =
+            (m.userData?.baseOpacity ?? 1) * opacity;
+        }
+      };
+      if (Array.isArray(mat)) mat.forEach(apply);
+      else apply(mat);
+    });
   });
 
   const px = (params.primary.cx - 0.5) * PORTRAIT_W;
@@ -94,7 +104,7 @@ export function AgentTile({
   return (
     <group
       ref={group}
-      position={[position[0], position[1] - 2, position[2]]}
+      position={[layout.pos[0], layout.pos[1] - 2, layout.pos[2]]}
       onPointerOver={(e) => {
         e.stopPropagation();
         setHoveredId(id);
@@ -111,21 +121,23 @@ export function AgentTile({
           router.push(`/agent/${agent.address}`);
         } else {
           setActiveId(id);
-          rigState.target.set(position[0], position[1], 0);
+          rigState.target.set(layout.pos[0], layout.pos[1], 0);
           rigState.zoom = CATALOG_CONFIG.zoomIn;
         }
       }}
     >
-      <mesh ref={baseMesh} castShadow receiveShadow position={[0, 0, -TILE_DEPTH / 2]}>
+      <mesh
+        ref={baseMesh}
+        castShadow
+        receiveShadow
+        position={[0, 0, -TILE_DEPTH / 2]}
+        userData={{ baseOpacity: 1 }}
+      >
         <boxGeometry args={[PORTRAIT_W, PORTRAIT_H, TILE_DEPTH]} />
-        <meshStandardMaterial
-          color={params.deck.paper}
-          roughness={0.92}
-          metalness={0.0}
-        />
+        <meshStandardMaterial color={params.deck.paper} roughness={0.92} metalness={0} />
       </mesh>
 
-      <mesh position={[gx, gy, 0.002]}>
+      <mesh position={[gx, gy, 0.002]} userData={{ baseOpacity: 0.42 }}>
         <circleGeometry args={[pr, 64]} />
         <meshStandardMaterial
           color={params.deck.secondary}
@@ -135,12 +147,12 @@ export function AgentTile({
         />
       </mesh>
 
-      <mesh position={[px, py, 0.004]}>
+      <mesh position={[px, py, 0.004]} userData={{ baseOpacity: 1 }}>
         <circleGeometry args={[pr, 64]} />
         <meshStandardMaterial color={params.deck.primary} roughness={0.85} />
       </mesh>
 
-      <mesh position={[0, bandY, 0.006]}>
+      <mesh position={[0, bandY, 0.006]} userData={{ baseOpacity: 0.88 }}>
         <planeGeometry args={[PORTRAIT_W, bandH]} />
         <meshStandardMaterial
           color={params.deck.secondary}
@@ -150,7 +162,7 @@ export function AgentTile({
         />
       </mesh>
 
-      <mesh position={[sx, sy, 0.008]}>
+      <mesh position={[sx, sy, 0.008]} userData={{ baseOpacity: 1 }}>
         <circleGeometry args={[sr, 32]} />
         <meshStandardMaterial color={params.deck.secondary} roughness={0.85} />
       </mesh>

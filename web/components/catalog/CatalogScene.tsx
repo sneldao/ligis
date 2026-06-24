@@ -7,36 +7,16 @@ import { AgentTile } from "./AgentTile";
 import { Rig } from "./Rig";
 import { CATALOG_CONFIG } from "./catalogState";
 import { seedCatalog, type CatalogAgent } from "./agentSeed";
-
-function gridPositions(agents: CatalogAgent[]) {
-  const cols = CATALOG_CONFIG.gridCols;
-  const spacing = CATALOG_CONFIG.itemSize + CATALOG_CONFIG.gap;
-  const rows = Math.ceil(agents.length / cols);
-  const w = cols * spacing;
-  const h = rows * spacing;
-  return {
-    width: w,
-    height: h,
-    positions: agents.map((_, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      return [
-        col * spacing - w / 2 + spacing / 2,
-        -(row * spacing) + h / 2 - spacing / 2,
-        0,
-      ] as [number, number, number];
-    }),
-  };
-}
+import { layoutCatalog } from "./positions";
 
 export function CatalogScene({ agents }: { agents?: CatalogAgent[] }) {
-  const items = useMemo(() => agents ?? seedCatalog(49), [agents]);
-  const { width, height, positions } = useMemo(() => gridPositions(items), [items]);
+  const items = useMemo(() => agents ?? seedCatalog(72), [agents]);
+  const layout = useMemo(() => layoutCatalog(items), [items]);
 
   return (
     <Canvas
       shadows
-      camera={{ position: [0, 0, CATALOG_CONFIG.zoomOut], fov: 35 }}
+      camera={{ position: [0, 0, CATALOG_CONFIG.zoomOut], fov: 38 }}
       dpr={[1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       style={{ background: "#F4F1EC", touchAction: "none" }}
@@ -51,10 +31,10 @@ export function CatalogScene({ agents }: { agents?: CatalogAgent[] }) {
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-left={-25}
-        shadow-camera-right={25}
-        shadow-camera-top={25}
-        shadow-camera-bottom={-25}
+        shadow-camera-left={-30}
+        shadow-camera-right={30}
+        shadow-camera-top={30}
+        shadow-camera-bottom={-30}
       />
       <directionalLight position={[-6, -4, 6]} intensity={0.25} color="#d6e0d2" />
 
@@ -64,12 +44,13 @@ export function CatalogScene({ agents }: { agents?: CatalogAgent[] }) {
 
       <Suspense fallback={null}>
         {items.map((agent, i) => {
-          const enterDelay = i * 22 + (Math.random() * 80);
+          const enterDelay = i * 18 + Math.random() * 60;
+          const layoutItem = layout.positions[i]!;
           return (
             <AgentTile
               key={agent.address}
               agent={agent}
-              position={positions[i]!}
+              layout={layoutItem}
               enterDelay={enterDelay}
             />
           );
@@ -77,15 +58,15 @@ export function CatalogScene({ agents }: { agents?: CatalogAgent[] }) {
       </Suspense>
 
       <ContactShadows
-        position={[0, -height / 2 - 1.6, 0]}
-        opacity={0.32}
-        scale={Math.max(width, height) * 1.2}
-        blur={3.4}
+        position={[0, -layout.height / 2 - 1.8, 0]}
+        opacity={0.3}
+        scale={Math.max(layout.width, layout.height) * 1.2}
+        blur={3.6}
         far={6}
         color="#1c1b1a"
       />
 
-      <Rig gridW={width} gridH={height} />
+      <Rig gridW={layout.width} gridH={layout.height} />
     </Canvas>
   );
 }

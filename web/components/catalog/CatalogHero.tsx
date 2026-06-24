@@ -21,7 +21,7 @@ const CatalogScene = dynamic(
 );
 
 export function CatalogHero() {
-  const agents = seedCatalog(49);
+  const agents = seedCatalog(72);
 
   return (
     <section className="relative h-[100dvh] w-full overflow-hidden">
@@ -42,8 +42,11 @@ export function CatalogHero() {
         <p className="font-serif text-2xl italic text-ink sm:text-3xl">
           A trust layer for autonomous agents.
         </p>
-        <p className="max-w-md font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft">
-          drag to wander · scroll to zoom · click to focus, again to open
+        <p className="hidden max-w-md font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft sm:block">
+          drag to wander · scroll to fly · WASD to walk · click to focus
+        </p>
+        <p className="max-w-md font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft sm:hidden">
+          drag to wander · pinch to fly · tap to focus
         </p>
       </motion.div>
 
