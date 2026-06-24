@@ -2,111 +2,216 @@
 
 import { type Phase } from "@/lib/steward-events";
 
-type PhaseStatus = "idle" | "running" | "done" | "skip" | "error";
+type PhaseStatus = "idle" | "running" | "done" | "error";
 
-function nodeColor(status: PhaseStatus): string {
-  switch (status) {
-    case "running":
-      return "#B85D3E";
-    case "done":
-      return "#6f8267";
-    case "error":
-      return "#a13a2a";
-    default:
-      return "#d9d3cb";
-  }
-}
-
-function nodeFill(status: PhaseStatus): string {
-  return status === "running" || status === "done" ? nodeColor(status) : "none";
-}
-
-const LABELS = ["boot", "reason", "gate", "act", "record"];
+const NODES: { phase: Phase; label: string; desc: string }[] = [
+  { phase: "BOOT", label: "boot", desc: "mint agent ID" },
+  { phase: "REASON", label: "reason", desc: "0G Compute" },
+  { phase: "GATE", label: "gate", desc: "check creds" },
+  { phase: "ACT", label: "act", desc: "self-issue" },
+  { phase: "RECORD", label: "record", desc: "anchor to 0G" },
+];
 
 export function StewardDiagram({
   phaseStatus,
+  running,
 }: {
   phaseStatus: Record<string, PhaseStatus>;
   running: boolean;
 }) {
-  const width = 280;
-  const height = 56;
-  const nodeY = 22;
-  const nodeR = 7;
-  const labelY = nodeY + nodeR + 12;
+  const width = 640;
+  const height = 180;
+  const nodeY = 36;
+  const nodeR = 14;
+  const labelY = nodeY + nodeR + 18;
+  const descY = labelY + 14;
+  const barY = 152;
+  const barH = 2;
+  const spacing = width / NODES.length;
+
+  const color = (phase: string): string => {
+    const s = phaseStatus[phase];
+    if (s === "running") return "#B85D3E";
+    if (s === "done") return "#6f8267";
+    if (s === "error") return "#a13a2a";
+    return "#d9d3cb";
+  };
+
+  const isActive = (phase: string): boolean => phaseStatus[phase] === "running";
+  const isDone = (phase: string): boolean => phaseStatus[phase] === "done";
+  const isIdle = (phase: string): boolean =>
+    !phaseStatus[phase] || phaseStatus[phase] === "idle";
+
+  const showStreamAnimation =
+    running || Object.values(phaseStatus).some((s) => s === "done" || s === "running");
+
+  const doneCount = NODES.filter((n) => isDone(n.phase)).length;
+  const runningCount = NODES.filter((n) => isActive(n.phase)).length;
+  const progress = (doneCount + (runningCount > 0 ? 0.5 : 0)) / NODES.length;
+  const currentPhaseIdx = NODES.findIndex((n) => isActive(n.phase));
+  const allDone = doneCount === NODES.length;
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full">
+      <div className="mb-4 flex items-baseline justify-between">
+        <p className="eyebrow">the loop</p>
+        <p className="font-mono text-[11px] tabular text-ink-quiet">
+          {allDone ? "✓ complete" : currentPhaseIdx >= 0 ? `phase ${currentPhaseIdx + 1} / ${NODES.length}` : "—"}
+        </p>
+      </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="mx-auto h-14 w-auto"
+        className="w-full h-auto"
         aria-label="Steward loop flow: boot, reason, gate, act, record"
       >
-        {LABELS.map((_, i) => {
-          const cx = (width / LABELS.length) * (i + 0.5);
-          const nextCx =
-            i < LABELS.length - 1
-              ? (width / LABELS.length) * (i + 1.5)
-              : cx + nodeR + 2;
-          if (i >= LABELS.length - 1) return null;
-          const phase = LABELS[i].toUpperCase() as keyof typeof phaseStatus;
-          const nextPhase = LABELS[i + 1].toUpperCase() as keyof typeof phaseStatus;
-          const cur = phaseStatus[phase] || "idle";
-          const next = phaseStatus[nextPhase] || "idle";
-          const highlighted = cur === "done" || cur === "running" || next === "done" || next === "running";
+        <defs>
+          {NODES.map((n, i) => {
+            if (i >= NODES.length - 1) return null;
+            const cx = (width / NODES.length) * (i + 0.5);
+            const nx = (width / NODES.length) * (i + 1.5);
+            return (
+              <linearGradient
+                key={`g-${i}`}
+                id={`flow-${i}`}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="0"
+              >
+                <stop
+                  offset="0%"
+                  stopColor={isDone(n.phase) || isActive(n.phase) ? color(n.phase) : "#d9d3cb"}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={
+                    isDone(NODES[i + 1].phase) || isActive(NODES[i + 1].phase)
+                      ? color(NODES[i + 1].phase)
+                      : "#d9d3cb"
+                  }
+                />
+              </linearGradient>
+            );
+          })}
+
+          {showStreamAnimation && (
+            <style>
+              {`
+                @keyframes stream-dash {{
+                  to { stroke-dashoffset: -24; }
+                }}
+                @keyframes node-ping {{
+                  0% {{ transform: scale(1); opacity: 0.4; }}
+                  100% {{ transform: scale(2.4); opacity: 0; }}
+                }}
+                @media (prefers-reduced-motion: reduce) {{
+                  [data-anim="stream"] {{ animation: none !important; }}
+                  [data-anim="ping"] {{ animation: none !important; }}
+                }}
+              `}
+            </style>
+          )}
+        </defs>
+
+        {NODES.map((n, i) => {
+          if (i >= NODES.length - 1) return null;
+          const cx = spacing * (i + 0.5);
+          const nx = spacing * (i + 1.5);
+          const cur = phaseStatus[n.phase] || "idle";
+          const next = phaseStatus[NODES[i + 1].phase] || "idle";
+          const flowing = cur === "running" || cur === "done" || next === "running" || next === "done";
           return (
-            <line
-              key={`line-${i}`}
-              x1={cx + nodeR + 2}
-              y1={nodeY}
-              x2={nextCx - nodeR - 2}
-              y2={nodeY}
-              stroke={highlighted ? nodeColor(cur === "idle" ? next : cur) : "#d9d3cb"}
-              strokeWidth={highlighted ? 1 : 0.5}
-              strokeDasharray={highlighted ? "none" : "2 3"}
-              style={{ transition: "stroke 0.5s ease" }}
-            />
+            <g key={`l-${i}`}>
+              <line
+                x1={cx + nodeR + 3}
+                y1={nodeY}
+                x2={nx - nodeR - 3}
+                y2={nodeY}
+                stroke={flowing ? `url(#flow-${i})` : "#d9d3cb"}
+                strokeWidth={flowing ? 1.5 : 1}
+                strokeLinecap="round"
+                style={{ transition: "stroke 0.5s ease" }}
+              />
+              {flowing ? (
+                <line
+                  x1={cx + nodeR + 3}
+                  y1={nodeY}
+                  x2={nx - nodeR - 3}
+                  y2={nodeY}
+                  stroke={color(n.phase)}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeDasharray="4 8"
+                  style={{
+                    animation: "stream-dash 0.8s linear infinite",
+                    opacity: 0.5,
+                  }}
+                  data-anim="stream"
+                />
+              ) : null}
+            </g>
           );
         })}
 
-        {LABELS.map((label, i) => {
-          const phase = label.toUpperCase() as keyof typeof phaseStatus;
-          const status = (phaseStatus[phase] || "idle") as PhaseStatus;
-          const cx = (width / LABELS.length) * (i + 0.5);
-          const color = nodeColor(status);
-          const fill = nodeFill(status);
-          const isRunning = status === "running";
+        {NODES.map((n, i) => {
+          const cx = spacing * (i + 0.5);
+          const c = color(n.phase);
+          const active = isActive(n.phase);
+          const done = isDone(n.phase);
 
           return (
-            <g key={label}>
+            <g key={n.phase}>
+              {active ? (
+                <>
+                  <circle
+                    cx={cx}
+                    cy={nodeY}
+                    r={nodeR + 6}
+                    fill="none"
+                    stroke={c}
+                    strokeWidth={1}
+                    opacity={0.3}
+                    style={{
+                      animation: "node-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
+                      transformBox: "fill-box",
+                      transformOrigin: "center",
+                    }}
+                    data-anim="ping"
+                  />
+                  <circle
+                    cx={cx}
+                    cy={nodeY}
+                    r={nodeR + 4}
+                    fill="none"
+                    stroke={c}
+                    strokeWidth={1}
+                    opacity={0.5}
+                    style={{
+                      animation: "node-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
+                      animationDelay: "0.4s",
+                      transformBox: "fill-box",
+                      transformOrigin: "center",
+                    }}
+                    data-anim="ping"
+                  />
+                </>
+              ) : null}
               <circle
                 cx={cx}
                 cy={nodeY}
                 r={nodeR}
-                fill={fill}
-                stroke={color}
-                strokeWidth={isRunning || status === "done" || status === "error" ? 1.5 : 1}
+                fill={done || active ? c : "none"}
+                stroke={c}
+                strokeWidth={isIdle(n.phase) ? 1.5 : 2}
                 style={{ transition: "fill 0.4s ease, stroke 0.4s ease" }}
               />
-              {isRunning ? (
-                <circle
-                  cx={cx}
-                  cy={nodeY}
-                  r={nodeR + 3}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth={0.5}
-                  opacity={0.35}
-                  style={{ animation: "ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite" }}
-                />
-              ) : null}
               <text
                 x={cx}
-                y={nodeY + 0.5}
+                y={nodeY + 1}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fill={isRunning || status === "done" ? "#f4f1ec" : "#8a857d"}
-                fontSize="7"
+                fill={done || active ? "#f4f1ec" : "#6f6a62"}
+                fontSize="11"
                 fontFamily="JetBrains Mono, ui-monospace, monospace"
                 style={{
                   fontVariantNumeric: "tabular-nums",
@@ -119,20 +224,55 @@ export function StewardDiagram({
                 x={cx}
                 y={labelY}
                 textAnchor="middle"
-                fill={status === "idle" ? "#8a857d" : "#1c1b1a"}
-                fontSize="6.5"
+                fill={isIdle(n.phase) ? "#6f6a62" : "#1c1b1a"}
+                fontSize="10"
                 fontFamily="Hanken Grotesk, ui-sans-serif, system-ui, sans-serif"
+                fontWeight="500"
                 style={{
                   letterSpacing: "0.16em",
                   textTransform: "uppercase",
                   transition: "fill 0.4s ease",
                 }}
               >
-                {label}
+                {n.label}
+              </text>
+              <text
+                x={cx}
+                y={descY}
+                textAnchor="middle"
+                fill="#6f6a62"
+                fontSize="8.5"
+                fontFamily="Hanken Grotesk, ui-sans-serif, system-ui, sans-serif"
+                style={{
+                  transition: "fill 0.4s ease",
+                }}
+              >
+                {n.desc}
               </text>
             </g>
           );
         })}
+
+        {/* Progress bar */}
+        <rect
+          x={0}
+          y={barY}
+          width={width}
+          height={barH}
+          fill="#e7e2d9"
+          rx={1}
+        />
+        <rect
+          x={0}
+          y={barY}
+          width={width * progress}
+          height={barH}
+          fill={allDone ? "#6f8267" : "#B85D3E"}
+          rx={1}
+          style={{
+            transition: "width 0.6s cubic-bezier(0.215, 0.61, 0.355, 1), fill 0.4s ease",
+          }}
+        />
       </svg>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import {
   CATALOG_CONFIG,
@@ -37,6 +37,7 @@ export function GlobalDock() {
   const onCatalog = pathname === "/";
   const active = ui.activeId;
   const [navOpen, setNavOpen] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     setNavOpen(false);
@@ -109,9 +110,9 @@ export function GlobalDock() {
       <AnimatePresence>
         {navOpen ? (
           <motion.div
-            initial={{ opacity: 0, y: -6 }}
+            initial={reducedMotion ? false : { opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
+            exit={reducedMotion ? undefined : { opacity: 0, y: -6 }}
             transition={{ duration: 0.16 }}
             className="pointer-events-auto absolute left-3 right-3 top-14 bg-ink/92 px-5 py-4 text-paper backdrop-blur-md sm:hidden"
             style={{ borderRadius: 16 }}

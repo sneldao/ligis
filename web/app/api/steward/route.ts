@@ -26,7 +26,7 @@ function encode(event: StewardEvent): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
 }
 
-async function* simulateLoop(_goal: string, dryRun: boolean): AsyncGenerator<StewardEvent> {
+async function* simulateLoop(_goal: string): AsyncGenerator<StewardEvent> {
   yield { type: "phase", phase: "BOOT", status: "start" };
   await sleep(450);
   yield { type: "phase", phase: "BOOT", status: "done" };
@@ -55,43 +55,38 @@ async function* simulateLoop(_goal: string, dryRun: boolean): AsyncGenerator<Ste
   }
   yield { type: "phase", phase: "GATE", status: "done" };
 
-  if (dryRun) {
-    yield { type: "phase", phase: "ACT", status: "skip" };
-    yield { type: "phase", phase: "RECORD", status: "skip" };
-  } else {
-    yield { type: "phase", phase: "ACT", status: "start" };
-    for (const name of DETECTED.filter((n) => n !== "agent.commerce.swap")) {
-      await sleep(820);
-      yield { type: "tx", phase: "ACT", name, txHash: fakeTx() };
-    }
-    yield { type: "phase", phase: "ACT", status: "done" };
-
-    yield { type: "phase", phase: "RECORD", status: "start" };
-    await sleep(1100);
-    yield {
-      type: "manifest",
-      phase: "RECORD",
-      rootHash: fakeTx(),
-      anchorTx: fakeTx(),
-    };
-    yield { type: "phase", phase: "RECORD", status: "done" };
+  await sleep(400);
+  yield { type: "phase", phase: "ACT", status: "start" };
+  for (const name of DETECTED.filter((n) => n !== "agent.commerce.swap")) {
+    await sleep(900);
+    yield { type: "tx", phase: "ACT", name, txHash: fakeTx() };
   }
+  yield { type: "phase", phase: "ACT", status: "done" };
+
+  yield { type: "phase", phase: "RECORD", status: "start" };
+  await sleep(1400);
+  yield {
+    type: "manifest",
+    phase: "RECORD",
+    rootHash: fakeTx(),
+    anchorTx: fakeTx(),
+  };
+  yield { type: "phase", phase: "RECORD", status: "done" };
 
   yield { type: "summary", ok: true, tokenId: "341" };
 }
 
 export async function POST(req: NextRequest) {
-  let body: { goal?: string; dryRun?: boolean } = {};
+  let body: { goal?: string } = {};
   try {
     body = await req.json();
   } catch {}
   const goal = (body.goal ?? "").trim() || "Operate as a Pharos agent.";
-  const dryRun = body.dryRun !== false;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        for await (const event of simulateLoop(goal, dryRun)) {
+        for await (const event of simulateLoop(goal)) {
           controller.enqueue(encode(event));
         }
       } catch (err) {

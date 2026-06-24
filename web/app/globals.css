@@ -5,7 +5,7 @@
   --color-paper-deep: #ece7df;
   --color-ink: #1c1b1a;
   --color-ink-soft: #5c5852;
-  --color-ink-quiet: #8a857d;
+  --color-ink-quiet: #6f6a62;
   --color-rule: #d9d3cb;
   --color-rule-soft: #e7e2d9;
   --color-terra: #b85d3e;
@@ -90,6 +90,17 @@ select:focus-visible {
   }
 }
 
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes draw-rule {
   from {
     transform: scaleX(0);
@@ -101,6 +112,10 @@ select:focus-visible {
 
 .animate-fade-in {
   animation: fade-in 420ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+}
+
+.animate-fadeInUp {
+  animation: fade-in-up 500ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
 
 .animate-draw-rule {

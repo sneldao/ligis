@@ -27,9 +27,10 @@ export function VerifyDemo({
         action={formAction}
         className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
       >
-        <label className="block space-y-2">
+        <label htmlFor="subject" className="block space-y-2">
           <span className="eyebrow">subject · wallet</span>
           <input
+            id="subject"
             name="subject"
             defaultValue={defaultSubject}
             spellCheck={false}
@@ -38,9 +39,10 @@ export function VerifyDemo({
             className="block w-full border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra"
           />
         </label>
-        <label className="block space-y-2">
+        <label htmlFor="capability" className="block space-y-2">
           <span className="eyebrow">capability</span>
           <select
+            id="capability"
             name="capability"
             defaultValue={capabilities[0]?.id}
             className="block w-full appearance-none border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra"

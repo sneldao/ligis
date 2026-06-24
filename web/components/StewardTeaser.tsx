@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { PHASES } from "@/lib/steward-events";
 import { Rule } from "./Rule";
@@ -9,8 +9,17 @@ import { Rule } from "./Rule";
 const CYCLE_MS = 1200;
 const HOLD_MS = 1600;
 
+const PHASE_THOUGHTS: Record<string, string> = {
+  BOOT: "I need to know who I am.",
+  REASON: "What does this goal require of me?",
+  GATE: "Checking what I already hold…",
+  ACT: "Issuing what I'm missing.",
+  RECORD: "Anchoring my proof to 0G.",
+};
+
 export function StewardTeaser() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     let step = 0;
@@ -49,6 +58,14 @@ export function StewardTeaser() {
             gates on the credential registry, self-issues anything missing, and
             anchors a manifest of the evidence into 0G Storage. End to end.
           </p>
+          {activeIndex > 0 && activeIndex <= PHASES.length ? (
+            <blockquote
+              key={activeIndex}
+              className="animate-fadeInUp mt-6 border-l border-terra pl-4 font-serif text-lg italic leading-snug text-ink"
+            >
+              {PHASE_THOUGHTS[PHASES[activeIndex - 1].key]}
+            </blockquote>
+          ) : null}
           <Link
             href="/steward"
             className="mt-8 inline-block text-sm text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
@@ -74,6 +91,7 @@ export function StewardTeaser() {
                 label={p.label}
                 gloss={p.gloss}
                 status={status}
+                reducedMotion={reducedMotion}
               />
             );
           })}
@@ -88,11 +106,13 @@ function PhasePill({
   label,
   gloss,
   status,
+  reducedMotion,
 }: {
   index: number;
   label: string;
   gloss: string;
   status: "idle" | "running" | "done";
+  reducedMotion: boolean | null;
 }) {
   const dotColor =
     status === "running"
@@ -107,7 +127,7 @@ function PhasePill({
       <motion.div
         layout
         className="grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-x-6 py-4"
-        animate={status === "running" ? { x: [0, 2, 0] } : { x: 0 }}
+        animate={status === "running" && !reducedMotion ? { x: [0, 2, 0] } : { x: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <div className="flex items-center gap-3">

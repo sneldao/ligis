@@ -13,6 +13,11 @@ import credentialsRef from "../../assets/credentials.example.json";
 const atlantic = networks.networks["atlantic-testnet"];
 const deployment = networks.deployment["atlantic-testnet"];
 
+const RPC_URL = process.env.PHAROS_RPC_URL ?? atlantic.rpcUrl;
+if (!RPC_URL) {
+  console.warn("[ligis] No PHAROS_RPC_URL set and no fallback in networks.json — chain reads will fail.");
+}
+
 export const pharosAtlantic = defineChain({
   id: atlantic.chainId,
   name: atlantic.name,
@@ -31,7 +36,7 @@ export const pharosAtlantic = defineChain({
 
 export const publicClient = createPublicClient({
   chain: pharosAtlantic,
-  transport: http(process.env.PHAROS_RPC_URL ?? atlantic.rpcUrl, {
+  transport: http(RPC_URL, {
     retryCount: 3,
     timeout: 20_000,
   }),
@@ -150,21 +155,21 @@ export type AgentSnapshot = {
 };
 
 export async function readAgentSnapshot(wallet: Address): Promise<AgentSnapshot> {
-  const tokenId = await readAgentId(wallet);
+  const tokenId = await readAgentId(wallet).catch(() => 0n);
   if (tokenId === 0n) {
     return { exists: false, tokenId: 0n, controller: null, tokenUri: "", held: [] };
   }
 
   const [controller, tokenUri, ...views] = await Promise.all([
-    readOwnerOf(tokenId),
+    readOwnerOf(tokenId).catch(() => null as Address | null),
     readTokenUri(tokenId).catch(() => ""),
-    ...capabilities.map((c) => readCredential(wallet, c.hash)),
+    ...capabilities.map((c) => readCredential(wallet, c.hash).catch(() => null)),
   ]);
 
   const held: HeldCredential[] = [];
   capabilities.forEach((cap, i) => {
-    const view = views[i] as CredentialView;
-    if (view.valid && !view.revoked) {
+    const view = views[i] as CredentialView | null;
+    if (view && view.valid && !view.revoked) {
       held.push({ capability: cap, view });
     }
   });

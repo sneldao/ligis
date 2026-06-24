@@ -6,7 +6,7 @@ import { Rule } from "./Rule";
 import { StewardDiagram } from "./StewardDiagram";
 import { truncateAddress, truncateHash } from "@/lib/format";
 
-type PhaseStatus = "idle" | "running" | "done" | "skip" | "error";
+type PhaseStatus = "idle" | "running" | "done" | "error";
 
 type State = {
   phaseStatus: Record<Phase, PhaseStatus>;
@@ -63,7 +63,6 @@ function apply(state: State, ev: StewardEvent): State {
 
 export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   const [goal, setGoal] = useState(defaultGoal);
-  const [dryRun, setDryRun] = useState(true);
   const [state, setState] = useState<State>(EMPTY);
   const [running, setRunning] = useState(false);
   const [showReal, setShowReal] = useState(false);
@@ -80,7 +79,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
       const res = await fetch("/api/steward", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal, dryRun }),
+        body: JSON.stringify({ goal }),
         signal: controller.signal,
       });
       if (!res.body) throw new Error("No response body");
@@ -114,7 +113,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     } finally {
       setRunning(false);
     }
-  }, [goal, dryRun]);
+  }, [goal]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -124,9 +123,29 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   const eventCount = state.events.length;
   const jsonPanel = useMemo(() => JSON.stringify(state.events, null, 2), [state.events]);
 
+  const thought = useMemo(() => {
+    const ps = state.phaseStatus;
+    for (const phase of ["RECORD", "ACT", "GATE", "REASON", "BOOT"] as const) {
+      const s = ps[phase];
+      if (s === "running" || s === "done") {
+        return AGENT_THOUGHTS[phase]?.[s] ?? null;
+      }
+    }
+    return AGENT_THOUGHTS.BOOT.idle;
+  }, [state.phaseStatus]);
+
   return (
     <div className="space-y-16">
       <StewardDiagram phaseStatus={state.phaseStatus} running={running} />
+
+      {thought ? (
+        <section className="space-y-4" key={thought}>
+          <p className="eyebrow">self · thought</p>
+          <blockquote className="animate-fadeInUp border-l-2 border-terra pl-6 font-serif text-2xl italic leading-snug text-ink transition-[border-color,color] duration-500">
+            {thought}
+          </blockquote>
+        </section>
+      ) : null}
 
       <section className="space-y-6">
         <div className="space-y-2">
@@ -142,18 +161,9 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
           />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-6">
-          <label className="inline-flex items-center gap-3 text-sm text-ink-soft">
-            <input
-              type="checkbox"
-              checked={dryRun}
-              onChange={(e) => setDryRun(e.target.checked)}
-              className="h-3 w-3 appearance-none border border-ink-soft bg-paper checked:bg-terra checked:border-terra"
-            />
-            <span>
-              <span className="text-ink">dry run</span>
-              <span className="ml-2 text-ink-quiet">— no on-chain writes</span>
-            </span>
-          </label>
+          <p className="font-mono text-[11px] tabular text-ink-quiet">
+            simulated · no on-chain writes
+          </p>
           <div className="flex items-baseline gap-6">
             {running ? (
               <button
@@ -218,51 +228,39 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                 </div>
               ) : null}
 
-              {p.key === "ACT" ? (
-                status === "skip" ? (
-                  <p className="font-serif text-base italic text-ink-quiet">
-                    Dry run — no credentials issued.
-                  </p>
-                ) : state.txs.length > 0 ? (
-                  <div className="space-y-0">
-                    {state.txs.map((t) => (
-                      <div key={t.txHash}>
-                        <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
-                          <span className="font-mono tabular text-ink">
-                            issued {t.name}
-                          </span>
-                          <span className="font-mono tabular text-ink-soft">
-                            {truncateHash(t.txHash, 10, 6)}
-                          </span>
-                        </div>
-                        <Rule tone="soft" />
+              {p.key === "ACT" && state.txs.length > 0 ? (
+                <div className="space-y-0">
+                  {state.txs.map((t) => (
+                    <div key={t.txHash}>
+                      <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
+                        <span className="font-mono tabular text-ink">
+                          issued {t.name}
+                        </span>
+                        <span className="font-mono tabular text-ink-soft">
+                          {truncateHash(t.txHash, 10, 6)}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                ) : null
+                      <Rule tone="soft" />
+                    </div>
+                  ))}
+                </div>
               ) : null}
 
-              {p.key === "RECORD" ? (
-                status === "skip" ? (
-                  <p className="font-serif text-base italic text-ink-quiet">
-                    Dry run — manifest not anchored.
-                  </p>
-                ) : state.manifest ? (
-                  <div className="space-y-3 text-sm">
-                    <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
-                      <span className="text-ink-quiet">manifest root</span>
-                      <span className="font-mono tabular text-ink">
-                        {truncateHash(state.manifest.rootHash, 10, 6)}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
-                      <span className="text-ink-quiet">anchor tx</span>
-                      <span className="font-mono tabular text-ink">
-                        {truncateAddress(state.manifest.anchorTx, 10, 6)}
-                      </span>
-                    </div>
+              {p.key === "RECORD" && state.manifest ? (
+                <div className="space-y-3 text-sm">
+                  <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+                    <span className="text-ink-quiet">manifest root</span>
+                    <span className="font-mono tabular text-ink">
+                      {truncateHash(state.manifest.rootHash, 10, 6)}
+                    </span>
                   </div>
-                ) : null
+                  <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+                    <span className="text-ink-quiet">anchor tx</span>
+                    <span className="font-mono tabular text-ink">
+                      {truncateAddress(state.manifest.anchorTx, 10, 6)}
+                    </span>
+                  </div>
+                </div>
               ) : null}
             </PhaseRow>
           );
@@ -339,6 +337,30 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   );
 }
 
+const AGENT_THOUGHTS: Record<string, Record<string, string>> = {
+  BOOT: {
+    idle: "I exist, but I don't know who I am yet.",
+    running: "Searching the registry for my agent token…",
+    done: "I'm token #341. I exist on-chain. Now — what am I for?",
+  },
+  REASON: {
+    running: "Sending my goal to 0G Compute. What capabilities does this require?",
+    done: "I need escrow and swap. Let me check what I already hold.",
+  },
+  GATE: {
+    running: "Checking the credential registry — what do I have, what's missing?",
+    done: "I hold swap, but escrow is missing. I know what I need.",
+  },
+  ACT: {
+    running: "Self-issuing the missing credential. I don't need permission — I'm authorized.",
+    done: "Credential issued and on-chain. I have everything I need.",
+  },
+  RECORD: {
+    running: "Writing my evidence manifest to 0G Storage — goal, reasoning, every tx hash.",
+    done: "I know who I am, what I can do, and I can prove both.",
+  },
+};
+
 function PhaseCommand({
   index,
   label,
@@ -386,12 +408,12 @@ function PhaseRow({
       ? "bg-terra animate-pulse"
       : status === "done"
         ? "bg-sage"
-        : status === "skip"
-          ? "bg-ink-quiet"
-          : status === "error"
-            ? "bg-revoke"
-            : "bg-rule";
+        : status === "error"
+          ? "bg-revoke"
+          : "bg-rule";
   const indexColor = status === "idle" ? "text-ink-quiet" : "text-ink";
+
+  const statusKey = `${index}-${status}`;
 
   return (
     <div className="grid grid-cols-[3rem_1fr] items-start gap-x-6">
@@ -401,7 +423,7 @@ function PhaseRow({
           aria-hidden
         />
       </div>
-      <div className="space-y-3">
+      <div className="space-y-3" key={statusKey}>
         <header className="flex items-baseline justify-between">
           <p className={`text-[11px] uppercase tracking-[0.16em] ${indexColor}`}>
             {String(index).padStart(2, "0")} · {phase.label}
@@ -411,8 +433,14 @@ function PhaseRow({
           </span>
         </header>
         <Rule />
-        <p className="font-serif text-sm italic text-ink-quiet">{phase.gloss}.</p>
-        {children}
+        <p className={`font-serif text-sm italic transition-colors duration-500 ${status === "running" ? "text-terra" : status === "done" ? "text-sage" : "text-ink-quiet"}`}>
+          {phase.gloss}.
+        </p>
+        {status !== "idle" ? (
+          <div className="animate-fadeInUp">{children}</div>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );

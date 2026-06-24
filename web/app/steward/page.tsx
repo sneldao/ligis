@@ -60,10 +60,10 @@ export default function StewardPage() {
           </span>
           <p className="font-serif text-sm leading-relaxed text-ink-soft">
             This is a <strong>simulated</strong> run — no on-chain writes, no
-            0G wallet needed. The timing and events mirror the real loop so
-            you can watch the agent come to life without provisioning a thing.
-            The real CLI commands are below if you want to run it against your
-            own keys.
+            0G wallet needed. All five phases execute with realistic timing and
+            simulated transaction hashes so you can watch the full loop come to
+            life without provisioning a thing. The real CLI commands are below
+            if you want to run it against your own keys.
           </p>
         </div>
       </section>

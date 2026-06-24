@@ -1,3 +1,5 @@
+"use client";
+
 export function Diagram({ className = "" }: { className?: string }) {
   const W = 920;
   const H = 360;
@@ -14,6 +16,18 @@ export function Diagram({ className = "" }: { className?: string }) {
       role="img"
       aria-label="Two contracts compose. CredentialRegistry never depends on PharosAgentID."
     >
+      <style>
+        {`
+          @keyframes diagram-flow {
+            to { stroke-dashoffset: -20; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            [data-anim="diagram-flow"] {
+              animation: none !important;
+            }
+          }
+        `}
+      </style>
       <line x1={leftX} y1={top} x2={leftX + boxW} y2={top} stroke="#1C1B1A" strokeWidth="0.5" />
       <line
         x1={leftX}
@@ -39,7 +53,7 @@ export function Diagram({ className = "" }: { className?: string }) {
         fontFamily="JetBrains Mono, monospace"
         fontSize="11"
         letterSpacing="2"
-        fill="#8A857D"
+        fill="#6f6a62"
       >
         01 · IDENTITY
       </text>
@@ -87,7 +101,7 @@ export function Diagram({ className = "" }: { className?: string }) {
         fontFamily="JetBrains Mono, monospace"
         fontSize="11"
         letterSpacing="2"
-        fill="#8A857D"
+        fill="#6f6a62"
       >
         02 · CREDENTIALS
       </text>
@@ -134,6 +148,18 @@ export function Diagram({ className = "" }: { className?: string }) {
         stroke="#B85D3E"
         strokeWidth="0.75"
         fill="none"
+      />
+      <path
+        d={`M ${leftX + boxW + 10} ${top + 100} Q ${(leftX + boxW + rightX) / 2} ${top + 70} ${rightX - 10} ${top + 100}`}
+        stroke="#B85D3E"
+        strokeWidth="1.5"
+        fill="none"
+        strokeDasharray="4 6"
+        style={{
+          animation: "diagram-flow 1.2s linear infinite",
+          opacity: 0.5,
+        }}
+        data-anim="diagram-flow"
       />
       <text
         x={(leftX + boxW + rightX) / 2}
