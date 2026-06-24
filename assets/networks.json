@@ -43,11 +43,11 @@
   "defaultNetwork": "atlantic-testnet",
   "deployment": {
     "atlantic-testnet": {
-      "pharosAgentId": "0xBAab32536368bBD97BD9410CCE6b7d075CdcAcF8",
-      "credentialRegistry": "0xf583421A8e11aEB42d26798F285dc590A992e488",
+      "pharosAgentId": "0xb74508134CC0A0EE868E4FAc76EFD1db66c393e0",
+      "credentialRegistry": "0xcA10b459c15E0F24866053F737B8CBBE9a81048d",
       "chainId": 688689,
       "deployer": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
-      "deployedAt": "1781675551"
+      "deployedAt": "1782297709"
     },
     "local-anvil": {
       "network": "local-anvil",
