@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { DynamicIsland, EscListener, ScrollHint } from "./DynamicIsland";
+import { FocusPanel } from "./FocusPanel";
 import { seedCatalog } from "./agentSeed";
 
 const CatalogScene = dynamic(
@@ -30,6 +31,7 @@ export function CatalogHero() {
 
       <DynamicIsland totalCount={agents.length} />
       <EscListener />
+      <FocusPanel />
 
       <motion.div
         initial={{ opacity: 0, y: 8 }}

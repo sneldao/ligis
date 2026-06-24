@@ -2,54 +2,89 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group } from "three";
+import type { Group, Mesh } from "three";
 import { easing } from "maath";
 import { Text } from "@react-three/drei";
 import { useRouter } from "next/navigation";
 import { portraitParams } from "@/lib/portrait";
-import { CATALOG_CONFIG, rigState, setActiveId, setHoveredId } from "./catalogState";
+import {
+  CATALOG_CONFIG,
+  rigState,
+  setActiveId,
+  setHoveredId,
+} from "./catalogState";
 import type { CatalogAgent } from "./agentSeed";
 
-const PORTRAIT_W = 2.4;
-const PORTRAIT_H = 3.0;
+const PORTRAIT_W = 2.6;
+const PORTRAIT_H = 3.25;
+const TILE_DEPTH = 0.18;
+
+function bytes(addr: string): number[] {
+  const hex = addr.toLowerCase().replace(/^0x/, "").padEnd(40, "0");
+  const out: number[] = [];
+  for (let i = 0; i < 20; i++) out.push(parseInt(hex.slice(i * 2, i * 2 + 2), 16));
+  return out;
+}
 
 export function AgentTile({
   agent,
   position,
+  enterDelay,
 }: {
   agent: CatalogAgent;
   position: [number, number, number];
+  enterDelay: number;
 }) {
   const router = useRouter();
   const group = useRef<Group>(null);
+  const baseMesh = useRef<Mesh>(null);
+  const startTime = useRef(performance.now());
+
   const params = useMemo(() => portraitParams(agent.address), [agent.address]);
+  const jitter = useMemo(() => {
+    const b = bytes(agent.address);
+    return {
+      zOffset: ((b[14]! % 32) - 16) / 200,
+      rotZ: ((b[15]! % 32) - 16) / 600,
+      rotX: ((b[16]! % 16) - 8) / 800,
+    };
+  }, [agent.address]);
+
   const id = agent.address;
 
   useFrame((_state, delta) => {
     if (!group.current) return;
+    const elapsed = performance.now() - startTime.current - enterDelay;
+    const reveal = Math.max(0, Math.min(1, elapsed / 700));
     const isActive = rigState.activeId === id;
     const isAnyActive = rigState.activeId !== null;
+
     const targetScale = isActive
       ? CATALOG_CONFIG.focusScale
       : isAnyActive
         ? CATALOG_CONFIG.dimScale
         : 1;
-    easing.damp3(group.current.scale, [targetScale, targetScale, 1], 0.18, delta);
+    const eased = reveal * targetScale;
+    easing.damp3(group.current.scale, [eased, eased, eased], 0.22, delta);
 
-    const targetZ = isActive ? 1.5 : 0;
-    easing.damp(group.current.position, "z", position[2] + targetZ, 0.2, delta);
+    const focusZ = isActive ? 1.6 : 0;
+    const distFromCenter = Math.sqrt(position[0] ** 2 + position[1] ** 2);
+    const curveBack = distFromCenter * CATALOG_CONFIG.curvatureStrength;
+    const targetZ = position[2] + focusZ + jitter.zOffset - curveBack;
+    easing.damp(group.current.position, "z", targetZ, 0.28, delta);
 
-    const curveBack =
-      ((position[0] * position[0] + position[1] * position[1]) ** 0.5) *
-      CATALOG_CONFIG.curvatureStrength;
-    easing.damp(group.current.position, "z", position[2] + targetZ - curveBack, 0.25, delta);
+    const liftIn = (1 - reveal) * -2;
+    easing.damp(group.current.position, "y", position[1] + liftIn, 0.22, delta);
+
+    easing.damp(group.current.rotation, "z", jitter.rotZ, 0.4, delta);
+    easing.damp(group.current.rotation, "x", jitter.rotX, 0.4, delta);
   });
 
   const px = (params.primary.cx - 0.5) * PORTRAIT_W;
   const py = (0.5 - params.primary.cy) * PORTRAIT_H;
   const pr = params.primary.r * PORTRAIT_W;
-  const gx = px + params.ghost.ox * PORTRAIT_W * 8;
-  const gy = py - params.ghost.oy * PORTRAIT_H * 8;
+  const gx = px + params.ghost.ox * PORTRAIT_W * 10;
+  const gy = py - params.ghost.oy * PORTRAIT_H * 10;
   const sx = (params.secondary.cx - 0.5) * PORTRAIT_W;
   const sy = (0.5 - params.secondary.cy) * PORTRAIT_H;
   const sr = params.secondary.r * PORTRAIT_W;
@@ -59,7 +94,7 @@ export function AgentTile({
   return (
     <group
       ref={group}
-      position={position}
+      position={[position[0], position[1] - 2, position[2]]}
       onPointerOver={(e) => {
         e.stopPropagation();
         setHoveredId(id);
@@ -81,33 +116,47 @@ export function AgentTile({
         }
       }}
     >
-      <mesh position={[0, 0, 0]}>
-        <planeGeometry args={[PORTRAIT_W, PORTRAIT_H]} />
-        <meshBasicMaterial color={params.deck.paper} />
+      <mesh ref={baseMesh} castShadow receiveShadow position={[0, 0, -TILE_DEPTH / 2]}>
+        <boxGeometry args={[PORTRAIT_W, PORTRAIT_H, TILE_DEPTH]} />
+        <meshStandardMaterial
+          color={params.deck.paper}
+          roughness={0.92}
+          metalness={0.0}
+        />
       </mesh>
 
-      <mesh position={[gx, gy, 0.001]}>
-        <circleGeometry args={[pr, 48]} />
-        <meshBasicMaterial color={params.deck.secondary} transparent opacity={0.42} />
+      <mesh position={[gx, gy, 0.002]}>
+        <circleGeometry args={[pr, 64]} />
+        <meshStandardMaterial
+          color={params.deck.secondary}
+          transparent
+          opacity={0.42}
+          roughness={1}
+        />
       </mesh>
 
-      <mesh position={[px, py, 0.002]}>
-        <circleGeometry args={[pr, 48]} />
-        <meshBasicMaterial color={params.deck.primary} />
+      <mesh position={[px, py, 0.004]}>
+        <circleGeometry args={[pr, 64]} />
+        <meshStandardMaterial color={params.deck.primary} roughness={0.85} />
       </mesh>
 
-      <mesh position={[0, bandY, 0.003]}>
+      <mesh position={[0, bandY, 0.006]}>
         <planeGeometry args={[PORTRAIT_W, bandH]} />
-        <meshBasicMaterial color={params.deck.secondary} transparent opacity={0.86} />
+        <meshStandardMaterial
+          color={params.deck.secondary}
+          transparent
+          opacity={0.88}
+          roughness={0.9}
+        />
       </mesh>
 
-      <mesh position={[sx, sy, 0.004]}>
+      <mesh position={[sx, sy, 0.008]}>
         <circleGeometry args={[sr, 32]} />
-        <meshBasicMaterial color={params.deck.secondary} />
+        <meshStandardMaterial color={params.deck.secondary} roughness={0.85} />
       </mesh>
 
       <Text
-        position={[0, -PORTRAIT_H / 2 - 0.22, 0.01]}
+        position={[0, -PORTRAIT_H / 2 - 0.28, 0.01]}
         fontSize={0.14}
         color="#1C1B1A"
         anchorX="center"

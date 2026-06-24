@@ -6,9 +6,15 @@ import { Vector3 } from "three";
 import { easing } from "maath";
 import { CATALOG_CONFIG, rigState } from "./catalogState";
 
+const IDLE_DELAY_MS = 6000;
+const IDLE_RADIUS = 1.4;
+const IDLE_SPEED = 0.18;
+
 export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
   const { camera, gl } = useThree();
   const prevPos = useRef(new Vector3());
+  const lastInteract = useRef(performance.now());
+  const idlePhase = useRef(Math.random() * Math.PI * 2);
 
   useEffect(() => {
     camera.position.z = rigState.zoom;
@@ -35,6 +41,10 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
       return { x: xLimit, y: yLimit, visibleHeight };
     };
 
+    const markActive = () => {
+      lastInteract.current = performance.now();
+    };
+
     const onDown = (e: PointerEvent) => {
       isDown = true;
       startX = e.clientX;
@@ -44,10 +54,12 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
       maxDist = 0;
       rigState.isDragging = false;
       canvas.style.cursor = "grabbing";
+      markActive();
     };
 
     const onMove = (e: PointerEvent) => {
       if (!isDown) return;
+      markActive();
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       maxDist = Math.max(maxDist, Math.sqrt(dx * dx + dy * dy));
@@ -83,6 +95,7 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      markActive();
       const next = Math.max(
         CATALOG_CONFIG.zoomIn,
         Math.min(CATALOG_CONFIG.zoomOut + 12, rigState.zoom + e.deltaY * 0.02)
@@ -108,6 +121,14 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
   }, [gl, camera, gridW, gridH]);
 
   useFrame((_state, delta) => {
+    const idleFor = (performance.now() - lastInteract.current) / 1000;
+    if (idleFor > IDLE_DELAY_MS / 1000 && rigState.activeId === null && !rigState.isDragging) {
+      idlePhase.current += delta * IDLE_SPEED;
+      const driftX = Math.cos(idlePhase.current) * IDLE_RADIUS;
+      const driftY = Math.sin(idlePhase.current * 0.73) * IDLE_RADIUS * 0.5;
+      rigState.target.set(driftX, driftY, 0);
+    }
+
     easing.damp3(rigState.current, rigState.target, CATALOG_CONFIG.dampFactor, delta);
     easing.damp(camera.position, "z", rigState.zoom, CATALOG_CONFIG.zoomDamp, delta);
     rigState.velocity.copy(rigState.current).sub(prevPos.current);
