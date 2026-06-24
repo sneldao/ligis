@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
 import { capabilities, network } from "@/lib/chain";
+import { SITE_URL } from "@/lib/site";
 
 const EXAMPLE_SUBJECT = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
 const EXAMPLE_CAP = capabilities[0]?.id ?? "kyc.basic";
@@ -13,14 +14,14 @@ export const metadata = {
 
 export default function EmbedPage() {
   const iframeCode = `<iframe
-  src="https://ligis.app/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}"
+  src="${SITE_URL}/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}"
   width="520" height="120"
   style="border: 0; background: transparent;"
   loading="lazy"
   title="Ligis verification badge">
 </iframe>`;
 
-  const directLink = `https://ligis.app/embed/verify?subject={SUBJECT}&capability={CAPABILITY}`;
+  const directLink = `${SITE_URL}/embed/verify?subject={SUBJECT}&capability={CAPABILITY}`;
 
   return (
     <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">

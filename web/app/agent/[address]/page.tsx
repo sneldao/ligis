@@ -8,6 +8,7 @@ import { ShareRow } from "@/components/ShareRow";
 import { Snippet } from "@/components/Snippet";
 import { capabilities, network, readAgentSnapshot } from "@/lib/chain";
 import { isAddressLike, monthYear, truncateAddress } from "@/lib/format";
+import { SITE_URL } from "@/lib/site";
 
 type Params = { address: string };
 
@@ -189,7 +190,7 @@ function ShareSection({
   heldCount: number;
   firstCapability: string;
 }) {
-  const url = `https://ligis.app/agent/${address}`;
+  const url = `${SITE_URL}/agent/${address}`;
   const heldLine =
     heldCount > 0
       ? `${heldCount} verified ${heldCount === 1 ? "capability" : "capabilities"}`
@@ -197,7 +198,7 @@ function ShareSection({
   const text = `${truncateAddress(address)} · ${heldLine} on Ligis.`;
 
   const iframeCode = `<iframe
-  src="https://ligis.app/embed/verify?subject=${address}&capability=${firstCapability}"
+  src="${SITE_URL}/embed/verify?subject=${address}&capability=${firstCapability}"
   width="520" height="120"
   style="border: 0; background: transparent;"
   loading="lazy"

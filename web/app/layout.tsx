@@ -1,11 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, Fraunces, JetBrains_Mono } from "next/font/google";
 import { CommandPalette } from "@/components/CommandPalette";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://ligis.app");
 
 const hanken = Hanken_Grotesk({
   subsets: ["latin"],
