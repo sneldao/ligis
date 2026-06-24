@@ -6,32 +6,12 @@ import {
   readAgentSnapshot,
 } from "@/lib/chain";
 import { isAddressLike, truncateAddress } from "@/lib/format";
+import { loadFont } from "@/lib/og-fonts";
 import { portraitSvgInner } from "@/lib/portrait";
 
 export const alt = "Ligis · agent identity";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-
-async function loadFont(family: string, weight = 600): Promise<ArrayBuffer | null> {
-  try {
-    const cssUrl = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}:wght@${weight}&display=swap`;
-    const cssRes = await fetch(cssUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-      },
-    });
-    if (!cssRes.ok) return null;
-    const css = await cssRes.text();
-    const match = css.match(/src: url\(([^)]+)\) format/);
-    if (!match) return null;
-    const fontRes = await fetch(match[1]!);
-    if (!fontRes.ok) return null;
-    return await fontRes.arrayBuffer();
-  } catch {
-    return null;
-  }
-}
 
 export default async function Image({
   params,

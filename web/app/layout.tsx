@@ -1,7 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, Fraunces, JetBrains_Mono } from "next/font/google";
 import { CommandPalette } from "@/components/CommandPalette";
 import "./globals.css";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://ligis.app");
 
 const hanken = Hanken_Grotesk({
   subsets: ["latin"],
@@ -22,10 +26,63 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
+const TITLE = "Ligis — a trust layer for autonomous agents";
+const DESCRIPTION =
+  "Portable identity and verifiable credentials for AI agents on Pharos. Two non-custodial contracts, one read: isCapable. No admin, no SDK, no oracle.";
+
 export const metadata: Metadata = {
-  title: "Ligis — trust, made portable for autonomous agents",
-  description:
-    "Portable identity and verifiable credentials for AI agents. Issue, verify, rotate, and revoke on Pharos.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: TITLE,
+    template: "%s · Ligis",
+  },
+  description: DESCRIPTION,
+  applicationName: "Ligis",
+  keywords: [
+    "Ligis",
+    "Pharos",
+    "agent identity",
+    "verifiable credentials",
+    "EIP-712",
+    "ERC-721",
+    "AI agents",
+    "0G",
+    "Trust Steward",
+  ],
+  authors: [{ name: "sneldao" }],
+  creator: "sneldao",
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "Ligis",
+    title: TITLE,
+    description: DESCRIPTION,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    creator: "@sneldao",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+  category: "technology",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F4F1EC" },
+    { media: "(prefers-color-scheme: dark)", color: "#F4F1EC" },
+  ],
+  colorScheme: "light",
+  width: "device-width",
+  initialScale: 1,
 };
 
 function PaletteHint() {
