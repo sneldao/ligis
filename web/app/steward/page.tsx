@@ -5,7 +5,7 @@ import { StewardRunner } from "@/components/StewardRunner";
 import { network } from "@/lib/chain";
 
 const DEFAULT_GOAL =
-  "Operate as a Pharos agent that participates in escrow-backed commerce and can swap between approved venues.";
+  "I am a Pharos agent. I need to participate in escrow-backed commerce and swap between approved venues. Figure out what credentials I need and make sure I have them.";
 
 const SELF_HOSTED = `# 0G wallet (one-time, see docs/setup.md)
 source .env.d/zerog.env
@@ -16,8 +16,9 @@ PRIVATE_KEY=0x... ligis agent run \\
   --goal "Operate as a Pharos agent that participates in escrow-backed commerce."`;
 
 export const metadata = {
-  title: "Steward — Ligis",
-  description: "Watch an agent boot itself: mint, reason, gate, act, record.",
+  title: "The Steward — Ligis",
+  description:
+    "An agent that doesn't know who it is yet. Watch it mint its own identity, reason about what it needs, earn credentials, and record its journey — all autonomously.",
 };
 
 export default function StewardPage() {
@@ -35,16 +36,20 @@ export default function StewardPage() {
 
       <section className="mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
-          Watch an agent
+          An agent that
           <br />
-          boot itself.
+          doesn&rsquo;t know
+          <br />
+          who it is yet.
         </h1>
         <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
-          The Trust Steward is the autonomous loop. Given a goal, it ensures
-          its own identity token, asks 0G Compute which capabilities the goal
-          calls for, checks the credential registry for each one, self-issues
-          what is missing, and anchors a manifest of the evidence into 0G
-          Storage.
+          The Trust Steward arrives with nothing but a goal. No identity token,
+          no credentials, no proof of what it can do. Over the next few seconds
+          it mints its own agent ID, asks 0G Compute what capabilities the goal
+          requires, checks the credential registry, self-issues whatever is
+          missing, and anchors a tamper-proof manifest of every step into 0G
+          Storage. By the end it knows who it is, what it can do, and can prove
+          both. This is the autonomous loop.
         </p>
         <div
           className="mt-8 flex items-start gap-4 bg-paper-deep px-5 py-4"
@@ -54,11 +59,11 @@ export default function StewardPage() {
             ⚠ simulation
           </span>
           <p className="font-serif text-sm leading-relaxed text-ink-soft">
-            This page runs a <strong>simulated</strong> loop against{" "}
-            {network.name.toLowerCase()}. No on-chain writes occur. Events are
-            generated client-side at believable timing so the shape of the
-            loop is legible without provisioning a 0G wallet. Scroll down for
-            the real CLI commands to run it yourself.
+            This is a <strong>simulated</strong> run — no on-chain writes, no
+            0G wallet needed. The timing and events mirror the real loop so
+            you can watch the agent come to life without provisioning a thing.
+            The real CLI commands are below if you want to run it against your
+            own keys.
           </p>
         </div>
       </section>

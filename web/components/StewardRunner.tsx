@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { PHASES, type Phase, type StewardEvent } from "@/lib/steward-events";
 import { Rule } from "./Rule";
+import { StewardDiagram } from "./StewardDiagram";
 import { truncateAddress, truncateHash } from "@/lib/format";
 
 type PhaseStatus = "idle" | "running" | "done" | "skip" | "error";
@@ -125,6 +126,8 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
 
   return (
     <div className="space-y-16">
+      <StewardDiagram phaseStatus={state.phaseStatus} running={running} />
+
       <section className="space-y-6">
         <div className="space-y-2">
           <label htmlFor="goal" className="eyebrow block">
