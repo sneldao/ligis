@@ -1,8 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, Fraunces, JetBrains_Mono } from "next/font/google";
 import { CommandPalette } from "@/components/CommandPalette";
+import { GlobalDock } from "@/components/GlobalDock";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
+
+const EMOJI_FAVICON = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="88">🪪</text></svg>'
+)}`;
 
 const hanken = Hanken_Grotesk({
   subsets: ["latin"],
@@ -70,6 +75,11 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
   },
   category: "technology",
+  icons: {
+    icon: [{ url: EMOJI_FAVICON, type: "image/svg+xml" }],
+    shortcut: [{ url: EMOJI_FAVICON, type: "image/svg+xml" }],
+    apple: [{ url: EMOJI_FAVICON, type: "image/svg+xml" }],
+  },
 };
 
 export const viewport: Viewport = {
@@ -107,6 +117,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <div id="main-content">{children}</div>
+        <GlobalDock />
         <CommandPalette />
         <PaletteHint />
       </body>

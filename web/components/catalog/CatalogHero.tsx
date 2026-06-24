@@ -2,9 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { DynamicIsland, EscListener, ScrollHint } from "./DynamicIsland";
+import { EscListener, ScrollHint } from "./DynamicIsland";
 import { FocusPanel } from "./FocusPanel";
-import { seedCatalog } from "./agentSeed";
 
 const CatalogScene = dynamic(
   () => import("./CatalogScene").then((m) => m.CatalogScene),
@@ -21,15 +20,12 @@ const CatalogScene = dynamic(
 );
 
 export function CatalogHero() {
-  const agents = seedCatalog(72);
-
   return (
     <section className="relative h-[100dvh] w-full overflow-hidden">
       <div className="absolute inset-0">
-        <CatalogScene agents={agents} />
+        <CatalogScene />
       </div>
 
-      <DynamicIsland totalCount={agents.length} />
       <EscListener />
       <FocusPanel />
 

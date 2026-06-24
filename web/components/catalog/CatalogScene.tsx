@@ -1,18 +1,12 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { ContactShadows } from "@react-three/drei";
-import { AgentTile } from "./AgentTile";
+import { ChunkedField } from "./ChunkedField";
 import { Rig } from "./Rig";
 import { CATALOG_CONFIG } from "./catalogState";
-import { seedCatalog, type CatalogAgent } from "./agentSeed";
-import { layoutCatalog } from "./positions";
 
-export function CatalogScene({ agents }: { agents?: CatalogAgent[] }) {
-  const items = useMemo(() => agents ?? seedCatalog(72), [agents]);
-  const layout = useMemo(() => layoutCatalog(items), [items]);
-
+export function CatalogScene() {
   return (
     <Canvas
       shadows
@@ -31,38 +25,18 @@ export function CatalogScene({ agents }: { agents?: CatalogAgent[] }) {
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
-        shadow-camera-left={-26}
-        shadow-camera-right={26}
-        shadow-camera-top={26}
-        shadow-camera-bottom={-26}
+        shadow-camera-left={-30}
+        shadow-camera-right={30}
+        shadow-camera-top={30}
+        shadow-camera-bottom={-30}
       />
       <directionalLight position={[-6, -4, 6]} intensity={0.3} color="#d6e0d2" />
 
       <Suspense fallback={null}>
-        {items.map((agent, i) => {
-          const enterDelay = i * 18 + Math.random() * 60;
-          const layoutItem = layout.positions[i]!;
-          return (
-            <AgentTile
-              key={agent.address}
-              agent={agent}
-              layout={layoutItem}
-              enterDelay={enterDelay}
-            />
-          );
-        })}
+        <ChunkedField />
       </Suspense>
 
-      <ContactShadows
-        position={[0, -layout.height / 2 - 1.8, 0]}
-        opacity={0.3}
-        scale={Math.max(layout.width, layout.height) * 1.2}
-        blur={3.6}
-        far={6}
-        color="#1c1b1a"
-      />
-
-      <Rig gridW={layout.width} gridH={layout.height} />
+      <Rig />
     </Canvas>
   );
 }

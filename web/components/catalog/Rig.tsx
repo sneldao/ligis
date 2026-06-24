@@ -7,8 +7,8 @@ import { easing } from "maath";
 import { CATALOG_CONFIG, rigState } from "./catalogState";
 
 const IDLE_DELAY_MS = 5500;
-const IDLE_RADIUS = 2.2;
-const IDLE_SPEED = 0.16;
+const IDLE_RADIUS = 2.6;
+const IDLE_SPEED = 0.13;
 
 const KEY_FORWARD = ["w", "W", "ArrowUp"];
 const KEY_BACK = ["s", "S", "ArrowDown"];
@@ -17,13 +17,14 @@ const KEY_RIGHT = ["d", "D", "ArrowRight"];
 const KEY_UP = ["e", "E"];
 const KEY_DOWN = ["q", "Q"];
 
-const KEY_PAN_SPEED = 14;
+const KEY_PAN_SPEED = 16;
 const KEY_Z_SPEED = 12;
 
-export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
+export function Rig() {
   const { camera, gl } = useThree();
   const prevPos = useRef(new Vector3());
   const lastInteract = useRef(performance.now());
+  const idleAnchor = useRef<{ x: number; y: number } | null>(null);
   const idlePhase = useRef(Math.random() * Math.PI * 2);
   const keys = useRef({
     forward: false,
@@ -52,16 +53,7 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
 
     const markActive = () => {
       lastInteract.current = performance.now();
-    };
-
-    const getBounds = () => {
-      const dist = cam.position.z;
-      const vFov = (cam.fov * Math.PI) / 180;
-      const visibleHeight = 2 * Math.tan(vFov / 2) * dist;
-      const visibleWidth = visibleHeight * cam.aspect;
-      const xLimit = Math.max(0, (gridW - visibleWidth) / 2 + 3);
-      const yLimit = Math.max(0, (gridH - visibleHeight) / 2 + 3);
-      return { x: xLimit, y: yLimit, visibleHeight };
+      idleAnchor.current = null;
     };
 
     const onDown = (e: PointerEvent) => {
@@ -90,17 +82,11 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
       if (maxDist > CATALOG_CONFIG.clickThreshold) {
         rigState.isDragging = true;
       }
-      const { x: bx, y: by, visibleHeight } = getBounds();
+      const vFov = (cam.fov * Math.PI) / 180;
+      const visibleHeight = 2 * Math.tan(vFov / 2) * cam.position.z;
       const sensitivity = (visibleHeight / window.innerHeight) * CATALOG_CONFIG.dragSpeed;
-      let tx = initialX + dx * sensitivity;
-      let ty = initialY - dy * sensitivity;
-      if (tx > bx) tx = bx + (tx - bx) * CATALOG_CONFIG.dragResistance;
-      if (tx < -bx) tx = -bx + (tx + bx) * CATALOG_CONFIG.dragResistance;
-      if (ty > by) ty = by + (ty - by) * CATALOG_CONFIG.dragResistance;
-      if (ty < -by) ty = -by + (ty + by) * CATALOG_CONFIG.dragResistance;
-      const max = 3;
-      tx = Math.max(-bx - max, Math.min(bx + max, tx));
-      ty = Math.max(-by - max, Math.min(by + max, ty));
+      const tx = initialX + dx * sensitivity;
+      const ty = initialY - dy * sensitivity;
       rigState.target.set(tx, ty, 0);
     };
 
@@ -109,22 +95,15 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
       isDown = false;
       rigState.isDragging = false;
       canvas.style.cursor = "grab";
-      if (rigState.activeId !== null) return;
-      const { x: bx, y: by } = getBounds();
-      const isZoomedOut = cam.position.z > CATALOG_CONFIG.zoomIn + 2;
-      const snapX = isZoomedOut ? 0 : Math.max(-bx, Math.min(bx, rigState.target.x));
-      const snapY = isZoomedOut ? 0 : Math.max(-by, Math.min(by, rigState.target.y));
-      rigState.target.set(snapX, snapY, 0);
     };
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       markActive();
-      const next = Math.max(
+      rigState.zoom = Math.max(
         CATALOG_CONFIG.zoomIn,
         Math.min(CATALOG_CONFIG.zoomOut + 14, rigState.zoom + e.deltaY * 0.02)
       );
-      rigState.zoom = next;
     };
 
     const onKey = (down: boolean) => (e: KeyboardEvent) => {
@@ -170,7 +149,7 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
       window.removeEventListener("keydown", keyDownHandler);
       window.removeEventListener("keyup", keyUpHandler);
     };
-  }, [gl, camera, gridW, gridH]);
+  }, [gl, camera]);
 
   useFrame((_state, delta) => {
     const k = keys.current;
@@ -185,16 +164,8 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
     if (k.back) dz += 1;
 
     if (dx || dy) {
-      const bx = gridW / 2 + 3;
-      const by = gridH / 2 + 3;
-      rigState.target.x = Math.max(
-        -bx,
-        Math.min(bx, rigState.target.x + dx * KEY_PAN_SPEED * delta)
-      );
-      rigState.target.y = Math.max(
-        -by,
-        Math.min(by, rigState.target.y + dy * KEY_PAN_SPEED * delta)
-      );
+      rigState.target.x += dx * KEY_PAN_SPEED * delta;
+      rigState.target.y += dy * KEY_PAN_SPEED * delta;
     }
     if (dz) {
       rigState.zoom = Math.max(
@@ -209,9 +180,14 @@ export function Rig({ gridW, gridH }: { gridW: number; gridH: number }) {
       rigState.activeId === null &&
       !rigState.isDragging
     ) {
+      if (!idleAnchor.current) {
+        idleAnchor.current = { x: rigState.target.x, y: rigState.target.y };
+        idlePhase.current = Math.random() * Math.PI * 2;
+      }
       idlePhase.current += delta * IDLE_SPEED;
-      const driftX = Math.cos(idlePhase.current) * IDLE_RADIUS;
-      const driftY = Math.sin(idlePhase.current * 0.73) * IDLE_RADIUS * 0.6;
+      const driftX = idleAnchor.current.x + Math.cos(idlePhase.current) * IDLE_RADIUS;
+      const driftY =
+        idleAnchor.current.y + Math.sin(idlePhase.current * 0.73) * IDLE_RADIUS * 0.6;
       easing.damp(rigState.target, "x", driftX, 0.6, delta);
       easing.damp(rigState.target, "y", driftY, 0.6, delta);
     }
