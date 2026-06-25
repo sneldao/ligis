@@ -10,9 +10,7 @@
 //! `packages/adapter-casper/src/eip712.ts`.
 
 use odra::prelude::*;
-use odra::{Address, Var, Mapping};
 
-#[derive(Clone, PartialEq, Eq, Debug)]
 #[odra::odra_type]
 pub struct CredentialView {
     pub issuer: Address,

@@ -16,9 +16,34 @@ odra-modules = { version = "2.8.1", default-features = false }
 [dev-dependencies]
 odra-test = { version = "2.8.1", default-features = false }
 
+[build-dependencies]
+odra-build = { version = "2.8.1", default-features = false }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+odra-build = { version = "2.8.1", default-features = false }
+odra-cli = { version = "2.8.1", default-features = false }
+
+[[bin]]
+name = "ligis_contracts_casper_build_contract"
+path = "bin/build_contract.rs"
+test = false
+
+[[bin]]
+name = "ligis_contracts_casper_build_schema"
+path = "bin/build_schema.rs"
+test = false
+
+[[bin]]
+name = "ligis_contracts_casper_cli"
+path = "bin/cli.rs"
+test = false
+
 [features]
 default = []
 
 [profile.release]
 codegen-units = 1
 lto = true
+
+[profile.dev.package."*"]
+opt-level = 3

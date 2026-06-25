@@ -12,7 +12,6 @@
 //! out once the EVM ↔ Casper invariants are finalized.
 
 use odra::prelude::*;
-use odra::{Address, Var, Mapping};
 
 #[odra::module]
 pub struct AgentId {
@@ -48,7 +47,7 @@ impl AgentId {
         assert_eq!(current, caller, "AgentId::rotate: caller is not the current controller");
 
         self.owner_of.set(&token_id, new_controller);
-        self.wallet_of_agent.remove(&current);
+        self.wallet_of_agent.set(&current, 0);
         self.wallet_of_agent.set(&new_controller, token_id);
     }
 

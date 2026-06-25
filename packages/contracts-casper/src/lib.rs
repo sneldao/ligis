@@ -14,8 +14,8 @@
 //! digests + the host's secp256k1 recovery, so credentials issued by the same
 //! key on Pharos verify identically here.
 
-#![no_std]
-
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 extern crate alloc;
 
 pub mod agent_id;
