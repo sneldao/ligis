@@ -141,7 +141,7 @@ export default async function AgentPage({ params }: { params: Promise<Params> })
         </div>
       </section>
 
-      {history.length > 0 ? (
+      {snap.exists ? (
         <section className="mt-24">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">Capability history</p>
@@ -149,47 +149,54 @@ export default async function AgentPage({ params }: { params: Promise<Params> })
               {history.length} {history.length === 1 ? "event" : "events"} · AgentCapabilityChanged
             </p>
           </header>
-          <div className="mt-6">
-            <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-8 py-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-              <span>capability</span>
-              <span className="w-20">status</span>
-              <span className="w-20 text-right">block</span>
-              <span className="w-32 text-right">tx</span>
-            </div>
-            <Rule />
-            {history.slice(0, 20).map((h, i) => {
-              const capName = capMap.get(h.capabilityHash.toLowerCase()) ?? truncateHash(h.capabilityHash, 8, 6);
-              return (
-                <div key={`${h.txHash}-${h.logIndex}-${i}`}>
-                  <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-8 py-4 text-sm">
-                    <span className="font-mono tabular text-ink">{capName}</span>
-                    <span className={`w-20 font-mono text-[11px] uppercase tracking-[0.16em] ${h.capable ? "text-sage" : "text-revoke"}`}>
-                      {h.capable ? "gained" : "lost"}
-                    </span>
-                    <span className="w-20 text-right font-mono tabular text-ink-soft">
-                      {h.blockNumber.toString()}
-                    </span>
-                    <span className="w-32 text-right font-mono tabular text-ink-soft">
-                      <a
-                        href={`${network.explorerUrl}/tx/${h.txHash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-                      >
-                        {truncateHash(h.txHash, 8, 6)}
-                      </a>
-                    </span>
+          <Rule className="mt-4" />
+          {history.length > 0 ? (
+            <div className="mt-6">
+              <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-8 py-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
+                <span>capability</span>
+                <span className="w-20">status</span>
+                <span className="w-20 text-right">block</span>
+                <span className="w-32 text-right">tx</span>
+              </div>
+              <Rule />
+              {history.slice(0, 20).map((h, i) => {
+                const capName = capMap.get(h.capabilityHash.toLowerCase()) ?? truncateHash(h.capabilityHash, 8, 6);
+                return (
+                  <div key={`${h.txHash}-${h.logIndex}-${i}`}>
+                    <div className="grid grid-cols-[1fr_auto_auto_auto] items-baseline gap-x-8 py-4 text-sm">
+                      <span className="font-mono tabular text-ink">{capName}</span>
+                      <span className={`w-20 font-mono text-[11px] uppercase tracking-[0.16em] ${h.capable ? "text-sage" : "text-revoke"}`}>
+                        {h.capable ? "gained" : "lost"}
+                      </span>
+                      <span className="w-20 text-right font-mono tabular text-ink-soft">
+                        {h.blockNumber.toString()}
+                      </span>
+                      <span className="w-32 text-right font-mono tabular text-ink-soft">
+                        <a
+                          href={`${network.explorerUrl}/tx/${h.txHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+                        >
+                          {truncateHash(h.txHash, 8, 6)}
+                        </a>
+                      </span>
+                    </div>
+                    <Rule tone="soft" />
                   </div>
-                  <Rule tone="soft" />
-                </div>
-              );
-            })}
-            {history.length > 20 ? (
-              <p className="py-4 text-center font-serif text-xs italic text-ink-quiet">
-                Showing 20 of {history.length} events.
-              </p>
-            ) : null}
-          </div>
+                );
+              })}
+              {history.length > 20 ? (
+                <p className="py-4 text-center font-serif text-xs italic text-ink-quiet">
+                  Showing 20 of {history.length} events.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-6 font-serif text-base italic text-ink-quiet">
+              No capability changes recorded yet. Run the Steward loop or issue credentials via the CLI to populate this history.
+            </p>
+          )}
         </section>
       ) : null}
 

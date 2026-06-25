@@ -47,11 +47,7 @@ export const addresses = {
   credentialRegistry: deployment.credentialRegistry as Address,
 };
 
-export const network = {
-  name: atlantic.name,
-  chainId: atlantic.chainId,
-  explorerUrl: atlantic.explorerUrl,
-};
+export { network } from "./network";
 
 export async function readAgentId(wallet: Address): Promise<bigint> {
   return (await publicClient.readContract({
