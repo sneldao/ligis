@@ -31,18 +31,15 @@ ask "who are you, and who vouches for that?"
 
 ## Deployed contracts (Pharos Atlantic testnet — live)
 
-- **PharosAgentID** (ERC-721 soulbound-style): `0xb74508134CC0A0EE868E4FAc76EFD1db66c393e0`
-  - Deployed at block: 24369310+ (latest redeploy)
-  - Pharos Scan: https://atlantic.pharosscan.xyz/address/0xb74508134CC0A0EE868E4FAc76EFD1db66c393e0
-- **CredentialRegistry** (EIP-712 attestations): `0xcA10b459c15E0F24866053F737B8CBBE9a81048d`
-  - Deployed at block: 24369311+ (latest redeploy)
-  - Pharos Scan: https://atlantic.pharosscan.xyz/address/0xcA10b459c15E0F24866053F737B8CBBE9a81048d
-- **Source verification**: pending. The contracts were hardened (ERC-721 compliance, safeTransferFrom, bounded registry scans) *after* the initial Atlantic deployment, so the deployed bytecode no longer matches the current source. To get the verification badge, redeploy the current contracts with `bash scripts/deploy.sh atlantic` and then run `bash scripts/verify.sh atlantic`. The verify script has been updated to use the correct socialscan API endpoint (`pharos-testnet/v1/explorer/command_api/contract`), `solidity-single-file` format, `cancun` EVM version, and the correct solc commit hash (`e11b9ed9`).
+- **PharosAgentID** (ERC-721 soulbound-style): `0xbd163Be6882CF6DE54bA10d726F4f619Bdc28a89`
+  - Pharos Scan: https://atlantic.pharosscan.xyz/address/0xbd163Be6882CF6DE54bA10d726F4f619Bdc28a89
+- **CredentialRegistry** (EIP-712 attestations): `0x9E6eC93200E185c11423eb3A5150449D49d3473A`
+  - Pharos Scan: https://atlantic.pharosscan.xyz/address/0x9E6eC93200E185c11423eb3A5150449D49d3473A
 - **0G wallet**: funded (5.48 OG consolidated from 8 faucet claims, 2.48 OG after ledger deposit + provider setup). One-time `setupProvider()` run successfully — Trust Steward Agent ready for Compute + Storage.
 
 ## End-to-end demo txs (executed live on Atlantic)
 
-The full `scripts/demo.sh` flow ran on the live testnet:
+The full `scripts/demo.sh` flow ran on the live testnet (previous deployment — re-run on new contracts for fresh tx hashes):
 
 | Step | Action | Tx hash | Result |
 |------|--------|---------|--------|
@@ -159,7 +156,7 @@ control and start composing.
 
 ### Final hardening pass (post-review)
 
-After an internal audit, the following improvements were applied without changing any public function signatures:
+After an internal audit, the following improvements were applied:
 
 - **ERC-721 compliance**: `PharosAgentID` now emits standard `Transfer` events on `mint`, `rotate`, `revoke`, and `transferFrom`, making the NFT fully trackable by indexers, marketplaces, and wallet UIs.
 - **`safeTransferFrom` safety**: Added `IERC721Receiver` checks so transfers to contracts that do not implement `onERC721Received` revert cleanly (previously it was just a passthrough to `transferFrom`).
@@ -172,6 +169,9 @@ After an internal audit, the following improvements were applied without changin
 - **Forge path resolution**: Added `scripts/forge.sh` wrapper that finds Foundry's forge at `~/.foundry/bin/forge` (avoids shadowing by other `forge` CLIs). All npm scripts and deploy/verify scripts use it.
 - **0G Compute SDK fix**: The SDK's ESM build has a broken re-export; `compute.ts` now imports via `createRequire` to use the working CJS build.
 - **Pharos Scan verify script**: Updated to the correct socialscan API endpoint, `solidity-single-file` format, `cancun` EVM version, and correct solc commit hash.
+- **Batch capability reads**: `isCapableMulti(address, bytes32[])` returns `bool[]` in a single call — the Trust Steward's GATE phase now uses 1 RPC instead of N for capability checks. The frontend `readAgentSnapshot` also uses this, and the VerifyDemo has a batch mode toggle.
+- **AgentCapabilityChanged event**: Emitted on `issue` (capable=true) and `revoke` (capable=true/false) so indexers and frontends get real-time trust state changes without polling.
+- **ERC-165 support**: `CredentialRegistry` now implements `supportsInterface(bytes4)` for trustless composition — other Skills can verify the registry interface before calling it.
 
 ### Security posture
 
@@ -266,7 +266,7 @@ Solo submitter: `<your name>`
 - [x] 17/17 TypeScript unit tests passing (node:test, mocked clients)
 - [x] Solidity 0.8.24, no warnings, optimizer on
 - [x] Deployed to Pharos Atlantic testnet (chainId 688689) — see tx hashes above
-- [ ] Source verified on Pharos Scan (source changed after deployment — redeploy + `bash scripts/verify.sh atlantic` to get the badge; verify script updated with correct API endpoint + compiler settings)
+- [ ] Source verified on Pharos Scan (verify script updated with correct API endpoint — run `bash scripts/verify.sh atlantic` after redeploy to get the badge)
 - [x] CLI: 8 commands, JSON output — verified live on Atlantic
 - [x] MCP server: 7 tools (including `ligis-run-steward`)
 - [x] Trust Steward Agent: full loop (boot → reason → gate → act → record) with 0G Compute + 0G Storage

@@ -59,7 +59,7 @@ escrows — only new openings are blocked.
 
 **Live integration** (in the BUIDL context): Aegis on Atlantic testnet can be
 wired to our `CredentialRegistry` at
-`0xf583421A8e11aEB42d26798F285dc590A992e488` with a one-line constructor arg.
+`0x9E6eC93200E185c11423eb3A5150449D49d3473A` with a one-line constructor arg.
 
 ---
 

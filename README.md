@@ -31,8 +31,8 @@ First deployment is live on **Pharos Atlantic testnet** (chainId 688689):
 
 | Contract | Address |
 |----------|---------|
-| `PharosAgentID` | `0xb74508134CC0A0EE868E4FAc76EFD1db66c393e0` |
-| `CredentialRegistry` | `0xcA10b459c15E0F24866053F737B8CBBE9a81048d` |
+| `PharosAgentID` | `0xbd163Be6882CF6DE54bA10d726F4f619Bdc28a89` |
+| `CredentialRegistry` | `0x9E6eC93200E185c11423eb3A5150449D49d3473A` |
 
 ## Chain support
 

@@ -99,7 +99,7 @@ export default function StyleguidePage() {
             <div className="space-y-2">
               <p className="eyebrow">technical · monospace</p>
               <p className="font-mono text-sm tabular text-ink">
-                0xBAab32536368bBD97BD9410CCE6b7d075CdcAcF8
+                0xbd163Be6882CF6DE54bA10d726F4f619Bdc28a89
               </p>
               <p className="font-mono text-sm tabular text-ink-soft">
                 keccak256(&quot;agent.commerce.escrow&quot;)
