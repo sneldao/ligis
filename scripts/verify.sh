@@ -16,7 +16,7 @@ NETWORK="${1:-atlantic}"
 
 case "$NETWORK" in
   atlantic|atlantic-testnet)
-    API_URL="https://api.socialscan.io/pharos-testnet/v1/explorer/command_api/contract"
+    API_URL="https://api.socialscan.io/pharos-atlantic-testnet/v1/explorer/command_api/contract"
     CHAIN_NAME="atlantic"
     COMPILER="0.8.24"
     OPTIMIZER_RUNS=200
@@ -35,7 +35,7 @@ esac
 
 if [[ -z "${SOCIALSCAN_API_KEY:-}" ]]; then
   echo "ERROR: SOCIALSCAN_API_KEY is not set. The Socialscan API requires an API key." >&2
-  echo "Get one at https://etherscan.io/apis (it's the same Etherscan family)." >&2
+  echo "Get one at https://developer.socialscan.io/" >&2
   echo "Then: export SOCIALSCAN_API_KEY=..." >&2
   exit 1
 fi

@@ -96,6 +96,18 @@ export async function isCapable(
   })) as boolean;
 }
 
+export async function isCapableMulti(
+  subject: Address,
+  capabilityHashes: readonly Hex[]
+): Promise<boolean[]> {
+  return (await publicClient.readContract({
+    address: addresses.credentialRegistry,
+    abi: CREDENTIAL_REGISTRY_ABI,
+    functionName: "isCapableMulti",
+    args: [subject, capabilityHashes],
+  })) as boolean[];
+}
+
 export async function readTokenUri(tokenId: bigint): Promise<string> {
   return (await publicClient.readContract({
     address: addresses.pharosAgentId,
@@ -160,16 +172,20 @@ export async function readAgentSnapshot(wallet: Address): Promise<AgentSnapshot>
     return { exists: false, tokenId: 0n, controller: null, tokenUri: "", held: [] };
   }
 
-  const [controller, tokenUri, ...views] = await Promise.all([
+  const [controller, tokenUri, capableResults, ...views] = await Promise.all([
     readOwnerOf(tokenId).catch(() => null as Address | null),
     readTokenUri(tokenId).catch(() => ""),
+    isCapableMulti(wallet, capabilities.map((c) => c.hash)).catch(() =>
+      capabilities.map(() => false)
+    ),
     ...capabilities.map((c) => readCredential(wallet, c.hash).catch(() => null)),
   ]);
 
   const held: HeldCredential[] = [];
   capabilities.forEach((cap, i) => {
     const view = views[i] as CredentialView | null;
-    if (view && view.valid && !view.revoked) {
+    const capable = capableResults[i];
+    if (capable && view && view.valid && !view.revoked) {
       held.push({ capability: cap, view });
     }
   });

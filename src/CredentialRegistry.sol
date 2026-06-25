@@ -67,6 +67,11 @@ contract CredentialRegistry {
         uint256 nonce,
         uint64 revokedAt
     );
+    event AgentCapabilityChanged(
+        address indexed subject,
+        bytes32 indexed capabilityHash,
+        bool capable
+    );
 
     error Expired(uint64 expiresAt, uint64 nowTs);
     error NotIssuer(address caller, address issuer);
@@ -137,6 +142,7 @@ contract CredentialRegistry {
         issuerNonce[issuer] = nonce + 1;
 
         emit CredentialIssued(issuer, subject, capabilityHash, nonce, issuedAt, expiresAt);
+        emit AgentCapabilityChanged(subject, capabilityHash, true);
         return nonce;
     }
 
@@ -175,6 +181,10 @@ contract CredentialRegistry {
         }
 
         emit CredentialRevoked(cred.issuer, subject, capabilityHash, nonce, cred.revokedAt);
+        // Check if the subject is still capable after this revocation
+        bool stillCapable = _hasValid[subject][capabilityHash] &&
+            _latestValidNonce[subject][capabilityHash] != 0;
+        emit AgentCapabilityChanged(subject, capabilityHash, stillCapable);
     }
 
     // ---------- Read API used by other Skills (Aegis, FaroLink, ...) ----------
@@ -228,6 +238,33 @@ contract CredentialRegistry {
         if (c.issuer == address(0)) return CredentialView(address(0), 0, 0, false, false);
         bool valid = c.revokedAt == 0 && block.timestamp <= c.expiresAt;
         return CredentialView(c.issuer, c.issuedAt, c.expiresAt, c.revokedAt != 0, valid);
+    }
+
+    /// @notice Batch check: returns an array of booleans for each capability hash.
+    ///         Saves N-1 RPC calls for the Trust Steward's GATE phase.
+    function isCapableMulti(
+        address subject,
+        bytes32[] calldata capabilityHashes
+    ) external view returns (bool[] memory results) {
+        results = new bool[](capabilityHashes.length);
+        for (uint256 i = 0; i < capabilityHashes.length; i++) {
+            bytes32 cap = capabilityHashes[i];
+            if (!_hasValid[subject][cap]) {
+                results[i] = false;
+                continue;
+            }
+            uint256 nonce = _latestValidNonce[subject][cap];
+            Credential storage c = _credentials[subject][cap][nonce];
+            results[i] = c.issuer != address(0) &&
+                c.revokedAt == 0 &&
+                block.timestamp <= c.expiresAt;
+        }
+    }
+
+    // ---------- ERC-165 ----------
+
+    function supportsInterface(bytes4 iid) external pure returns (bool) {
+        return iid == 0x01ffc9a7; // ERC-165
     }
 
     // ---------- EIP-712 helpers ----------

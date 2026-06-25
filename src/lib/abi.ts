@@ -299,4 +299,30 @@ export const CREDENTIAL_REGISTRY_ABI = [
       { name: "revokedAt", type: "uint64", indexed: false },
     ],
   },
+  {
+    type: "event",
+    name: "AgentCapabilityChanged",
+    inputs: [
+      { name: "subject", type: "address", indexed: true },
+      { name: "capabilityHash", type: "bytes32", indexed: true },
+      { name: "capable", type: "bool", indexed: false },
+    ],
+  },
+  {
+    type: "function",
+    name: "isCapableMulti",
+    stateMutability: "view",
+    inputs: [
+      { name: "subject", type: "address" },
+      { name: "capabilityHashes", type: "bytes32[]" },
+    ],
+    outputs: [{ name: "results", type: "bool[]" }],
+  },
+  {
+    type: "function",
+    name: "supportsInterface",
+    stateMutability: "view",
+    inputs: [{ name: "interfaceId", type: "bytes4" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
 ] as const;
