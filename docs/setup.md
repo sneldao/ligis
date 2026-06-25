@@ -69,9 +69,18 @@ The web frontend runs the Steward loop in two modes:
   key. The loop will make real `isCapableMulti` reads, sign and submit EIP-712
   credentials via `issue()`, and anchor evidence via `setTokenURI`.
 
+**Security recommendation: use a dedicated steward wallet, not your deployer
+key.** Create a separate wallet for the web steward, fund it with a small
+amount of testnet PHRS (enough for gas), and mint it an Agent ID + issue
+credentials once via the CLI. This limits blast radius — if the Vercel env var
+is compromised, only the steward wallet (with limited funds and capabilities)
+is affected, not the deployer who owns the contracts.
+
+Live writes are rate-limited to 3 runs per minute per IP address.
+
 ```bash
 # In Vercel project settings → Environment Variables:
-LIGIS_STEWARD_KEY=0x...  # same key as your deployer wallet
+LIGIS_STEWARD_KEY=0x...  # dedicated steward wallet (not your deployer key)
 ```
 
 ## 0G wallet setup

@@ -85,25 +85,49 @@ function getWalletClient() {
   };
 }
 
+// ---------- Rate limiting (in-memory, per-IP) ----------
+
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_LIVE = 3;
+const liveHits = new Map<string, number[]>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const hits = (liveHits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (hits.length >= RATE_MAX_LIVE) return false;
+  hits.push(now);
+  liveHits.set(ip, hits);
+  return true;
+}
+
 // ---------- Main loop ----------
 
 export async function* stewardLoop(
   goal: string,
-  opts: { live: boolean }
+  opts: { live: boolean; clientIp?: string }
 ): AsyncGenerator<StewardEvent> {
   const { live } = opts;
   let rpcCalls = 0;
 
-  // === 1. BOOT ===
-  yield { type: "phase", phase: "BOOT", status: "start" };
-
+  // Live writes require a dedicated steward wallet — separate from deployer.
+  // Live reads (GATE) work without any key.
   const wallet = getWalletClient();
+  const canWrite = live && wallet !== null;
+
+  // Rate-limit live writes: max 3 runs/min per IP
+  if (canWrite && opts.clientIp && !checkRateLimit(opts.clientIp)) {
+    yield { type: "error", message: "Rate limit: too many live runs. Try again in a minute." };
+    return;
+  }
+
+  // Subject address: use steward wallet if available, otherwise read-only mode
+  // uses the wallet address if provided, or falls back to a query param.
   const subject = wallet?.account.address ?? ("0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec" as Address);
 
   let tokenId = "0";
   let minted = false;
 
-  if (live && wallet) {
+  if (canWrite) {
     const existing = await readAgentId(subject);
     rpcCalls++;
     if (existing === 0n) {
@@ -150,6 +174,7 @@ export async function* stewardLoop(
   let capableResults: boolean[];
 
   if (live) {
+    // GATE is read-only — works even without a wallet key
     capableResults = await isCapableMulti(subject, hashes).catch(() =>
       requiredCaps.map(() => false)
     );
@@ -185,9 +210,9 @@ export async function* stewardLoop(
   for (let i = 0; i < requiredCaps.length; i++) {
     if (capableResults[i]) continue;
 
-    if (live && wallet) {
+    if (canWrite) {
       try {
-        const issuer = wallet.account.address;
+        const issuer = wallet!.account.address;
         const capHash = requiredCaps[i].hash;
         const issuedAt = BigInt(Math.floor(Date.now() / 1000));
         const expiresAt = issuedAt + 2592000n;
@@ -210,13 +235,13 @@ export async function* stewardLoop(
 
         const signature = await wallet.account.sign({ hash: digest });
 
-        const issueHash = await wallet.client.writeContract({
+        const issueHash = await wallet!.client.writeContract({
           address: addresses.credentialRegistry,
           abi: CREDENTIAL_REGISTRY_ABI,
           functionName: "issue",
           args: [issuer, subject, capHash, issuedAt, expiresAt, nonce, signature],
           chain: pharosAtlantic,
-          account: wallet.account.address,
+          account: wallet!.account.address,
         });
         await publicClient.waitForTransactionReceipt({ hash: issueHash });
 
@@ -263,7 +288,7 @@ export async function* stewardLoop(
   let tokenUri: string;
   const storageType: "0g" | "local" = "local";
 
-  if (live && wallet) {
+  if (canWrite) {
     // Build a local evidence manifest and hash it
     const manifest = {
       version: 1,
@@ -285,13 +310,13 @@ export async function* stewardLoop(
     // Anchor via setTokenURI
     tokenUri = `0g://${rootHash.slice(2, 34)}`;
     try {
-      const anchorHash = await wallet.client.writeContract({
+      const anchorHash = await wallet!.client.writeContract({
         address: addresses.pharosAgentId,
         abi: PHAROS_AGENT_ID_ABI,
         functionName: "setTokenURI",
         args: [BigInt(tokenId), tokenUri],
         chain: pharosAtlantic,
-        account: wallet.account.address,
+        account: wallet!.account.address,
       });
       await publicClient.waitForTransactionReceipt({ hash: anchorHash });
       anchorTx = anchorHash;
@@ -321,7 +346,7 @@ export async function* stewardLoop(
     ok: true,
     tokenId,
     gated: allGated,
-    live,
+    live: canWrite,
     rpcCalls,
   };
 }

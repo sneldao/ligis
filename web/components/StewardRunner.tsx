@@ -304,6 +304,31 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
         })}
       </section>
 
+      {state.summary?.ok ? (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-xs">
+            <span className={`font-mono tabular ${state.summary.live ? "text-sage" : "text-ink-quiet"}`}>
+              {state.summary.live ? "● live on-chain" : "○ simulated"}
+            </span>
+            {state.summary.gated !== undefined ? (
+              <span className="font-mono tabular text-ink-soft">
+                gated: {state.summary.gated ? "yes" : "no"}
+              </span>
+            ) : null}
+            {state.summary.rpcCalls !== undefined && state.summary.rpcCalls > 0 ? (
+              <span className="font-mono tabular text-ink-soft">
+                {state.summary.rpcCalls} RPC calls
+              </span>
+            ) : null}
+            {state.summary.tokenId ? (
+              <span className="font-mono tabular text-ink-soft">
+                token #{state.summary.tokenId}
+              </span>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
       {state.error ? (
         <section className="space-y-3">
           <p className="eyebrow">error</p>

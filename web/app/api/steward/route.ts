@@ -11,11 +11,12 @@ export async function POST(req: NextRequest) {
   } catch {}
   const goal = (body.goal ?? "").trim() || "Operate as a Pharos agent.";
   const live = body.live === true;
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        for await (const event of stewardLoop(goal, { live })) {
+        for await (const event of stewardLoop(goal, { live, clientIp })) {
           controller.enqueue(encode(event));
         }
       } catch (err) {
