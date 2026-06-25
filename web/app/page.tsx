@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChainSelector } from "@/components/ChainSelector";
 import { CatalogHero } from "@/components/catalog/CatalogHero";
 import { Diagram } from "@/components/Diagram";
 import { Rule } from "@/components/Rule";
@@ -8,10 +9,10 @@ import { VerifyDemo } from "@/components/VerifyDemo";
 import {
   addresses,
   capabilities,
-  network,
   readBlockNumber,
   readTotalSupply,
 } from "@/lib/chain";
+import { getChain, type ChainNetwork } from "@/lib/network";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,12 @@ const ok = await readContract({
   args: [subject, capabilityHash],
 });`;
 
-async function liveStats() {
+async function liveStats(chain: ChainNetwork) {
+  // Only attempt EVM reads when the active chain is the live Pharos chain.
+  // Non-live chains (e.g. Casper before contracts deploy) get a preview notice.
+  if (!chain.live) {
+    return { ok: false as const, preview: true as const };
+  }
   try {
     const [supply, block] = await Promise.all([readTotalSupply(), readBlockNumber()]);
     return { supply: Number(supply), block: block.toString(), ok: true as const };
@@ -39,8 +45,13 @@ async function liveStats() {
   }
 }
 
-export default async function HomePage() {
-  const stats = await liveStats();
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
+  const chain = getChain(searchParams);
+  const stats = await liveStats(chain);
   const capOptions = capabilities.map((c) => ({ id: c.id, label: c.label }));
 
   return (
@@ -52,7 +63,9 @@ export default async function HomePage() {
       <main id="how" className="mx-auto max-w-5xl scroll-mt-24 px-8 pt-32 pb-24 sm:pt-44 sm:pb-32">
         <header className="flex items-baseline justify-between text-xs">
           <p className="eyebrow">Ligis · how it works 00</p>
-          <nav className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm text-ink-soft">
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+            <ChainSelector activeId={chain.id} />
+            <nav className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm text-ink-soft">
             <Link
               href="/capabilities"
               className="hover:text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
@@ -83,7 +96,8 @@ export default async function HomePage() {
             >
               Source
             </a>
-          </nav>
+            </nav>
+          </div>
         </header>
 
         <section className="mt-20">
@@ -110,9 +124,18 @@ export default async function HomePage() {
                 <span className="font-mono not-italic tabular text-ink">
                   {Number(stats.block).toLocaleString("en")}
                 </span>{" "}
-                on {network.name.toLowerCase()}. The catalog above shows the
+                on {chain.name.toLowerCase()}. The catalog above shows the
                 live agent plus a preview set so the spatial pattern is legible
                 before the index fills out.
+              </>
+            ) : stats.preview ? (
+              <>
+                <span className="not-italic text-ink-soft">
+                  {chain.name}
+                </span>{" "}
+                is in preview mode — contracts are not deployed yet. Switch to
+                Pharos Atlantic for live on-chain reads, or come back after the
+                Casper rollout.
               </>
             ) : (
               <>The live index is presently unreachable. {stats.error}</>
@@ -124,7 +147,7 @@ export default async function HomePage() {
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">01 · Verify</p>
             <p className="font-mono text-[11px] tabular text-ink-quiet">
-              live · {network.name.toLowerCase()}
+              live · {chain.name.toLowerCase()}
             </p>
           </header>
           <Rule className="mt-4" />
@@ -141,7 +164,7 @@ export default async function HomePage() {
             <VerifyDemo
               capabilities={capOptions}
               defaultSubject={SAMPLE_SUBJECT}
-              explorerUrl={network.explorerUrl}
+              explorerUrl={chain.explorerUrl}
             />
           </div>
         </section>
@@ -183,7 +206,7 @@ export default async function HomePage() {
           </div>
           <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2">
             <a
-              href={`${network.explorerUrl}/address/${addresses.pharosAgentId}`}
+              href={`${chain.explorerUrl}/address/${addresses.pharosAgentId}`}
               target="_blank"
               rel="noreferrer"
               className="group block space-y-2 py-2"
@@ -195,7 +218,7 @@ export default async function HomePage() {
               </p>
             </a>
             <a
-              href={`${network.explorerUrl}/address/${addresses.credentialRegistry}`}
+              href={`${chain.explorerUrl}/address/${addresses.credentialRegistry}`}
               target="_blank"
               rel="noreferrer"
               className="group block space-y-2 py-2"
@@ -300,7 +323,7 @@ ligis sign \\
             </Link>
             .
           </span>
-          <span className="font-mono tabular">chain {network.chainId}</span>
+          <span className="font-mono tabular">chain {chain.chainId ?? chain.chainName}</span>
         </footer>
       </main>
     </>

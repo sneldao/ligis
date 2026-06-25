@@ -25,18 +25,6 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "@ligis/core": [
-        "../packages/core/src/index.ts"
-      ],
-      "@ligis/adapter-evm": [
-        "../packages/adapter-evm/src/index.ts"
-      ],
-      "@ligis/agent-logic": [
-        "../packages/agent-logic/src/index.ts"
-      ],
-      "@ligis/zerog": [
-        "../packages/zerog/src/index.ts"
       ]
     }
   },

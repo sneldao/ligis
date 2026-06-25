@@ -13,11 +13,7 @@
     "resolveJsonModule": true,
     "declaration": true,
     "sourceMap": true,
-    "composite": true,
-    "baseUrl": ".",
-    "paths": {
-      "@ligis/core": ["../core/dist/index.js", "../core/src/index.ts"]
-    }
+    "composite": true
   },
   "include": ["src/**/*.ts"],
   "references": [

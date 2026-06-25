@@ -23,6 +23,12 @@ importers:
       '@ligis/core':
         specifier: workspace:*
         version: link:../core
+      '@noble/curves':
+        specifier: ^1.4.0
+        version: 1.9.7
+      '@noble/hashes':
+        specifier: ^1.4.0
+        version: 1.8.0
       casper-js-sdk:
         specifier: ^5.0.0
         version: 5.0.12
@@ -139,6 +145,31 @@ importers:
         specifier: ^5.6.0
         version: 5.9.3
 
+  packages/x402-server:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^1.13.0
+        version: 1.19.14(hono@4.12.27)
+      '@ligis/adapter-casper':
+        specifier: workspace:*
+        version: link:../adapter-casper
+      '@ligis/core':
+        specifier: workspace:*
+        version: link:../core
+      hono:
+        specifier: ^4.6.0
+        version: 4.12.27
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.0
+      tsx:
+        specifier: ^4.19.0
+        version: 4.22.4
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   packages/zerog:
     dependencies:
       '@0gfoundation/0g-compute-ts-sdk':
@@ -169,6 +200,18 @@ importers:
       '@0gfoundation/0g-storage-ts-sdk':
         specifier: ^1.2.6
         version: 1.2.10(bufferutil@4.1.0)(ethers@6.17.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10)
+      '@ligis/adapter-evm':
+        specifier: workspace:*
+        version: link:../packages/adapter-evm
+      '@ligis/agent-logic':
+        specifier: workspace:*
+        version: link:../packages/agent-logic
+      '@ligis/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@ligis/zerog':
+        specifier: workspace:*
+        version: link:../packages/zerog
       '@react-three/drei':
         specifier: ^10.7.7
         version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0))(@types/react@19.2.17)(@types/three@0.184.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0)

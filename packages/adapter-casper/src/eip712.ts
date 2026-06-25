@@ -21,12 +21,13 @@ import {
   CASPER_DOMAIN_TYPES,
   hashTypedData,
   recoverTypedDataSigner,
+  toHex,
   verifySignature,
 } from "@casper-ecosystem/casper-eip-712";
 import type { CasperConfig } from "./config.js";
 
 /** The on-wire credential payload that gets signed and submitted on-chain. */
-export interface CredentialMessage {
+export interface CredentialMessage extends Record<string, unknown> {
   issuer: string;          // 0x-prefixed 20-byte secp256k1 Ethereum-style address
   subject: string;         // chain-formatted subject identifier (account hash on Casper)
   capabilityHash: string;  // 0x-prefixed 32-byte keccak256 hash
@@ -85,9 +86,10 @@ export function recoverCredentialIssuer(
   signature: Uint8Array,
 ): string {
   const domain = buildDomain(config);
-  return recoverTypedDataSigner(domain, CREDENTIAL_TYPES, "Credential", message, signature, {
+  const addrBytes = recoverTypedDataSigner(domain, CREDENTIAL_TYPES, "Credential", message, signature, {
     domainTypes: CASPER_DOMAIN_TYPES,
   });
+  return toHex(addrBytes);
 }
 
 /** Verify a credential signature matches the expected issuer. */
@@ -97,7 +99,10 @@ export function verifyCredentialSignature(
   signature: Uint8Array,
   expectedIssuer: string,
 ): boolean {
-  const digest = buildCredentialDigest(config, message);
+  const domain = buildDomain(config);
+  const digest = hashTypedData(domain, CREDENTIAL_TYPES, "Credential", message, {
+    domainTypes: CASPER_DOMAIN_TYPES,
+  });
   return verifySignature(digest, signature, expectedIssuer);
 }
 
