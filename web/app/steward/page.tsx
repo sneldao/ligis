@@ -56,14 +56,16 @@ export default function StewardPage() {
           style={{ borderLeft: "3px solid #B85D3E" }}
         >
           <span className="mt-0.5 shrink-0 font-mono text-[11px] uppercase tracking-[0.16em] text-terra">
-            ⚠ simulation
+            live or simulated
           </span>
           <p className="font-serif text-sm leading-relaxed text-ink-soft">
-            This is a <strong>simulated</strong> run — no on-chain writes, no
-            0G wallet needed. All five phases execute with realistic timing and
-            simulated transaction hashes so you can watch the full loop come to
-            life without provisioning a thing. The real CLI commands are below
-            if you want to run it against your own keys.
+            The loop supports two modes: <strong>simulated</strong> (default —
+            no on-chain writes, no wallet needed) and <strong>live</strong>{" "}
+            (toggle on to run real <span className="font-mono text-ink">isCapableMulti</span>{" "}
+            reads, self-issue credentials via signed EIP-712 transactions, and
+            anchor an evidence manifest on-chain via{" "}
+            <span className="font-mono text-ink">setTokenURI</span>). Live mode
+            requires a funded wallet key on the server.
           </p>
         </div>
       </section>

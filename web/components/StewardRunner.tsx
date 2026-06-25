@@ -11,10 +11,10 @@ type PhaseStatus = "idle" | "running" | "done" | "error";
 type State = {
   phaseStatus: Record<Phase, PhaseStatus>;
   reasonText: string;
-  capabilities: Array<{ name: string; capable: boolean }>;
+  capabilities: Array<{ name: string; capable: boolean; selfIssued: boolean; issueTxHash?: string }>;
   txs: Array<{ name: string; txHash: string }>;
-  manifest: { rootHash: string; anchorTx: string } | null;
-  summary: { ok: boolean; tokenId?: string } | null;
+  manifest: { rootHash: string; anchorTx: string; storageType: string; tokenUri: string } | null;
+  summary: { ok: boolean; tokenId?: string; gated?: boolean; live: boolean; rpcCalls?: number } | null;
   error: string | null;
   events: StewardEvent[];
 };
@@ -39,20 +39,30 @@ function apply(state: State, ev: StewardEvent): State {
     case "phase":
       next.phaseStatus = { ...state.phaseStatus, [ev.phase]: ev.status === "start" ? "running" : ev.status };
       break;
+    case "boot":
+      next.summary = { ok: true, tokenId: ev.tokenId, live: false };
+      break;
     case "delta":
       next.reasonText = state.reasonText + ev.text;
       break;
-    case "capability":
-      next.capabilities = [...state.capabilities, { name: ev.name, capable: ev.capable }];
+    case "capability": {
+      const existing = state.capabilities.findIndex((c) => c.name === ev.name);
+      const entry = { name: ev.name, capable: ev.capable, selfIssued: ev.selfIssued, issueTxHash: ev.issueTxHash };
+      if (existing >= 0) {
+        next.capabilities = state.capabilities.map((c, i) => i === existing ? entry : c);
+      } else {
+        next.capabilities = [...state.capabilities, entry];
+      }
       break;
+    }
     case "tx":
       next.txs = [...state.txs, { name: ev.name, txHash: ev.txHash }];
       break;
     case "manifest":
-      next.manifest = { rootHash: ev.rootHash, anchorTx: ev.anchorTx };
+      next.manifest = { rootHash: ev.rootHash, anchorTx: ev.anchorTx, storageType: ev.storageType, tokenUri: ev.tokenUri };
       break;
     case "summary":
-      next.summary = { ok: ev.ok, tokenId: ev.tokenId };
+      next.summary = { ok: ev.ok, tokenId: ev.tokenId, gated: ev.gated, live: ev.live, rpcCalls: ev.rpcCalls };
       break;
     case "error":
       next.error = ev.message;
@@ -66,6 +76,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   const [state, setState] = useState<State>(EMPTY);
   const [running, setRunning] = useState(false);
   const [showReal, setShowReal] = useState(false);
+  const [live, setLive] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const run = useCallback(async () => {
@@ -79,7 +90,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
       const res = await fetch("/api/steward", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal }),
+        body: JSON.stringify({ goal, live }),
         signal: controller.signal,
       });
       if (!res.body) throw new Error("No response body");
@@ -113,7 +124,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     } finally {
       setRunning(false);
     }
-  }, [goal]);
+  }, [goal, live]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -161,9 +172,15 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
           />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-6">
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
-            simulated · no on-chain writes
-          </p>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setLive((v) => !v)}
+              className={`font-mono text-[11px] tabular transition-colors ${live ? "text-sage" : "text-ink-quiet"}`}
+            >
+              {live ? "● live · on-chain" : "○ simulated · no writes"}
+            </button>
+          </div>
           <div className="flex items-baseline gap-6">
             {running ? (
               <button
@@ -214,12 +231,20 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                 <div className="space-y-0">
                   {state.capabilities.map((c) => (
                     <div key={c.name}>
-                      <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
-                        <span className="font-mono tabular text-ink">{c.name}</span>
+                      <div className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-8 py-3 text-sm">
+                        <div className="space-y-0.5">
+                          <span className="font-mono tabular text-ink">{c.name}</span>
+                          {c.selfIssued ? (
+                            <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.12em] text-terra">self-issued</span>
+                          ) : null}
+                        </div>
                         <span
                           className={`font-mono text-[11px] uppercase tracking-[0.16em] ${c.capable ? "text-sage" : "text-ink-quiet"}`}
                         >
                           {c.capable ? "held" : "not held"}
+                        </span>
+                        <span className="w-24 text-right font-mono text-[10px] tabular text-ink-soft">
+                          {c.issueTxHash ? truncateHash(c.issueTxHash, 8, 6) : ""}
                         </span>
                       </div>
                       <Rule tone="soft" />
@@ -258,6 +283,18 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                     <span className="text-ink-quiet">anchor tx</span>
                     <span className="font-mono tabular text-ink">
                       {truncateAddress(state.manifest.anchorTx, 10, 6)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+                    <span className="text-ink-quiet">token URI</span>
+                    <span className="font-mono tabular text-ink-soft">
+                      {state.manifest.tokenUri}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+                    <span className="text-ink-quiet">storage</span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft">
+                      {state.manifest.storageType === "0g" ? "0G Storage" : "local hash"}
                     </span>
                   </div>
                 </div>
