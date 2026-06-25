@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../src/PharosAgentID.sol";
-import "../src/CredentialRegistry.sol";
+import "../packages/contracts-evm/src/PharosAgentID.sol";
+import "../packages/contracts-evm/src/CredentialRegistry.sol";
 
 contract DeployIdentitySkill is Script {
     function run() external {

@@ -18,7 +18,7 @@ import {
   readAgentId,
   type CapabilityRef,
 } from "./chain";
-import { CREDENTIAL_REGISTRY_ABI, PHAROS_AGENT_ID_ABI } from "@ligis/abi";
+import { CREDENTIAL_REGISTRY_ABI, PHAROS_AGENT_ID_ABI } from "@ligis/adapter-evm";
 import type { StewardEvent } from "./steward-events";
 
 // 0G SDKs (CJS — use createRequire for ESM compat)

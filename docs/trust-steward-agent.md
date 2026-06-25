@@ -46,11 +46,11 @@ The primary demo path is **self-contained**: the Steward issues itself a capabil
 ```bash
 # Dry run — reason + gate only, no on-chain writes
 PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
-  npx tsx src/cli/index.ts agent run --goal "open an escrow" --dry-run
+  pnpm start -- agent run --goal "open an escrow" --dry-run
 
 # Full run
 PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
-  npx tsx src/cli/index.ts agent run --goal "open an escrow"
+  pnpm start -- agent run --goal "open an escrow"
 ```
 
 See [Setup](setup.md) for 0G wallet initialization.

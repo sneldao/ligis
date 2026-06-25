@@ -44,7 +44,7 @@ async function ChainProbe() {
       </div>
       <p className="max-w-prose text-xs text-ink-quiet">
         This row proves a Server Component can reach Pharos Atlantic through
-        the shared <code className="font-mono">@ligis/abi</code> alias. If the
+        the shared <code className="font-mono">@ligis/adapter-evm</code> alias. If the
         call fails, the architecture is broken — fix this before building any
         feature that depends on it.
       </p>

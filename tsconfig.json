@@ -4,16 +4,30 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
-    "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ligis/core": ["packages/core/src/index.ts"],
+      "@ligis/adapter-evm": ["packages/adapter-evm/src/index.ts"],
+      "@ligis/agent-logic": ["packages/agent-logic/src/index.ts"],
+      "@ligis/zerog": ["packages/zerog/src/index.ts"],
+      "@ligis/cli": ["packages/cli/src/index.ts"],
+      "@ligis/mcp-server": ["packages/mcp-server/src/index.ts"]
+    }
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "out", "lib", "test", "broadcast"]
+  "references": [
+    { "path": "packages/core/tsconfig.json" },
+    { "path": "packages/adapter-evm/tsconfig.json" },
+    { "path": "packages/zerog/tsconfig.json" },
+    { "path": "packages/agent-logic/tsconfig.json" },
+    { "path": "packages/cli/tsconfig.json" },
+    { "path": "packages/mcp-server/tsconfig.json" }
+  ]
 }

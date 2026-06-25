@@ -1,9 +1,17 @@
 # dependencies
 /lib/
 node_modules/
+/packages/*/dist/
+/packages/*/node_modules/
 out/
 cache/
 broadcast/
+
+# package build outputs
+dist/
+
+# typescript incremental build cache
+*.tsbuildinfo
 
 # secrets — never commit these
 .env
@@ -42,6 +50,8 @@ debug.log
 .npm
 .npmrc
 
-# claude code / commandcode session-local config
+# claude code / commandcode / agent session-local config
 .claude/
 .commandcode/
+.junie/
+.agents/

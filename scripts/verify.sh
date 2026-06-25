@@ -118,8 +118,8 @@ verify_contract() {
 
 cd "$ROOT_DIR"
 
-verify_contract "PharosAgentID" "$PAID" "src/PharosAgentID.sol" "src/PharosAgentID.sol:PharosAgentID" || true
-verify_contract "CredentialRegistry" "$CREG" "src/CredentialRegistry.sol" "src/CredentialRegistry.sol:CredentialRegistry" || true
+verify_contract "PharosAgentID" "$PAID" "packages/contracts-evm/src/PharosAgentID.sol" "packages/contracts-evm/src/PharosAgentID.sol:PharosAgentID" || true
+verify_contract "CredentialRegistry" "$CREG" "packages/contracts-evm/src/CredentialRegistry.sol" "packages/contracts-evm/src/CredentialRegistry.sol:CredentialRegistry" || true
 
 echo
 echo "Done. Check the explorer for the green 'Verified' badge next to each contract."

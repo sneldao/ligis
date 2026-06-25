@@ -1,0 +1,32 @@
+{
+  "name": "@ligis/zerog",
+  "version": "0.1.0",
+  "description": "0G Compute (Reasoner) + 0G Storage (EvidenceStore) implementations for Ligis",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.6",
+    "@ligis/core": "workspace:*",
+    "ethers": "^6.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

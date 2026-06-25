@@ -7,3 +7,9 @@ out
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# Agent directories
+.claude/
+.commandcode/
+.junie/
+.agents/

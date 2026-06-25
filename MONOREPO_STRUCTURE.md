@@ -1,0 +1,120 @@
+# Ligis monorepo
+
+Ligis is a chain-agnostic agent identity & verifiable credentials skill. The
+monorepo is split along a single axis: **what depends on a particular chain**.
+Chain-neutral logic lives in `core` and `agent-logic`; chain-specific code
+lives in `adapter-*` packages.
+
+## Layout
+
+```
+ligis/
+├── packages/
+│   ├── core/              # Chain-neutral primitives (no chain SDKs)
+│   │   └── src/
+│   │       ├── types.ts       # CredentialView, SignedCredential, Network, ...
+│   │       ├── hash.ts        # capabilityHash (keccak256), parseCapability
+│   │       ├── did.ts         # did:ligis:<chain>:<id>
+│   │       ├── config.ts      # loadConfig() — reads assets/networks.json
+│   │       ├── adapter.ts     # ChainAdapter interface
+│   │       ├── reasoner.ts    # Reasoner interface (LLM)
+│   │       └── evidence.ts    # EvidenceStore interface + manifest type
+│   │
+│   ├── adapter-evm/       # ChainAdapter impl for EVM (Pharos, anvil, ...)
+│   │   └── src/
+│   │       ├── adapter.ts     # EvmAdapter class (the public surface)
+│   │       ├── operations.ts  # raw viem ops (issue/verify/sign/revoke/...)
+│   │       ├── client.ts      # viem ClientContext bootstrap
+│   │       ├── abi.ts         # Solidity ABIs
+│   │       └── address.ts     # EVM address parsing
+│   │
+│   ├── adapter-casper/    # (planned) ChainAdapter impl for Casper / Odra
+│   │
+│   ├── zerog/             # 0G Compute (Reasoner) + 0G Storage (EvidenceStore)
+│   │   └── src/
+│   │       ├── compute.ts
+│   │       └── storage.ts
+│   │
+│   ├── agent-logic/       # Trust Steward — chain-agnostic agent loop
+│   │   └── src/
+│   │       ├── policy.ts      # Known capabilities + reasoning prompt
+│   │       └── steward.ts     # boot → reason → gate → act → record
+│   │
+│   ├── cli/               # ligis CLI (--chain evm|casper)
+│   ├── mcp-server/        # MCP server (per-tool `chain` argument)
+│   ├── contracts-evm/     # Solidity contracts (Foundry)
+│   └── contracts-casper/  # (planned) Odra/Rust contracts
+│
+├── web/                   # Next.js demo + StewardRunner UI
+├── assets/                # Single source of truth: networks.json, credentials.example.json
+├── foundry.toml           # Foundry pointed at packages/contracts-evm/src
+├── tsconfig.json          # Root project references
+└── pnpm-workspace.yaml
+```
+
+## Dependency graph
+
+```
+@ligis/core               (zero chain SDKs)
+   ↑
+   ├── @ligis/adapter-evm     (viem)
+   ├── @ligis/adapter-casper  (planned — casper-js-sdk)
+   ├── @ligis/zerog           (ethers + 0G SDKs)
+   └── @ligis/agent-logic     (consumes ChainAdapter, Reasoner, EvidenceStore — never imports a concrete chain)
+          ↑
+          ├── @ligis/cli         (wires adapters by --chain flag)
+          ├── @ligis/mcp-server  (wires adapters by `chain` tool argument)
+          └── web/               (Next.js — imports adapter-evm + core directly)
+```
+
+The Trust Steward (`agent-logic`) is the centerpiece. It depends on three
+interfaces from `core` and nothing else — swap the adapter and the same loop
+runs on a different chain.
+
+## ChainAdapter
+
+Every chain adapter implements `ChainAdapter` from `@ligis/core`:
+
+- **identity**: `getAgentId`, `issueAgentId`, `rotateAgentId`
+- **credentials**: `verifyCapability`, `signCredential`, `submitCredential`, `revokeCredential`
+- **evidence**: `anchorEvidence`
+- **wallet**: `hasWallet`, `walletAddress`
+- **metadata**: `chainId`, `chainName`, `explorerUrl`
+
+All methods return chain-neutral JSON-safe shapes (`TxRef`, `SignedCredential`,
+`VerifyResult`, ...). No `bigint`, no `viem.Hex`, no Casper SDK types leak
+across the interface.
+
+## Conventions
+
+- **Capabilities are chain-neutral**: `capabilityHash("kyc.basic")` produces
+  the same `0x...32` on every chain. The hash is the canonical id.
+- **Agent identity uses DIDs**: `did:ligis:<chain-id>:<chain-native-id>`. Raw
+  addresses are never stored above the adapter boundary.
+- **Config is shared**: `assets/networks.json` is the source of truth for
+  network endpoints + deployment addresses across all chains.
+
+## Development
+
+```bash
+pnpm install
+pnpm build                          # build all packages in dependency order
+pnpm --filter @ligis/core build     # build a single package
+pnpm dev                            # watch mode for all packages
+
+pnpm --filter @ligis/cli start -- --chain evm info
+pnpm --filter @ligis/mcp-server dev
+
+pnpm test         # Solidity (Foundry)
+pnpm test:ts      # TypeScript tests across packages
+pnpm test:all     # both
+```
+
+## Adding a new chain
+
+1. Create `packages/adapter-<chain>/` with a class implementing `ChainAdapter`.
+2. Add the chain branch to the `getAdapter()` switch in `packages/cli/src/index.ts` and `packages/mcp-server/src/index.ts`.
+3. (Optional) Create `packages/contracts-<chain>/` for the chain's smart contracts.
+
+The Trust Steward, policy engine, CLI surface, and MCP tools require no
+changes — they consume the interface, not the implementation.

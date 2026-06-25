@@ -1,28 +1,25 @@
 {
   "name": "ligis",
   "version": "0.1.0",
-  "description": "Ligis — Identity & Verifiable Credentials Skill for the Pharos AI Agent ecosystem. Issue portable agent IDs (ERC-721), sign and verify EIP-712 capability credentials, rotate keys, and revoke. Built for the Pharos Skill-to-Agent Dual Cascade Hackathon (Phase 1).",
+  "description": "Ligis — Chain-agnostic Identity & Verifiable Credentials Skill for AI agents. Portable agent IDs, signed capability credentials, key rotation, and revocation. Pluggable chain adapters (EVM/Pharos today; Casper next), with 0G Compute for reasoning and 0G Storage for verifiable evidence.",
   "license": "MIT",
   "type": "module",
-  "bin": {
-    "ligis": "./dist/cli/index.js"
-  },
-  "main": "./dist/cli/index.js",
+  "private": true,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "start": "node --enable-source-maps dist/cli/index.js",
-    "dev": "tsx src/cli/index.ts",
-    "mcp": "node --enable-source-maps dist/mcp/server.js",
-    "mcp:dev": "tsx src/mcp/server.ts",
+    "build": "pnpm -r run build",
+    "dev": "pnpm -r run dev",
+    "start": "node --enable-source-maps packages/cli/dist/index.js",
+    "mcp": "node --enable-source-maps packages/mcp-server/dist/index.js",
+    "mcp:dev": "tsx packages/mcp-server/src/index.ts",
     "test": "bash scripts/forge.sh test -vvv",
-    "test:ts": "node --import tsx --test test/ts/*.test.ts",
-    "test:all": "bash scripts/forge.sh test -vvv && npm run test:ts",
+    "test:ts": "node --import tsx --test packages/*/test/**/*.test.ts",
+    "test:all": "bash scripts/forge.sh test -vvv && pnpm run test:ts",
     "test:coverage": "bash scripts/forge.sh coverage",
     "deploy:atlantic": "bash scripts/deploy.sh atlantic",
     "verify:atlantic": "bash scripts/verify.sh atlantic",
     "demo": "bash scripts/demo.sh",
-    "format": "bash scripts/forge.sh fmt && prettier --write 'src/**/*.{ts,json,md}'",
-    "clean": "rm -rf out cache broadcast dist"
+    "format": "bash scripts/forge.sh fmt && prettier --write 'packages/*/src/**/*.{ts,json,md}'",
+    "clean": "pnpm -r run clean && rm -rf out cache broadcast"
   },
   "keywords": [
     "pharos",
@@ -36,19 +33,9 @@
     "ai-agent",
     "web3"
   ],
-  "dependencies": {
-    "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",
-    "@0gfoundation/0g-storage-ts-sdk": "^1.2.6",
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "ethers": "^6.13.1",
-    "viem": "^2.21.0",
-    "zod": "^3.23.0"
-  },
   "devDependencies": {
-    "@types/node": "^22.0.0",
     "prettier": "^3.3.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "tsx": "^4.19.0"
   },
   "engines": {
     "node": ">=20"

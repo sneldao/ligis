@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/PharosAgentID.sol";
+import "../packages/contracts-evm/src/PharosAgentID.sol";
 
 contract GoodReceiver is IERC721Receiver {
     function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {

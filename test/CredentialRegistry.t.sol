@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/CredentialRegistry.sol";
+import "../packages/contracts-evm/src/CredentialRegistry.sol";
 
 contract CredentialRegistryTest is Test {
     CredentialRegistry internal registry;

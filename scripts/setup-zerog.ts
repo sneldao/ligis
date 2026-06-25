@@ -1,4 +1,4 @@
-import { loadZeroGConfig, setupProvider } from "../src/zerog/compute.js";
+import { loadZeroGConfig, setupProvider } from "../packages/zerog/src/compute.js";
 
 async function main() {
   const config = loadZeroGConfig();

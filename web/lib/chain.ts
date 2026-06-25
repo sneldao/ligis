@@ -6,7 +6,7 @@ import {
   type Address,
   type Hex,
 } from "viem";
-import { PHAROS_AGENT_ID_ABI, CREDENTIAL_REGISTRY_ABI } from "@ligis/abi";
+import { PHAROS_AGENT_ID_ABI, CREDENTIAL_REGISTRY_ABI } from "@ligis/adapter-evm";
 import networks from "../../assets/networks.json";
 import credentialsRef from "../../assets/credentials.example.json";
 

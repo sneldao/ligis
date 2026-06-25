@@ -1,0 +1,13 @@
+{
+  "name": "@ligis/contracts-evm",
+  "version": "0.1.0",
+  "description": "EVM (Solidity) contracts for Ligis — Pharos and any EVM-compatible chain",
+  "keywords": [
+    "solidity",
+    "pharos",
+    "agent",
+    "identity",
+    "credentials",
+    "eip-712"
+  ]
+}

@@ -10,7 +10,7 @@
 
 ```bash
 # 1. Install deps
-npm install
+pnpm install
 
 # 2. Get testnet PHRS from the Pharos Atlantic faucet
 #    https://atlantic.pharosscan.xyz (Faucet tool) or Chainlink faucet
@@ -20,8 +20,8 @@ export PRIVATE_KEY=0x<YOUR_TESTNET_PRIVATE_KEY>
 
 # 4. Build and test
 bash scripts/forge.sh build
-npm test
-npm run test:ts
+pnpm test
+pnpm run test:ts
 
 # 5. Deploy
 bash scripts/deploy.sh atlantic

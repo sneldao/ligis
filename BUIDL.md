@@ -98,24 +98,28 @@ layer.
 
 - **2 Solidity contracts** (`PharosAgentID.sol`, `CredentialRegistry.sol`)
   on Pharos Atlantic (chainId 688689), 100% Foundry test coverage (41 tests, including fuzz tests).
-- **CLI** (`dist/cli/index.js`): 8 commands (info, hash, issue, verify, revoke,
+- **CLI** (`packages/cli/dist/index.js`): 8 commands (info, hash, issue, verify, revoke,
   rotate, sign, agent run) — every command prints JSON for downstream Skills to consume.
-- **MCP server** (`dist/mcp/server.js`): 7 tools that an agent can call
+- **MCP server** (`packages/mcp-server/dist/index.js`): 7 tools that an agent can call
   directly from Claude Code or any MCP-aware IDE.
-- **Trust Steward Agent** (`src/agent/`): an autonomous agent that runs the full
+- **Trust Steward Agent** (`packages/agent-logic/`): an autonomous agent that runs the full
   loop — boot (mint Agent ID) → reason (0G Compute TEE-verified LLM maps a
   natural-language goal to required capabilities) → gate (`isCapable`) → act
   (self-issue missing credentials) → record (write evidence manifest to 0G
   Storage, anchor the Merkle root on-chain via `setTokenURI`). 17 TypeScript
   unit tests (node:test) with mocked clients verify the full loop offline.
-- **0G integration** (`src/zerog/`): `compute.ts` wraps the 0G Compute serving
+- **0G integration** (`packages/zerog/`): `compute.ts` wraps the 0G Compute serving
   broker for TEE-verified inference; `storage.ts` wraps the 0G Storage SDK for
   verifiable evidence storage. Both sit behind interfaces (`Reasoner`,
-  `EvidenceStore`) so the agent is testable offline.
-- **Shared library** (`src/lib/`): single source of truth for all on-chain
-  operations — `issueId`, `verify`, `revoke`, `rotate`, `signCredential`,
-  `getAgentId`, `submitCredential`, `updateTokenUri`. CLI, MCP, and Agent all
-  import from here (no duplicated chain logic).
+  `EvidenceStore`) from `@ligis/core` so the agent is testable offline.
+- **Chain adapter** (`packages/adapter-evm/`): the single EVM `ChainAdapter`
+  implementation — wraps viem and exposes only chain-neutral shapes
+  (`ChainAdapter`, `TxRef`, `VerifyResult`, ...). viem does not leak above
+  this boundary.
+- **Chain-neutral primitives** (`packages/core/`): zero chain SDKs, one
+  dep (`@noble/hashes`). Defines the `ChainAdapter`, `Reasoner`,
+  `EvidenceStore` interfaces, the DID format (`did:ligis:<chain>:<id>`),
+  capability hashing, and the `loadConfig()` reader for `assets/networks.json`.
 - **SKILL.md + 7 references** (issue/verify/revoke/rotate/hash/sign/composability) following
   the Pharos Skill Engine's director pattern. The composability reference is the
   integration playbook for Aegis, Pact, FaroLink, Maestro, and x402 facilitators.
@@ -161,7 +165,7 @@ After an internal audit, the following improvements were applied:
 
 - **ERC-721 compliance**: `PharosAgentID` now emits standard `Transfer` events on `mint`, `rotate`, `revoke`, and `transferFrom`, making the NFT fully trackable by indexers, marketplaces, and wallet UIs.
 - **`safeTransferFrom` safety**: Added `IERC721Receiver` checks so transfers to contracts that do not implement `onERC721Received` revert cleanly (previously it was just a passthrough to `transferFrom`).
-- **ABI event alignment**: The TypeScript ABI (`src/lib/abi.ts`) now matches the exact Solidity event names (`AgentMinted`, `AgentRotated`, `AgentRevoked`, `MetadataUpdated`), fixing silent event-decoding failures.
+- **ABI event alignment**: The TypeScript ABI (`packages/adapter-evm/src/abi.ts`) now matches the exact Solidity event names (`AgentMinted`, `AgentRotated`, `AgentRevoked`, `MetadataUpdated`), fixing silent event-decoding failures.
 - **Bounded registry scans**: `CredentialRegistry.revoke` now scans at most 50 nonces when recomputing the latest valid credential, preventing unbounded gas griefing. `latestCredential` and `getCredential` no longer iterate backward — they use O(1) existence flags and exact nonce lookups.
 - **O(1) issuer-specific checks**: `isCapableFromIssuer` now reads from a per-issuer latest-valid nonce tracker instead of iterating backward, making it safe for on-chain callers.
 - **Fuzz tests**: Added 3 Foundry fuzz tests covering valid signature issuance, wrong-nonce rejection, and revocation edge cases (256 runs each).
@@ -212,15 +216,15 @@ After an internal audit, the following improvements were applied:
 open https://atlantic.pharosscan.xyz/address/<PharosAgentID>
 
 # 0:20  In a terminal:
-PRIVATE_KEY=$PHAROS_DEPLOYER_KEY node dist/cli/index.js info
+PRIVATE_KEY=$PHAROS_DEPLOYER_KEY node packages/cli/dist/index.js info
         → shows the live addresses
 
 # 0:30  Mint an Agent ID for a fresh wallet
-node dist/cli/index.js issue --token-uri "ipfs://demo-agent"
+node packages/cli/dist/index.js issue --token-uri "ipfs://demo-agent"
         → returns {tokenId: 1, txHash: "0x..."}
 
 # 0:40  Sign a capability off-chain
-node dist/cli/index.js sign --issuer-key $ISSUER_KEY \
+node packages/cli/dist/index.js sign --issuer-key $ISSUER_KEY \
     --subject 0x... --capability "agent.commerce.escrow" --expires-in 3600
         → prints the EIP-712 envelope with submitCommand
 
@@ -228,15 +232,15 @@ node dist/cli/index.js sign --issuer-key $ISSUER_KEY \
         → returns the CredentialIssued event with a Pharos Scan link
 
 # 1:00  Verify
-node dist/cli/index.js verify --subject 0x... --capability "agent.commerce.escrow"
+node packages/cli/dist/index.js verify --subject 0x... --capability "agent.commerce.escrow"
         → capable: true, valid: true
 
 # 1:10  Revoke (issuer action)
-node dist/cli/index.js revoke --subject 0x... --capability "agent.commerce.escrow" --nonce 0
+node packages/cli/dist/index.js revoke --subject 0x... --capability "agent.commerce.escrow" --nonce 0
         → returns CredentialRevoked
 
 # 1:20  Re-verify
-node dist/cli/index.js verify --subject 0x... --capability "agent.commerce.escrow"
+node packages/cli/dist/index.js verify --subject 0x... --capability "agent.commerce.escrow"
         → capable: false (latest credential is revoked)
 
 # 1:30  Show the same flow in an MCP-aware IDE (Claude Code or Cursor) calling
@@ -271,7 +275,8 @@ Solo submitter: `<your name>`
 - [x] CLI: 8 commands, JSON output — verified live on Atlantic
 - [x] MCP server: 7 tools (including `ligis-run-steward`)
 - [x] Trust Steward Agent: full loop (boot → reason → gate → act → record) with 0G Compute + 0G Storage. Web frontend supports live on-chain mode (real isCapableMulti reads, EIP-712 credential issuance, setTokenURI anchoring) via `LIGIS_STEWARD_KEY` env var.
-- [x] Shared library (`src/lib/`): single source of truth for CLI, MCP, and Agent
+- [x] Chain adapter (`packages/adapter-evm/`): single EVM `ChainAdapter` implementation; viem stays inside this package
+- [x] Chain-neutral core (`packages/core/`): zero chain SDKs, depends only on `@noble/hashes`
 - [x] SKILL.md + 7 references
 - [x] install.sh (Claude Code + Codex)
 - [x] Bash deploy/verify/demo scripts (all `bash -n` clean, demo executed end-to-end on Atlantic)

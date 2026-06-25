@@ -48,17 +48,17 @@ To bring up another EVM chain: add it to [`assets/networks.json`](assets/network
 ## Quick start
 
 ```bash
-npm install
+pnpm install
 
 # Mint an Agent ID
-PRIVATE_KEY=0x... npx tsx src/cli/index.ts issue --token-uri "ipfs://bafy.../meta"
+PRIVATE_KEY=0x... pnpm start -- issue --token-uri "ipfs://bafy.../meta"
 
 # Verify a credential (read-only)
-npx tsx src/cli/index.ts verify --subject 0x... --capability "agent.commerce.escrow"
+pnpm start -- verify --subject 0x... --capability "agent.commerce.escrow"
 
 # Run the Trust Steward Agent
 PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
-  npx tsx src/cli/index.ts agent run --goal "open an escrow with counterparty X"
+  pnpm start -- agent run --goal "open an escrow with counterparty X"
 ```
 
 ## Documentation

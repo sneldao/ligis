@@ -1,0 +1,30 @@
+{
+  "name": "@ligis/cli",
+  "version": "0.1.0",
+  "description": "CLI for Ligis — agent identity + capability credentials across chains",
+  "type": "module",
+  "bin": {
+    "ligis": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "start": "node --enable-source-maps dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@ligis/adapter-evm": "workspace:*",
+    "@ligis/agent-logic": "workspace:*",
+    "@ligis/core": "workspace:*",
+    "@ligis/zerog": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
