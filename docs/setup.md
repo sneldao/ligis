@@ -49,6 +49,7 @@ bash scripts/demo.sh
 | `PHAROS_NETWORK` | All ops | `atlantic` (default) or `mainnet` |
 | `PHAROS_RPC_URL` | All ops | Override the default RPC URL |
 | `SOCIALSCAN_API_KEY` | Source verification | For `scripts/verify.sh` |
+| `LIGIS_STEWARD_KEY` | Web Steward live mode | Pharos Atlantic wallet key for on-chain steward runs on the web frontend. Set on Vercel to enable the ● live toggle. Uses the same key as `PRIVATE_KEY` (your deployer wallet). |
 
 Store keys in `.env.d/` (gitignored). Example:
 ```bash
@@ -56,6 +57,21 @@ Store keys in `.env.d/` (gitignored). Example:
 PRIVATE_KEY=0x...
 # .env.d/zerog.env
 ZEROG_PRIVATE_KEY=0x...
+```
+
+### Web frontend (Vercel)
+
+The web frontend runs the Steward loop in two modes:
+
+- **Simulated** (default): no env vars needed. The loop uses realistic timing
+  and fake tx hashes for demo purposes.
+- **Live**: set `LIGIS_STEWARD_KEY` to a funded Pharos Atlantic wallet private
+  key. The loop will make real `isCapableMulti` reads, sign and submit EIP-712
+  credentials via `issue()`, and anchor evidence via `setTokenURI`.
+
+```bash
+# In Vercel project settings → Environment Variables:
+LIGIS_STEWARD_KEY=0x...  # same key as your deployer wallet
 ```
 
 ## 0G wallet setup

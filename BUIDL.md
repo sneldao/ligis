@@ -170,7 +170,7 @@ After an internal audit, the following improvements were applied:
 - **0G Compute SDK fix**: The SDK's ESM build has a broken re-export; `compute.ts` now imports via `createRequire` to use the working CJS build.
 - **Pharos Scan verify script**: Updated to the correct socialscan API endpoint, `solidity-standard-json-input` format via `forge verify-contract --show-standard-json-input`, `cancun` EVM version, and correct solc commit hash. The previous `solidity-single-file` (flattened) approach consistently failed with "No contract could be verified" or Internal Server Error; switching to standard JSON input (which includes optimizer settings, EVM version, and remappings in the payload) resolved it.
 - **Batch capability reads**: `isCapableMulti(address, bytes32[])` returns `bool[]` in a single call — the Trust Steward's GATE phase now uses 1 RPC instead of N for capability checks. The frontend `readAgentSnapshot` also uses this, and the VerifyDemo has a batch mode toggle.
-- **AgentCapabilityChanged event**: Emitted on `issue` (capable=true) and `revoke` (capable=true/false) so indexers and frontends get real-time trust state changes without polling.
+- **AgentCapabilityChanged event**: Emitted on `issue` (capable=true) and `revoke` (capable=true/false) so indexers and frontends get real-time trust state changes without polling. The agent profile page now shows a capability history timeline from these events.
 - **ERC-165 support**: `CredentialRegistry` now implements `supportsInterface(bytes4)` for trustless composition — other Skills can verify the registry interface before calling it.
 
 ### Security posture
@@ -269,7 +269,7 @@ Solo submitter: `<your name>`
 - [x] Source verified on Pharos Scan (both contracts verified via socialscan API using `solidity-standard-json-input` format)
 - [x] CLI: 8 commands, JSON output — verified live on Atlantic
 - [x] MCP server: 7 tools (including `ligis-run-steward`)
-- [x] Trust Steward Agent: full loop (boot → reason → gate → act → record) with 0G Compute + 0G Storage
+- [x] Trust Steward Agent: full loop (boot → reason → gate → act → record) with 0G Compute + 0G Storage. Web frontend supports live on-chain mode (real isCapableMulti reads, EIP-712 credential issuance, setTokenURI anchoring) via `LIGIS_STEWARD_KEY` env var.
 - [x] Shared library (`src/lib/`): single source of truth for CLI, MCP, and Agent
 - [x] SKILL.md + 7 references
 - [x] install.sh (Claude Code + Codex)
