@@ -76,6 +76,9 @@ credentials once via the CLI. This limits blast radius — if the Vercel env var
 is compromised, only the steward wallet (with limited funds and capabilities)
 is affected, not the deployer who owns the contracts.
 
+**Current steward wallet:** `0x76eCFC63742b154e24dECf3c00Ea8DFED5061833`
+(token #3, minted on Atlantic). Funded with testnet PHRS.
+
 Live writes are rate-limited to 3 runs per minute per IP address.
 
 ```bash
