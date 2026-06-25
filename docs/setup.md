@@ -93,7 +93,7 @@ Live writes are rate-limited to 3 runs per minute per IP address.
 ```bash
 # In Vercel project settings → Environment Variables:
 LIGIS_STEWARD_KEY=0x...  # dedicated steward wallet (not your deployer key)
-ZEROG_PRIVATE_KEY=0x...  # 0G testnet wallet for Compute + Storage (same key as CLI)
+ZEROG_PRIVATE_KEY=0x...  # SAME value as LIGIS_STEWARD_KEY — one key, two chains
 # Optional:
 # PHAROS_RPC_URL=https://...  # custom RPC if default is rate-limited
 # ZEROG_RPC_URL=https://evmrpc-testnet.0g.ai  # 0G EVM RPC (default works)
@@ -105,11 +105,38 @@ ZEROG_PRIVATE_KEY=0x...  # 0G testnet wallet for Compute + Storage (same key as 
 
 The Trust Steward Agent needs a funded 0G testnet wallet for Compute (TEE-verified inference) and Storage (evidence upload).
 
+### Architecture: one dedicated steward key for both chains
+
+The steward wallet (`0x76eCFC63742b154e24dECf3c00Ea8DFED5061833`) is reused for both Pharos Atlantic (PHRS gas) and 0G testnet (OG for Compute + Storage). EVM private keys are chain-agnostic, so the same key controls the same address on both chains. This means:
+
+- **One env var on Vercel**: `ZEROG_PRIVATE_KEY` = `LIGIS_STEWARD_KEY` (same value)
+- **One dedicated wallet** with limited funds on both chains (not the deployer key)
+- **Simpler key management** — no second wallet to track
+
 ### Current status (as of June 2026)
 
-✅ **Funded and initialized.** The main 0G wallet (`0xa234d5ba3864acD254467193272e15941102A8fa`) holds 2.48 OG after the 3 OG ledger deposit + 0.1 OG provider funding. The one-time `setupProvider()` has been run.
+**CLI 0G wallet** (`0xa234d5ba3864acD254467193272e15941102A8fa`): funded with 2.48 OG, `setupProvider()` completed. Used for CLI/MCP agent runs.
 
-To re-run from scratch on a fresh wallet:
+**Web steward 0G wallet** (`0x76eCFC63742b154e24dECf3c00Ea8DFED5061833`): needs funding + `setupProvider()` before live 0G integration works on Vercel.
+
+To set up the web steward wallet for 0G:
+
+1. **Fund it** with at least **3.2 OG** on the 0G testnet (Galileo):
+   - 3 OG for the ledger deposit (hard minimum enforced by the SDK)
+   - 0.1 OG for provider funding
+   - Extra for Storage upload gas
+   - Faucet: https://docs.0g.ai/developer-hub/testnet/testnet-overview
+2. **Run one-time setup** to initialize the 0G Compute ledger:
+   ```bash
+   source .env.d/steward.env
+   export ZEROG_PRIVATE_KEY=$LIGIS_STEWARD_KEY
+   export ZEROG_RPC_URL=https://evmrpc-testnet.0g.ai
+   export ZEROG_PROVIDER=0x69Eb5a0BD7d0f4bF39eD5CE9Bd3376c61863aE08
+   npx tsx scripts/setup-zerog.ts
+   ```
+3. **On Vercel**, set `ZEROG_PRIVATE_KEY` to the same value as `LIGIS_STEWARD_KEY`.
+
+To set up a fresh wallet from scratch (alternative approach):
 
 1. **Generate a wallet** and store the key in `.env.d/zerog.env`.
 2. **Fund it** with at least **3.2 OG** on the 0G testnet (Galileo):
