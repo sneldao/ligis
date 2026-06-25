@@ -1,17 +1,24 @@
 # Ligis
 
 > **Portable on-chain identity and verifiable credentials for AI agents.**
-> **Live on Pharos. Portable to any EVM chain.**
+> **Live on Pharos. Casper in progress for the Casper Agentic Buildathon.**
 
-41 Foundry tests + 17 TypeScript tests passing. 4 on-chain Skills + 2 helpers + Trust Steward Agent. CLI. MCP server. MIT.
+A chain-agnostic agent identity runtime: one `ChainAdapter` interface, two
+implementations (EVM/Pharos today, Casper/Odra in progress), and a Trust
+Steward that runs the same loop on either chain. Credentials are chain-neutral
+by design — `capabilityHash("kyc.basic")` produces the same 32-byte hash on
+every chain, which is what makes cross-chain credential portability possible.
+
+41 Foundry tests + 17 TypeScript tests passing. 4 on-chain Skills + 2 helpers
++ Trust Steward Agent. CLI. MCP server. x402 Trust Gate. MIT.
 
 ---
 
 ## What this is
 
-Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgentID` ERC-721) and signed capability credentials (`CredentialRegistry` EIP-712). Any contract can gate access in one line: `require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed")`.
+Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgentID` ERC-721 on EVM, `AgentId` Odra contract on Casper) and signed capability credentials (`CredentialRegistry` EIP-712 on both chains). Any contract can gate access in one line: `require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed")`.
 
-It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The contracts are plain EVM Solidity with no chain-specific dependencies, so the same two contracts deploy on any EVM chain, and credentials are chain-scoped and replay-safe by design.
+It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter + Odra contracts are scaffolded and building for the [Casper Agentic Buildathon](https://dorahacks.io/hackathon/2202/detail); see [`docs/casper-buildathon.md`](docs/casper-buildathon.md) for the submission plan.
 
 ## Skills
 
@@ -36,21 +43,36 @@ First deployment is live on **Pharos Atlantic testnet** (chainId 688689):
 
 ## Chain support
 
-Ligis is **Pharos-first, EVM-portable by design.**
+Ligis is **chain-agnostic by design.** Every chain implements the same
+`ChainAdapter` interface from `@ligis/core`; the Trust Steward, CLI, and
+MCP server consume the interface, not the implementation.
 
-- **No chain-specific dependencies.** Both contracts are plain Solidity (`^0.8.24`) — no custom precompiles or opcodes. The same source deploys unchanged on any EVM chain.
-- **Per-chain, replay-safe credentials.** The EIP-712 `DOMAIN_SEPARATOR` binds `block.chainid` and the registry address, so a credential signed for one chain cannot be replayed on another. Multi-chain is a property of the design, not a later bolt-on.
-- **Data-driven runtime.** Chains live in [`assets/networks.json`](assets/networks.json) and are selected with `PHAROS_NETWORK`; the CLI, MCP server, and agent build the chain at runtime (viem `defineChain`) — no code change to read a new network.
-- **Already multi-network.** The Trust Steward uses Pharos for identity/credentials and **0G** for verifiable compute and storage.
+| Chain | Adapter | Contracts | Status |
+|-------|---------|-----------|--------|
+| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm` | `packages/contracts-evm` (Solidity) | Live — deployed, tested, steward running |
+| **Casper Testnet** | `@ligis/adapter-casper` | `packages/contracts-casper` (Odra) | Scaffolded — `signCredential` live, ops pending contract deploy |
 
-To bring up another EVM chain: add it to [`assets/networks.json`](assets/networks.json) and to the network map in [`scripts/deploy.sh`](scripts/deploy.sh) (which currently has entries for `atlantic`, `mainnet`, and `local`), then run `bash scripts/deploy.sh <network>`. Each deployment is independent and gets its own EIP-712 domain.
+**Why this works across chains:**
+- **Capabilities are chain-neutral**: `capabilityHash("kyc.basic")` produces
+  the same `0x...32` on every chain. The hash is the canonical id.
+- **Agent identity uses DIDs**: `did:ligis:<chain-id>:<chain-native-id>`.
+- **EIP-712 domain separation is per-chain**: the domain separator binds
+  the chain name + contract package hash, so a credential signed for one
+  chain cannot be replayed on another.
+- **The same secp256k1 key** can issue credentials on both chains — the
+  signature is valid wherever the issuer's address is recognized.
+
+To bring up another chain: implement `ChainAdapter`, add the chain branch
+to `getAdapter()` in the CLI and MCP server, and (optionally) create
+`packages/contracts-<chain>`. See [`MONOREPO_STRUCTURE.md`](MONOREPO_STRUCTURE.md)
+for the full architecture.
 
 ## Quick start
 
 ```bash
 pnpm install
 
-# Mint an Agent ID
+# Mint an Agent ID on Pharos (default chain)
 PRIVATE_KEY=0x... pnpm start -- issue --token-uri "ipfs://bafy.../meta"
 
 # Verify a credential (read-only)
@@ -59,6 +81,10 @@ pnpm start -- verify --subject 0x... --capability "agent.commerce.escrow"
 # Run the Trust Steward Agent
 PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
   pnpm start -- agent run --goal "open an escrow with counterparty X"
+
+# Casper (after contracts are deployed — see docs/setup.md)
+pnpm start -- --chain casper info
+pnpm start -- --chain casper verify --subject <account-hash> --capability kyc.basic
 ```
 
 ## Documentation
@@ -66,9 +92,11 @@ PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
 | Doc | What's in it |
 |-----|-------------|
 | [Architecture](docs/architecture.md) | Contract design, module structure, repository layout |
+| [Monorepo structure](MONOREPO_STRUCTURE.md) | Package layout, dependency graph, ChainAdapter interface, adding a new chain |
+| [Casper Buildathon](docs/casper-buildathon.md) | Submission plan, product story, day-by-day roadmap, demo storyboard |
 | [Trust Steward Agent](docs/trust-steward-agent.md) | The autonomous loop, 0G integration, build phases |
 | [Security](docs/security.md) | Non-custodial design, EIP-712 replay protection |
-| [Setup](docs/setup.md) | From-scratch install, env vars, 0G wallet, deploy, verify |
+| [Setup](docs/setup.md) | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify |
 | [SKILL.md](SKILL.md) | Director entry point for AI agents |
 | [References](references/) | Per-skill command specs (issue, verify, revoke, rotate, hash, sign, composability) |
 

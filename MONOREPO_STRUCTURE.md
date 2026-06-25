@@ -28,7 +28,14 @@ ligis/
 │   │       ├── abi.ts         # Solidity ABIs
 │   │       └── address.ts     # EVM address parsing
 │   │
-│   ├── adapter-casper/    # (planned) ChainAdapter impl for Casper / Odra
+│   ├── adapter-casper/    # ChainAdapter impl for Casper (casper-js-sdk + casper-eip-712)
+│   │   └── src/
+│   │       ├── adapter.ts     # CasperAdapter class
+│   │       ├── operations.ts  # on-chain ops (signCredential live; others stubbed pending deploy)
+│   │       ├── client.ts      # casper-js-sdk RpcClient bootstrap
+│   │       ├── config.ts      # CasperConfig + loadCasperConfig() from env
+│   │       ├── eip712.ts      # EIP-712 digest construction via @casper-ecosystem/casper-eip-712
+│   │       └── index.ts
 │   │
 │   ├── zerog/             # 0G Compute (Reasoner) + 0G Storage (EvidenceStore)
 │   │   └── src/
@@ -43,9 +50,10 @@ ligis/
 │   ├── cli/               # ligis CLI (--chain evm|casper)
 │   ├── mcp-server/        # MCP server (per-tool `chain` argument)
 │   ├── contracts-evm/     # Solidity contracts (Foundry)
-│   └── contracts-casper/  # (planned) Odra/Rust contracts
+│   ├── contracts-casper/  # Odra/Rust contracts (agent_id.rs, credential_registry.rs)
+│   └── x402-server/       # Credential-gated x402 resource server (Hono + CasperAdapter)
 │
-├── web/                   # Next.js demo + StewardRunner UI
+├── web/                   # Next.js app — multi-chain (ChainSelector + getChain(searchParams))
 ├── assets/                # Single source of truth: networks.json, credentials.example.json
 ├── foundry.toml           # Foundry pointed at packages/contracts-evm/src
 ├── tsconfig.json          # Root project references
@@ -58,13 +66,14 @@ ligis/
 @ligis/core               (zero chain SDKs)
    ↑
    ├── @ligis/adapter-evm     (viem)
-   ├── @ligis/adapter-casper  (planned — casper-js-sdk)
+   ├── @ligis/adapter-casper  (casper-js-sdk + @casper-ecosystem/casper-eip-712)
    ├── @ligis/zerog           (ethers + 0G SDKs)
    └── @ligis/agent-logic     (consumes ChainAdapter, Reasoner, EvidenceStore — never imports a concrete chain)
           ↑
           ├── @ligis/cli         (wires adapters by --chain flag)
           ├── @ligis/mcp-server  (wires adapters by `chain` tool argument)
-          └── web/               (Next.js — imports adapter-evm + core directly)
+          ├── @ligis/x402-server (CasperAdapter — credential-gated x402 endpoint)
+          └── @ligis/web         (Next.js — imports adapter-evm + core via workspace symlinks)
 ```
 
 The Trust Steward (`agent-logic`) is the centerpiece. It depends on three

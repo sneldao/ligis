@@ -173,15 +173,22 @@ MCP server via `--chain casper`. To use it end-to-end:
   cargo install just --locked
   ```
 
-### 2. Casper Wallet + Testnet CSPR
+### 2. Casper Wallets + Testnet CSPR
 
-1. Install the [Casper Wallet](https://www.casperwallet.io/) and create or
-   import an account.
+The buildathon needs **three** funded accounts: deployer, agent subject,
+and issuer. The faucet is single-use per account, so the deployer hits
+the faucet once and transfers to the other two.
+
+1. Install the [Casper Wallet](https://www.casperwallet.io/) and create
+   three accounts: **deployer**, **agent**, **issuer**.
 2. Switch the wallet to **Testnet**.
-3. Visit <https://testnet.cspr.live/tools/faucet>, connect the wallet, and
-   click **Request tokens** (one-time per account).
-4. Export the secret key as a PEM file (`secret_key.pem`) — the adapter reads
-   it via `LIGIS_CASPER_KEY_PATH`.
+3. Visit <https://testnet.cspr.live/tools/faucet>, connect the **deployer**
+   account, and click **Request tokens** (one-time per account).
+4. Transfer ~10–50 CSPR from deployer → agent and deployer → issuer
+   (enough for gas on a handful of transactions each).
+5. Export each secret key as a PEM file (`secret_key.pem`,
+   `agent_key.pem`, `issuer_key.pem`) — the adapter reads them via
+   `LIGIS_CASPER_KEY_PATH`.
 
 ### 3. Build the Odra contracts
 
@@ -233,6 +240,27 @@ For production-grade RPC (rate limits, low latency, SSE), use CSPR.cloud:
 ```bash
 export LIGIS_CASPER_RPC_URL=https://node.testnet.cspr.cloud/rpc
 export LIGIS_CASPER_AUTH=<your CSPR.cloud bearer token>
+```
+
+### 7. Optional: x402 Trust Gate server
+
+`packages/x402-server` is a credential-gated x402 resource server. It checks
+a Ligis credential on Casper before accepting a paid HTTP request.
+
+```bash
+# Configure the gate
+export LIGIS_GATE_CAPABILITY=data.premium        # capability the gate requires
+export LIGIS_GATE_PRICE=1000000                  # price in smallest token unit
+export LIGIS_GATE_ASSET=<CEP-18 package hash>    # payment token
+export LIGIS_GATE_PAY_TO=<your account hash>     # recipient
+export LIGIS_FACILITATOR_URL=http://localhost:4022  # Casper x402 Facilitator
+
+# Run it
+pnpm x402:dev   # or: pnpm x402 (after build)
+
+# Test it
+curl http://localhost:4040/premium -H "X-Subject: <agent account hash>"
+# → 401 (no credential) or 402 (credential valid, payment required)
 ```
 
 > **Buildathon note**: Casper x402 Facilitator access is sponsored for
