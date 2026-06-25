@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { PHASES, type Phase, type StewardEvent } from "@/lib/steward-events";
+import { network } from "@/lib/network";
 import { Rule } from "./Rule";
 import { StewardDiagram } from "./StewardDiagram";
 import { truncateAddress, truncateHash } from "@/lib/format";
@@ -14,7 +16,7 @@ type State = {
   capabilities: Array<{ name: string; capable: boolean; selfIssued: boolean; issueTxHash?: string }>;
   txs: Array<{ name: string; txHash: string }>;
   manifest: { rootHash: string; anchorTx: string; storageType: string; tokenUri: string } | null;
-  summary: { ok: boolean; tokenId?: string; gated?: boolean; live: boolean; rpcCalls?: number } | null;
+  summary: { ok: boolean; tokenId?: string; gated?: boolean; live: boolean; rpcCalls?: number; subject?: string; minted?: boolean } | null;
   error: string | null;
   events: StewardEvent[];
 };
@@ -40,7 +42,7 @@ function apply(state: State, ev: StewardEvent): State {
       next.phaseStatus = { ...state.phaseStatus, [ev.phase]: ev.status === "start" ? "running" : ev.status };
       break;
     case "boot":
-      next.summary = { ok: true, tokenId: ev.tokenId, live: false };
+      next.summary = { ok: true, tokenId: ev.tokenId, live: false, subject: ev.subject, minted: ev.minted };
       break;
     case "delta":
       next.reasonText = state.reasonText + ev.text;
@@ -62,7 +64,7 @@ function apply(state: State, ev: StewardEvent): State {
       next.manifest = { rootHash: ev.rootHash, anchorTx: ev.anchorTx, storageType: ev.storageType, tokenUri: ev.tokenUri };
       break;
     case "summary":
-      next.summary = { ok: ev.ok, tokenId: ev.tokenId, gated: ev.gated, live: ev.live, rpcCalls: ev.rpcCalls };
+      next.summary = { ok: ev.ok, tokenId: ev.tokenId, gated: ev.gated, live: ev.live, rpcCalls: ev.rpcCalls, subject: ev.subject, minted: next.summary?.minted };
       break;
     case "error":
       next.error = ev.message;
@@ -136,14 +138,41 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
 
   const thought = useMemo(() => {
     const ps = state.phaseStatus;
+    const caps = state.capabilities;
+    const held = caps.filter((c) => c.capable).map((c) => c.name);
+    const missing = caps.filter((c) => !c.capable).map((c) => c.name);
+    const tokenId = state.summary?.tokenId;
+
     for (const phase of ["RECORD", "ACT", "GATE", "REASON", "BOOT"] as const) {
       const s = ps[phase];
       if (s === "running" || s === "done") {
-        return AGENT_THOUGHTS[phase]?.[s] ?? null;
+        if (phase === "BOOT") {
+          if (s === "running") return "Searching the registry for my agent token…";
+          return tokenId ? `I'm token #${tokenId}. I exist on-chain. Now — what am I for?` : "I exist on-chain. Now — what am I for?";
+        }
+        if (phase === "REASON") {
+          if (s === "running") return "Sending my goal to 0G Compute. What capabilities does this require?";
+          return caps.length > 0 ? `I need ${caps.map((c) => c.name.split(".").pop()).join(" and ")}. Let me check what I already hold.` : "I know what I need. Let me check what I already hold.";
+        }
+        if (phase === "GATE") {
+          if (s === "running") return "Checking the credential registry — what do I have, what's missing?";
+          if (missing.length === 0) return "I hold everything I need. I'm ready.";
+          const heldShort = held.map((n) => n.split(".").pop());
+          const missingShort = missing.map((n) => n.split(".").pop());
+          return `I hold ${held.length > 0 ? heldShort.join(", ") : "nothing"}, but ${missingShort.join(" and ")} ${missing.length === 1 ? "is" : "are"} missing. I know what I need.`;
+        }
+        if (phase === "ACT") {
+          if (s === "running") return "Self-issuing the missing credential. I don't need permission — I'm authorized.";
+          return "Credential issued and on-chain. I have everything I need.";
+        }
+        if (phase === "RECORD") {
+          if (s === "running") return "Writing my evidence manifest to 0G Storage — goal, reasoning, every tx hash.";
+          return "I know who I am, what I can do, and I can prove both.";
+        }
       }
     }
-    return AGENT_THOUGHTS.BOOT.idle;
-  }, [state.phaseStatus]);
+    return "I exist, but I don't know who I am yet.";
+  }, [state.phaseStatus, state.capabilities, state.summary?.tokenId]);
 
   return (
     <div className="space-y-16">
@@ -180,6 +209,11 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
             >
               {live ? "● live · on-chain" : "○ simulated · no writes"}
             </button>
+            {live && state.summary?.subject ? (
+              <span className="font-mono text-[10px] tabular text-ink-soft">
+                steward · <Link href={`/agent/${state.summary.subject}`} className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra">{truncateAddress(state.summary.subject, 6, 4)}</Link>
+              </span>
+            ) : null}
           </div>
           <div className="flex items-baseline gap-6">
             {running ? (
@@ -211,7 +245,9 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
               {p.key === "BOOT" && status !== "idle" ? (
                 <p className="font-serif text-base italic text-ink-soft">
                   {state.summary?.tokenId
-                    ? `Ensured agent token #${state.summary.tokenId}.`
+                    ? state.summary.minted
+                      ? `Minted agent token #${state.summary.tokenId}.`
+                      : `Found existing agent token #${state.summary.tokenId}.`
                     : status === "running"
                       ? "Reading walletOfAgent…"
                       : "Token ensured."}
@@ -243,13 +279,27 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                         >
                           {c.capable ? "held" : "not held"}
                         </span>
-                        <span className="w-24 text-right font-mono text-[10px] tabular text-ink-soft">
-                          {c.issueTxHash ? truncateHash(c.issueTxHash, 8, 6) : ""}
+                        <span className="w-28 text-right font-mono text-[10px] tabular text-ink-soft">
+                          {c.issueTxHash ? (
+                            <a
+                              href={`${network.explorerUrl}/tx/${c.issueTxHash}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+                            >
+                              {truncateHash(c.issueTxHash, 8, 6)}
+                            </a>
+                          ) : ""}
                         </span>
                       </div>
                       <Rule tone="soft" />
                     </div>
                   ))}
+                  {state.phaseStatus.GATE === "done" ? (
+                    <p className="pt-3 font-mono text-[11px] tabular text-ink-quiet">
+                      {state.capabilities.filter((c) => c.capable).length} held · {state.capabilities.filter((c) => !c.capable).length} missing
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -261,9 +311,14 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                         <span className="font-mono tabular text-ink">
                           issued {t.name}
                         </span>
-                        <span className="font-mono tabular text-ink-soft">
+                        <a
+                          href={`${network.explorerUrl}/tx/${t.txHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+                        >
                           {truncateHash(t.txHash, 10, 6)}
-                        </span>
+                        </a>
                       </div>
                       <Rule tone="soft" />
                     </div>
@@ -281,9 +336,14 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                   </div>
                   <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
                     <span className="text-ink-quiet">anchor tx</span>
-                    <span className="font-mono tabular text-ink">
+                    <a
+                      href={`${network.explorerUrl}/tx/${state.manifest.anchorTx}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-mono tabular text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+                    >
                       {truncateAddress(state.manifest.anchorTx, 10, 6)}
-                    </span>
+                    </a>
                   </div>
                   <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
                     <span className="text-ink-quiet">token URI</span>
@@ -326,6 +386,24 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
               </span>
             ) : null}
           </div>
+          {state.summary.live && state.summary.subject ? (
+            <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-xs">
+              <Link
+                href={`/agent/${state.summary.subject}`}
+                className="font-mono tabular text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+              >
+                View agent profile →
+              </Link>
+              <a
+                href={`${network.explorerUrl}/address/${state.summary.subject}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+              >
+                On PharosScan ↗
+              </a>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -398,30 +476,6 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     </div>
   );
 }
-
-const AGENT_THOUGHTS: Record<string, Record<string, string>> = {
-  BOOT: {
-    idle: "I exist, but I don't know who I am yet.",
-    running: "Searching the registry for my agent token…",
-    done: "I'm token #341. I exist on-chain. Now — what am I for?",
-  },
-  REASON: {
-    running: "Sending my goal to 0G Compute. What capabilities does this require?",
-    done: "I need escrow and swap. Let me check what I already hold.",
-  },
-  GATE: {
-    running: "Checking the credential registry — what do I have, what's missing?",
-    done: "I hold swap, but escrow is missing. I know what I need.",
-  },
-  ACT: {
-    running: "Self-issuing the missing credential. I don't need permission — I'm authorized.",
-    done: "Credential issued and on-chain. I have everything I need.",
-  },
-  RECORD: {
-    running: "Writing my evidence manifest to 0G Storage — goal, reasoning, every tx hash.",
-    done: "I know who I am, what I can do, and I can prove both.",
-  },
-};
 
 function PhaseCommand({
   index,

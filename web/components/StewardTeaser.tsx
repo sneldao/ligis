@@ -70,7 +70,7 @@ export function StewardTeaser() {
             href="/steward"
             className="mt-8 inline-block text-sm text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
           >
-            Watch the full simulation →
+            Run the full loop →
           </Link>
         </div>
 
