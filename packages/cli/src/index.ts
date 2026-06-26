@@ -80,6 +80,34 @@ function emit(data: unknown) {
 // ---------- Commands ----------
 
 async function cmdInfo() {
+  const chain = (arg("chain") ?? "evm").toLowerCase();
+  if (chain === "casper") {
+    const { loadCasperConfig } = await import("@ligis/adapter-casper");
+    const config = loadCasperConfig();
+    const adapter = getAdapter() as CasperAdapter;
+    let balance: { balance: string; displayBalance: string } | null = null;
+    try {
+      balance = await adapter.getBalance();
+    } catch {
+      // balance query may fail if account not on-chain
+    }
+    emit({
+      networkName: config.network.chainName,
+      network: {
+        chainName: config.network.chainName,
+        displayName: config.network.displayName,
+        rpcUrl: config.network.rpcUrl,
+        explorerUrl: config.network.explorerUrl,
+      },
+      deployment: config.deployment,
+      wallet: {
+        publicKey: adapter.ctx.publicKeyHex,
+        accountHash: adapter.ctx.accountHash,
+        balance: balance?.displayBalance ?? "unknown",
+      },
+    });
+    return;
+  }
   const { networkName, network, deployment } = loadConfig();
   emit({ networkName, network, deployment });
 }

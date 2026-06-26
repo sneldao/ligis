@@ -15,9 +15,15 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve, join } from "node:path";
-import {
+import casperSdk from "casper-js-sdk";
+import type {
+  Hash as HashType,
+  CLValue as CLValueType,
+  Transaction as TransactionType,
+} from "casper-js-sdk";
+
+const {
   Args,
-  CLValue,
   Duration,
   Hash,
   InitiatorAddr,
@@ -37,7 +43,7 @@ import {
   TransactionScheduling,
   HttpHandler,
   RpcClient,
-} from "casper-js-sdk";
+} = casperSdk;
 
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
 const DEFAULT_PAYMENT_AMOUNT = 200_000_000_000; // 200 CSPR for install
@@ -71,10 +77,10 @@ function buildInstallTransaction(params: {
   chainName: string;
   privateKey: PrivateKey;
   wasmBytes: Uint8Array;
-  args?: Map<string, CLValue>;
+  args?: Map<string, CLValueType>;
   ttlMs?: number;
   paymentAmount?: number;
-}): Transaction {
+}): TransactionType {
   const {
     chainName,
     privateKey,

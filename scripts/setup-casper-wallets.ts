@@ -56,7 +56,7 @@ interface Wallet {
   ethAddress: string;
 }
 
-function main() {
+async function main() {
   const wallets: Wallet[] = [];
   const names = ["deployer", "agent", "issuer"];
 
@@ -71,21 +71,18 @@ function main() {
     // PKCS8 for secp256k1: the last 32 bytes are the private key scalar
     const privKeyHex = toHex(privateKey.slice(-32));
 
-    // Extract the public key from SPKI DER
+    // Extract the public key from SPKI DER for the eth-style address
     // SPKI for secp256k1: the last 65 bytes are 04 || X(32) || Y(32) (uncompressed)
     const pubRaw = publicKey.slice(-65);
     const x = pubRaw.subarray(1, 33);
     const y = pubRaw.subarray(33, 65);
 
-    // Compress the public key: prefix (02 if y is even, 03 if odd) || X
-    const yBig = BigInt("0x" + toHex(y));
-    const prefix = yBig % 2n === 0n ? 0x02 : 0x03;
-    const compressed = Buffer.concat([Buffer.from([prefix]), x]);
-
-    // Casper public key format: algorithm byte (0x02 = secp256k1) || compressed key
-    // The casper-js-sdk PublicKey.fromHex expects 68 hex chars: "02" + 66 chars
-    const casperPublicKey = Buffer.concat([Buffer.from([0x02]), compressed]);
-    const publicKeyHex = toHex(casperPublicKey);
+    // Casper public key: derive from the private key using the SDK
+    // to guarantee the pubkey matches what casper-js-sdk produces at runtime.
+    // The SDK prepends the algorithm byte (0x02 = secp256k1) to the compressed key.
+    const casperSdk = await import("casper-js-sdk");
+    const pk = casperSdk.PrivateKey.fromHex(privKeyHex, casperSdk.KeyAlgorithm.SECP256K1);
+    const publicKeyHex = pk.publicKey.toHex();
 
     // Ethereum-style address: keccak256(X || Y) → last 20 bytes
     // Node doesn't have keccak256 built-in, so we use SHA-256 for the display.
