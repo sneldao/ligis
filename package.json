@@ -20,6 +20,7 @@
     "test:coverage": "bash scripts/forge.sh coverage",
     "deploy:atlantic": "bash scripts/deploy.sh atlantic",
     "verify:atlantic": "bash scripts/verify.sh atlantic",
+    "setup:casper": "node scripts/setup-casper-wallets.ts",
     "demo": "bash scripts/demo.sh",
     "format": "bash scripts/forge.sh fmt && prettier --write 'packages/*/src/**/*.{ts,json,md}'",
     "clean": "pnpm -r run clean && rm -rf out cache broadcast"
