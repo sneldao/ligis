@@ -24,6 +24,7 @@ import type {
 
 const {
   Args,
+  CLValue,
   Duration,
   Hash,
   InitiatorAddr,
@@ -46,7 +47,11 @@ const {
 } = casperSdk;
 
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
-const DEFAULT_PAYMENT_AMOUNT = 200_000_000_000; // 200 CSPR for install
+const DEFAULT_PAYMENT_AMOUNT = 50_000_000_000; // 50 CSPR for install (testnet)
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 interface DeployResult {
   contractName: string;
@@ -70,14 +75,20 @@ function loadDeployerKey(): PrivateKey {
 }
 
 /**
- * Build a TransactionV1 that installs a WASM module as session code.
- * This is how Odra contracts are deployed to Casper.
+ * Build a TransactionV1 that installs an Odra WASM module as session code.
+ *
+ * Odra contracts expect specific runtime args when installed:
+ *   - odra_cfg_package_hash_key_name: name to store the package hash under
+ *   - entry_point: "init" (the constructor)
+ *   - args: serialized args for the init function (empty for no-arg init)
+ *   - attached_value: 0
+ *   - amount: 0
  */
 function buildInstallTransaction(params: {
   chainName: string;
   privateKey: PrivateKey;
   wasmBytes: Uint8Array;
-  args?: Map<string, CLValueType>;
+  contractName: string;
   ttlMs?: number;
   paymentAmount?: number;
 }): TransactionType {
@@ -85,14 +96,27 @@ function buildInstallTransaction(params: {
     chainName,
     privateKey,
     wasmBytes,
-    args = new Map(),
+    contractName,
     ttlMs = DEFAULT_TTL_MS,
     paymentAmount = DEFAULT_PAYMENT_AMOUNT,
   } = params;
 
   const publicKey = privateKey.publicKey;
   const initiatorAddr = new InitiatorAddr(publicKey);
-  const argsObj = new Args(args);
+
+  // Odra-required runtime args for contract installation
+  const odraArgs = new Map<string, CLValueType>();
+  // Name under which the package hash is stored in account's named keys
+  odraArgs.set("odra_cfg_package_hash_key_name", CLValue.newCLString(`ligis_${contractName.toLowerCase()}`));
+  // Entry point to call during install — Odra uses "init"
+  odraArgs.set("entry_point", CLValue.newCLString("init"));
+  // Serialized args for the init function — empty bytes for no-arg init
+  odraArgs.set("args", CLValue.newCLByteArray(new Uint8Array(0)));
+  // No attached value, no transfer
+  odraArgs.set("attached_value", CLValue.newCLUInt512(0));
+  odraArgs.set("amount", CLValue.newCLUInt512(0));
+
+  const argsObj = new Args(odraArgs);
   const ttl = new Duration(ttlMs);
   const entryPoint = new TransactionEntryPoint(TransactionEntryPointEnum.Call);
   const timestamp = new Timestamp(new Date());
@@ -182,12 +206,60 @@ async function deployContract(params: {
     chainName,
     privateKey,
     wasmBytes,
+    contractName,
   });
 
-  await rpc.putTransaction(tx);
-  const result = await rpc.waitForTransaction(tx, 120);
-  const txHash = result.transaction?.hash?.transactionV1?.toHex() ?? "";
-  const blockHeight = result.executionInfo?.blockHeight?.toString() ?? "0";
+  try {
+    const putResult = await rpc.putTransaction(tx);
+    const txHash = putResult.transactionHash ?? "";
+    console.log(`    tx hash: ${txHash}`);
+  } catch (e: any) {
+    console.error(`    putTransaction failed:`, e.message);
+    if (e.sourceErr) console.error(`    sourceErr:`, JSON.stringify(e.sourceErr, null, 2));
+    throw e;
+  }
+
+  // Poll for transaction result instead of using the SDK's waitForTransaction
+  // (which has a bug with Casper 2.0 nodes)
+  console.log(`    polling for confirmation...`);
+  const txHashStr = (() => {
+    try {
+      // Extract hash from the transaction we built
+      const hash = (tx as any).hash?.transactionV1?.toHex?.();
+      return hash ?? "";
+    } catch {
+      return "";
+    }
+  })();
+
+  let result: any = null;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    await sleep(5000);
+    try {
+      result = await (rpc as any).getTransactionByTransactionHash(txHashStr);
+      if (result?.executionInfo) {
+        console.log(`    confirmed after ${(attempt + 1) * 5}s`);
+        break;
+      }
+    } catch {
+      // Transaction not found yet, keep polling
+    }
+  }
+
+  if (!result?.executionInfo) {
+    console.log(`    timeout waiting for confirmation (check explorer)`);
+  }
+
+  const execInfo = result?.executionInfo;
+  const txHash = execInfo?.transactionHash ?? txHashStr;
+  const blockHeight = execInfo?.blockHeight?.toString() ?? "0";
+
+  // Check execution result
+  const execResult = execInfo?.executionResult;
+  if (execResult?.errorMessage) {
+    console.error(`    execution failed: ${execResult.errorMessage}`);
+  }
+
   const packageHash = extractPackageHash(result);
 
   console.log(`    tx: ${txHash}`);

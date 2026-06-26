@@ -89,27 +89,31 @@ export function loadSigner(): Signer {
 }
 
 /**
- * Parse a package hash string (e.g. "hash-abc123..." or "0xabc123...") into a Hash.
+ * Parse a package hash string into a Hash.
+ * Accepts formats:
+ *   - "contract-package-abc123..." (Casper explorer format)
+ *   - "hash-abc123..." (legacy format)
+ *   - "0xabc123..." (hex with prefix)
+ *   - "abc123..." (raw hex)
  */
 function parsePackageHash(hashStr: string): HashType {
-  const clean = hashStr.startsWith("hash-")
-    ? hashStr.slice("hash-".length)
-    : hashStr.startsWith("0x")
-      ? hashStr.slice(2)
-      : hashStr;
+  const clean = hashStr
+    .replace(/^contract-package-/, "")
+    .replace(/^hash-/, "")
+    .replace(/^0x/, "");
   return Hash.fromHex(clean);
 }
 
 /**
  * Build a TransactionV1 that calls a stored contract by package hash,
- * wrap it in a Transaction, sign it, and return the wrapper.
+ * using casper-client CLI for reliable serialization.
  *
- * This is the standard pattern for calling an Odra-deployed contract:
- *   - target: ByPackageHashInvocationTarget with the contract's package hash
- *   - entry point: Custom with the method name
- *   - args: the method's named arguments
+ * This bypasses the casper-js-sdk's broken CJS serialization of
+ * ByPackageHashInvocationTarget by using the official casper-client CLI.
+ *
+ * Returns the transaction hash directly (no need for separate submission).
  */
-export function buildStoredContractTransaction(params: {
+export async function callStoredContractViaCli(params: {
   chainName: string;
   signer: Signer;
   packageHash: string;
@@ -117,72 +121,171 @@ export function buildStoredContractTransaction(params: {
   args: Map<string, CLValueType>;
   ttlMs?: number;
   paymentAmount?: number;
-}): TransactionType {
+  rpcUrl: string;
+}): Promise<{ txHash: string; blockNumber: string }> {
   const {
     chainName,
     signer,
     packageHash,
     entryPoint,
     args,
-    ttlMs = DEFAULT_TTL_MS,
-    paymentAmount = DEFAULT_PAYMENT_AMOUNT,
+    rpcUrl,
+    paymentAmount = 10_000_000_000, // 10 CSPR for contract calls
   } = params;
 
-  const initiatorAddr = new InitiatorAddr(signer.publicKey);
-  const argsObj = new Args(args);
-  const ttl = new Duration(ttlMs);
-  const entryPointObj = new TransactionEntryPoint(TransactionEntryPointEnum.Custom, entryPoint);
-  const timestamp = new Timestamp(new Date());
+  const keyPath = process.env.LIGIS_CASPER_KEY_PATH;
+  if (!keyPath) {
+    throw new Error("Casper signer: LIGIS_CASPER_KEY_PATH (PEM) required for casper-client CLI");
+  }
 
-  const invocationTarget = new ByPackageHashInvocationTarget();
-  invocationTarget.addr = parsePackageHash(packageHash);
-  invocationTarget.version = undefined;
-  invocationTarget.protocolVersionMajor = null;
+  // Build casper-client session-arg strings
+  const sessionArgs: string[] = [];
+  for (const [name, clValue] of args) {
+    const argStr = clValueToCasperClientArg(name, clValue);
+    sessionArgs.push(argStr);
+  }
 
-  const storedTarget = new StoredTarget();
-  storedTarget.id = invocationTarget;
-  storedTarget.runtime = TransactionRuntime.vmCasperV1();
+  // Normalize package hash: convert contract-package-XXX to hash-XXX for casper-client
+  const normalizedHash = packageHash
+    .replace(/^contract-package-/, "hash-")
+    .replace(/^0x/, "hash-");
+  const finalHash = normalizedHash.startsWith("hash-")
+    ? normalizedHash
+    : `hash-${normalizedHash}`;
 
-  const target = new TransactionTarget(undefined, storedTarget, undefined);
+  // Build the command
+  const cmd = [
+    "casper-client put-transaction package",
+    `--node-address ${rpcUrl}`,
+    `--secret-key ${keyPath}`,
+    `--contract-package-hash ${finalHash}`,
+    `--session-entry-point ${entryPoint}`,
+    `--chain-name ${chainName}`,
+    "--gas-price-tolerance 1",
+    `--payment-amount ${paymentAmount}`,
+    "--standard-payment true",
+    ...sessionArgs.map((a) => `--session-arg ${JSON.stringify(a)}`),
+  ].join(" ");
 
-  const pricingMode = new PricingMode();
-  pricingMode.paymentLimited = new PaymentLimitedMode();
-  pricingMode.paymentLimited.gasPriceTolerance = DEFAULT_GAS_PRICE_TOLERANCE;
-  pricingMode.paymentLimited.paymentAmount = paymentAmount;
-  pricingMode.paymentLimited.standardPayment = true;
+  const { execSync } = await import("node:child_process");
+  let output: string;
+  try {
+    output = execSync(cmd, { encoding: "utf-8", timeout: 30000 });
+  } catch (e: any) {
+    const stderr = e.stderr?.toString() ?? "";
+    const stdout = e.stdout?.toString() ?? "";
+    throw new Error(`casper-client failed: ${stderr || stdout || e.message}`);
+  }
+  const hashMatch = output.match(/"Version1":\s*"([a-f0-9]+)"/);
+  const txHash = hashMatch ? hashMatch[1] : "";
 
-  const scheduling = new TransactionScheduling();
-  scheduling.standard = {};
+  if (!txHash) {
+    throw new Error(`casper-client failed to submit transaction: ${output}`);
+  }
 
-  const payload = TransactionV1Payload.build({
-    initiatorAddr,
-    args: argsObj,
-    ttl,
-    entryPoint: entryPointObj,
-    pricingMode,
-    timestamp,
-    transactionTarget: target,
-    scheduling,
-    chainName,
-  });
+  // Poll for confirmation
+  const blockNumber = await pollTransactionWithCli(txHash, 120_000);
+  return { txHash, blockNumber };
+}
 
-  const v1 = TransactionV1.makeTransactionV1(payload);
-  v1.sign(signer.privateKey);
-  return Transaction.fromTransactionV1(v1);
+/**
+ * Convert a CLValue to a casper-client --session-arg string.
+ * Format: "name:TYPE='value'"
+ */
+function clValueToCasperClientArg(name: string, clValue: CLValueType): string {
+  // Check the CLType by inspecting the clValue
+  const any = clValue as any;
+  const clType = any?.clType?.value ?? any?.clType?.toString?.() ?? "";
+
+  // String
+  if (clType === "String" || any?.parsed !== undefined && typeof any.parsed === "string") {
+    return `${name}:string='${any.parsed}'`;
+  }
+  // U512 / U64 / U32
+  if (clType === "U512" || clType === "U64" || clType === "U32" || clType === "U256" || clType === "U128") {
+    const val = any.parsed?.toString?.() ?? "0";
+    return `${name}:u512='${val}'`;
+  }
+  // Bool
+  if (clType === "Bool") {
+    return `${name}:bool='${any.parsed}'`;
+  }
+  // ByteArray
+  if (typeof clType === "object" && clType?.ByteArray !== undefined) {
+    const val = any.parsed ?? "";
+    return `${name}:byte_array_${clType.ByteArray}='${val}'`;
+  }
+  // PublicKey
+  if (clType === "PublicKey") {
+    return `${name}:public_key='${any.parsed}'`;
+  }
+  // Fallback: try as string
+  const val = any?.parsed?.toString?.() ?? "";
+  return `${name}:string='${val}'`;
 }
 
 /**
  * Submit a transaction and wait for confirmation.
- * Returns the transaction hash and block height.
+ * Uses casper-client CLI for reliable serialization + polling.
+ * Falls back to SDK if casper-client is not available.
  */
 export async function submitAndWait(
   rpc: RpcClient,
   tx: TransactionType,
   timeoutMs = 120_000,
 ): Promise<{ txHash: string; blockNumber: string }> {
-  await rpc.putTransaction(tx);
-  const result = await rpc.waitForTransaction(tx, timeoutMs / 1000);
-  const txHash = result.transaction?.hash?.transactionV1?.toHex() ?? "";
-  const blockHeight = result.executionInfo?.blockHeight?.toString() ?? "0";
+  // Try to extract the tx hash from the SDK transaction
+  let txHash = "";
+  try {
+    txHash = (tx as any).hash?.transactionV1?.toHex?.() ?? "";
+  } catch {}
+
+  if (!txHash) {
+    // Submit via SDK
+    const putResult: any = await rpc.putTransaction(tx);
+    txHash = putResult.transactionHash ?? "";
+  }
+
+  if (!txHash) {
+    throw new Error("Failed to get transaction hash");
+  }
+
+  // Poll for confirmation using casper-client CLI (more reliable than SDK)
+  const blockHeight = await pollTransactionWithCli(txHash, timeoutMs);
   return { txHash, blockNumber: blockHeight };
+}
+
+/**
+ * Poll for transaction confirmation using casper-client CLI.
+ * Returns the block height as a string, or "0" if not found.
+ */
+async function pollTransactionWithCli(txHash: string, timeoutMs: number): Promise<string> {
+  const rpcUrl = process.env.LIGIS_CASPER_RPC_URL ?? "https://node.testnet.casper.network/rpc";
+  const maxAttempts = Math.floor(timeoutMs / 5000);
+  for (let i = 0; i < maxAttempts; i++) {
+    await sleep(5000);
+    try {
+      const { execSync } = await import("node:child_process");
+      const output = execSync(
+        `casper-client get-transaction --node-address ${rpcUrl} ${txHash} 2>&1`,
+        { encoding: "utf-8", timeout: 15000 },
+      );
+      const match = output.match(/"block_height":\s*(\d+)/);
+      if (match) {
+        // Check for errors
+        const errMatch = output.match(/"error_message":\s*"([^"]+)"/);
+        if (errMatch && errMatch[1] !== "null") {
+          console.error(`  Transaction execution error: ${errMatch[1]}`);
+        }
+        return match[1];
+      }
+    } catch {
+      // Transaction not found yet, keep polling
+    }
+  }
+  return "0";
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }

@@ -23,8 +23,7 @@ export {
 
 export {
   loadSigner,
-  buildStoredContractTransaction,
-  submitAndWait,
+  callStoredContractViaCli,
   type Signer,
 } from "./signer.js";
 

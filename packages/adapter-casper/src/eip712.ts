@@ -48,6 +48,16 @@ const CREDENTIAL_TYPES = {
   ],
 };
 
+/**
+ * Strip hash prefix (contract-package-, hash-, 0x) from a hash string.
+ */
+function stripPrefix(hash: string): string {
+  return hash
+    .replace(/^contract-package-/, "")
+    .replace(/^hash-/, "")
+    .replace(/^0x/, "");
+}
+
 /** Convert the loaded config to a Casper-native EIP-712 domain. */
 function buildDomain(config: CasperConfig): Record<string, string> {
   const registry = config.deployment.credentialRegistry;
@@ -61,9 +71,7 @@ function buildDomain(config: CasperConfig): Record<string, string> {
     name: "Ligis CredentialRegistry",
     version: "1",
     chain_name: `casper:${config.network.chainName}`,
-    contract_package_hash: registry.startsWith("hash-")
-      ? `0x${registry.slice("hash-".length)}`
-      : registry,
+    contract_package_hash: `0x${stripPrefix(registry)}`,
   };
 }
 
