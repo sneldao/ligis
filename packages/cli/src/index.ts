@@ -60,6 +60,7 @@ Usage:
   ligis revoke --subject <addr> --capability <name|hash> --nonce <n> [--issuer-key <key>]
   ligis rotate --token-id <id> --new-controller <addr>
   ligis sign --issuer-key <key> --subject <addr> --capability <name|hash> [--expires-in <seconds>]
+  ligis balance [--public-key <hex>]    query CSPR balance (Casper only)
   ligis agent run --goal <text> [--dry-run]
 
 Global flags:
@@ -157,6 +158,16 @@ async function cmdAgentRun() {
   emit(result);
 }
 
+async function cmdBalance() {
+  const adapter = getAdapter();
+  if (typeof (adapter as any).getBalance !== "function") {
+    throw new Error("balance is only supported on the Casper chain (--chain casper)");
+  }
+  const pubKey = arg("public-key");
+  const result = await (adapter as any).getBalance(pubKey);
+  emit({ ok: true, chainId: adapter.chainId, ...result });
+}
+
 // ---------- Main ----------
 
 async function main() {
@@ -173,6 +184,7 @@ async function main() {
     case "revoke": return cmdRevoke();
     case "rotate": return cmdRotate();
     case "sign":   return cmdSign();
+    case "balance": return cmdBalance();
     case "agent":
       if (process.argv[3] === "run") return cmdAgentRun();
       console.error(`Unknown agent subcommand: ${process.argv[3] ?? "(none)"}`);

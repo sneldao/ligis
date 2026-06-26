@@ -16,7 +16,9 @@
  */
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
-import { CLValue } from "casper-js-sdk";
+import casperSdk from "casper-js-sdk";
+import type { CLValue as CLValueType } from "casper-js-sdk";
+const { CLValue, PublicKey, PurseIdentifier } = casperSdk;
 import { capabilityHash, parseCapability } from "@ligis/core";
 import type { CasperClientContext } from "./client.js";
 import { buildCredentialDigest, type CredentialMessage } from "./eip712.js";
@@ -128,7 +130,7 @@ export async function issueAgentId(
   const signerAccountHash = signer.accountHash;
   const isSelfMint = !opts.controller || opts.controller === signerAccountHash;
 
-  const args = new Map<string, CLValue>();
+  const args = new Map<string, CLValueType>();
   args.set("token_uri", CLValue.newCLString(tokenUri));
   if (!isSelfMint) {
     const controllerBytes = accountHashToBytes(opts.controller!);
@@ -168,7 +170,7 @@ export async function rotateAgentId(
   const packageHash = requireDeployment(ctx, "agentId");
   const signer = requireSigner();
 
-  const args = new Map<string, CLValue>();
+  const args = new Map<string, CLValueType>();
   args.set("token_id", CLValue.newCLUint64(BigInt(opts.agentId)));
   const newControllerBytes = accountHashToBytes(opts.newController);
   args.set("new_controller", CLValue.newCLByteArray(newControllerBytes));
@@ -377,7 +379,7 @@ export async function submitCredential(
   const capHashBytes = hexToBytes(signed.capabilityHash);
   const sigBytes = hexToBytes(signed.signature);
 
-  const args = new Map<string, CLValue>();
+  const args = new Map<string, CLValueType>();
   args.set("issuer", CLValue.newCLByteArray(issuerBytes));
   args.set("subject", CLValue.newCLByteArray(subjectBytes));
   args.set("capability_hash", CLValue.newCLByteArray(capHashBytes));
@@ -417,7 +419,7 @@ export async function revokeCredential(
   const subjectBytes = accountHashToBytes(opts.subject);
   const capHashBytes = hexToBytes(capHash);
 
-  const args = new Map<string, CLValue>();
+  const args = new Map<string, CLValueType>();
   args.set("subject", CLValue.newCLByteArray(subjectBytes));
   args.set("capability_hash", CLValue.newCLByteArray(capHashBytes));
   args.set("nonce", CLValue.newCLUint64(BigInt(opts.nonce)));
@@ -446,7 +448,7 @@ export async function anchorEvidence(
   const packageHash = requireDeployment(ctx, "agentId");
   const signer = requireSigner();
 
-  const args = new Map<string, CLValue>();
+  const args = new Map<string, CLValueType>();
   args.set("token_id", CLValue.newCLUint64(BigInt(opts.agentId)));
   args.set("uri", CLValue.newCLString(opts.uri));
 
@@ -459,6 +461,35 @@ export async function anchorEvidence(
   });
 
   return submitAndWait(ctx.rpc, tx);
+}
+
+// ---------- balance ----------
+
+/**
+ * Query the CSPR balance of a public key.
+ * Returns the balance in motes (1 CSPR = 1,000,000,000 motes).
+ * Returns { balance: "0", displayBalance: "0 CSPR" } if the account
+ * doesn't exist on-chain yet (unfunded).
+ */
+export async function getBalance(
+  ctx: CasperClientContext,
+  publicKeyHex: string,
+): Promise<{ balance: string; displayBalance: string }> {
+  try {
+    const pubKey = PublicKey.fromHex(publicKeyHex);
+    const purseIdentifier = PurseIdentifier.fromPublicKey(pubKey);
+    const result = await ctx.rpc.queryLatestBalance(purseIdentifier);
+    const balance = (result as any)?.balance ?? "0";
+    const motes = BigInt(balance);
+    const cspr = Number(motes) / 1_000_000_000;
+    return {
+      balance: balance.toString(),
+      displayBalance: `${cspr.toFixed(4)} CSPR`,
+    };
+  } catch {
+    // Account doesn't exist on-chain (unfunded) or RPC method unsupported.
+    return { balance: "0", displayBalance: "0 CSPR (unfunded)" };
+  }
 }
 
 // Re-exports for tests / sibling modules

@@ -5,9 +5,11 @@
  * module (which talks to casper-js-sdk) and normalizes results to the
  * chain-neutral types from @ligis/core.
  *
- * Status: scaffolded. The class shape, type wiring, and CLI/MCP routing
- * are in place; the operation bodies in `operations.ts` are stubbed pending
- * the Odra contracts in packages/contracts-casper being deployed.
+ * All 8 operations are implemented in operations.ts via casper-js-sdk:
+ * getAgentId, issueAgentId, rotateAgentId, verifyCapability,
+ * signCredential, submitCredential, revokeCredential, anchorEvidence.
+ * Write ops build TransactionV1 payloads, sign with a secp256k1 key
+ * from env, and submit via putTransaction + waitForTransaction.
  */
 import { capabilityHash, formatDid, parseCapability } from "@ligis/core";
 import type {
@@ -140,6 +142,16 @@ export class CasperAdapter implements ChainAdapter {
   walletAddress(): string | null {
     // Returns the account hash (Casper's address equivalent) preferentially.
     return this.ctx.accountHash ?? this.ctx.publicKeyHex;
+  }
+
+  /**
+   * Query the CSPR balance of a public key or account hash.
+   * Returns { balance: motes string, displayBalance: "X.XXXX CSPR" }.
+   */
+  async getBalance(publicKeyOrAccountHash?: string): Promise<{ balance: string; displayBalance: string }> {
+    const key = publicKeyOrAccountHash ?? this.ctx.publicKeyHex ?? "";
+    if (!key) throw new Error("CasperAdapter.getBalance: no public key configured and none provided");
+    return ops.getBalance(this.ctx, key);
   }
 
   // ---------- internals ----------

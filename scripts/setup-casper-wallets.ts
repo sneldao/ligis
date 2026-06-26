@@ -81,7 +81,11 @@ function main() {
     const yBig = BigInt("0x" + toHex(y));
     const prefix = yBig % 2n === 0n ? 0x02 : 0x03;
     const compressed = Buffer.concat([Buffer.from([prefix]), x]);
-    const publicKeyHex = toHex(compressed);
+
+    // Casper public key format: algorithm byte (0x02 = secp256k1) || compressed key
+    // The casper-js-sdk PublicKey.fromHex expects 68 hex chars: "02" + 66 chars
+    const casperPublicKey = Buffer.concat([Buffer.from([0x02]), compressed]);
+    const publicKeyHex = toHex(casperPublicKey);
 
     // Ethereum-style address: keccak256(X || Y) → last 20 bytes
     // Node doesn't have keccak256 built-in, so we use SHA-256 for the display.

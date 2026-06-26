@@ -209,7 +209,7 @@ async function main() {
   console.log(`  Deployer: ${publicKey.toHex()}`);
   console.log();
 
-  const handler = new HttpHandler(rpcUrl);
+  const handler = new HttpHandler(rpcUrl, "fetch");
   const rpc = new RpcClient(handler);
 
   // Find the WASM files

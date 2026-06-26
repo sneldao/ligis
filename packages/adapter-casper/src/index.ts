@@ -27,3 +27,5 @@ export {
   submitAndWait,
   type Signer,
 } from "./signer.js";
+
+export { getBalance } from "./operations.js";

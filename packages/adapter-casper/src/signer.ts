@@ -6,7 +6,17 @@
  * recoverable per-call error rather than a startup failure.
  */
 import { readFileSync } from "node:fs";
-import {
+import casperSdk from "casper-js-sdk";
+import type {
+  RpcClient,
+  PrivateKey as PrivateKeyType,
+  PublicKey as PublicKeyType,
+  Hash as HashType,
+  CLValue as CLValueType,
+  Transaction as TransactionType,
+} from "casper-js-sdk";
+
+const {
   Args,
   CLValue,
   Hash,
@@ -28,8 +38,7 @@ import {
   PricingMode,
   PaymentLimitedMode,
   TransactionScheduling,
-  type RpcClient,
-} from "casper-js-sdk";
+} = casperSdk;
 
 /** Default TTL for Casper transactions: 30 minutes. */
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
@@ -41,8 +50,8 @@ const DEFAULT_GAS_PRICE_TOLERANCE = 1;
 const DEFAULT_PAYMENT_AMOUNT = 100_000_000_000;
 
 export interface Signer {
-  privateKey: PrivateKey;
-  publicKey: PublicKey;
+  privateKey: PrivateKeyType;
+  publicKey: PublicKeyType;
   publicKeyHex: string;
   accountHash: string;
 }
@@ -59,7 +68,7 @@ export function loadSigner(): Signer {
   const pemPath = process.env.LIGIS_CASPER_KEY_PATH;
   const hexKey = process.env.LIGIS_CASPER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 
-  let privateKey: PrivateKey;
+  let privateKey: PrivateKeyType;
   if (pemPath) {
     const pemContent = readFileSync(pemPath, "utf-8");
     privateKey = PrivateKey.fromPem(pemContent, KeyAlgorithm.SECP256K1);
@@ -82,7 +91,7 @@ export function loadSigner(): Signer {
 /**
  * Parse a package hash string (e.g. "hash-abc123..." or "0xabc123...") into a Hash.
  */
-function parsePackageHash(hashStr: string): Hash {
+function parsePackageHash(hashStr: string): HashType {
   const clean = hashStr.startsWith("hash-")
     ? hashStr.slice("hash-".length)
     : hashStr.startsWith("0x")
@@ -105,10 +114,10 @@ export function buildStoredContractTransaction(params: {
   signer: Signer;
   packageHash: string;
   entryPoint: string;
-  args: Map<string, CLValue>;
+  args: Map<string, CLValueType>;
   ttlMs?: number;
   paymentAmount?: number;
-}): Transaction {
+}): TransactionType {
   const {
     chainName,
     signer,
@@ -168,7 +177,7 @@ export function buildStoredContractTransaction(params: {
  */
 export async function submitAndWait(
   rpc: RpcClient,
-  tx: Transaction,
+  tx: TransactionType,
   timeoutMs = 120_000,
 ): Promise<{ txHash: string; blockNumber: string }> {
   await rpc.putTransaction(tx);
