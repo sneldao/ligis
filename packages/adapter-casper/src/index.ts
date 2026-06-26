@@ -1,10 +1,10 @@
 /**
  * @ligis/adapter-casper — ChainAdapter implementation for Casper Network.
  *
- * Status: scaffolded. CasperAdapter satisfies the ChainAdapter contract; the
- * concrete operation bodies are stubs pending the Odra contracts in
- * packages/contracts-casper being deployed and their package hashes wired
- * into env (LIGIS_CASPER_CREDENTIAL_REGISTRY, LIGIS_CASPER_AGENT_ID).
+ * CasperAdapter satisfies the ChainAdapter contract. Operations talk to
+ * the Odra contracts in packages/contracts-casper via casper-js-sdk.
+ * Set LIGIS_CASPER_CREDENTIAL_REGISTRY and LIGIS_CASPER_AGENT_ID env vars
+ * to the deployed contract package hashes.
  */
 export * from "./adapter.js";
 export { CasperAdapter as default } from "./adapter.js";
@@ -20,3 +20,10 @@ export {
   buildCasperClient,
   type CasperClientContext,
 } from "./client.js";
+
+export {
+  loadSigner,
+  buildStoredContractTransaction,
+  submitAndWait,
+  type Signer,
+} from "./signer.js";

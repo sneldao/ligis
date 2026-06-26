@@ -5,7 +5,7 @@
  * are loaded lazily from env (LIGIS_STEWARD_KEY or PRIVATE_KEY); the adapter
  * works read-only without one.
  */
-import { HttpHandler, RpcClient } from "casper-js-sdk";
+import { HttpHandler, RpcClient, PublicKey, KeyAlgorithm } from "casper-js-sdk";
 import type { CasperConfig } from "./config.js";
 
 export interface CasperClientContext {
@@ -40,11 +40,8 @@ export function buildCasperClient(config: CasperConfig): CasperClientContext {
 
 /**
  * Derive the `account-hash-...` prefixed hex from a Casper public-key hex.
- *
- * Stub: real implementation belongs in signer.ts using casper-js-sdk's
- * PublicKey.fromHex(...).accountHash(). Returns null until wired up so the
- * adapter can still construct.
  */
-function publicKeyToAccountHashHex(_publicKeyHex: string): string | null {
-  return null;
+function publicKeyToAccountHashHex(publicKeyHex: string): string {
+  const pub = PublicKey.fromHex(publicKeyHex);
+  return pub.accountHash().toPrefixedString();
 }
