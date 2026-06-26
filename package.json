@@ -20,7 +20,7 @@
     "test:coverage": "bash scripts/forge.sh coverage",
     "deploy:atlantic": "bash scripts/deploy.sh atlantic",
     "verify:atlantic": "bash scripts/verify.sh atlantic",
-    "setup:casper": "node scripts/setup-casper-wallets.ts",
+    "setup:casper": "tsx scripts/setup-casper-wallets.ts",
     "smoke:casper": "tsx scripts/casper-smoke-test.ts",
     "deploy:casper": "pnpm --filter @ligis/adapter-casper deploy",
     "demo": "bash scripts/demo.sh",
