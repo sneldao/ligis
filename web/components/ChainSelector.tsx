@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useTransition } from "react";
+import { Suspense, useCallback, useMemo, useTransition } from "react";
 import { CHAINS, type ChainNetwork } from "@/lib/network";
 
 /**
@@ -13,7 +13,36 @@ import { CHAINS, type ChainNetwork } from "@/lib/network";
  * Pages read the chain via `getChain(searchParams)` from `@/lib/network`,
  * so switching chains re-renders the same UI against a different chain.
  */
-export function ChainSelector({ activeId }: { activeId: string }) {
+export function ChainSelector({ activeId }: { activeId?: string }) {
+  return (
+    <Suspense fallback={<ChainSelectorFallback />}>
+      <ChainSelectorInner activeId={activeId} />
+    </Suspense>
+  );
+}
+
+function ChainSelectorFallback() {
+  return (
+    <div
+      className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-ink-quiet"
+      aria-label="Select chain"
+    >
+      <span className="eyebrow">chain</span>
+      <div className="inline-flex items-center divide-x divide-rule border border-rule bg-paper">
+        {CHAINS.map((chain) => (
+          <span
+            key={chain.id}
+            className="px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet"
+          >
+            {shortName(chain)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChainSelectorInner({ activeId }: { activeId?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -21,20 +50,23 @@ export function ChainSelector({ activeId }: { activeId: string }) {
 
   const chains: ChainNetwork[] = CHAINS;
 
+  // If activeId is not passed, derive from the URL ?chain= param.
+  const resolvedActiveId = activeId ?? searchParams.get("chain") ?? chains[0]!.id;
+
   const onSelect = useCallback(
     (chainId: string) => {
-      if (chainId === activeId) return;
+      if (chainId === resolvedActiveId) return;
       const params = new URLSearchParams(searchParams.toString());
       params.set("chain", chainId);
       const url = `${pathname}?${params.toString()}`;
       startTransition(() => router.push(url));
     },
-    [activeId, pathname, router, searchParams],
+    [resolvedActiveId, pathname, router, searchParams],
   );
 
   const active = useMemo(
-    () => chains.find((c) => c.id === activeId) ?? chains[0]!,
-    [chains, activeId],
+    () => chains.find((c) => c.id === resolvedActiveId) ?? chains[0]!,
+    [chains, resolvedActiveId],
   );
 
   return (

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { AddressDisplay } from "@/components/AddressDisplay";
+import { ChainSelector } from "@/components/ChainSelector";
 import { Rule } from "@/components/Rule";
 import { network, readIssuerActivity } from "@/lib/chain";
+import { getChain } from "@/lib/network";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;
@@ -11,7 +13,35 @@ export const metadata = {
   description: "Addresses that have signed credentials onto Ligis.",
 };
 
-export default async function IssuersPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function IssuersPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const chain = getChain(await searchParams);
+
+  // Non-live chains get a preview notice.
+  if (!chain.live) {
+    return (
+      <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
+        <header className="flex items-baseline justify-between text-xs">
+          <p className="eyebrow">Ligis · issuers 00</p>
+          <ChainSelector activeId={chain.id} />
+        </header>
+        <section className="mt-20">
+          <h1 className="display text-5xl text-ink sm:text-6xl">Issuers.</h1>
+          <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
+            {chain.name} is not yet live. Issuer activity will appear here once
+            the Casper contracts are deployed. Switch to Pharos Atlantic for
+            live issuer data.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   const log = await readIssuerActivity();
   const top = log.issuers.slice(0, 50);
 
@@ -19,12 +49,15 @@ export default async function IssuersPage() {
     <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
       <header className="flex items-baseline justify-between text-xs">
         <p className="eyebrow">Ligis · issuers 00</p>
-        <Link
-          href="/"
-          className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-        >
-          ← Index
-        </Link>
+        <div className="flex items-baseline gap-6">
+          <ChainSelector activeId={chain.id} />
+          <Link
+            href="/"
+            className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+          >
+            ← Index
+          </Link>
+        </div>
       </header>
 
       <section className="mt-20">

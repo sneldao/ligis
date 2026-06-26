@@ -1,11 +1,12 @@
 import type { Address, Hex } from "viem";
 import { getAddress } from "viem";
 import { capabilities, isCapable, network, readCredential } from "@/lib/chain";
+import { getChain } from "@/lib/network";
 import { isAddressLike, monthYear, truncateAddress } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ subject?: string; capability?: string }>;
+type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
 
 export const metadata = {
   title: "Verify · Ligis",
@@ -18,6 +19,7 @@ export default async function EmbedVerifyPage({
   searchParams: SearchParams;
 }) {
   const { subject: rawSubject, capability: rawCap } = await searchParams;
+  const chain = getChain(await searchParams);
 
   if (!rawSubject || !rawCap || !isAddressLike(rawSubject)) {
     return <Frame error="Provide subject and capability query parameters." />;
@@ -28,6 +30,18 @@ export default async function EmbedVerifyPage({
   );
   if (!cap) {
     return <Frame error={`Unknown capability: ${rawCap}`} />;
+  }
+
+  // Non-live chains can't do on-chain verification.
+  if (!chain.live) {
+    return (
+      <Frame
+        subject={getAddress(rawSubject) as Address}
+        capabilityId={cap.id}
+        capable={false}
+        error={`${chain.name} is not yet live. Switch to Pharos Atlantic for on-chain verification.`}
+      />
+    );
   }
 
   const subject = getAddress(rawSubject) as Address;

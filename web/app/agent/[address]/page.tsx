@@ -3,14 +3,17 @@ import { getAddress } from "viem";
 import { notFound } from "next/navigation";
 import { AddressDisplay } from "@/components/AddressDisplay";
 import { AgentHero } from "@/components/catalog/AgentHero";
+import { ChainSelector } from "@/components/ChainSelector";
 import { Rule } from "@/components/Rule";
 import { ShareRow } from "@/components/ShareRow";
 import { Snippet } from "@/components/Snippet";
 import { capabilities, network, readAgentSnapshot, readCapabilityHistory } from "@/lib/chain";
+import { getChain, type ChainNetwork } from "@/lib/network";
 import { isAddressLike, monthYear, truncateAddress, truncateHash } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
 
 type Params = { address: string };
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +36,23 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   };
 }
 
-export default async function AgentPage({ params }: { params: Promise<Params> }) {
+export default async function AgentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<Params>;
+  searchParams: SearchParams;
+}) {
   const { address: raw } = await params;
   const address = normalize(raw);
   if (!address) notFound();
+
+  const chain = getChain(await searchParams);
+
+  // Non-live chains (e.g. Casper before contracts deploy) get a preview notice.
+  if (!chain.live) {
+    return <PreviewChain address={address} chain={chain} />;
+  }
 
   const snap = await readAgentSnapshot(address);
   const heldCount = snap.held.length;
@@ -53,9 +69,12 @@ export default async function AgentPage({ params }: { params: Promise<Params> })
           <p className="eyebrow">
             {snap.exists ? "Agent · in the index" : "Agent · not in the index"}
           </p>
-          <span className="font-mono tabular">
-            {network.name.toLowerCase()} · chain {network.chainId}
-          </span>
+          <div className="flex items-baseline gap-6">
+            <ChainSelector activeId={chain.id} />
+            <span className="font-mono tabular">
+              {chain.name.toLowerCase()} · chain {chain.chainId}
+            </span>
+          </div>
         </header>
 
         <section className="mt-12">
@@ -321,6 +340,31 @@ function ShareSection({
           <Snippet code={iframeCode} lang="html" />
         </div>
       </section>
+    </>
+  );
+}
+
+function PreviewChain({ address, chain }: { address: Address; chain: ChainNetwork }) {
+  return (
+    <>
+      <AgentHero address={address} heldCount={0} />
+      <main className="mx-auto max-w-5xl px-8 pt-16 pb-16 sm:pb-24">
+        <header className="flex items-baseline justify-between text-xs text-ink-quiet">
+          <p className="eyebrow">Agent · preview mode</p>
+          <ChainSelector activeId={chain.id} />
+        </header>
+        <section className="mt-12">
+          <h1 className="display text-5xl text-ink sm:text-[5rem]">
+            {truncateAddress(address, 6, 4)}
+          </h1>
+          <p className="mt-8 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
+            {chain.name} is not yet live in the web app. The Ligis contracts are
+            scaffolded and building (Odra/Rust), but the on-chain reads will
+            activate once they are deployed. Switch to Pharos Atlantic for live
+            agent data, or come back after the Casper contracts go live.
+          </p>
+        </section>
+      </main>
     </>
   );
 }
