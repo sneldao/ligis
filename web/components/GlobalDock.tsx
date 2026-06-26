@@ -4,13 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
-import {
-  CATALOG_CONFIG,
-  rigState,
-  setActiveId,
-  useCatalogUi,
-} from "@/components/catalog/catalogState";
-import { truncateAddress } from "@/lib/format";
+import { ChainSelector } from "@/components/ChainSelector";
 
 const NAV = [
   { href: "/#how", label: "How it works" },
@@ -33,9 +27,7 @@ function pageLabel(pathname: string): string {
 
 export function GlobalDock() {
   const pathname = usePathname() ?? "/";
-  const ui = useCatalogUi();
   const onCatalog = pathname === "/";
-  const active = ui.activeId;
   const [navOpen, setNavOpen] = useState(false);
   const reducedMotion = useReducedMotion();
 
@@ -48,7 +40,7 @@ export function GlobalDock() {
       <motion.div
         layout
         transition={{ type: "spring", stiffness: 360, damping: 32 }}
-        className="pointer-events-auto flex max-w-full items-center gap-x-3 bg-ink/85 px-3 py-2 text-paper backdrop-blur-md sm:gap-x-5 sm:px-5 sm:py-2.5"
+        className="pointer-events-auto flex max-w-full items-center gap-x-3 bg-ink/85 px-3 py-2 text-paper backdrop-blur-md sm:gap-x-4 sm:px-5 sm:py-2.5"
         style={{ color: "#F4F1EC", borderRadius: 999 }}
       >
         <Link
@@ -62,21 +54,21 @@ export function GlobalDock() {
 
         <span className="h-3 w-px bg-paper-deep/30" aria-hidden />
 
-        <div className="flex min-w-0 items-center gap-x-3 sm:gap-x-5">
-          <AnimatePresence mode="wait" initial={false}>
-            {onCatalog && active ? (
-              <FocusedSlug key={`focused-${active}`} address={active} />
-            ) : onCatalog ? (
-              <IdleCatalogSlug key="idle" />
-            ) : (
-              <PageSlug key={pathname} label={pageLabel(pathname)} />
-            )}
-          </AnimatePresence>
+        {/* Page label — always visible, never replaced by focus state */}
+        <AnimatePresence mode="wait" initial={false}>
+          <PageSlug key={pathname} label={pageLabel(pathname)} />
+        </AnimatePresence>
+
+        {/* ChainSelector — always visible in the dock */}
+        <span className="hidden h-3 w-px bg-paper-deep/30 sm:inline-block" aria-hidden />
+        <div className="hidden sm:block">
+          <ChainSelector />
         </div>
 
         <span className="hidden h-3 w-px bg-paper-deep/30 sm:inline-block" aria-hidden />
 
-        <nav className="hidden items-center gap-x-3 sm:flex">
+        {/* Nav links — always visible on desktop, never hidden by focus */}
+        <nav className="hidden items-center gap-x-3 lg:flex">
           {NAV.map((n) => {
             const isActive =
               n.href === "/"
@@ -101,12 +93,13 @@ export function GlobalDock() {
           onClick={() => setNavOpen((v) => !v)}
           aria-label="Open menu"
           aria-expanded={navOpen}
-          className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/80 hover:text-paper sm:hidden"
+          className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/80 hover:text-paper lg:hidden"
         >
           {navOpen ? "close" : "menu"}
         </button>
       </motion.div>
 
+      {/* Mobile dropdown — includes nav + chain selector */}
       <AnimatePresence>
         {navOpen ? (
           <motion.div
@@ -114,9 +107,12 @@ export function GlobalDock() {
             animate={{ opacity: 1, y: 0 }}
             exit={reducedMotion ? undefined : { opacity: 0, y: -6 }}
             transition={{ duration: 0.16 }}
-            className="pointer-events-auto absolute left-3 right-3 top-14 bg-ink/92 px-5 py-4 text-paper backdrop-blur-md sm:hidden"
+            className="pointer-events-auto absolute left-3 right-3 top-14 bg-ink/92 px-5 py-4 text-paper backdrop-blur-md lg:hidden"
             style={{ borderRadius: 16 }}
           >
+            <div className="mb-4">
+              <ChainSelector />
+            </div>
             <ul className="flex flex-col gap-y-3">
               {NAV.map((n) => (
                 <li key={n.href}>
@@ -136,29 +132,6 @@ export function GlobalDock() {
   );
 }
 
-function IdleCatalogSlug() {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      transition={{ duration: 0.18 }}
-      className="flex items-baseline gap-x-3 sm:gap-x-5"
-    >
-      <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-terra sm:inline">
-        live · pharos atlantic
-      </span>
-      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/65 sm:hidden">
-        live
-      </span>
-      <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/70 sm:inline">
-        click a tile to verify
-      </span>
-    </motion.div>
-  );
-}
-
 function PageSlug({ label }: { label: string }) {
   return (
     <motion.span
@@ -171,42 +144,5 @@ function PageSlug({ label }: { label: string }) {
     >
       {label}
     </motion.span>
-  );
-}
-
-function FocusedSlug({ address }: { address: string }) {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      transition={{ duration: 0.18 }}
-      className="flex items-baseline gap-x-3 sm:gap-x-5"
-    >
-      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/70">
-        focused
-      </span>
-      <span className="font-mono text-sm tabular text-paper">
-        {truncateAddress(address, 6, 4)}
-      </span>
-      <Link
-        href={`/agent/${address}`}
-        className="font-mono text-[11px] uppercase tracking-[0.18em] text-terra hover:text-paper"
-      >
-        open ↗
-      </Link>
-      <button
-        type="button"
-        onClick={() => {
-          setActiveId(null);
-          rigState.target.set(0, 0, 0);
-          rigState.zoom = CATALOG_CONFIG.zoomOut;
-        }}
-        className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/65 hover:text-paper"
-      >
-        esc
-      </button>
-    </motion.div>
   );
 }

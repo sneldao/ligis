@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ChainSelector } from "@/components/ChainSelector";
 import { CatalogHero } from "@/components/catalog/CatalogHero";
 import { Diagram } from "@/components/Diagram";
 import { Rule } from "@/components/Rule";
@@ -64,7 +63,6 @@ export default async function HomePage({
         <header className="flex items-baseline justify-between text-xs">
           <p className="eyebrow">Ligis · how it works 00</p>
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-            <ChainSelector activeId={chain.id} />
             <nav className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm text-ink-soft">
             <Link
               href="/capabilities"

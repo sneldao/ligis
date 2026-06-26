@@ -3,8 +3,7 @@
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { EscListener, ScrollHint } from "./DynamicIsland";
-import { FocusPanel } from "./FocusPanel";
+import { ScrollHint } from "./DynamicIsland";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 
 const CatalogScene = dynamic(
@@ -69,9 +68,6 @@ export function CatalogHero() {
         </SceneErrorBoundary>
       </div>
 
-      <EscListener />
-      <FocusPanel />
-
       {/* Hero headline + audience routing */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-center px-6 pt-[8vh] sm:pt-[15vh]">
         <motion.div
@@ -127,7 +123,7 @@ export function CatalogHero() {
         className="pointer-events-none absolute inset-x-0 bottom-20 z-10 flex flex-col items-center gap-3 px-6 text-center sm:bottom-24"
       >
         <p className="hidden max-w-xl font-serif text-base italic leading-relaxed text-ink-soft sm:block">
-          Click any tile to verify a live credential.
+          Click any tile to open an agent dossier.
         </p>
         <p className="hidden max-w-md font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet sm:mt-2 sm:block">
           drag · scroll · WASD · click

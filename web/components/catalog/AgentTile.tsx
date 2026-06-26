@@ -8,9 +8,7 @@ import { Text } from "@react-three/drei";
 import { useRouter } from "next/navigation";
 import { portraitParams } from "@/lib/portrait";
 import {
-  CATALOG_CONFIG,
   rigState,
-  setActiveId,
   setHoveredId,
 } from "./catalogState";
 import type { CatalogAgent } from "./agentSeed";
@@ -42,25 +40,19 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
     if (!group.current) return;
     const elapsed = performance.now() - startTime.current - enterDelay;
     const reveal = Math.max(0, Math.min(1, elapsed / 800));
-    const isActive = rigState.activeId === id;
-    const isAnyActive = rigState.activeId !== null;
 
-    const targetScale = isActive
-      ? CATALOG_CONFIG.focusScale
-      : isAnyActive
-        ? CATALOG_CONFIG.dimScale
-        : 1;
-    const eased = reveal * targetScale;
+    // No focus state — all tiles render at uniform scale.
+    const targetScale = reveal;
+    const eased = targetScale;
     easing.damp3(group.current.scale, [eased, eased, eased], 0.22, delta);
 
-    const focusBoost = isActive ? 1.2 : 0;
     const liftIn = (1 - reveal) * -1.6;
     const bob =
       Math.sin(state.clock.elapsedTime * 0.55 + layout.bobPhase) * layout.bobAmp;
 
     easing.damp(group.current.position, "x", layout.pos[0], 0.28, delta);
     easing.damp(group.current.position, "y", layout.pos[1] + bob + liftIn, 0.22, delta);
-    easing.damp(group.current.position, "z", layout.pos[2] + focusBoost, 0.28, delta);
+    easing.damp(group.current.position, "z", layout.pos[2], 0.28, delta);
 
     easing.damp(group.current.rotation, "z", layout.rotZ, 0.4, delta);
     easing.damp(group.current.rotation, "x", layout.rotX, 0.4, delta);
@@ -117,13 +109,8 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
       onClick={(e) => {
         e.stopPropagation();
         if (rigState.isDragging) return;
-        if (rigState.activeId === id) {
-          router.push(`/agent/${agent.address}`);
-        } else {
-          setActiveId(id);
-          rigState.target.set(layout.pos[0], layout.pos[1], 0);
-          rigState.zoom = CATALOG_CONFIG.zoomIn;
-        }
+        // One click = navigate to agent page. No focus step.
+        router.push(`/agent/${agent.address}`);
       }}
     >
       {agent.origin === "deployer" ? (
