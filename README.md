@@ -1,10 +1,10 @@
 # Ligis
 
 > **Portable on-chain identity and verifiable credentials for AI agents.**
-> **Live on Pharos. Casper in progress for the Casper Agentic Buildathon.**
+> **Live on Pharos. Casper adapter implemented — contracts building, deploy script ready.**
 
 A chain-agnostic agent identity runtime: one `ChainAdapter` interface, two
-implementations (EVM/Pharos today, Casper/Odra in progress), and a Trust
+implementations (EVM/Pharos live, Casper/Odra implemented), and a Trust
 Steward that runs the same loop on either chain. Credentials are chain-neutral
 by design — `capabilityHash("kyc.basic")` produces the same 32-byte hash on
 every chain, which is what makes cross-chain credential portability possible.
@@ -18,7 +18,7 @@ every chain, which is what makes cross-chain credential portability possible.
 
 Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgentID` ERC-721 on EVM, `AgentId` Odra contract on Casper) and signed capability credentials (`CredentialRegistry` EIP-712 on both chains). Any contract can gate access in one line: `require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed")`.
 
-It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter + Odra contracts are scaffolded and building for the [Casper Agentic Buildathon](https://dorahacks.io/hackathon/2202/detail); see [`docs/casper-buildathon.md`](docs/casper-buildathon.md) for the submission plan.
+It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter (`@ligis/adapter-casper`) is fully implemented — all 8 `ChainAdapter` operations talk to Odra contracts via `casper-js-sdk`, the WASM contracts build and pass tests, and a deploy script (`pnpm deploy:casper`) installs them to Casper Testnet. The web frontend is chain-aware on all pages (`?chain=casper-testnet` shows a preview until contracts go live). See [`docs/casper-buildathon.md`](docs/casper-buildathon.md) for the submission plan.
 
 ## Skills
 
@@ -50,7 +50,7 @@ MCP server consume the interface, not the implementation.
 | Chain | Adapter | Contracts | Status |
 |-------|---------|-----------|--------|
 | **Pharos Atlantic** (EVM) | `@ligis/adapter-evm` | `packages/contracts-evm` (Solidity) | Live — deployed, tested, steward running |
-| **Casper Testnet** | `@ligis/adapter-casper` | `packages/contracts-casper` (Odra) | Scaffolded — `signCredential` live, ops pending contract deploy |
+| **Casper Testnet** | `@ligis/adapter-casper` | `packages/contracts-casper` (Odra) | Implemented — all ops live, WASM builds, deploy script ready, awaiting Testnet deploy |
 
 **Why this works across chains:**
 - **Capabilities are chain-neutral**: `capabilityHash("kyc.basic")` produces
@@ -83,6 +83,11 @@ PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
   pnpm start -- agent run --goal "open an escrow with counterparty X"
 
 # Casper (after contracts are deployed — see docs/setup.md)
+pnpm setup:casper                    # generate 3 testnet wallets
+# → fund deployer at https://testnet.cspr.live/tools/faucet
+# → transfer CSPR to agent + issuer
+source .env.d/casper.env
+pnpm deploy:casper                   # install WASM contracts to Casper Testnet
 pnpm start -- --chain casper info
 pnpm start -- --chain casper verify --subject <account-hash> --capability kyc.basic
 ```

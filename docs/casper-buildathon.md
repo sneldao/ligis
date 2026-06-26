@@ -148,13 +148,13 @@ single-adapter for now avoids the riskiest item in the plan.
 packages/
 ├── core/                Chain-neutral (done)
 ├── adapter-evm/         Pharos (done)
-├── adapter-casper/      Casper — scaffolded, signCredential live, others stubbed
+├── adapter-casper/      Casper — all 8 ops implemented (casper-js-sdk), signer + deploy scripts
 ├── zerog/               0G Compute/Storage (done)
 ├── agent-logic/         Trust Steward (chain-agnostic, done)
 ├── cli/                 + --chain casper (wired)
 ├── mcp-server/          + chain="casper" (wired)
 ├── contracts-evm/       Solidity (done)
-├── contracts-casper/    Odra — scaffolded, compiles, cargo odra build pending toolchain fix
+├── contracts-casper/    Odra — builds + tests pass, WASM in wasm/ (AgentId.wasm, CredentialRegistry.wasm)
 └── x402-server/         Scaffolded — /premium endpoint, 402 response, facilitator forward
 ```
 
@@ -165,38 +165,41 @@ packages/
 - [x] `x402-server` scaffolded (pulled forward from Day 4).
 - [x] Multi-chain UI shell on home page (ChainSelector + getChain).
 - [x] Workspace builds end-to-end (all 8 TS packages + web).
-- [ ] Install Rust toolchain, `cargo-odra`, `just` (budget: 2–3 hours —
-      first Odra build often hits trait-bound mismatches needing cargo.toml surgery).
-- [ ] Create **three** Casper Testnet wallets: deployer, agent subject, issuer.
-      Faucet is single-use per account, so: deployer hits faucet once, then
-      deployer → agent + issuer via transfer. Each needs ~10–50 CSPR.
-- [ ] `cargo odra build` succeeds locally (proves the toolchain works).
+- [x] Install Rust toolchain, `cargo-odra`, `just`.
+- [x] `cargo odra build` succeeds locally — `AgentId.wasm` + `CredentialRegistry.wasm` generated.
+- [x] `cargo odra test` passes (in-memory Odra test env).
+- [x] Create **three** Casper Testnet wallets via `pnpm setup:casper` (deployer, agent, issuer).
+      Faucet funding + transfers pending manual step.
+- [x] Implement all 8 `CasperAdapter` operations (casper-js-sdk):
+      `getAgentId`, `issueAgentId`, `rotateAgentId`, `verifyCapability`,
+      `signCredential`, `submitCredential`, `revokeCredential`, `anchorEvidence`.
+- [x] `signer.ts` — secp256k1 key loading (PEM/hex), TransactionV1 building + signing.
+- [x] `deploy.ts` — WASM install script (`pnpm deploy:casper`).
+- [x] Chain-awareness propagated to all web pages (agent, issuers, capabilities,
+      steward, embed, embed/verify) — `?chain=casper-testnet` shows preview.
 
 ### Day 2 (Jun 26)
-- [ ] Flesh out `agent_id.rs` + `credential_registry.rs` with full signature
-  verification path. Wire `casper-eip-712` crate.
-- [ ] Deploy `agent_id.wasm` + `credential_registry.wasm` to Casper Testnet.
-  Record package hashes.
-- [ ] Implement `CasperAdapter.getAgentId` + `issueAgentId` against the
-  deployed `AgentId` contract. **First Casper transaction lands.**
+- [ ] Fund deployer wallet from faucet, transfer CSPR to agent + issuer.
+- [ ] `pnpm deploy:casper` — install WASM contracts to Casper Testnet.
+      Record package hashes in `.env.d/casper.env`.
+- [ ] First Casper transaction: `pnpm start -- --chain casper issue` (mint an AgentId).
+- [ ] Verify on cspr.live explorer.
 
 ### Day 3 (Jun 27)
-- [ ] Implement `CasperAdapter.signCredential` + `submitCredential` +
-  `verifyCapability` against `CredentialRegistry`. Wire `casper-eip-712`
-  on the TS side.
-- [ ] Implement `revokeCredential` and `anchorEvidence`.
 - [ ] Trust Steward end-to-end run on Casper:
   `ligis --chain casper agent run --goal "test"`.
   Steward self-issues **both** `data.premium` **and** `agent.commerce.x402`
   (the gate reads `data.premium`; the agent needs `agent.commerce.x402`
   to authorize the x402 payment flow).
+- [ ] Verify `signCredential` + `submitCredential` produce valid on-chain credentials.
+- [ ] Verify `verifyCapability` reads them back correctly.
 
 ### Day 4 (Jun 28)
 - [ ] Wire `x402-server` credential check + 402 + payment settlement via
   the Casper x402 Facilitator (scaffold is already in place).
-- [ ] Propagate chain-awareness to remaining web pages (agent profile,
-  steward, capabilities, issuers, embed) — same pattern as the home page.
 - [ ] Add a CEP-18 test token if needed (or reuse a Buildathon-provided one).
+- [ ] Flip `CASPER_TESTNET.live` to `true` in `web/lib/network.ts` once
+  contracts are deployed and reads work.
 
 ### Day 5 (Jun 29)
 - [ ] End-to-end demo run: agent → Steward → Casper credential → x402 paid
@@ -232,9 +235,9 @@ packages/
 
 | Risk                                                          | Mitigation                                                                                |
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Odra learning curve eats Day 2.                               | Skeleton already compiles; Day 2 is "fill in bodies + deploy", not "learn from scratch". Budget 2–3 hours for Day 1 toolchain setup, not 1. |
+| Odra toolchain issues.                                        | **Resolved** — `cargo odra build` + `cargo odra test` pass. WASM files generated. Day 2 is deploy-only. |
 | `casper-eip-712` Rust side has edge cases against TS side.    | The repo ships cross-language test vectors — use them as oracles.                         |
-| Casper Testnet faucet rate limits (single-use per account).   | Create three wallets (deployer, agent, issuer) early. Deployer hits faucet once, then transfers to the other two. Each needs ~10–50 CSPR. |
+| Casper Testnet faucet rate limits (single-use per account).   | Three wallets generated by `pnpm setup:casper`. Deployer hits faucet once, then transfers to the other two. Each needs ~10–50 CSPR. |
 | x402 Facilitator on testnet is finicky.                       | Don't mock settlement. The Steward loop produces 3+ Ligis-native on-chain txs per run — those are the qualification floor. If the facilitator is down, show the Ligis-native txs as proof and note the x402 path is wired but pending the facilitator. |
 | Run out of time on Day 5.                                     | Day 5 is run-through + script lock only. Recording is Day 6 morning. Submit at end of Day 6 even if rough. |
 

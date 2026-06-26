@@ -31,7 +31,9 @@ ligis/
 │   ├── adapter-casper/    # ChainAdapter impl for Casper (casper-js-sdk + casper-eip-712)
 │   │   └── src/
 │   │       ├── adapter.ts     # CasperAdapter class
-│   │       ├── operations.ts  # on-chain ops (signCredential live; others stubbed pending deploy)
+│   │       ├── operations.ts  # on-chain ops (all 8 implemented via casper-js-sdk)
+│   │       ├── signer.ts      # secp256k1 key loading + TransactionV1 building/signing
+│   │       ├── deploy.ts      # WASM install script (pnpm deploy:casper)
 │   │       ├── client.ts      # casper-js-sdk RpcClient bootstrap
 │   │       ├── config.ts      # CasperConfig + loadCasperConfig() from env
 │   │       ├── eip712.ts      # EIP-712 digest construction via @casper-ecosystem/casper-eip-712
@@ -53,7 +55,7 @@ ligis/
 │   ├── contracts-casper/  # Odra/Rust contracts (agent_id.rs, credential_registry.rs)
 │   └── x402-server/       # Credential-gated x402 resource server (Hono + CasperAdapter)
 │
-├── web/                   # Next.js app — multi-chain (ChainSelector + getChain(searchParams))
+├── web/                   # Next.js app — all pages chain-aware (ChainSelector + getChain(searchParams))
 ├── assets/                # Single source of truth: networks.json, credentials.example.json
 ├── foundry.toml           # Foundry pointed at packages/contracts-evm/src
 ├── tsconfig.json          # Root project references
@@ -117,6 +119,10 @@ pnpm --filter @ligis/mcp-server dev
 pnpm test         # Solidity (Foundry)
 pnpm test:ts      # TypeScript tests across packages
 pnpm test:all     # both
+
+# Casper Testnet (see docs/setup.md for full walkthrough)
+pnpm setup:casper # generate 3 secp256k1 keypairs → .env.d/casper.env
+pnpm deploy:casper # install WASM contracts to Casper Testnet
 ```
 
 ## Adding a new chain
