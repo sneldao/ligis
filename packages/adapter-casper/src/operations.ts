@@ -16,6 +16,7 @@
  */
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
+import { blake2b } from "@noble/hashes/blake2b";
 import casperSdk from "casper-js-sdk";
 import type { CLValue as CLValueType } from "casper-js-sdk";
 const { CLValue, PublicKey, PurseIdentifier } = casperSdk;
@@ -240,22 +241,55 @@ export async function verifyCapability(
   const subjectBytes = accountHashToBytes(opts.subject);
   const capHashBytes = hexToBytes(capHash);
 
-  // Build the composite dictionary key: subject_bytes || capability_hash_bytes
-  const compositeKey = new Uint8Array(subjectBytes.length + capHashBytes.length);
-  compositeKey.set(subjectBytes, 0);
-  compositeKey.set(capHashBytes, subjectBytes.length);
-  const dictKey = `hash-${Buffer.from(compositeKey).toString("hex")}`;
-
-  // Query the credential registry's dictionary.
-  // Odra stores mappings as dictionaries — the dictionary name is "latest"
-  // and the item key is the composite key (subject || capability_hash).
+  // Odra storage key computation:
+  // - The `latest` mapping is at field index 2 in the CredentialRegistry module
+  //   (index 0 = module root, 1 = issuer_nonce, 2 = latest)
+  // - index_bytes = u32 big-endian of the path (2 → [0,0,0,2])
+  // - mapping_data = key.to_bytes() = subject(32) ++ cap_hash(32)
+  // - final_key = index_bytes ++ mapping_data
+  // - dict_item_key = blake2b(final_key, 32)
+  // - The dictionary URef is the contract's `state` URef
   try {
     const rpcUrl = ctx.config.network.rpcUrl;
     const { execSync } = await import("node:child_process");
-    const contractHash = `hash-${stripPrefix(packageHash)}`;
-    const dictItemKey = Buffer.from(compositeKey).toString("hex");
+    const pkgHash = `hash-${stripPrefix(packageHash)}`;
 
-    // Get state root hash
+    // 1. Query the contract package to get the latest contract hash
+    const pkgOutput = execSync(
+      `casper-client query-global-state --node-address ${rpcUrl} --key ${pkgHash} 2>&1`,
+      { encoding: "utf-8", timeout: 15000 },
+    );
+    const pkgData = JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
+    const versions = pkgData?.versions ?? [];
+    const latestVersion = versions[versions.length - 1];
+    const contractHashRaw = latestVersion?.contract_hash ?? "";
+    if (!contractHashRaw) throw new Error("No contract hash found");
+    const contractHash = `hash-${contractHashRaw.replace(/^contract-/, "")}`;
+
+    // 2. Get the contract's named keys to find the `state` URef
+    const contractOutput = execSync(
+      `casper-client query-global-state --node-address ${rpcUrl} ` +
+      `--key ${contractHash} 2>&1`,
+      { encoding: "utf-8", timeout: 15000 },
+    );
+    const contractData = JSON.parse(contractOutput)?.result?.stored_value?.Contract;
+    if (!contractData) throw new Error("Contract not found");
+    const stateUref = contractData.named_keys?.find(
+      (k: any) => k.name === "state",
+    )?.key;
+    if (!stateUref) throw new Error("state URef not found");
+
+    // 2. Compute the Odra dictionary item key
+    const indexBytes = Buffer.alloc(4);
+    indexBytes.writeUInt32BE(2, 0); // field index 2 for `latest`
+    const mappingData = Buffer.concat([
+      Buffer.from(subjectBytes),
+      Buffer.from(capHashBytes),
+    ]);
+    const finalKey = Buffer.concat([indexBytes, mappingData]);
+    const dictItemKey = Buffer.from(blake2b(finalKey, { dkLen: 32 })).toString("hex");
+
+    // 3. Get state root hash
     const stateRootOutput = execSync(
       `casper-client get-state-root-hash --node-address ${rpcUrl} 2>&1`,
       { encoding: "utf-8", timeout: 15000 },
@@ -264,20 +298,20 @@ export async function verifyCapability(
     if (!srMatch) throw new Error("No state root hash");
     const stateRoot = srMatch[1];
 
+    // 4. Query the dictionary item
     const output = execSync(
       `casper-client get-dictionary-item --node-address ${rpcUrl} ` +
         `--state-root-hash ${stateRoot} ` +
-        `--contract-hash ${contractHash} ` +
-        `--dictionary-name "latest" ` +
+        `--seed-uref "${stateUref}" ` +
         `--dictionary-item-key "${dictItemKey}" 2>&1`,
       { encoding: "utf-8", timeout: 15000 },
     );
 
-    // Parse the CLValue from the response
+    // Parse the CLValue — Odra stores CredentialView as List<U8> (raw bytes)
     const clValue = JSON.parse(output)?.result?.stored_value?.CLValue;
     if (!clValue) throw new Error("No CLValue in response");
 
-    const view = parseCredentialView(clValue);
+    const view = parseCredentialViewBytes(clValue);
     const now = BigInt(Math.floor(Date.now() / 1000));
     const capable = view.valid && !view.revoked && BigInt(view.expiresAt) > now &&
       (!opts.issuer || view.issuer.toLowerCase() === opts.issuer.toLowerCase());
@@ -303,35 +337,35 @@ export async function verifyCapability(
   }
 }
 
-/** Parse a CredentialView CLValue from the query result. */
-function parseCredentialView(clValue: any): {
+/** Parse a CredentialView stored as List<U8> bytes.
+ *
+ * The bytes (after the 4-byte length prefix) are:
+ *   issuer: [u8; 20] | subject: [u8; 32] | issued_at: u64 LE | expires_at: u64 LE | revoked: bool | valid: bool
+ */
+function parseCredentialViewBytes(clValue: any): {
   issuer: string;
   issuedAt: string;
   expiresAt: string;
   revoked: boolean;
   valid: boolean;
 } {
-  const parsed = clValue.parsed ?? clValue;
-  if (typeof parsed === "object" && parsed !== null) {
-    const issuerBytes = parsed.issuer ?? parsed.issuer?.bytes ?? new Uint8Array(20);
-    const issuerHex = typeof issuerBytes === "string"
-      ? issuerBytes
-      : bytesToHex(issuerBytes instanceof Uint8Array ? issuerBytes : new Uint8Array(issuerBytes));
-    return {
-      issuer: issuerHex,
-      issuedAt: String(parsed.issued_at ?? parsed.issuedAt ?? 0),
-      expiresAt: String(parsed.expires_at ?? parsed.expiresAt ?? 0),
-      revoked: Boolean(parsed.revoked ?? false),
-      valid: Boolean(parsed.valid ?? false),
-    };
+  const hexBytes = clValue.bytes ?? "";
+  const allBytes = Buffer.from(hexBytes, "hex");
+  // First 4 bytes = length prefix (u32 LE)
+  const len = allBytes.readUInt32LE(0);
+  const data = allBytes.subarray(4, 4 + len);
+  if (data.length < 70) {
+    return { issuer: "0x" + "00".repeat(20), issuedAt: "0", expiresAt: "0", revoked: false, valid: false };
   }
-  return {
-    issuer: "0x0000000000000000000000000000000000000000",
-    issuedAt: "0",
-    expiresAt: "0",
-    revoked: false,
-    valid: false,
-  };
+  let offset = 0;
+  const issuer = "0x" + data.subarray(offset, offset + 20).toString("hex"); offset += 20;
+  // subject (32 bytes) — skip, not needed for verification
+  offset += 32;
+  const issuedAt = data.readBigUInt64LE(offset).toString(); offset += 8;
+  const expiresAt = data.readBigUInt64LE(offset).toString(); offset += 8;
+  const revoked = data[offset] !== 0; offset += 1;
+  const valid = data[offset] !== 0;
+  return { issuer, issuedAt, expiresAt, revoked, valid };
 }
 
 /**
@@ -360,20 +394,72 @@ export async function signCredential(
   const expiresAt = issuedAt + BigInt(opts.expiresInSeconds ?? DEFAULT_EXPIRY_SECONDS);
 
   // Try to read the issuer's nonce from the contract.
+  // Odra stores the `issuer_nonce` mapping at field index 1.
+  // The dictionary key is blake2b(index_bytes ++ issuer_bytes) where
+  // index_bytes = u32 BE of 1.
   let nonce = "0";
   try {
     const packageHash = ctx.config.deployment.credentialRegistry;
     if (packageHash) {
-      const stateRoot = await ctx.rpc.getStateRootHashLatest();
-      const issuerKeyHex = stripPrefix(issuer);
-      const dictKey = `hash-${issuerKeyHex}`;
-      const result = await ctx.rpc.queryGlobalStateByStateHash(
-        stateRoot.stateRootHash.toHex(),
-        `hash-${stripPrefix(packageHash)}`,
-        ["issuer_nonce", dictKey],
+      const rpcUrl = ctx.config.network.rpcUrl;
+      const { execSync } = await import("node:child_process");
+      const pkgHash = `hash-${stripPrefix(packageHash)}`;
+
+      // Query the contract package to get the latest contract hash
+      const pkgOutput = execSync(
+        `casper-client query-global-state --node-address ${rpcUrl} --key ${pkgHash} 2>&1`,
+        { encoding: "utf-8", timeout: 15000 },
       );
-      const nonceVal = (result as any)?.value?.CLValue?.parsed?.toString();
-      if (nonceVal) nonce = nonceVal;
+      const pkgData = JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
+      const versions = pkgData?.versions ?? [];
+      // Get the latest enabled version's contract hash
+      const latestVersion = versions[versions.length - 1];
+      const contractHashRaw = latestVersion?.contract_hash ?? "";
+      if (!contractHashRaw) throw new Error("No contract hash found");
+      // contractHashRaw is like "contract-b50e044687d471c0b3472db990070169eddefc4275cd0eb9e7700d4d75cc9595"
+      // Convert to hash- format for query
+      const contractHash = `hash-${contractHashRaw.replace(/^contract-/, "")}`;
+
+      // Get the contract's state URef
+      const contractOutput = execSync(
+        `casper-client query-global-state --node-address ${rpcUrl} --key ${contractHash} 2>&1`,
+        { encoding: "utf-8", timeout: 15000 },
+      );
+      const contractData = JSON.parse(contractOutput)?.result?.stored_value?.Contract;
+      const stateUref = contractData?.named_keys?.find(
+        (k: any) => k.name === "state",
+      )?.key;
+      if (stateUref) {
+        // Compute dictionary item key for issuer_nonce mapping (index 1)
+        const issuerBytes = Buffer.from(stripPrefix(issuer), "hex");
+        const indexBytes = Buffer.alloc(4);
+        indexBytes.writeUInt32BE(1, 0); // field index 1 for `issuer_nonce`
+        const finalKey = Buffer.concat([indexBytes, issuerBytes]);
+        const dictItemKey = Buffer.from(blake2b(finalKey, { dkLen: 32 })).toString("hex");
+
+        // Get state root hash
+        const srOutput = execSync(
+          `casper-client get-state-root-hash --node-address ${rpcUrl} 2>&1`,
+          { encoding: "utf-8", timeout: 15000 },
+        );
+        const srMatch = srOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/);
+        if (srMatch) {
+          const stateRoot = srMatch[1];
+          const dictOutput = execSync(
+            `casper-client get-dictionary-item --node-address ${rpcUrl} ` +
+            `--state-root-hash ${stateRoot} ` +
+            `--seed-uref "${stateUref}" ` +
+            `--dictionary-item-key "${dictItemKey}" 2>&1`,
+            { encoding: "utf-8", timeout: 15000 },
+          );
+          const clValue = JSON.parse(dictOutput)?.result?.stored_value?.CLValue;
+          if (clValue?.bytes) {
+            // Odra stores U64 as List<U8>: 4-byte length prefix + 8-byte LE value
+            const buf = Buffer.from(clValue.bytes, "hex");
+            nonce = buf.readBigUInt64LE(4).toString();
+          }
+        }
+      }
     }
   } catch {
     // Contract not deployed or query failed — default nonce "0" is fine.
@@ -445,7 +531,7 @@ export async function submitCredential(
   args.set("nonce", CLValue.newCLUint64(BigInt(signed.nonce)));
   // signature is Vec<u8> — a list of U8 CLValues
   const sigList = Array.from(sigBytes).map((b) => CLValue.newCLUint8(b));
-  args.set("signature", CLValue.newCLList(
+  args.set("_signature", CLValue.newCLList(
     { name: "U8", variations: [] } as any,
     sigList,
   ));
@@ -478,7 +564,7 @@ export async function revokeCredential(
   const args = new Map<string, CLValueType>();
   args.set("subject", CLValue.newCLByteArray(subjectBytes));
   args.set("capability_hash", CLValue.newCLByteArray(capHashBytes));
-  args.set("nonce", CLValue.newCLUint64(BigInt(opts.nonce)));
+  args.set("_nonce", CLValue.newCLUint64(BigInt(opts.nonce)));
 
   return callStoredContractViaCli({
     chainName: ctx.config.network.chainName,

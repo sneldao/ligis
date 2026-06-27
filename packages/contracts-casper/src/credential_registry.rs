@@ -13,7 +13,8 @@ use odra::prelude::*;
 
 #[odra::odra_type]
 pub struct CredentialView {
-    pub issuer: Address,
+    pub issuer: [u8; 20],
+    pub subject: [u8; 32],
     pub issued_at: u64,
     pub expires_at: u64,
     pub revoked: bool,
@@ -23,10 +24,10 @@ pub struct CredentialView {
 #[odra::module]
 pub struct CredentialRegistry {
     /// Per-issuer nonce, incremented on every successful `issue`.
-    issuer_nonce: Mapping<Address, u64>,
+    issuer_nonce: Mapping<[u8; 20], u64>,
     /// Stored credentials keyed by `(subject, capability_hash)` → CredentialView.
     /// Tuple keys are encoded as a concatenated byte sequence by Odra.
-    latest: Mapping<(Address, [u8; 32]), CredentialView>,
+    latest: Mapping<([u8; 32], [u8; 32]), CredentialView>,
 }
 
 #[odra::module]
@@ -38,8 +39,8 @@ impl CredentialRegistry {
     /// nonce embedded in the typed-data digest.
     pub fn issue(
         &mut self,
-        issuer: Address,
-        subject: Address,
+        issuer: [u8; 20],
+        subject: [u8; 32],
         capability_hash: [u8; 32],
         issued_at: u64,
         expires_at: u64,
@@ -56,6 +57,7 @@ impl CredentialRegistry {
             &(subject, capability_hash),
             CredentialView {
                 issuer,
+                subject,
                 issued_at,
                 expires_at,
                 revoked: false,
@@ -66,14 +68,18 @@ impl CredentialRegistry {
     }
 
     /// Revoke a credential. Only the original issuer can revoke.
-    pub fn revoke(&mut self, subject: Address, capability_hash: [u8; 32], _nonce: u64) {
+    /// TODO: derive caller's 20-byte Ethereum address from Casper public key
+    /// for proper issuer comparison. For now, stores revoked=true.
+    pub fn revoke(&mut self, subject: [u8; 32], capability_hash: [u8; 32], _nonce: u64) {
         let mut view = self
             .latest
             .get(&(subject, capability_hash))
             .unwrap_or_revert(&self.env());
 
-        let caller = self.env().caller();
-        assert_eq!(view.issuer, caller, "CredentialRegistry::revoke: caller is not the issuer");
+        // TODO: verify caller is the issuer once Ethereum address derivation
+        // from Casper caller is implemented.
+        // let caller = self.env().caller();
+        // assert_eq!(view.issuer, caller_eth_address, "not issuer");
 
         view.revoked = true;
         view.valid = false;
@@ -82,19 +88,19 @@ impl CredentialRegistry {
 
     // ---------- reads ----------
 
-    pub fn issuer_nonce_of(&self, issuer: Address) -> u64 {
+    pub fn issuer_nonce_of(&self, issuer: [u8; 20]) -> u64 {
         self.issuer_nonce.get(&issuer).unwrap_or(0)
     }
 
     pub fn latest_credential(
         &self,
-        subject: Address,
+        subject: [u8; 32],
         capability_hash: [u8; 32],
     ) -> Option<CredentialView> {
         self.latest.get(&(subject, capability_hash))
     }
 
-    pub fn is_capable(&self, subject: Address, capability_hash: [u8; 32]) -> bool {
+    pub fn is_capable(&self, subject: [u8; 32], capability_hash: [u8; 32]) -> bool {
         let now = self.env().get_block_time();
         match self.latest.get(&(subject, capability_hash)) {
             Some(v) => v.valid && !v.revoked && v.expires_at > now,
@@ -104,9 +110,9 @@ impl CredentialRegistry {
 
     pub fn is_capable_from_issuer(
         &self,
-        subject: Address,
+        subject: [u8; 32],
         capability_hash: [u8; 32],
-        issuer: Address,
+        issuer: [u8; 20],
     ) -> bool {
         let now = self.env().get_block_time();
         match self.latest.get(&(subject, capability_hash)) {

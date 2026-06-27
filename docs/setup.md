@@ -224,6 +224,13 @@ cargo odra build              # produces WASM in wasm/
 cargo odra test               # unit tests (in-memory env)
 ```
 
+> **Nightly Rust required**: Odra macros need `#![feature(box_patterns)]`.
+> The `rust-toolchain` file pins `nightly-2026-01-01`.
+>
+> **Bulk memory disabled**: Casper's WASM runtime rejects bulk memory
+> operations. Build with `RUSTFLAGS="-C target-feature=-bulk-memory,-bulk-memory-opt"`
+> (the `cargo odra build` command handles this automatically).
+
 ### 4. Deploy to Casper Testnet
 
 **Option A — use the deploy script (recommended):**
@@ -231,38 +238,75 @@ cargo odra test               # unit tests (in-memory env)
 ```bash
 source .env.d/casper.env
 pnpm deploy:casper
-# → installs AgentId.wasm and CredentialRegistry.wasm as session code
-# → extracts contract package hashes from the execution result
-# → writes LIGIS_CASPER_AGENT_ID and LIGIS_CASPER_CREDENTIAL_REGISTRY to .env.d/casper.env
+# → installs AgentId.wasm and CredentialRegistry.wasm via casper-client put-deploy
+# → polls for confirmation
+# → prints transaction hashes and package hashes
 ```
 
-The deploy script (`packages/adapter-casper/src/deploy.ts`) uses the
-`casper-js-sdk` to build `TransactionV1` payloads with session code
-(moduleBytes), signs with the deployer key, submits via `putTransaction`,
-and waits for confirmation. It then parses the execution effects for
-`WriteContractPackage` transforms to extract the package hashes.
+The deploy script (`packages/adapter-casper/src/deploy.ts`) uses
+`casper-client put-deploy` (legacy deploy format) to install the WASM
+as session code. This is required because Casper 2.0's `TransactionV1`
+`is_install_upgrade` flag is not recognized by the testnet node for
+contract installation, causing `NotAllowedToAddContractVersion [48]`.
 
-**Option B — use casper-client CLI:**
+The script uses `standardPayment=false` so failed deployments only
+cost actual gas consumed, not the full payment amount.
+
+After deployment, update `.env.d/casper.env` with the package hashes
+from the deployer's named keys:
 
 ```bash
-# casper-client CLI install: see https://docs.casper.network/users/tools/casper-client/
-casper-client put-transaction \
+casper-client query-global-state \
   --node-address https://node.testnet.casper.network/rpc \
+  --key <deployer-public-key> \
+  | grep ligis_
+```
+
+**Option B — use casper-client CLI directly:**
+
+```bash
+casper-client put-deploy \
+  --node-address https://node.testnet.casper.network/rpc \
+  --secret-key .env.d/casper-deployer.pem \
+  --session-path packages/contracts-casper/wasm/AgentId.wasm \
   --chain-name casper-test \
-  --secret-key ~/.casper/secret_key.pem \
-  --transaction-target-mode session \
-  --transaction-path packages/contracts-casper/wasm/credential_registry.wasm \
-  --payment-amount 10000000000
+  --gas-price 1 \
+  --payment-amount 800000000000 \
+  --session-arg "odra_cfg_package_hash_key_name:string='ligis_agentid'" \
+  --session-arg "odra_cfg_is_upgradable:bool='false'" \
+  --session-arg "odra_cfg_is_upgrade:bool='false'" \
+  --session-arg "odra_cfg_allow_key_override:bool='true'" \
+  --session-arg "odra_cfg_create_upgrade_group:bool='false'" \
+  --session-arg "entry_point:string='init'" \
+  --session-arg "args:byte_array_0=''" \
+  --session-arg "attached_value:u512='0'" \
+  --session-arg "amount:u512='0'"
 ```
 
 After deployment (either option), verify the env vars are set:
 
 ```bash
-echo $LIGIS_CASPER_CREDENTIAL_REGISTRY  # hash-<...>
-echo $LIGIS_CASPER_AGENT_ID             # hash-<...>
+echo $LIGIS_CASPER_CREDENTIAL_REGISTRY  # contract-package-<...>
+echo $LIGIS_CASPER_AGENT_ID             # contract-package-<...>
 ```
 
-### 5. Run the adapter
+### 5. Run the smoke test
+
+```bash
+source .env.d/casper.env
+npx tsx scripts/casper-smoke-test.ts
+```
+
+This runs the full credential lifecycle:
+1. Check deployer balance
+2. Mint an AgentId (`mint_self`)
+3. Sign an EIP-712 credential (reads nonce from on-chain)
+4. Submit the credential on-chain (`issue`)
+5. Verify the capability is valid (`verifyCapability`)
+6. Revoke the credential (`revoke`)
+7. Verify the capability is no longer valid
+
+### 6. Run the adapter
 
 ```bash
 source .env.d/casper.env  # loads all LIGIS_CASPER_* vars
@@ -275,7 +319,7 @@ pnpm start -- --chain casper verify --subject <account-hash> --capability kyc.ba
 pnpm --filter @ligis/mcp-server dev
 ```
 
-### 6. Optional: CSPR.cloud node access
+### 7. Optional: CSPR.cloud node access
 
 For production-grade RPC (rate limits, low latency, SSE), use CSPR.cloud:
 
@@ -284,7 +328,7 @@ export LIGIS_CASPER_RPC_URL=https://node.testnet.cspr.cloud/rpc
 export LIGIS_CASPER_AUTH=<your CSPR.cloud bearer token>
 ```
 
-### 7. Optional: x402 Trust Gate server
+### 8. Optional: x402 Trust Gate server
 
 `packages/x402-server` is a credential-gated x402 resource server. It checks
 a Ligis credential on Casper before accepting a paid HTTP request.

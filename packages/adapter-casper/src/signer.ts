@@ -153,19 +153,21 @@ export async function callStoredContractViaCli(params: {
     ? normalizedHash
     : `hash-${normalizedHash}`;
 
-  // Build the command
+  // Build the command — use legacy put-deploy (TransactionV1 is_install_upgrade
+  // flag is not recognized by the testnet node for stored contract calls)
   const cmd = [
-    "casper-client put-transaction package",
+    "casper-client put-deploy",
     `--node-address ${rpcUrl}`,
     `--secret-key ${keyPath}`,
-    `--contract-package-hash ${finalHash}`,
+    `--session-package-hash ${finalHash}`,
     `--session-entry-point ${entryPoint}`,
     `--chain-name ${chainName}`,
-    "--gas-price-tolerance 1",
+    "--gas-price 1",
     `--payment-amount ${paymentAmount}`,
-    "--standard-payment true",
     ...sessionArgs.map((a) => `--session-arg ${JSON.stringify(a)}`),
   ].join(" ");
+
+  console.log(`  casper-client cmd: ${cmd}`);
 
   const { execSync } = await import("node:child_process");
   let output: string;
@@ -176,7 +178,7 @@ export async function callStoredContractViaCli(params: {
     const stdout = e.stdout?.toString() ?? "";
     throw new Error(`casper-client failed: ${stderr || stdout || e.message}`);
   }
-  const hashMatch = output.match(/"Version1":\s*"([a-f0-9]+)"/);
+  const hashMatch = output.match(/"deploy_hash":\s*"([a-f0-9]+)"/);
   const txHash = hashMatch ? hashMatch[1] : "";
 
   if (!txHash) {
@@ -193,35 +195,61 @@ export async function callStoredContractViaCli(params: {
  * Format: "name:TYPE='value'"
  */
 function clValueToCasperClientArg(name: string, clValue: CLValueType): string {
-  // Check the CLType by inspecting the clValue
-  const any = clValue as any;
-  const clType = any?.clType?.value ?? any?.clType?.toString?.() ?? "";
+  const v = clValue as any;
+  const typeName = v.type?.typeName ?? "";
+
+  // ByteArray — detect by presence of `byteArray.data`
+  if (v.byteArray?.data) {
+    const size = v.type?.size ?? v.byteArray.data.length;
+    const hex = Buffer.from(v.byteArray.data).toString("hex");
+    return `${name}:byte_array_${size}='${hex}'`;
+  }
 
   // String
-  if (clType === "String" || any?.parsed !== undefined && typeof any.parsed === "string") {
-    return `${name}:string='${any.parsed}'`;
+  if (typeName === "String" || v.stringVal?.value !== undefined) {
+    const val = v.stringVal?.value ?? "";
+    return `${name}:string='${val}'`;
   }
-  // U512 / U64 / U32
-  if (clType === "U512" || clType === "U64" || clType === "U32" || clType === "U256" || clType === "U128") {
-    const val = any.parsed?.toString?.() ?? "0";
+
+  // U64
+  if (typeName === "U64") {
+    const val = v.ui64?.toString?.() ?? "0";
+    return `${name}:u64='${val}'`;
+  }
+  // U512
+  if (typeName === "U512") {
+    const val = v.ui512?.toString?.() ?? "0";
     return `${name}:u512='${val}'`;
   }
+  // U32
+  if (typeName === "U32") {
+    const val = v.ui32?.toString?.() ?? "0";
+    return `${name}:u32='${val}'`;
+  }
+  // U8
+  if (typeName === "U8") {
+    const val = v.ui8?.toString?.() ?? "0";
+    return `${name}:u8='${val}'`;
+  }
+
   // Bool
-  if (clType === "Bool") {
-    return `${name}:bool='${any.parsed}'`;
+  if (typeName === "Bool") {
+    const val = v.boolVal?.value ?? v.parsed ?? false;
+    return `${name}:bool='${val}'`;
   }
-  // ByteArray
-  if (typeof clType === "object" && clType?.ByteArray !== undefined) {
-    const val = any.parsed ?? "";
-    return `${name}:byte_array_${clType.ByteArray}='${val}'`;
+
+  // List — for Vec<u8> (signature), use byte_list
+  if (v.list?.elements || Array.isArray(v.list?.values)) {
+    const items = v.list?.elements ?? v.list?.values ?? [];
+    const hex = items.map((item: any) => {
+      const b = item.ui8?.toString?.() ?? item.parsed ?? 0;
+      return Number(b).toString(16).padStart(2, "0");
+    }).join("");
+    return `${name}:byte_list='${hex}'`;
   }
-  // PublicKey
-  if (clType === "PublicKey") {
-    return `${name}:public_key='${any.parsed}'`;
-  }
-  // Fallback: try as string
-  const val = any?.parsed?.toString?.() ?? "";
-  return `${name}:string='${val}'`;
+
+  // Fallback
+  throw new Error(`Unsupported CLValue type: ${typeName} for arg ${name}`);
 }
 
 /**
@@ -267,7 +295,7 @@ async function pollTransactionWithCli(txHash: string, timeoutMs: number): Promis
     try {
       const { execSync } = await import("node:child_process");
       const output = execSync(
-        `casper-client get-transaction --node-address ${rpcUrl} ${txHash} 2>&1`,
+        `casper-client get-deploy --node-address ${rpcUrl} ${txHash} 2>&1`,
         { encoding: "utf-8", timeout: 15000 },
       );
       const match = output.match(/"block_height":\s*(\d+)/);

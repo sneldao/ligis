@@ -13,7 +13,7 @@
  * Or via the CLI:
  *   pnpm --filter @ligis/adapter-casper deploy
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { resolve, join } from "node:path";
 import casperSdk from "casper-js-sdk";
 import type {
@@ -47,7 +47,7 @@ const {
 } = casperSdk;
 
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
-const DEFAULT_PAYMENT_AMOUNT = 50_000_000_000; // 50 CSPR for install (testnet)
+const DEFAULT_PAYMENT_AMOUNT = 800_000_000_000; // 50 CSPR for install (testnet)
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -107,7 +107,7 @@ function buildInstallTransaction(params: {
   // Odra-required runtime args for contract installation
   const odraArgs = new Map<string, CLValueType>();
   // Name under which the package hash is stored in account's named keys
-  odraArgs.set("odra_cfg_package_hash_key_name", CLValue.newCLString(`ligis_${contractName.toLowerCase()}`));
+  odraArgs.set("odra_cfg_package_hash_key_name", CLValue.newCLString(`ligis_${contractName.toLowerCase()}_v5`));
   // Entry point to call during install — Odra uses "init"
   odraArgs.set("entry_point", CLValue.newCLString("init"));
   // Serialized args for the init function — empty bytes for no-arg init
@@ -115,6 +115,11 @@ function buildInstallTransaction(params: {
   // No attached value, no transfer
   odraArgs.set("attached_value", CLValue.newCLUInt512(0));
   odraArgs.set("amount", CLValue.newCLUInt512(0));
+  // Odra config flags
+  odraArgs.set("odra_cfg_is_upgradable", CLValue.newCLValueBool(false));
+  odraArgs.set("odra_cfg_is_upgrade", CLValue.newCLValueBool(false));
+  odraArgs.set("odra_cfg_allow_key_override", CLValue.newCLValueBool(true));
+  odraArgs.set("odra_cfg_create_upgrade_group", CLValue.newCLValueBool(false));
 
   const argsObj = new Args(odraArgs);
   const ttl = new Duration(ttlMs);
@@ -132,7 +137,7 @@ function buildInstallTransaction(params: {
   pricingMode.paymentLimited = new PaymentLimitedMode();
   pricingMode.paymentLimited.gasPriceTolerance = 1;
   pricingMode.paymentLimited.paymentAmount = paymentAmount;
-  pricingMode.paymentLimited.standardPayment = true;
+  pricingMode.paymentLimited.standardPayment = false;
 
   const scheduling = new TransactionScheduling();
   scheduling.standard = {};
@@ -198,79 +203,80 @@ async function deployContract(params: {
   contractName: string;
   wasmPath: string;
 }): Promise<DeployResult> {
-  const { rpc, chainName, privateKey, contractName, wasmPath } = params;
-  const wasmBytes = new Uint8Array(readFileSync(wasmPath));
+  const { chainName, contractName, wasmPath } = params;
+  const rpcUrl = process.env.LIGIS_CASPER_RPC_URL ?? "https://node.testnet.casper.network/rpc";
+  const keyPath = process.env.LIGIS_CASPER_KEY_PATH ?? ".env.d/casper-deployer.pem";
+  const paymentAmount = "800000000000"; // 800 CSPR max (refund for unused)
+  const keyName = `ligis_${contractName.toLowerCase()}_v7`;
 
   console.log(`  Deploying ${contractName} from ${wasmPath}...`);
-  const tx = buildInstallTransaction({
-    chainName,
-    privateKey,
-    wasmBytes,
-    contractName,
-  });
 
+  // Use legacy put-deploy (TransactionV1 is_install_upgrade flag is not
+  // recognized by the testnet node for contract installation)
+  const { execSync } = await import("node:child_process");
+  const cmd = [
+    "casper-client put-deploy",
+    `--node-address ${rpcUrl}`,
+    `--secret-key ${keyPath}`,
+    `--session-path ${wasmPath}`,
+    `--chain-name ${chainName}`,
+    "--gas-price 1",
+    `--payment-amount ${paymentAmount}`,
+    `--session-arg "odra_cfg_package_hash_key_name:string='${keyName}'"`,
+    `--session-arg "odra_cfg_is_upgradable:bool='false'"`,
+    `--session-arg "odra_cfg_is_upgrade:bool='false'"`,
+    `--session-arg "odra_cfg_allow_key_override:bool='true'"`,
+    `--session-arg "odra_cfg_create_upgrade_group:bool='false'"`,
+    `--session-arg "entry_point:string='init'"`,
+    `--session-arg "args:byte_array_0=''"`,
+    `--session-arg "attached_value:u512='0'"`,
+    `--session-arg "amount:u512='0'"`,
+  ].join(" ");
+
+  let output: string;
   try {
-    const putResult = await rpc.putTransaction(tx);
-    const txHash = putResult.transactionHash ?? "";
-    console.log(`    tx hash: ${txHash}`);
+    output = execSync(cmd, { encoding: "utf-8", timeout: 60000 });
   } catch (e: any) {
-    console.error(`    putTransaction failed:`, e.message);
-    if (e.sourceErr) console.error(`    sourceErr:`, JSON.stringify(e.sourceErr, null, 2));
+    console.error(`    deploy failed:`, e.stderr?.toString() ?? e.message);
     throw e;
   }
 
-  // Poll for transaction result instead of using the SDK's waitForTransaction
-  // (which has a bug with Casper 2.0 nodes)
-  console.log(`    polling for confirmation...`);
-  const txHashStr = (() => {
-    try {
-      // Extract hash from the transaction we built
-      const hash = (tx as any).hash?.transactionV1?.toHex?.();
-      return hash ?? "";
-    } catch {
-      return "";
-    }
-  })();
+  const hashMatch = output.match(/"deploy_hash":\s*"([a-f0-9]+)"/);
+  const txHash = hashMatch ? hashMatch[1] : "";
+  console.log(`    tx hash: ${txHash}`);
 
-  let result: any = null;
+  // Poll for confirmation
+  console.log(`    polling for confirmation...`);
+  let blockHeight = "0";
+  let errorMessage: string | null = null;
   for (let attempt = 0; attempt < 60; attempt++) {
     await sleep(5000);
     try {
-      result = await (rpc as any).getTransactionByTransactionHash(txHashStr);
-      if (result?.executionInfo) {
+      const pollOutput = execSync(
+        `casper-client get-deploy --node-address ${rpcUrl} ${txHash} 2>&1`,
+        { encoding: "utf-8", timeout: 15000 },
+      );
+      const blockMatch = pollOutput.match(/"block_height":\s*(\d+)/);
+      if (blockMatch) {
+        blockHeight = blockMatch[1];
         console.log(`    confirmed after ${(attempt + 1) * 5}s`);
+        const errMatch = pollOutput.match(/"error_message":\s*"([^"]+)"/);
+        if (errMatch && errMatch[1] !== "null") {
+          errorMessage = errMatch[1];
+          console.error(`    execution failed: ${errorMessage}`);
+        }
         break;
       }
     } catch {
-      // Transaction not found yet, keep polling
+      // Not found yet
     }
   }
 
-  if (!result?.executionInfo) {
-    console.log(`    timeout waiting for confirmation (check explorer)`);
-  }
-
-  const execInfo = result?.executionInfo;
-  const txHash = execInfo?.transactionHash ?? txHashStr;
-  const blockHeight = execInfo?.blockHeight?.toString() ?? "0";
-
-  // Check execution result
-  const execResult = execInfo?.executionResult;
-  if (execResult?.errorMessage) {
-    console.error(`    execution failed: ${execResult.errorMessage}`);
-  }
-
-  const packageHash = extractPackageHash(result);
-
   console.log(`    tx: ${txHash}`);
   console.log(`    block: ${blockHeight}`);
-  if (packageHash) {
-    console.log(`    package hash: ${packageHash}`);
-  } else {
-    console.log(`    package hash: (check explorer for ${txHash})`);
-  }
+  console.log(`    package hash: (check explorer for ${txHash})`);
 
-  return { contractName, txHash, blockHeight: blockHeight, packageHash };
+  return { contractName, txHash, blockHeight, packageHash: "" };
 }
 
 async function main() {
@@ -290,12 +296,30 @@ async function main() {
   const handler = new HttpHandler(rpcUrl, "fetch");
   const rpc = new RpcClient(handler);
 
-  // Find the WASM files
-  const wasmDir = resolve(process.cwd(), "packages/contracts-casper/wasm");
-  const contracts = [
-    { name: "AgentId", path: join(wasmDir, "AgentId.wasm") },
-    { name: "CredentialRegistry", path: join(wasmDir, "CredentialRegistry.wasm") },
+  // Find the WASM files — resolve from monorepo root
+  const wasmDir = resolve(process.cwd(), "../../packages/contracts-casper/wasm");
+  if (!existsSync(wasmDir)) {
+    // Fallback: try from repo root
+    const altDir = resolve(process.cwd(), "packages/contracts-casper/wasm");
+    if (existsSync(altDir)) {
+      // use altDir
+    } else {
+      console.error(`Cannot find wasm directory. Tried: ${wasmDir} and ${altDir}`);
+      process.exit(1);
+    }
+  }
+  const actualWasmDir = existsSync(resolve(process.cwd(), "packages/contracts-casper/wasm"))
+    ? resolve(process.cwd(), "packages/contracts-casper/wasm")
+    : wasmDir;
+  const allContracts = [
+    { name: "AgentId", path: join(actualWasmDir, "AgentId.wasm") },
+    { name: "CredentialRegistry", path: join(actualWasmDir, "CredentialRegistry.wasm") },
   ];
+  // Allow filtering by contract name via CLI arg
+  const filter = process.argv[2];
+  const contracts = filter
+    ? allContracts.filter((c) => c.name === filter)
+    : allContracts;
 
   const results: DeployResult[] = [];
   for (const contract of contracts) {

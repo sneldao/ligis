@@ -32,7 +32,7 @@ export const CASPER_TESTNET: ChainNetwork = {
   name: "Casper Testnet",
   chainName: "casper-test",
   explorerUrl: "https://testnet.cspr.live",
-  live: false, // flips to true once Odra contracts deploy + LIGIS_CASPER_* env is set
+  live: true, // Odra contracts deployed + smoke test passed
 };
 
 export const CHAINS: ChainNetwork[] = [PHAROS_ATLANTIC, CASPER_TESTNET];
