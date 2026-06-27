@@ -333,20 +333,55 @@ export LIGIS_CASPER_AUTH=<your CSPR.cloud bearer token>
 `packages/x402-server` is a credential-gated x402 resource server. It checks
 a Ligis credential on Casper before accepting a paid HTTP request.
 
+**Two settlement modes:**
+
+- **`local`** (default): verifies the EIP-712 payment payload format and
+  signature, then settles via a direct CSPR transfer on Casper. No CEP-18
+  token or facilitator required.
+- **`facilitator`**: forwards the signed payment to the CSPR.cloud x402
+  facilitator, which calls `transfer_with_authorization` on the CEP-18
+  token contract. Requires `CSPR_CLOUD_TOKEN`.
+
 ```bash
 # Configure the gate
 export LIGIS_GATE_CAPABILITY=data.premium        # capability the gate requires
-export LIGIS_GATE_PRICE=1000000                  # price in smallest token unit
-export LIGIS_GATE_ASSET=<CEP-18 package hash>    # payment token
-export LIGIS_GATE_PAY_TO=<your account hash>     # recipient
-export LIGIS_FACILITATOR_URL=http://localhost:4022  # Casper x402 Facilitator
+export LIGIS_GATE_PRICE=1000000000              # price in motes (1 CSPR)
+export LIGIS_GATE_PAY_TO=00<your-account-hash>  # recipient (00 + 32-byte hash)
+export X402_SETTLEMENT_MODE=local               # or: facilitator
+export LIGIS_CASPER_KEY_PATH=.env.d/casper-deployer.pem  # for local settlement
+
+# For facilitator mode (optional):
+# export CSPR_CLOUD_TOKEN=<your CSPR.cloud access token>
+# export LIGIS_GATE_ASSET=<CEP-18 package hash>
 
 # Run it
 pnpm x402:dev   # or: pnpm x402 (after build)
 
 # Test it
-curl http://localhost:4040/premium -H "X-Subject: <agent account hash>"
+curl http://localhost:4040/premium -H "X-Subject: account-hash-<...>"
 # → 401 (no credential) or 402 (credential valid, payment required)
+```
+
+### 9. Demo scripts
+
+Two demo scripts provide rich console output for screen recording:
+
+**Steward loop demo** (`scripts/casper-e2e-demo.ts`):
+```bash
+source .env.d/casper.env
+source .env.d/zerog.env
+export PRIVATE_KEY=$LIGIS_CASPER_DEPLOYER_PRIVATE_KEY
+export LIGIS_CASPER_PUBLIC_KEY=$LIGIS_CASPER_DEPLOYER_PUBKEY
+npx tsx scripts/casper-e2e-demo.ts
+# → boot → reason → gate → act → record (3-4 on-chain txs)
+```
+
+**x402 payment demo** (`scripts/casper-x402-demo.ts`):
+```bash
+# Start the x402 server first (see step 8)
+source .env.d/casper.env
+npx tsx scripts/casper-x402-demo.ts
+# → 402 → sign EIP-712 → pay → 200 + RWA market data
 ```
 
 > **Buildathon note**: Casper x402 Facilitator access is sponsored for

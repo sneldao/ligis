@@ -33,6 +33,23 @@ The primary demo path is **self-contained**: the Steward issues itself a capabil
 | 2 | `zerog/storage.ts` — evidence on 0G Storage, root in `tokenURI` | ✅ DONE |
 | 3 | `agent/steward.ts` + `agent/policy.ts` — full loop | ✅ DONE |
 | 4 | `agent run` CLI + `run-steward` MCP tool + `node:test` units | ✅ DONE |
+| 5 | `LocalReasoner` — keyword-based fallback when 0G Compute is down | ✅ DONE |
+| 6 | Casper adapter integration — same loop on Casper Testnet | ✅ DONE |
+| 7 | x402 Trust Gate — credential-gated micropayment endpoint | ✅ DONE |
+| 8 | Web UI — Casper steward loop with chain-aware page | ✅ DONE |
+
+## Fallback reasoning
+
+When 0G Compute is unavailable (network issues, service down, wallet unfunded),
+the steward falls back to `LocalReasoner` (`packages/agent-logic/src/local-reasoner.ts`).
+This is a keyword-based matcher that maps goal text to capabilities using the
+same `KNOWN_CAPABILITIES` registry. The fallback is clearly labeled in the
+output (`model: "local-keyword-match"`, `verified: false`) so it's never
+confused with TEE-verified inference.
+
+The CLI tries 0G Compute first with a 15-second timeout. If it fails, it
+prints a warning and switches to the local reasoner. The web steward has
+the same fallback logic.
 
 ## Design constraints
 
@@ -48,9 +65,16 @@ The primary demo path is **self-contained**: the Steward issues itself a capabil
 PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
   pnpm start -- agent run --goal "open an escrow" --dry-run
 
-# Full run
+# Full run (Pharos)
 PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
   pnpm start -- agent run --goal "open an escrow"
+
+# Full run (Casper Testnet)
+source .env.d/casper.env
+source .env.d/zerog.env
+export PRIVATE_KEY=$LIGIS_CASPER_DEPLOYER_PRIVATE_KEY
+npx tsx scripts/casper-e2e-demo.ts
+# or: ligis agent run --chain casper --goal "fetch premium RWA data"
 ```
 
-See [Setup](setup.md) for 0G wallet initialization.
+See [Setup](setup.md) for 0G wallet initialization and Casper Testnet setup.

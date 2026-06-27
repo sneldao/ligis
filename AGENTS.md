@@ -55,3 +55,37 @@ npx tsx src/deploy.ts CredentialRegistry  # deploy only CredentialRegistry
 export $(grep -v '^#' .env.d/casper.env | grep -v '^$' | xargs)
 npx tsx scripts/casper-smoke-test.ts
 ```
+
+### Casper End-to-End Demo (steward loop)
+
+```bash
+source .env.d/casper.env
+source .env.d/zerog.env
+export PRIVATE_KEY=$LIGIS_CASPER_DEPLOYER_PRIVATE_KEY
+export LIGIS_CASPER_PUBLIC_KEY=$LIGIS_CASPER_DEPLOYER_PUBKEY
+npx tsx scripts/casper-e2e-demo.ts
+```
+
+This runs the full autonomous loop: boot → reason → gate → act → record.
+Produces 3-4 on-chain transactions on Casper Testnet.
+
+### x402 Payment Demo
+
+```bash
+# 1. Start the x402 server
+source .env.d/casper.env
+export LIGIS_GATE_PAY_TO=00<your-account-hash>
+export LIGIS_GATE_CAPABILITY=data.premium
+export LIGIS_GATE_PRICE=1000000000
+export X402_SETTLEMENT_MODE=local
+npx tsx packages/x402-server/src/index.ts &
+
+# 2. Run the payment demo
+npx tsx scripts/casper-x402-demo.ts
+```
+
+### 0G Compute fallback
+
+If 0G Compute is unavailable (network issues, service down), the CLI and
+web steward automatically fall back to `LocalReasoner` (keyword-based
+matching). The fallback is labeled in output as `model: "local-keyword-match"`.

@@ -150,12 +150,20 @@ packages/
 ├── adapter-evm/         Pharos (done)
 ├── adapter-casper/      Casper — all 8 ops implemented (casper-js-sdk), signer + deploy scripts
 ├── zerog/               0G Compute/Storage (done)
-├── agent-logic/         Trust Steward (chain-agnostic, done)
-├── cli/                 + --chain casper (wired)
+├── agent-logic/         Trust Steward (chain-agnostic, done) + LocalReasoner fallback
+├── cli/                 + --chain casper (wired) + 0G Compute fallback
 ├── mcp-server/          + chain="casper" (wired)
 ├── contracts-evm/       Solidity (done)
 ├── contracts-casper/    Odra — builds + tests pass, WASM in wasm/ (AgentId.wasm, CredentialRegistry.wasm)
-└── x402-server/         Scaffolded — /premium endpoint, 402 response, facilitator forward
+└── x402-server/         /premium endpoint, 402 response, EIP-712 client, local + facilitator settlement
+scripts/
+├── casper-e2e-demo.ts   Full steward loop with rich console output
+├── casper-x402-demo.ts  Full x402 payment flow (402→sign→pay→200 + RWA data)
+└── casper-smoke-test.ts Credential lifecycle test (mint→sign→submit→verify→revoke)
+web/
+├── lib/steward-casper.ts  Casper-specific steward loop (same event protocol)
+├── app/steward/page.tsx   Chain-aware (Casper + Pharos goals, CLI snippets)
+└── components/StewardRunner.tsx  Passes chain param to API
 ```
 
 ## Roadmap (5 days, day-by-day)
@@ -194,17 +202,28 @@ packages/
 - [x] `CASPER_TESTNET.live` flipped to `true` in `web/lib/network.ts`.
 
 ### Day 4 (Jun 28)
-- [ ] Wire `x402-server` credential check + 402 + payment settlement via
-  the Casper x402 Facilitator (scaffold is already in place).
-- [ ] Add a CEP-18 test token if needed (or reuse a Buildathon-provided one).
-- [ ] Flip `CASPER_TESTNET.live` to `true` in `web/lib/network.ts` once
-  contracts are deployed and reads work.
+- [x] Wire `x402-server` credential check + 402 + payment settlement.
+  - x402 v2 protocol implemented (PaymentRequirements, X-PAYMENT header).
+  - EIP-712 `TransferWithAuthorization` signing via `@casper-ecosystem/casper-eip-712`.
+  - Two settlement modes: `local` (direct CSPR transfer) and `facilitator`
+    (CSPR.cloud x402 facilitator with CEP-18 `transfer_with_authorization`).
+  - `casper-x402-demo.ts` runs the full 402→sign→pay→200 flow with RWA data.
+- [x] Local settlement mode works end-to-end (on-chain CSPR transfer).
+- [x] Facilitator mode wired to `https://x402-facilitator.cspr.cloud` (requires
+  `CSPR_CLOUD_TOKEN` for production use).
 
 ### Day 5 (Jun 29)
-- [ ] End-to-end demo run: agent → Steward → Casper credential → x402 paid
+- [x] End-to-end demo run: agent → Steward → Casper credential → x402 paid
   call → 0G evidence anchor.
-- [ ] **Run-through + script lock** (NOT the final recording — that's Day 6).
-- [ ] Polish README with Casper-first framing.
+  - `scripts/casper-e2e-demo.ts` — rich console output, 3-4 on-chain txs.
+  - `scripts/casper-x402-demo.ts` — full x402 payment flow with RWA data.
+- [x] LocalReasoner fallback when 0G Compute is unavailable.
+- [x] Web UI: Casper steward loop wired (`web/lib/steward-casper.ts`).
+  - Chain-aware steward page (`?chain=casper-testnet`).
+  - StewardRunner passes chain to API; API dispatches to Casper loop.
+- [x] Policy prompt enhanced with DeFi/RWA context.
+- [x] Premium payload: realistic RWA oracle data (4 properties, yields, LTV).
+- [x] README polished with Casper-first framing + demo commands.
 
 ### Day 6 (Jun 30) — recording + buffer
 - [ ] **Morning**: record + edit demo video (3–5 minutes). Budget 4–8 hours
@@ -238,7 +257,8 @@ packages/
 | Casper 2.0 `TransactionV1` `is_install_upgrade` not recognized. | **Resolved** — use legacy `put-deploy` format for contract installation and stored contract calls. TransactionV1's `is_install_upgrade` flag is rejected by the testnet node with `NotAllowedToAddContractVersion [48]`. |
 | Casper Testnet faucet rate limits (single-use per account).   | **Resolved** — deployer funded via Casper Wallet faucet. Failed deployments with `standardPayment=false` only cost actual gas consumed. |
 | Odra dictionary storage key computation.                      | **Resolved** — `verifyCapability` and `signCredential` correctly compute `blake2b(index_bytes ++ mapping_data)` using the contract's `state` URef. Field indices: `issuer_nonce`=1, `latest`=2. |
-| x402 Facilitator on testnet is finicky.                       | Don't mock settlement. The Steward loop produces 3+ Ligis-native on-chain txs per run — those are the qualification floor. If the facilitator is down, show the Ligis-native txs as proof and note the x402 path is wired but pending the facilitator. |
+| x402 Facilitator on testnet is finicky.                       | **Resolved** — implemented local settlement mode (direct CSPR transfer) as fallback. Facilitator mode wired to CSPR.cloud but requires auth token. Local mode produces real on-chain txs. |
+| 0G Compute inference endpoint unreachable.                    | **Resolved** — `LocalReasoner` (keyword-based fallback) implemented in `packages/agent-logic/src/local-reasoner.ts`. CLI tries 0G Compute first (15s timeout), falls back to local. Web steward has the same fallback. |
 | Run out of time on Day 5.                                     | Day 5 is run-through + script lock only. Recording is Day 6 morning. Submit at end of Day 6 even if rough. |
 
 ## Out of scope (deliberately not building)
