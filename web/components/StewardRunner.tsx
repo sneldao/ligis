@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PHASES, type Phase, type StewardEvent } from "@/lib/steward-events";
-import { network } from "@/lib/network";
+import { network, CHAINS } from "@/lib/network";
 import { Rule } from "./Rule";
 import { StewardDiagram } from "./StewardDiagram";
 import { truncateAddress, truncateHash } from "@/lib/format";
@@ -80,6 +81,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   const [showReal, setShowReal] = useState(false);
   const [live, setLive] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const searchParams = useSearchParams();
 
   const run = useCallback(async () => {
     abortRef.current?.abort();
@@ -88,11 +90,15 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     setState(EMPTY);
     setRunning(true);
 
+    // Resolve chain from URL query param
+    const chainParam = searchParams.get("chain") ?? "pharos-atlantic";
+    const activeChain = CHAINS.find((c) => c.id === chainParam) ?? CHAINS[0]!;
+
     try {
       const res = await fetch("/api/steward", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal, live }),
+        body: JSON.stringify({ goal, live, chain: activeChain.id }),
         signal: controller.signal,
       });
       if (!res.body) throw new Error("No response body");

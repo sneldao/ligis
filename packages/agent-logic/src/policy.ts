@@ -51,7 +51,14 @@ export function buildReasoningPrompt(goal: string): string {
     (c) => `  - ${c.name}: ${c.description}`,
   ).join("\n");
 
-  return `You are a Trust Steward agent. Given a natural-language goal, determine which capabilities are required to accomplish it.
+  return `You are a Trust Steward agent on a Casper or Pharos blockchain. Given a natural-language goal, determine which capabilities are required to accomplish it.
+
+Context: The agent operates in a DeFi/RWA ecosystem where:
+- Tokenized real-world assets (RWA) require accredited investor credentials
+- Premium data feeds (oracle prices, market data) require data.premium capability
+- x402 HTTP payments enable per-request micropayments for API access
+- Escrow, swap, bridge, and recurring payment capabilities enable autonomous commerce
+- KYC verification is required for regulated financial activities
 
 Available capabilities:
 ${capList}

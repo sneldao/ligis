@@ -1,13 +1,26 @@
 # Ligis
 
 > **Portable on-chain identity and verifiable credentials for AI agents.**
-> **Live on Pharos + Casper Testnet. Contracts deployed, smoke test passing.**
+> **Live on Pharos + Casper Testnet. Autonomous steward loop + x402 payments working end-to-end.**
 
 A chain-agnostic agent identity runtime: one `ChainAdapter` interface, two
 implementations (EVM/Pharos live, Casper/Odra live), and a Trust
 Steward that runs the same loop on either chain. Credentials are chain-neutral
 by design — `capabilityHash("kyc.basic")` produces the same 32-byte hash on
 every chain, which is what makes cross-chain credential portability possible.
+
+**The full autonomous loop on Casper:**
+1. **BOOT** — Agent mints its own identity (`AgentId.mint_self`) on Casper Testnet
+2. **REASON** — 0G Compute (or local fallback) maps the goal to required capabilities
+3. **GATE** — Checks `CredentialRegistry.is_capable` for each capability
+4. **ACT** — Self-issues missing credentials via signed EIP-712 `issue` calls
+5. **RECORD** — Anchors evidence manifest to 0G Storage + Casper (`set_token_uri`)
+
+**Then the agent pays for premium RWA data via x402:**
+1. Agent requests `GET /premium` → **402 Payment Required** (credential verified, payment needed)
+2. Agent signs `TransferWithAuthorization` (EIP-712 with Casper domain)
+3. Agent resubmits with `X-PAYMENT` header → **200 OK** with tokenized real-estate market data
+4. Settlement on Casper Testnet (on-chain tx)
 
 41 Foundry tests + 17 TypeScript tests passing. 4 on-chain Skills + 2 helpers
 + Trust Steward Agent. CLI. MCP server. x402 Trust Gate. MIT.
@@ -92,6 +105,33 @@ pnpm start -- --chain casper info
 pnpm start -- --chain casper verify --subject <account-hash> --capability kyc.basic
 npx tsx scripts/casper-smoke-test.ts   # end-to-end credential lifecycle test
 ```
+
+## Demo: Autonomous Agent + x402 Payment on Casper
+
+```bash
+# 1. Run the Trust Steward loop (boot → reason → gate → act → record)
+source .env.d/casper.env
+source .env.d/zerog.env
+export PRIVATE_KEY=$LIGIS_CASPER_DEPLOYER_PRIVATE_KEY
+export LIGIS_CASPER_PUBLIC_KEY=$LIGIS_CASPER_DEPLOYER_PUBKEY
+npx tsx scripts/casper-e2e-demo.ts
+
+# 2. Start the x402 Trust Gate server
+export LIGIS_GATE_PAY_TO="00<your-account-hash>"
+export LIGIS_GATE_CAPABILITY="data.premium"
+npx tsx packages/x402-server/src/index.ts &
+
+# 3. Run the x402 payment demo (402 → sign → pay → 200 + RWA data)
+npx tsx scripts/casper-x402-demo.ts
+```
+
+The steward loop produces 3-4 on-chain transactions on Casper Testnet:
+- `mint_self` — Agent mints its own identity
+- `issue` — Self-issues each missing capability credential
+- `set_token_uri` — Anchors evidence manifest to 0G Storage
+
+The x402 flow produces 1 additional on-chain transaction (settlement transfer).
+All transactions are visible on [cspr.live](https://testnet.cspr.live).
 
 ## Documentation
 

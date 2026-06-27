@@ -131,9 +131,12 @@ export default async function HomePage({
                 <span className="not-italic text-ink-soft">
                   {chain.name}
                 </span>{" "}
-                is in preview mode — contracts are not deployed yet. Switch to
-                Pharos Atlantic for live on-chain reads, or come back after the
-                Casper rollout.
+                contracts are deployed on Casper Testnet. The steward loop and
+                x402 payment flow are live — see the{" "}
+                <Link href="/steward?chain=casper-testnet" className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra">
+                  Steward page
+                </Link>{" "}
+                for the autonomous loop demo.
               </>
             ) : (
               <>The live index is presently unreachable. {stats.error}</>
@@ -312,7 +315,8 @@ ligis sign \\
 
         <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet sm:mt-40">
           <span>
-            Built for the Pharos Skill cascade. MIT licensed. Read{" "}
+            Built for the Casper Agentic Buildathon + Pharos Skill cascade.
+            Autonomous agents · x402 payments · RWA oracle. MIT licensed. Read{" "}
             <Link
               href="/styleguide"
               className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"

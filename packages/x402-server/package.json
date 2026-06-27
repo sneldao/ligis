@@ -4,6 +4,10 @@
   "description": "Ligis Trust Gate — credential-gated x402 resource server on Casper",
   "type": "module",
   "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/client.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/index.ts",
@@ -11,9 +15,12 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@casper-ecosystem/casper-eip-712": "^1.2.0",
     "@hono/node-server": "^1.13.0",
     "@ligis/adapter-casper": "workspace:*",
     "@ligis/core": "workspace:*",
+    "@noble/curves": "^1.6.0",
+    "@noble/hashes": "^1.5.0",
     "hono": "^4.6.0"
   },
   "devDependencies": {

@@ -13,6 +13,7 @@
   "dependencies": {
     "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",
     "@0gfoundation/0g-storage-ts-sdk": "^1.2.6",
+    "@ligis/adapter-casper": "workspace:*",
     "@ligis/adapter-evm": "workspace:*",
     "@ligis/agent-logic": "workspace:*",
     "@ligis/core": "workspace:*",

@@ -22,7 +22,7 @@
 import { capabilityHash, loadConfig, type ChainAdapter } from "@ligis/core";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
-import { TrustSteward } from "@ligis/agent-logic";
+import { TrustSteward, LocalReasoner } from "@ligis/agent-logic";
 import { ZeroGCompute, ZeroGStorage, loadZeroGConfig, loadZeroGStorageConfig } from "@ligis/zerog";
 
 /** Read a --flag <value> or --flag=value argument. */
@@ -179,8 +179,24 @@ async function cmdAgentRun() {
   if (!goal) throw new Error("--goal required");
   const dryRun = process.argv.includes("--dry-run");
   const adapter = getAdapter();
-  const reasoner = new ZeroGCompute(loadZeroGConfig());
   const store = new ZeroGStorage(loadZeroGStorageConfig());
+
+  // Try 0G Compute first; fall back to local keyword matching if unavailable
+  let reasoner;
+  try {
+    reasoner = new ZeroGCompute(loadZeroGConfig());
+    // Test connectivity by attempting a simple reason call
+    const test = await Promise.race([
+      reasoner.reason("Reply with: {\"capabilities\":[],\"reasoning\":\"ok\"}"),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000)),
+    ]);
+    void test; // connectivity confirmed
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`  [steward] 0G Compute unavailable (${msg}), using local keyword reasoner.`);
+    reasoner = new LocalReasoner();
+  }
+
   const steward = new TrustSteward(adapter, reasoner, store);
   const result = await steward.run(goal, { dryRun });
   emit(result);
