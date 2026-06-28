@@ -54,6 +54,26 @@ First deployment is live on **Pharos Atlantic testnet** (chainId 688689):
 | `PharosAgentID` | `0xbd163Be6882CF6DE54bA10d726F4f619Bdc28a89` |
 | `CredentialRegistry` | `0x9E6eC93200E185c11423eb3A5150449D49d3473A` |
 
+## Web frontend
+
+A Next.js app (`web/`) deployed on Vercel provides a live Steward interface
+with SSE streaming of the full boot → reason → gate → act → record loop.
+
+**Three modes:**
+- **Simulated** — no env vars needed, uses realistic timing + fake tx hashes
+- **Live reads** — real `isCapableMulti` calls against Pharos Atlantic
+- **Live writes** — real `mintSelf`, `issue` (EIP-712), `setTokenURI` on-chain
+
+When `ZEROG_PRIVATE_KEY` is set, the REASON phase calls 0G Compute (Qwen 2.5 7B,
+TEE-verified LLM) and the RECORD phase uploads evidence manifests to 0G Storage.
+Write transactions bypass `eth_sendTransaction` (unsupported by the default
+Pharos RPC) by signing locally and sending via `eth_sendRawTransaction`.
+
+Agent profile pages (`/agent/<address>`) show capability history from
+`AgentCapabilityChanged` events with clickable PharosScan links.
+
+See [`docs/setup.md`](docs/setup.md) for Vercel env var configuration.
+
 ## Chain support
 
 Ligis is **chain-agnostic by design.** Every chain implements the same

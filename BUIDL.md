@@ -126,6 +126,16 @@ layer.
 - **install.sh** that wires the CLI + MCP into Claude Code and Codex in 30 s.
 - **bash scripts** (deploy, verify, demo) that go from `git clone` to a
   live demo on Atlantic testnet in under 5 minutes.
+- **Web frontend** (`web/`): Next.js app deployed on Vercel with a live
+  Steward SSE streaming interface. Three modes: simulated, live reads
+  (real `isCapableMulti` calls), and live writes (real `mintSelf`,
+  `issue`, `setTokenURI` on-chain). The REASON phase calls 0G Compute
+  (Qwen 2.5 7B, TEE-verified) when `ZEROG_PRIVATE_KEY` is set; the
+  RECORD phase uploads evidence manifests to 0G Storage and anchors the
+  Merkle root on-chain. Write transactions bypass `eth_sendTransaction`
+  (unsupported by the default Pharos RPC) by signing locally and sending
+  via `eth_sendRawTransaction`. Agent profile pages show capability
+  history from `AgentCapabilityChanged` events with PharosScan links.
 
 ### Composability with the other Skills
 
@@ -275,6 +285,8 @@ Solo submitter: `<your name>`
 - [x] CLI: 8 commands, JSON output — verified live on Atlantic
 - [x] MCP server: 7 tools (including `ligis-run-steward`)
 - [x] Trust Steward Agent: full loop (boot → reason → gate → act → record) with 0G Compute + 0G Storage. Web frontend supports live on-chain mode (real isCapableMulti reads, EIP-712 credential issuance, setTokenURI anchoring) via `LIGIS_STEWARD_KEY` env var.
+- [x] Web frontend: Next.js + Vercel deployment with SSE streaming, 0G Compute (Qwen 2.5 7B) for REASON, 0G Storage for RECORD, sendRawTransaction for writes, agent profile pages with capability history + PharosScan links
+- [x] 0G Compute wired into web steward (steward wallet funded + setupProvider() completed with Qwen 2.5 7B)
 - [x] Chain adapter (`packages/adapter-evm/`): single EVM `ChainAdapter` implementation; viem stays inside this package
 - [x] Chain-neutral core (`packages/core/`): zero chain SDKs, depends only on `@noble/hashes`
 - [x] SKILL.md + 7 references
@@ -285,6 +297,6 @@ Solo submitter: `<your name>`
 - [x] Pre-commit secret-scan hook (gitleaks 8.30.1 + pure-bash fallback)
 - [x] 100% of secrets in `.env.d/`, gitignored
 - [x] Git initialized, initial commit created
-- [x] 0G wallet funded (5.48 OG) + one-time setupProvider() completed — Trust Steward Agent operational
+- [x] 0G wallet funded (CLI: 5.48 OG, web steward: 4.0 OG swept from 8 faucet wallets) + one-time setupProvider() completed on both — Trust Steward Agent operational
 - [ ] Loom demo (record from the tx hashes above)
 - [x] GitHub repo is public
