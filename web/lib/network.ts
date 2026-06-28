@@ -58,6 +58,17 @@ export function getChain(
   return CHAINS.find((c) => c.id === id) ?? DEFAULT_CHAIN;
 }
 
+/**
+ * Accent color classes for a chain — shared by ChainBadge and ChainSelector
+ * so the active-chain color is consistent everywhere (terra for EVM/Pharos,
+ * sky for Casper).
+ */
+export function chainAccent(chain: ChainNetwork): { bg: string; text: string } {
+  return chain.kind === "casper"
+    ? { bg: "bg-sky", text: "text-paper" }
+    : { bg: "bg-terra", text: "text-paper" };
+}
+
 /** Helper for the ChainSelector UI — a stable string per chain for hrefs. */
 export function chainHref(currentChainId: string, targetChainId: string, path: string): string {
   // Preserve the path; rewrite only the `chain` param. Caller passes the

@@ -2,13 +2,13 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useTransition } from "react";
-import { CHAINS, type ChainNetwork } from "@/lib/network";
+import { CHAINS, chainAccent, type ChainNetwork } from "@/lib/network";
 
 /**
  * Chain selector — a small client-side switcher that updates the `?chain=`
- * query param. The active chain is highlighted; chains with `live: false`
- * get a "preview" badge so users know reads will hit Pharos until the
- * adapter is wired.
+ * query param. The active chain is highlighted with its accent color
+ * (terra for Pharos, sky for Casper); chains with `live: false` get a
+ * "preview" badge.
  *
  * Pages read the chain via `getChain(searchParams)` from `@/lib/network`,
  * so switching chains re-renders the same UI against a different chain.
@@ -23,11 +23,7 @@ export function ChainSelector({ activeId }: { activeId?: string }) {
 
 function ChainSelectorFallback() {
   return (
-    <div
-      className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-ink-quiet"
-      aria-label="Select chain"
-    >
-      <span className="eyebrow">chain</span>
+    <div className="inline-flex items-center" aria-label="Select chain">
       <div className="inline-flex items-center divide-x divide-rule border border-rule bg-paper">
         {CHAINS.map((chain) => (
           <span
@@ -71,17 +67,19 @@ function ChainSelectorInner({ activeId }: { activeId?: string }) {
 
   return (
     <div
-      className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-ink-quiet"
+      className="inline-flex items-center"
       data-pending={isPending ? "true" : undefined}
       aria-label="Select chain"
     >
-      <span className="eyebrow">chain</span>
       <div
         role="tablist"
-        className="inline-flex items-center divide-x divide-rule border border-rule bg-paper"
+        className={`inline-flex items-center divide-x divide-rule border border-rule bg-paper transition-opacity ${
+          isPending ? "opacity-50" : ""
+        }`}
       >
         {chains.map((chain) => {
           const isActive = chain.id === active.id;
+          const accent = chainAccent(chain);
           return (
             <button
               key={chain.id}
@@ -91,7 +89,7 @@ function ChainSelectorInner({ activeId }: { activeId?: string }) {
               onClick={() => onSelect(chain.id)}
               className={`px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors ${
                 isActive
-                  ? "bg-paper-deep text-ink"
+                  ? `${accent.bg} ${accent.text}`
                   : "text-ink-quiet hover:bg-paper-deep hover:text-ink-soft"
               }`}
             >

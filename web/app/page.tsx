@@ -56,7 +56,7 @@ export default async function HomePage({
 
   return (
     <>
-      <CatalogHero />
+      <CatalogHero chain={chain} />
 
       <StewardTeaser />
 

@@ -5,6 +5,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ScrollHint } from "./DynamicIsland";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
+import { type ChainNetwork } from "@/lib/network";
+import { ChainSelector } from "@/components/ChainSelector";
 
 const CatalogScene = dynamic(
   () => import("./CatalogScene").then((m) => m.CatalogScene),
@@ -28,7 +30,7 @@ type Card = {
   actionLabel: string;
 };
 
-export function CatalogHero() {
+export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
 
@@ -77,11 +79,23 @@ export function CatalogHero() {
           className="pointer-events-auto text-center"
         >
           <h1 className="display max-w-3xl text-4xl text-ink sm:text-6xl">
-            Permissions for AI agents.
+            AI agents are getting smarter.
+            <br />
+            But they&rsquo;re still anonymous.
           </h1>
           <p className="mt-3 font-serif text-lg italic leading-relaxed text-ink-soft sm:text-xl">
-            Issue. Verify. Gate. One read on Pharos.
+            Ligis gives them portable identities and verifiable credentials —
+            so any app can verify what an agent is allowed to do in one on-chain
+            read.
           </p>
+          {chain ? (
+            <div className="mt-4 hidden flex-col items-center gap-1.5 sm:flex">
+              <ChainSelector activeId={chain.id} />
+              <p className="font-serif text-sm italic text-ink-quiet">
+                Same credential, verified on either chain.
+              </p>
+            </div>
+          ) : null}
         </motion.div>
 
         <motion.div
