@@ -123,7 +123,7 @@ The steward wallet (`0x76eCFC63742b154e24dECf3c00Ea8DFED5061833`) is reused for 
 
 **CLI 0G wallet** (`0xa234d5ba3864acD254467193272e15941102A8fa`): funded with 2.48 OG, `setupProvider()` completed. Used for CLI/MCP agent runs.
 
-**Web steward 0G wallet** (`0x76eCFC63742b154e24dECf3c00Ea8DFED5061833`): needs funding + `setupProvider()` before live 0G integration works on Vercel.
+**Web steward 0G wallet** (`0x76eCFC63742b154e24dECf3c00Ea8DFED5061833`): funded with 4.0 OG (swept from 8 faucet wallets), `setupProvider()` completed with Qwen 2.5 7B provider. Remaining balance: ~1.0 OG. Ready for live 0G integration on Vercel.
 
 To set up the web steward wallet for 0G:
 

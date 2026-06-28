@@ -36,7 +36,7 @@ ask "who are you, and who vouches for that?"
 - **CredentialRegistry** (EIP-712 attestations): `0x9E6eC93200E185c11423eb3A5150449D49d3473A`
   - Pharos Scan: https://atlantic.pharosscan.xyz/address/0x9E6eC93200E185c11423eb3A5150449D49d3473A
 - **0G wallet (CLI)**: `0xa234d5ba3864acD254467193272e15941102A8fa` — funded (5.48 OG consolidated from 8 faucet claims, 2.48 OG after ledger deposit + provider setup). One-time `setupProvider()` run successfully — Trust Steward Agent ready for Compute + Storage.
-- **0G wallet (web)**: reuses the steward wallet `0x76eCFC63742b154e24dECf3c00Ea8DFED5061833` — same key works on both Pharos Atlantic and 0G testnet. Needs OG funding + `setupProvider()` before live 0G integration is active on Vercel.
+- **0G wallet (web)**: reuses the steward wallet `0x76eCFC63742b154e24dECf3c00Ea8DFED5061833` — funded with 4.0 OG (swept from 8 faucet wallets), `setupProvider()` completed with Qwen 2.5 7B. Same key works on both Pharos Atlantic and 0G testnet. Ready for live 0G integration on Vercel.
 
 ## End-to-end demo txs (executed live on Atlantic)
 
