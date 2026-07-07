@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@casper-ecosystem/casper-eip-712": "^1.2.0",
-    "@hono/node-server": "^1.13.0",
+    "@hono/node-server": "^2.0.8",
     "@ligis/adapter-casper": "workspace:*",
     "@ligis/core": "workspace:*",
     "@noble/curves": "^1.6.0",
