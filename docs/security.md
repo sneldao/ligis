@@ -1,5 +1,12 @@
 # Security
 
+> **Casper port note:** The EVM/Solidity contracts enforce every property below.
+> The Casper/Odra `CredentialRegistry` now also performs on-chain secp256k1
+> signature recovery for both `issue` and `revoke` using the pure-Rust `k256`
+> crate. The recovered issuer address is enforced against the supplied issuer
+> (`issue`) or the stored credential issuer (`revoke`). A per-issuer nonce and
+> expiry/revocation checks provide replay and lifecycle protection.
+
 ## Non-custodial
 
 Both contracts never hold funds, never call external contracts on write paths. There is **no admin, no owner, no backdoor**.

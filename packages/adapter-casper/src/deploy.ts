@@ -274,9 +274,36 @@ async function deployContract(params: {
 
   console.log(`    tx: ${txHash}`);
   console.log(`    block: ${blockHeight}`);
-  console.log(`    package hash: (check explorer for ${txHash})`);
 
-  return { contractName, txHash, blockHeight, packageHash: "" };
+  // Extract the package hash from the deployer's named keys.
+  let packageHash: string | null = null;
+  try {
+    const publicKeyHex = privateKey.publicKey.toHex();
+    const queryOutput = execSync(
+      `casper-client query-global-state --node-address ${rpcUrl} --key ${publicKeyHex} 2>&1`,
+      { encoding: "utf-8", timeout: 15000 },
+    );
+    const namedKeysMatch = queryOutput.match(/"named_keys":\s*(\[.*?\])/s);
+    if (namedKeysMatch) {
+      const namedKeys = JSON.parse(namedKeysMatch[1]);
+      const packageEntry = namedKeys.find(
+        (k: any) => k.name === keyName && k.key.startsWith("hash-"),
+      );
+      if (packageEntry) {
+        packageHash = `contract-package-${packageEntry.key.replace(/^hash-/, "")}`;
+      }
+    }
+  } catch (e) {
+    // Package hash extraction is best-effort; fall back to empty.
+  }
+
+  if (packageHash) {
+    console.log(`    package hash: ${packageHash}`);
+  } else {
+    console.log(`    package hash: (check explorer for ${txHash})`);
+  }
+
+  return { contractName, txHash, blockHeight, packageHash };
 }
 
 async function main() {

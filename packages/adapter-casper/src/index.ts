@@ -7,7 +7,7 @@
  * to the deployed contract package hashes.
  */
 export * from "./adapter.js";
-export { CasperAdapter as default } from "./adapter.js";
+export { CasperAdapter, CasperAdapter as default } from "./adapter.js";
 
 export {
   loadCasperConfig,

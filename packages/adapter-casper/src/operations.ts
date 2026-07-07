@@ -22,7 +22,12 @@ import type { CLValue as CLValueType } from "casper-js-sdk";
 const { CLValue, PublicKey, PurseIdentifier } = casperSdk;
 import { capabilityHash, parseCapability } from "@ligis/core";
 import type { CasperClientContext } from "./client.js";
-import { buildCredentialDigest, type CredentialMessage } from "./eip712.js";
+import {
+  buildCredentialDigest,
+  buildRevokeDigest,
+  type CredentialMessage,
+  type RevocationMessage,
+} from "./eip712.js";
 import { loadSigner, callStoredContractViaCli, type Signer } from "./signer.js";
 
 const DEFAULT_EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -500,7 +505,7 @@ export async function signCredential(
 
 /**
  * Submit a signed credential to the CredentialRegistry contract.
- * Calls CredentialRegistry.issue(issuer, subject, cap_hash, issued_at, expires_at, nonce, signature).
+ * Calls CredentialRegistry.issue(issuer, subject, cap_hash, issued_at, expires_at, nonce, digest, signature).
  */
 export async function submitCredential(
   ctx: CasperClientContext,
@@ -511,6 +516,7 @@ export async function submitCredential(
     issuedAt: string;
     expiresAt: string;
     nonce: string;
+    digest: `0x${string}`;
     signature: string;
   },
 ): Promise<{ txHash: string; blockNumber: string }> {
@@ -520,6 +526,7 @@ export async function submitCredential(
   const issuerBytes = hexToBytes(signed.issuer);
   const subjectBytes = accountHashToBytes(signed.subject);
   const capHashBytes = hexToBytes(signed.capabilityHash);
+  const digestBytes = hexToBytes(signed.digest);
   const sigBytes = hexToBytes(signed.signature);
 
   const args = new Map<string, CLValueType>();
@@ -529,12 +536,9 @@ export async function submitCredential(
   args.set("issued_at", CLValue.newCLUint64(BigInt(signed.issuedAt)));
   args.set("expires_at", CLValue.newCLUint64(BigInt(signed.expiresAt)));
   args.set("nonce", CLValue.newCLUint64(BigInt(signed.nonce)));
-  // signature is Vec<u8> — a list of U8 CLValues
-  const sigList = Array.from(sigBytes).map((b) => CLValue.newCLUint8(b));
-  args.set("_signature", CLValue.newCLList(
-    { name: "U8", variations: [] } as any,
-    sigList,
-  ));
+  args.set("digest", CLValue.newCLByteArray(digestBytes));
+  // signature is [u8; 65] on the contract — fixed-size ByteArray
+  args.set("signature", CLValue.newCLByteArray(sigBytes));
 
   return callStoredContractViaCli({
     chainName: ctx.config.network.chainName,
@@ -547,24 +551,45 @@ export async function submitCredential(
 }
 
 /**
- * Revoke a credential. Calls CredentialRegistry.revoke(subject, capability_hash, nonce).
+ * Revoke a credential. Calls CredentialRegistry.revoke(subject, capability_hash, nonce, digest, signature).
  * Only the original issuer can revoke.
  */
 export async function revokeCredential(
   ctx: CasperClientContext,
-  opts: { subject: string; capability: string; nonce: string; issuerKey?: string },
+  opts: { subject: string; capability: string; nonce: string; issuerKey: string },
 ): Promise<{ txHash: string; blockNumber: string }> {
   const packageHash = requireDeployment(ctx, "credentialRegistry");
   const signer = requireSigner();
+
+  if (!opts.issuerKey) {
+    throw new Error("revokeCredential: issuerKey is required to sign the revocation");
+  }
 
   const capHash = parseCapability(opts.capability) as `0x${string}`;
   const subjectBytes = accountHashToBytes(opts.subject);
   const capHashBytes = hexToBytes(capHash);
 
+  const message: RevocationMessage = {
+    subject: `0x${stripAccountHashPrefix(opts.subject)}`,
+    capabilityHash: capHash,
+    nonce: BigInt(opts.nonce).toString(16).padStart(2, "0"),
+  };
+  const digest = buildRevokeDigest(ctx.config, message);
+
+  const priv = hexToBytes(opts.issuerKey);
+  const sig = secp256k1.sign(hexToBytes(digest), priv);
+  const compact = sig.toCompactRawBytes();
+  const fullSig = new Uint8Array(65);
+  fullSig.set(compact, 0);
+  fullSig[64] = 27 + (sig.recovery ?? 0);
+  const signature = bytesToHex(fullSig);
+
   const args = new Map<string, CLValueType>();
   args.set("subject", CLValue.newCLByteArray(subjectBytes));
   args.set("capability_hash", CLValue.newCLByteArray(capHashBytes));
   args.set("_nonce", CLValue.newCLUint64(BigInt(opts.nonce)));
+  args.set("digest", CLValue.newCLByteArray(hexToBytes(digest)));
+  args.set("signature", CLValue.newCLByteArray(hexToBytes(signature)));
 
   return callStoredContractViaCli({
     chainName: ctx.config.network.chainName,

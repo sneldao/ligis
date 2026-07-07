@@ -10,9 +10,10 @@
 //! computed off-chain (`keccak256("kyc.basic")`) lands on the same dictionary
 //! key here as on EVM. Cross-chain credential portability depends on this.
 //!
-//! Signature verification uses `casper-eip-712` for EIP-712 typed-data
-//! digests + the host's secp256k1 recovery, so credentials issued by the same
-//! key on Pharos verify identically here.
+//! Credentials are signed off-chain with secp256k1 using the same EIP-712
+//! layout as on Pharos, so the same issuer key produces the same signature
+//! bytes on both chains. The Casper contract recovers the issuer address
+//! on-chain for both `issue` and `revoke` using the pure-Rust `k256` crate.
 
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]

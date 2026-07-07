@@ -36,17 +36,17 @@ end-to-end x402 payment flow. Featured tx hashes (view on testnet.cspr.live):
 
 `https://github.com/sneldao/ligis`
 
-Public. MIT licensed. 41 Foundry tests + 17 TypeScript tests passing.
+Public. MIT licensed. 41 Foundry tests (EVM/Solidity contracts) + 12 Odra tests (Casper contracts) + 17 TypeScript tests + Casper smoke test passing.
 
 ## Deployed contracts (Casper Testnet)
 
 | Contract | Package hash |
 |----------|--------------|
 | `AgentId` (Odra, soulbound-style) | `contract-package-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1` |
-| `CredentialRegistry` (Odra, EIP-712) | `contract-package-e8ab657be6c31024c5ea745f0ed753e8aedc2c6ff9fd36ace48c0f1bfe917bb4` |
+| `CredentialRegistry` (Odra, EIP-712, on-chain secp256k1 recovery) | `contract-package-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37` |
 
 Built with Odra 2.8.1 against Casper 2.0, deployed via `casper-client put-deploy`
-on testnet (block ~8,317,400). Source: `packages/contracts-casper/`.
+on testnet (block ~8,429,998). Source: `packages/contracts-casper/`.
 
 ## End-to-end demo txs (executed live on Casper Testnet, today)
 
@@ -90,11 +90,13 @@ require(creds.is_capable(subject, capability_hash("agent.commerce.escrow")), "no
    (`mint_self`) to a controller address. No transfer approvals. A
    one-way `rotate` for key recovery. `set_token_uri` lets the agent
    anchor a 0G Storage evidence root on chain.
-2. **`CredentialRegistry`** — signed EIP-712 capability credentials
+2. **`CredentialRegistry`** — stores EIP-712 capability credentials
    (`issue`, `revoke`, `is_capable`). The capability name is hashed
-   chain-neutrally (keccak256 in Solidity / `blake2b` for the Odra
-   registry's `capabilityHash` helper) so the same `0x3896aa82..235f35e3e`
-   identifies `kyc.basic` on every chain.
+   chain-neutrally (keccak256 off-chain in `@ligis/core`) so the same
+   `0x3896aa82..235f35e3e` identifies `kyc.basic` on every chain.
+   Credentials are signed off-chain with EIP-712 and the Casper contract
+   recovers the secp256k1 issuer address on-chain, so anyone can submit
+   but only a valid issuer's signature is accepted.
 
 The Trust Steward wraps both contracts in an autonomous loop:
 
@@ -127,20 +129,23 @@ that requires a valid Ligis credential AND an x402 micropayment:
   with tokenized RWA market data, payment settled on chain
 
 Local settlement mode produces a real CSPR transfer on Casper Testnet
-(visible above as `27a9ac88..`). The CSPR.cloud x402 facilitator
-is wired as an alternative settlement path for production.
+(visible above as `27a9ac88..`) by verifying the X-PAYMENT payload shape
+and submitting a direct transfer. It is a demo fallback: it does not
+perform full CEP-18 `transfer_with_authorization` settlement or exhaustive
+EIP-712 signature verification. The CSPR.cloud x402 facilitator is wired as
+an alternative settlement path for production and requires `CSPR_CLOUD_TOKEN`.
 
 ### Cross-chain portability (the differentiating claim)
 
 `capabilityHash("kyc.basic")` produces the same 32-byte hash on
-Pharos Atlantic (Solidity keccak256) and Casper Testnet (Odra
-`Hasher::finalize` via `blake2b` for chain-native primitives).
-The same secp256k1 issuer key can sign a credential on both
-chains, and the signature verifies on either because the
-EIP-712 domain separator is per-chain (chain name + contract
-package hash). A demo at `scripts/cross-chain-credential-demo.ts`
-shows the same `0x3896aa82..235f35e3e` from both chains with
-the same issuer EVM address.
+Pharos Atlantic and Casper Testnet because both adapters use the same
+off-chain keccak256 implementation in `@ligis/core`. The same
+secp256k1 issuer key can sign a credential on both chains, and the
+off-chain signature verifies on either because the EIP-712 domain
+separator is per-chain (chain name + contract package hash). A demo
+at `scripts/cross-chain-credential-demo.ts` shows the same
+`0x3896aa82..235f35e3e` from both chains with the same issuer EVM
+address.
 
 ### Use of the Casper AI Toolkit
 

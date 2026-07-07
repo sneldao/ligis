@@ -12,9 +12,14 @@ bench = false
 [dependencies]
 odra = { version = "2.8.1", default-features = false }
 odra-modules = { version = "2.8.1", default-features = false }
+# Pure-Rust secp256k1 ECDSA recovery for on-chain signature verification.
+k256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
+sha3 = { version = "0.10", default-features = false }
 
 [dev-dependencies]
 odra-test = { version = "2.8.1", default-features = false }
+# For deterministic secp256k1 test keys. Used only in unit tests.
+rand = "0.8"
 
 [build-dependencies]
 odra-build = { version = "2.8.1", default-features = false }

@@ -13,9 +13,9 @@
     "eip-712"
   ],
   "scripts": {
-    "build": "PATH=\"$HOME/.rustup/toolchains/nightly-2026-01-01-x86_64-apple-darwin/bin:$PATH\" cargo odra build",
-    "test": "PATH=\"$HOME/.rustup/toolchains/nightly-2026-01-01-x86_64-apple-darwin/bin:$PATH\" cargo odra test",
-    "test:casper": "PATH=\"$HOME/.rustup/toolchains/nightly-2026-01-01-x86_64-apple-darwin/bin:$PATH\" cargo odra test -b casper",
+    "build": "PATH=\"$HOME/.cargo/bin:$HOME/.rustup/toolchains/nightly-2026-01-01-aarch64-apple-darwin/bin:$PATH\" cargo odra build",
+    "test": "PATH=\"$HOME/.cargo/bin:$HOME/.rustup/toolchains/nightly-2026-01-01-aarch64-apple-darwin/bin:$PATH\" cargo odra test",
+    "test:casper": "PATH=\"$HOME/.cargo/bin:$HOME/.rustup/toolchains/nightly-2026-01-01-aarch64-apple-darwin/bin:$PATH\" cargo odra test -b casper",
     "clean": "cargo clean"
   }
 }

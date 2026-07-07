@@ -377,9 +377,10 @@ a Ligis credential on Casper before accepting a paid HTTP request.
 
 **Two settlement modes:**
 
-- **`local`** (default): verifies the EIP-712 payment payload format and
-  signature, then settles via a direct CSPR transfer on Casper. No CEP-18
-  token or facilitator required.
+- **`local`** (default): checks the EIP-712 payment payload shape, then settles
+  via a direct CSPR transfer on Casper as a demo fallback. No CEP-18 token or
+  facilitator required. Full signature verification and CEP-18 settlement are
+  handled by the facilitator path.
 - **`facilitator`**: forwards the signed payment to the CSPR.cloud x402
   facilitator, which calls `transfer_with_authorization` on the CEP-18
   token contract. Requires `CSPR_CLOUD_TOKEN`.

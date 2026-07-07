@@ -16,7 +16,7 @@ This composes the three pillars of the Casper AI Toolkit into one product:
 | Pillar           | Role in Ligis Trust Gate                                        |
 | ---------------- | --------------------------------------------------------------- |
 | **Agent ID**     | Each agent has a Casper-native `AgentId` (Odra contract).       |
-| **Credentials**  | Capabilities are signed EIP-712 credentials in the Odra registry. |
+| **Credentials**  | Capabilities are EIP-712 credentials signed off-chain and verified on-chain via secp256k1 recovery in the Odra registry. |
 | **x402**         | The service requires payment + a valid credential per request.  |
 | **MCP**          | The MCP server exposes the gate as a discoverable agent tool.   |
 | **0G Compute**   | The Trust Steward decides which credentials to self-issue.      |
@@ -103,8 +103,9 @@ In `packages/contracts-casper/src/`:
 
 These mirror `PharosAgentID.sol` and `CredentialRegistry.sol` 1:1, with one
 critical invariant: **`capabilityHash("kyc.basic")` produces the same 32-byte
-hash on both chains**. That's the load-bearing fact that makes "same
-credential, two chains" credible to the jury.
+hash on both chains**. That happens because `@ligis/core` computes the hash
+off-chain with keccak256 before passing it to either adapter. That's the
+load-bearing fact that makes "same capability, two chains" credible to the jury.
 
 ## Resource server (the x402 endpoint)
 
@@ -220,7 +221,8 @@ web/
 - [x] Wire `x402-server` credential check + 402 + payment settlement.
   - x402 v2 protocol implemented (PaymentRequirements, X-PAYMENT header).
   - EIP-712 `TransferWithAuthorization` signing via `@casper-ecosystem/casper-eip-712`.
-  - Two settlement modes: `local` (direct CSPR transfer) and `facilitator`
+  - Two settlement modes: `local` (direct CSPR transfer; verifies payload shape
+    but not full EIP-712 signature / CEP-18 settlement) and `facilitator`
     (CSPR.cloud x402 facilitator with CEP-18 `transfer_with_authorization`).
   - `casper-x402-demo.ts` runs the full 402→sign→pay→200 flow with RWA data.
 - [x] Local settlement mode works end-to-end (on-chain CSPR transfer).
@@ -271,9 +273,10 @@ web/
 | Odra toolchain issues.                                        | **Resolved** — contracts built, deployed, and smoke-tested on Casper Testnet.             |
 | Casper 2.0 `TransactionV1` `is_install_upgrade` not recognized. | **Resolved** — use legacy `put-deploy` format for contract installation and stored contract calls. TransactionV1's `is_install_upgrade` flag is rejected by the testnet node with `NotAllowedToAddContractVersion [48]`. |
 | Casper Testnet faucet rate limits (single-use per account).   | **Resolved** — deployer funded via Casper Wallet faucet. Failed deployments with `standardPayment=false` only cost actual gas consumed. |
-| Odra dictionary storage key computation.                      | **Resolved** — `verifyCapability` and `signCredential` correctly compute `blake2b(index_bytes ++ mapping_data)` using the contract's `state` URef. Field indices: `issuer_nonce`=1, `latest`=2. |
+| Odra dictionary storage key computation.                      | **Resolved** — `verifyCapability` and `signCredential` correctly compute `blake2b(index_bytes ++ mapping_data)` for the dictionary item key (separate from the keccak256 capability hash). Field indices: `issuer_nonce`=1, `latest`=2. |
 | x402 Facilitator on testnet is finicky.                       | **Resolved** — implemented local settlement mode (direct CSPR transfer) as fallback. Facilitator mode wired to CSPR.cloud but requires auth token. Local mode produces real on-chain txs. |
 | 0G Compute inference endpoint unreachable.                    | **Resolved** — `LocalReasoner` (keyword-based fallback) implemented in `packages/agent-logic/src/local-reasoner.ts`. CLI tries 0G Compute first (15s timeout), falls back to local. Web steward has the same fallback. |
+| On-chain signature recovery.                  | **Resolved** — `CredentialRegistry` now recovers the secp256k1 issuer on-chain for both `issue` and `revoke` using the pure-Rust `k256` crate. |
 | Run out of time on Day 5.                                     | Day 5 is run-through + script lock only. Recording is Day 6 morning. Submit at end of Day 6 even if rough. |
 
 ## Out of scope (deliberately not building)

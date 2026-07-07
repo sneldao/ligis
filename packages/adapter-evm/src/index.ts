@@ -8,7 +8,7 @@
  * still need direct, EVM-typed access. Prefer the adapter for new code.
  */
 export * from "./adapter.js";
-export { EvmAdapter as default } from "./adapter.js";
+export { EvmAdapter, EvmAdapter as default } from "./adapter.js";
 
 // EVM-typed operations (use when chain-neutral ChainAdapter shape is insufficient)
 export * from "./operations.js";

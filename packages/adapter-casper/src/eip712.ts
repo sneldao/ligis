@@ -48,6 +48,15 @@ const CREDENTIAL_TYPES = {
   ],
 };
 
+/** EIP-712 type definitions for the `Revocation` primary type. */
+const REVOCATION_TYPES = {
+  Revocation: [
+    { name: "subject", type: "bytes32" },
+    { name: "capabilityHash", type: "bytes32" },
+    { name: "nonce", type: "uint256" },
+  ],
+};
+
 /**
  * Strip hash prefix (contract-package-, hash-, 0x) from a hash string.
  */
@@ -75,6 +84,13 @@ function buildDomain(config: CasperConfig): Record<string, string> {
   };
 }
 
+/** The on-wire revocation payload that gets signed and submitted on-chain. */
+export interface RevocationMessage extends Record<string, unknown> {
+  subject: string;         // chain-formatted subject identifier (account hash on Casper)
+  capabilityHash: string;  // 0x-prefixed 32-byte keccak256 hash
+  nonce: string;           // decimal string (uint256)
+}
+
 /** Compute the EIP-712 typed-data digest for a credential. */
 export function buildCredentialDigest(
   config: CasperConfig,
@@ -82,6 +98,18 @@ export function buildCredentialDigest(
 ): `0x${string}` {
   const domain = buildDomain(config);
   const digest = hashTypedData(domain, CREDENTIAL_TYPES, "Credential", message, {
+    domainTypes: CASPER_DOMAIN_TYPES,
+  });
+  return ("0x" + Buffer.from(digest).toString("hex")) as `0x${string}`;
+}
+
+/** Compute the EIP-712 typed-data digest for a revocation. */
+export function buildRevokeDigest(
+  config: CasperConfig,
+  message: RevocationMessage,
+): `0x${string}` {
+  const domain = buildDomain(config);
+  const digest = hashTypedData(domain, REVOCATION_TYPES, "Revocation", message, {
     domainTypes: CASPER_DOMAIN_TYPES,
   });
   return ("0x" + Buffer.from(digest).toString("hex")) as `0x${string}`;

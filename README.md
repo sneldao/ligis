@@ -34,14 +34,14 @@ every chain, which is what makes cross-chain credential portability possible.
 3. Agent resubmits with `X-PAYMENT` header → **200 OK** with tokenized real-estate market data
 4. Settlement on Casper Testnet (on-chain tx)
 
-41 Foundry tests + 17 TypeScript tests passing. 4 on-chain Skills + 2 helpers
+41 Foundry tests + 12 Odra tests + 17 TypeScript tests passing. 4 on-chain Skills + 2 helpers
 + Trust Steward Agent. CLI. MCP server. x402 Trust Gate. MIT.
 
 ---
 
 ## What this is
 
-Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgentID` ERC-721 on EVM, `AgentId` Odra contract on Casper) and signed capability credentials (`CredentialRegistry` EIP-712 on both chains). Any contract can gate access in one line: `require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed")`.
+Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgentID` ERC-721 on EVM, `AgentId` Odra contract on Casper) and EIP-712 capability credentials (`CredentialRegistry`). Credentials are signed off-chain with secp256k1; the EVM contracts verify signatures on-chain, and the Casper port now recovers the issuer address on-chain for both `issue` and `revoke` using the pure-Rust `k256` crate. Any contract can gate access in one line: `require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed")`.
 
 It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter (`@ligis/adapter-casper`) is fully implemented and **live on Casper Testnet** — all 8 `ChainAdapter` operations talk to Odra contracts via `casper-client`, the WASM contracts are deployed, and the smoke test passes end-to-end (mint → sign → submit → verify → revoke). The web frontend is chain-aware on all pages (`?chain=casper-testnet` is live). See [`docs/casper-buildathon.md`](docs/casper-buildathon.md) for the submission plan.
 
@@ -99,13 +99,15 @@ MCP server consume the interface, not the implementation.
 
 **Why this works across chains:**
 - **Capabilities are chain-neutral**: `capabilityHash("kyc.basic")` produces
-  the same `0x...32` on every chain. The hash is the canonical id.
+  the same `0x...32` on every chain because `@ligis/core` computes keccak256
+  off-chain and passes it to each adapter. The hash is the canonical id.
 - **Agent identity uses DIDs**: `did:ligis:<chain-id>:<chain-native-id>`.
 - **EIP-712 domain separation is per-chain**: the domain separator binds
   the chain name + contract package hash, so a credential signed for one
   chain cannot be replayed on another.
-- **The same secp256k1 key** can issue credentials on both chains — the
-  signature is valid wherever the issuer's address is recognized.
+- **The same secp256k1 key** can sign credentials for both chains — the
+  off-chain EIP-712 signature verifies against the same issuer address on
+  either chain.
 
 To bring up another chain: implement `ChainAdapter`, add the chain branch
 to `getAdapter()` in the CLI and MCP server, and (optionally) create
@@ -162,8 +164,7 @@ The steward loop produces 3-4 on-chain transactions on Casper Testnet:
 - `issue` — Self-issues each missing capability credential
 - `set_token_uri` — Anchors evidence manifest to 0G Storage
 
-The x402 flow produces 1 additional on-chain transaction (settlement transfer).
-All transactions are visible on [cspr.live](https://testnet.cspr.live).
+The x402 flow produces 1 additional on-chain transaction (a direct CSPR transfer in the demo's local-settlement fallback). Local settlement verifies the X-PAYMENT payload shape; full CEP-18 `transfer_with_authorization` settlement via the CSPR.cloud facilitator is wired but requires `CSPR_CLOUD_TOKEN`.
 
 ## Documentation
 

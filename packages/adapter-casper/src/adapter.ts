@@ -110,6 +110,7 @@ export class CasperAdapter implements ChainAdapter {
       issuedAt: signed.issuedAt,
       expiresAt: signed.expiresAt,
       nonce: signed.nonce,
+      digest: signed.digest,
       signature: signed.signature as string,
     });
     return { tx: this.tx(res.txHash, res.blockNumber) };
@@ -117,6 +118,9 @@ export class CasperAdapter implements ChainAdapter {
 
   async revokeCredential(opts: RevokeOpts): Promise<{ tx: TxRef }> {
     const capStr = typeof opts.capability === "string" ? opts.capability : (opts.capability as string);
+    if (!opts.issuerKey) {
+      throw new Error("CasperAdapter.revokeCredential: issuerKey is required");
+    }
     const res = await ops.revokeCredential(this.ctx, {
       subject: opts.subject,
       capability: capStr,
