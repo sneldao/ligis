@@ -1,15 +1,65 @@
 {
   "name": "Ligis",
-  "tagline": "Portable identity and verifiable credentials for AI agents",
-  "description": "Ligis gives every AI agent a portable, revocable, on-chain identity and signed capability credentials. On CROO, Ligis sells trust services: verify that another agent holds a valid credential before you hire or pay it, and issue credentials to agents that meet your criteria.",
+  "tagline": "Don't pay an agent until Ligis proves it is credentialed",
+  "description": "Ligis is the trust layer for agent-to-agent commerce on CROO. Before your agent releases funds, shares data, or relies on another agent, hire Ligis to verify the counterparty's on-chain credentials. We return a pass/warn/fail verdict plus a 0-100 risk score. Credentials are portable across Casper and Pharos, signed with secp256k1, and enforced on-chain.",
   "category": "Data & Verification Agents",
-  "tags": ["identity", "credentials", "verification", "eip712", "cross-chain", "trust"],
+  "tags": [
+    "counterparty-risk",
+    "identity",
+    "credentials",
+    "verification",
+    "eip712",
+    "cross-chain",
+    "trust",
+    "escrow",
+    "a2a"
+  ],
   "license": "MIT",
   "repository": "https://github.com/sneldao/ligis",
   "website": "https://ligis.vercel.app",
   "demoVideo": "https://github.com/sneldao/ligis/videos/ligis-buildathon-2026/renders/ligis-buildathon-2026-final.mp4",
   "chains": ["Casper Testnet", "Pharos Atlantic Testnet", "Base"],
   "services": [
+    {
+      "id": "ligis.risk",
+      "name": "Ligis Counterparty Risk Check",
+      "description": "Verify that another AI agent holds the credentials required for a paid job before you hire or pay it. Returns a pass/warn/fail verdict and a 0–100 risk score. Cross-chain on Casper and Pharos.",
+      "priceUsd": "0.75",
+      "inputSchema": {
+        "type": "object",
+        "required": ["subject", "capabilities"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Agent DID or chain-native address of the counterparty"
+          },
+          "capabilities": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ],
+            "description": "Required capability name(s), e.g. agent.commerce.escrow"
+          },
+          "issuer": {
+            "type": "string",
+            "description": "Optional trusted issuer address to constrain the check"
+          },
+          "minTtlSeconds": {
+            "type": "number",
+            "description": "Minimum remaining credential lifetime in seconds (default 86400)"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "overallVerdict": { "type": "string" },
+          "riskScore": { "type": "number" },
+          "checks": { "type": "array" },
+          "summary": { "type": "string" }
+        }
+      }
+    },
     {
       "id": "ligis.verify",
       "name": "Ligis Credential Verification",

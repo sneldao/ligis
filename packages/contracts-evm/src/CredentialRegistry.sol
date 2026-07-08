@@ -270,8 +270,8 @@ contract CredentialRegistry {
             }
             uint256 nonce = _latestValidNonce[subject][cap];
             Credential storage c = _credentials[subject][cap][nonce];
-            results[i] = c.issuer != address(0) && c.revokedAt == 0
-                && block.timestamp <= c.expiresAt;
+            results[i] =
+                c.issuer != address(0) && c.revokedAt == 0 && block.timestamp <= c.expiresAt;
         }
     }
 

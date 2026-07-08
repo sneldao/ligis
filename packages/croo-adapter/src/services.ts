@@ -31,7 +31,11 @@ export interface ServiceDescriptor {
   handler: ServiceHandler;
 }
 
-export const SUPPORTED_SERVICES = ["ligis.verify", "ligis.issue"] as const;
+export const SUPPORTED_SERVICES = [
+  "ligis.risk",
+  "ligis.verify",
+  "ligis.issue",
+] as const;
 
 export type SupportedServiceId = (typeof SUPPORTED_SERVICES)[number];
 

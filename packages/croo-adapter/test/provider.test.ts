@@ -61,6 +61,27 @@ describe("LigisCrooProvider", () => {
     assert.strictEqual(acceptCall.args[0], "neg-2");
   });
 
+  it("accepts ligis.risk negotiation", async () => {
+    const mock = new MockCrooClient();
+    const provider = new LigisCrooProvider({ client: mock });
+    await provider.start();
+
+    mock.emitEvent(EventType.NegotiationCreated, {
+      negotiation_id: "neg-risk",
+      service_id: "ligis.risk",
+      requirements: JSON.stringify({
+        subject: "0xabc",
+        capabilities: "agent.commerce.escrow",
+      }),
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    const acceptCall = mock.calls.find((c) => c.method === "acceptNegotiation");
+    assert.ok(acceptCall, "expected acceptNegotiation call");
+    assert.strictEqual(acceptCall.args[0], "neg-risk");
+  });
+
   it("delivers error payload when order paid but handler fails", async () => {
     const mock = new MockCrooClient();
     const provider = new LigisCrooProvider({ client: mock });

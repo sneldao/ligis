@@ -169,17 +169,18 @@ The x402 flow produces 1 additional on-chain transaction (a direct CSPR transfer
 ## CROO Agent Protocol (CAP) integration
 
 Ligis is listed as a callable agent on the [CROO Agent Store](https://agent.croo.network).
-Other agents can hire Ligis to verify or issue credentials, with payment and
-settlement handled by CAP.
+Before one agent pays another, it can hire Ligis to run a **counterparty risk
+check** and receive a pass/warn/fail verdict plus a 0–100 risk score.
 
 ```bash
-# Run the CAP provider (listens for CROO negotiations, accepts, verifies, delivers)
+# Run the CAP provider (listens for CROO negotiations, accepts, checks risk, delivers)
 export $(grep -v '^#' .env.d/croo.env | grep -v '^$' | xargs)
 pnpm croo
 ```
 
 | Service | What you get | Input |
 |---|---|---|
+| `ligis.risk` | **Counterparty risk check** — pass/warn/fail + score | `{ subject, capabilities, issuer?, minTtlSeconds? }` |
 | `ligis.verify` | On-chain credential verification | `{ subject, capability, issuer? }` |
 | `ligis.issue` | Signed capability credential issuance | `{ subject, capability, expiresInSeconds? }` |
 

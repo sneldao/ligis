@@ -1,6 +1,7 @@
 import { EventType } from "@croo-network/sdk";
 import { handleVerify } from "./verify.js";
 import { handleIssue } from "./issue.js";
+import { handleRisk } from "./risk.js";
 import type { CrooClient, EventStreamLike } from "./client.js";
 import {
   type ServiceDescriptor,
@@ -20,6 +21,50 @@ export interface ProviderOptions {
  * Register these service IDs in the CROO Dashboard when creating your agent.
  */
 export const defaultServices: ServiceDescriptor[] = [
+  {
+    id: "ligis.risk",
+    name: "Ligis Counterparty Risk Check",
+    description:
+      "Verify that another AI agent holds the credentials required for a paid job before you hire or pay it. Returns a pass/warn/fail verdict and a 0–100 risk score. Cross-chain on Casper and Pharos.",
+    priceUsd: "0.75",
+    inputSchema: {
+      type: "object",
+      required: ["subject", "capabilities"],
+      properties: {
+        subject: {
+          type: "string",
+          description: "Agent DID or chain-native address of the counterparty",
+        },
+        capabilities: {
+          oneOf: [
+            { type: "string" },
+            { type: "array", items: { type: "string" } },
+          ],
+          description:
+            "Required capability name(s), e.g. agent.commerce.escrow",
+        },
+        issuer: {
+          type: "string",
+          description: "Optional trusted issuer address to constrain the check",
+        },
+        minTtlSeconds: {
+          type: "number",
+          description:
+            "Minimum remaining credential lifetime in seconds (default 86400)",
+        },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        overallVerdict: { type: "string" },
+        riskScore: { type: "number" },
+        checks: { type: "array" },
+        summary: { type: "string" },
+      },
+    },
+    handler: handleRisk,
+  },
   {
     id: "ligis.verify",
     name: "Ligis Credential Verification",

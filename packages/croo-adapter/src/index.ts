@@ -11,3 +11,4 @@ export {
 } from "./services.js";
 export { handleVerify } from "./verify.js";
 export { handleIssue } from "./issue.js";
+export { handleRisk } from "./risk.js";
