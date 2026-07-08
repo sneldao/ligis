@@ -95,7 +95,9 @@ export class ZeroGStorage implements EvidenceStore {
       throw new Error(`0G Storage download error: ${dlErr}`);
     }
     // downloadToBlob returns a Blob — convert to bytes then text
-    const arrayBuffer = await (blob as unknown as { arrayBuffer(): Promise<ArrayBuffer> }).arrayBuffer();
+    const arrayBuffer = await (
+      blob as unknown as { arrayBuffer(): Promise<ArrayBuffer> }
+    ).arrayBuffer();
     const text = new TextDecoder().decode(new Uint8Array(arrayBuffer));
     return JSON.parse(text) as EvidenceManifest;
   }

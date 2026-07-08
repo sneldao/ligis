@@ -11,10 +11,7 @@
 import { createWalletClient, http, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { parseCapability } from "@ligis/core";
-import {
-  CREDENTIAL_REGISTRY_ABI,
-  PHAROS_AGENT_ID_ABI,
-} from "./abi.js";
+import { CREDENTIAL_REGISTRY_ABI, PHAROS_AGENT_ID_ABI } from "./abi.js";
 import { type ClientContext, requireWallet } from "./client.js";
 import { parseAddress } from "./address.js";
 
@@ -22,10 +19,12 @@ import { parseAddress } from "./address.js";
 
 export async function issueId(
   ctx: ClientContext,
-  opts: { controller?: string; tokenUri?: string }
+  opts: { controller?: string; tokenUri?: string },
 ) {
   const { walletClient, account } = requireWallet(ctx);
-  const controller = opts.controller ? parseAddress(opts.controller) : account.address;
+  const controller = opts.controller
+    ? parseAddress(opts.controller)
+    : account.address;
   const tokenUri = opts.tokenUri ?? "";
 
   const hash: Hex =
@@ -70,7 +69,7 @@ export async function issueId(
 
 export async function verify(
   ctx: ClientContext,
-  opts: { subject: string; capability: string; issuer?: string }
+  opts: { subject: string; capability: string; issuer?: string },
 ) {
   const subject = parseAddress(opts.subject);
   const capHash = parseCapability(opts.capability);
@@ -94,7 +93,13 @@ export async function verify(
     abi: CREDENTIAL_REGISTRY_ABI,
     functionName: "latestCredential",
     args: [subject, capHash],
-  })) as { issuer: Address; issuedAt: bigint; expiresAt: bigint; revoked: boolean; valid: boolean };
+  })) as {
+    issuer: Address;
+    issuedAt: bigint;
+    expiresAt: bigint;
+    revoked: boolean;
+    valid: boolean;
+  };
 
   return {
     ok: true,
@@ -119,7 +124,12 @@ export async function verify(
 
 export async function revoke(
   ctx: ClientContext,
-  opts: { subject: string; capability: string; nonce: string; issuerKey?: string }
+  opts: {
+    subject: string;
+    capability: string;
+    nonce: string;
+    issuerKey?: string;
+  },
 ) {
   const subject = parseAddress(opts.subject);
   const capHash = parseCapability(opts.capability);
@@ -170,7 +180,7 @@ export async function revoke(
 
 export async function rotate(
   ctx: ClientContext,
-  opts: { tokenId: string; newController: string }
+  opts: { tokenId: string; newController: string },
 ) {
   const { walletClient, account } = requireWallet(ctx);
   const tokenId = BigInt(opts.tokenId);
@@ -185,7 +195,7 @@ export async function rotate(
 
   if (current.toLowerCase() !== account.address.toLowerCase()) {
     throw new Error(
-      `caller ${account.address} is not the current controller of tokenId ${tokenId} (current: ${current})`
+      `caller ${account.address} is not the current controller of tokenId ${tokenId} (current: ${current})`,
     );
   }
 
@@ -220,7 +230,7 @@ export async function signCredential(
     subject: string;
     capability: string;
     expiresInSeconds?: number;
-  }
+  },
 ) {
   const issuerAccount = privateKeyToAccount(opts.issuerKey as Hex);
   const issuer = issuerAccount.address;
@@ -268,7 +278,7 @@ export async function signCredential(
 /** Read the agent ID (tokenId) for a controller wallet, or 0n if none. */
 export async function getAgentId(
   ctx: ClientContext,
-  controller: string
+  controller: string,
 ): Promise<bigint> {
   const addr = parseAddress(controller);
   return (await ctx.publicClient.readContract({
@@ -297,7 +307,7 @@ export async function submitCredential(
     expiresAt: string;
     nonce: string;
     signature: Hex;
-  }
+  },
 ) {
   const { walletClient, account } = requireWallet(ctx);
   const issuer = parseAddress(signed.issuer);
@@ -310,7 +320,15 @@ export async function submitCredential(
     address: ctx.deployment.credentialRegistry,
     abi: CREDENTIAL_REGISTRY_ABI,
     functionName: "issue",
-    args: [issuer, subject, signed.capabilityHash, issuedAt, expiresAt, nonce, signed.signature],
+    args: [
+      issuer,
+      subject,
+      signed.capabilityHash,
+      issuedAt,
+      expiresAt,
+      nonce,
+      signed.signature,
+    ],
     chain: ctx.chain,
     account,
   });
@@ -339,7 +357,7 @@ export async function submitCredential(
  */
 export async function updateTokenUri(
   ctx: ClientContext,
-  opts: { tokenId: string; tokenUri: string }
+  opts: { tokenId: string; tokenUri: string },
 ) {
   const { walletClient, account } = requireWallet(ctx);
   const tokenId = BigInt(opts.tokenId);

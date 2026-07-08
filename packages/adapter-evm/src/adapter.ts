@@ -64,13 +64,29 @@ export class EvmAdapter implements ChainAdapter {
       agentId: res.tokenId,
       did: formatDid(this.chainId, res.tokenId),
       controller: res.controller,
-      tx: { hash: res.txHash, blockNumber: res.blockNumber, explorerUrl: res.explorer },
+      tx: {
+        hash: res.txHash,
+        blockNumber: res.blockNumber,
+        explorerUrl: res.explorer,
+      },
     };
   }
 
-  async rotateAgentId(opts: { agentId: string; newController: string }): Promise<{ tx: TxRef }> {
-    const res = await rotate(this.ctx, { tokenId: opts.agentId, newController: opts.newController });
-    return { tx: { hash: res.txHash, blockNumber: res.blockNumber, explorerUrl: res.explorer } };
+  async rotateAgentId(opts: {
+    agentId: string;
+    newController: string;
+  }): Promise<{ tx: TxRef }> {
+    const res = await rotate(this.ctx, {
+      tokenId: opts.agentId,
+      newController: opts.newController,
+    });
+    return {
+      tx: {
+        hash: res.txHash,
+        blockNumber: res.blockNumber,
+        explorerUrl: res.explorer,
+      },
+    };
   }
 
   // ---------- credentials ----------
@@ -119,19 +135,40 @@ export class EvmAdapter implements ChainAdapter {
       nonce: signed.nonce,
       signature: signed.signature as `0x${string}`,
     });
-    return { tx: { hash: res.txHash, blockNumber: res.blockNumber, explorerUrl: res.explorer } };
+    return {
+      tx: {
+        hash: res.txHash,
+        blockNumber: res.blockNumber,
+        explorerUrl: res.explorer,
+      },
+    };
   }
 
   async revokeCredential(opts: RevokeOpts): Promise<{ tx: TxRef }> {
     const res = await revoke(this.ctx, opts);
-    return { tx: { hash: res.txHash, blockNumber: res.blockNumber, explorerUrl: res.explorer } };
+    return {
+      tx: {
+        hash: res.txHash,
+        blockNumber: res.blockNumber,
+        explorerUrl: res.explorer,
+      },
+    };
   }
 
   // ---------- evidence anchoring ----------
 
   async anchorEvidence(opts: AnchorEvidenceOpts): Promise<{ tx: TxRef }> {
-    const res = await updateTokenUri(this.ctx, { tokenId: opts.agentId, tokenUri: opts.uri });
-    return { tx: { hash: res.txHash, blockNumber: res.blockNumber, explorerUrl: res.explorer } };
+    const res = await updateTokenUri(this.ctx, {
+      tokenId: opts.agentId,
+      tokenUri: opts.uri,
+    });
+    return {
+      tx: {
+        hash: res.txHash,
+        blockNumber: res.blockNumber,
+        explorerUrl: res.explorer,
+      },
+    };
   }
 
   // ---------- wallet ----------

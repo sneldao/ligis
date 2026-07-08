@@ -14,12 +14,12 @@ import type { Reasoner, ReasoningResult } from "@ligis/core";
 
 // The 0G Compute SDK's ESM build has a broken re-export. Use the CJS build.
 const require = createRequire(import.meta.url);
-const {
-  createZGComputeNetworkBroker,
-} = require("@0gfoundation/0g-compute-ts-sdk") as {
-  createZGComputeNetworkBroker: typeof import("@0gfoundation/0g-compute-ts-sdk").createZGComputeNetworkBroker;
-};
-type ZGComputeNetworkBroker = import("@0gfoundation/0g-compute-ts-sdk").ZGComputeNetworkBroker;
+const { createZGComputeNetworkBroker } =
+  require("@0gfoundation/0g-compute-ts-sdk") as {
+    createZGComputeNetworkBroker: typeof import("@0gfoundation/0g-compute-ts-sdk").createZGComputeNetworkBroker;
+  };
+type ZGComputeNetworkBroker =
+  import("@0gfoundation/0g-compute-ts-sdk").ZGComputeNetworkBroker;
 
 // ---------- Config ----------
 
@@ -47,7 +47,11 @@ const DEFAULT_PROVIDER = "0xa48f01287233509FD694a22Bf840225062E67836";
 interface ChatCompletionResponse {
   id: string;
   choices: { message: { content: string } }[];
-  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 export function loadZeroGConfig(): ZeroGConfig {
@@ -85,7 +89,9 @@ export class ZeroGCompute implements Reasoner {
   private async getMetadata(): Promise<{ endpoint: string; model: string }> {
     if (!this.metadata) {
       const broker = await this.getBroker();
-      this.metadata = await broker.inference.getServiceMetadata(this.config.provider);
+      this.metadata = await broker.inference.getServiceMetadata(
+        this.config.provider,
+      );
     }
     return this.metadata;
   }
@@ -94,7 +100,9 @@ export class ZeroGCompute implements Reasoner {
     const broker = await this.getBroker();
     const { endpoint, model } = await this.getMetadata();
 
-    const headers = await broker.inference.getRequestHeaders(this.config.provider);
+    const headers = await broker.inference.getRequestHeaders(
+      this.config.provider,
+    );
 
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: "POST",
@@ -111,7 +119,7 @@ export class ZeroGCompute implements Reasoner {
     if (!response.ok) {
       const body = await response.text().catch(() => "");
       throw new Error(
-        `0G inference failed: ${response.status} ${response.statusText}${body ? ` — ${body}` : ""}`
+        `0G inference failed: ${response.status} ${response.statusText}${body ? ` — ${body}` : ""}`,
       );
     }
 

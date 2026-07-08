@@ -19,7 +19,7 @@ export function findProjectRoot(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
     path.resolve(here, "..", "..", "..", ".."), // packages/core/dist/* → root
-    path.resolve(here, "..", "..", ".."),       // packages/core/src    → root
+    path.resolve(here, "..", "..", ".."), // packages/core/src    → root
     path.resolve(here, "..", ".."),
     process.cwd(),
   ];

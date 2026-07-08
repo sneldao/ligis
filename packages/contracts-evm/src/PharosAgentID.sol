@@ -168,15 +168,24 @@ contract PharosAgentID {
         _checkOnERC721Received(from, to, tokenId, "");
     }
 
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) external {
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data)
+        external
+    {
         transferFrom(from, to, tokenId);
         _checkOnERC721Received(from, to, tokenId, data);
     }
 
-    function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data) internal {
+    function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
+        internal
+    {
         if (to.code.length == 0) return;
-        try IERC721Receiver(to).onERC721Received(msg.sender, from, tokenId, data) returns (bytes4 retval) {
-            require(retval == IERC721Receiver.onERC721Received.selector, "PharosAgentID: unsafe recipient");
+        try IERC721Receiver(to).onERC721Received(msg.sender, from, tokenId, data) returns (
+            bytes4 retval
+        ) {
+            require(
+                retval == IERC721Receiver.onERC721Received.selector,
+                "PharosAgentID: unsafe recipient"
+            );
         } catch (bytes memory reason) {
             if (reason.length == 0) revert("PharosAgentID: non-ERC721Receiver");
             assembly {

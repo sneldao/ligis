@@ -50,7 +50,8 @@ contract CredentialRegistry {
     mapping(address => mapping(bytes32 => uint256)) private _latestNonce; // newest issued
     mapping(address => mapping(bytes32 => uint256)) private _latestValidNonce; // newest not revoked & not expired
     mapping(address => mapping(bytes32 => mapping(address => bool))) private _hasValidFromIssuer;
-    mapping(address => mapping(bytes32 => mapping(address => uint256))) private _latestValidNonceFromIssuer;
+    mapping(address => mapping(bytes32 => mapping(address => uint256))) private
+        _latestValidNonceFromIssuer;
 
     event CredentialIssued(
         address indexed issuer,
@@ -68,9 +69,7 @@ contract CredentialRegistry {
         uint64 revokedAt
     );
     event AgentCapabilityChanged(
-        address indexed subject,
-        bytes32 indexed capabilityHash,
-        bool capable
+        address indexed subject, bytes32 indexed capabilityHash, bool capable
     );
 
     error Expired(uint64 expiresAt, uint64 nowTs);
@@ -84,7 +83,9 @@ contract CredentialRegistry {
     function DOMAIN_SEPARATOR() public view returns (bytes32) {
         return keccak256(
             abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
                 keccak256(bytes("PharosAgentCredential")),
                 keccak256(bytes("1")),
                 block.chainid,
@@ -106,13 +107,17 @@ contract CredentialRegistry {
         uint256 nonce,
         bytes calldata signature
     ) external returns (uint256 usedNonce) {
-        if (issuer == address(0) || subject == address(0)) revert ZeroAddress();
+        if (issuer == address(0) || subject == address(0)) {
+            revert ZeroAddress();
+        }
         if (expiresAt <= issuedAt) revert InvalidExpiry();
         if (block.timestamp > expiresAt) revert Expired(expiresAt, uint64(block.timestamp));
         if (nonce != issuerNonce[issuer]) revert InvalidSignature();
 
         bytes32 structHash = keccak256(
-            abi.encode(CREDENTIAL_TYPEHASH, issuer, subject, capabilityHash, issuedAt, expiresAt, nonce)
+            abi.encode(
+                CREDENTIAL_TYPEHASH, issuer, subject, capabilityHash, issuedAt, expiresAt, nonce
+            )
         );
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
 
@@ -129,7 +134,10 @@ contract CredentialRegistry {
             nonce: uint64(nonce)
         });
 
-        if (!_hasCredential[subject][capabilityHash] || nonce > _latestNonce[subject][capabilityHash]) {
+        if (
+            !_hasCredential[subject][capabilityHash]
+                || nonce > _latestNonce[subject][capabilityHash]
+        ) {
             _latestNonce[subject][capabilityHash] = nonce;
         }
         _hasCredential[subject][capabilityHash] = true;
@@ -182,8 +190,8 @@ contract CredentialRegistry {
 
         emit CredentialRevoked(cred.issuer, subject, capabilityHash, nonce, cred.revokedAt);
         // Check if the subject is still capable after this revocation
-        bool stillCapable = _hasValid[subject][capabilityHash] &&
-            _latestValidNonce[subject][capabilityHash] != 0;
+        bool stillCapable =
+            _hasValid[subject][capabilityHash] && _latestValidNonce[subject][capabilityHash] != 0;
         emit AgentCapabilityChanged(subject, capabilityHash, stillCapable);
     }
 
@@ -204,11 +212,11 @@ contract CredentialRegistry {
     /// @notice Returns true if a specific issuer has a valid credential for subject + capability.
     ///         Useful for Skills that only accept credentials from a known issuer (e.g. a DAO,
     ///         a KYC provider, a marketplace operator).
-    function isCapableFromIssuer(
-        address subject,
-        bytes32 capabilityHash,
-        address issuer
-    ) external view returns (bool) {
+    function isCapableFromIssuer(address subject, bytes32 capabilityHash, address issuer)
+        external
+        view
+        returns (bool)
+    {
         if (!_hasValidFromIssuer[subject][capabilityHash][issuer]) return false;
         uint256 nonce = _latestValidNonceFromIssuer[subject][capabilityHash][issuer];
         Credential storage c = _credentials[subject][capabilityHash][nonce];
@@ -220,8 +228,14 @@ contract CredentialRegistry {
 
     /// @notice Read the latest credential view for a (subject, capability) pair, regardless of
     ///         validity. Used by UIs and Agents that want to surface status.
-    function latestCredential(address subject, bytes32 capabilityHash) external view returns (CredentialView memory) {
-        if (!_hasCredential[subject][capabilityHash]) return CredentialView(address(0), 0, 0, false, false);
+    function latestCredential(address subject, bytes32 capabilityHash)
+        external
+        view
+        returns (CredentialView memory)
+    {
+        if (!_hasCredential[subject][capabilityHash]) {
+            return CredentialView(address(0), 0, 0, false, false);
+        }
         uint256 nonce = _latestNonce[subject][capabilityHash];
         Credential storage c = _credentials[subject][capabilityHash][nonce];
         if (c.issuer == address(0)) return CredentialView(address(0), 0, 0, false, false);
@@ -229,11 +243,11 @@ contract CredentialRegistry {
         return CredentialView(c.issuer, c.issuedAt, c.expiresAt, c.revokedAt != 0, valid);
     }
 
-    function getCredential(
-        address subject,
-        bytes32 capabilityHash,
-        uint256 nonce
-    ) external view returns (CredentialView memory) {
+    function getCredential(address subject, bytes32 capabilityHash, uint256 nonce)
+        external
+        view
+        returns (CredentialView memory)
+    {
         Credential storage c = _credentials[subject][capabilityHash][nonce];
         if (c.issuer == address(0)) return CredentialView(address(0), 0, 0, false, false);
         bool valid = c.revokedAt == 0 && block.timestamp <= c.expiresAt;
@@ -242,10 +256,11 @@ contract CredentialRegistry {
 
     /// @notice Batch check: returns an array of booleans for each capability hash.
     ///         Saves N-1 RPC calls for the Trust Steward's GATE phase.
-    function isCapableMulti(
-        address subject,
-        bytes32[] calldata capabilityHashes
-    ) external view returns (bool[] memory results) {
+    function isCapableMulti(address subject, bytes32[] calldata capabilityHashes)
+        external
+        view
+        returns (bool[] memory results)
+    {
         results = new bool[](capabilityHashes.length);
         for (uint256 i = 0; i < capabilityHashes.length; i++) {
             bytes32 cap = capabilityHashes[i];
@@ -255,9 +270,8 @@ contract CredentialRegistry {
             }
             uint256 nonce = _latestValidNonce[subject][cap];
             Credential storage c = _credentials[subject][cap][nonce];
-            results[i] = c.issuer != address(0) &&
-                c.revokedAt == 0 &&
-                block.timestamp <= c.expiresAt;
+            results[i] = c.issuer != address(0) && c.revokedAt == 0
+                && block.timestamp <= c.expiresAt;
         }
     }
 
@@ -278,7 +292,9 @@ contract CredentialRegistry {
         uint256 nonce
     ) external view returns (bytes32) {
         bytes32 structHash = keccak256(
-            abi.encode(CREDENTIAL_TYPEHASH, issuer, subject, capabilityHash, issuedAt, expiresAt, nonce)
+            abi.encode(
+                CREDENTIAL_TYPEHASH, issuer, subject, capabilityHash, issuedAt, expiresAt, nonce
+            )
         );
         return keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
     }

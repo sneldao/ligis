@@ -53,12 +53,15 @@ function bytesToHex(bytes: Uint8Array): `0x${string}` {
 function addressFromSecpKey(privateKeyHex: string): string {
   const priv = hexToBytes(privateKeyHex);
   const pub = secp256k1.getPublicKey(priv, false); // uncompressed: 0x04 || X || Y
-  const hash = keccak_256(pub.slice(1));            // skip the 0x04 prefix
+  const hash = keccak_256(pub.slice(1)); // skip the 0x04 prefix
   return bytesToHex(hash.slice(-20));
 }
 
 /** Require a deployed contract, throw with a clear message if missing. */
-function requireDeployment(ctx: CasperClientContext, which: "agentId" | "credentialRegistry"): string {
+function requireDeployment(
+  ctx: CasperClientContext,
+  which: "agentId" | "credentialRegistry",
+): string {
   const hash = ctx.config.deployment[which];
   if (!hash) {
     throw new Error(
@@ -86,9 +89,7 @@ function accountHashToBytes(accountHash: string): Uint8Array {
 
 /** Strip the account-hash- prefix from an account hash string. */
 function stripAccountHashPrefix(hash: string): string {
-  return hash
-    .replace(/^account-hash-/, "")
-    .replace(/^0x/, "");
+  return hash.replace(/^account-hash-/, "").replace(/^0x/, "");
 }
 
 /** Strip a hash- prefix or 0x prefix and return the raw hex. */
@@ -162,7 +163,12 @@ export async function getAgentId(
 export async function issueAgentId(
   ctx: CasperClientContext,
   opts: { controller?: string; tokenUri?: string },
-): Promise<{ agentId: string; controller: string; txHash: string; blockNumber: string }> {
+): Promise<{
+  agentId: string;
+  controller: string;
+  txHash: string;
+  blockNumber: string;
+}> {
   const packageHash = requireDeployment(ctx, "agentId");
   const signer = requireSigner();
   const tokenUri = opts.tokenUri ?? "";
@@ -238,7 +244,13 @@ export async function verifyCapability(
 ): Promise<{
   capable: boolean;
   capabilityHash: `0x${string}`;
-  latest: { issuer: string; issuedAt: string; expiresAt: string; revoked: boolean; valid: boolean };
+  latest: {
+    issuer: string;
+    issuedAt: string;
+    expiresAt: string;
+    revoked: boolean;
+    valid: boolean;
+  };
 }> {
   const packageHash = requireDeployment(ctx, "credentialRegistry");
   const capHash = parseCapability(opts.capability) as `0x${string}`;
@@ -264,7 +276,8 @@ export async function verifyCapability(
       `casper-client query-global-state --node-address ${rpcUrl} --key ${pkgHash} 2>&1`,
       { encoding: "utf-8", timeout: 15000 },
     );
-    const pkgData = JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
+    const pkgData =
+      JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
     const versions = pkgData?.versions ?? [];
     const latestVersion = versions[versions.length - 1];
     const contractHashRaw = latestVersion?.contract_hash ?? "";
@@ -274,10 +287,11 @@ export async function verifyCapability(
     // 2. Get the contract's named keys to find the `state` URef
     const contractOutput = execSync(
       `casper-client query-global-state --node-address ${rpcUrl} ` +
-      `--key ${contractHash} 2>&1`,
+        `--key ${contractHash} 2>&1`,
       { encoding: "utf-8", timeout: 15000 },
     );
-    const contractData = JSON.parse(contractOutput)?.result?.stored_value?.Contract;
+    const contractData =
+      JSON.parse(contractOutput)?.result?.stored_value?.Contract;
     if (!contractData) throw new Error("Contract not found");
     const stateUref = contractData.named_keys?.find(
       (k: any) => k.name === "state",
@@ -292,7 +306,9 @@ export async function verifyCapability(
       Buffer.from(capHashBytes),
     ]);
     const finalKey = Buffer.concat([indexBytes, mappingData]);
-    const dictItemKey = Buffer.from(blake2b(finalKey, { dkLen: 32 })).toString("hex");
+    const dictItemKey = Buffer.from(blake2b(finalKey, { dkLen: 32 })).toString(
+      "hex",
+    );
 
     // 3. Get state root hash
     const stateRootOutput = execSync(
@@ -318,7 +334,10 @@ export async function verifyCapability(
 
     const view = parseCredentialViewBytes(clValue);
     const now = BigInt(Math.floor(Date.now() / 1000));
-    const capable = view.valid && !view.revoked && BigInt(view.expiresAt) > now &&
+    const capable =
+      view.valid &&
+      !view.revoked &&
+      BigInt(view.expiresAt) > now &&
       (!opts.issuer || view.issuer.toLowerCase() === opts.issuer.toLowerCase());
 
     return {
@@ -360,15 +379,25 @@ function parseCredentialViewBytes(clValue: any): {
   const len = allBytes.readUInt32LE(0);
   const data = allBytes.subarray(4, 4 + len);
   if (data.length < 70) {
-    return { issuer: "0x" + "00".repeat(20), issuedAt: "0", expiresAt: "0", revoked: false, valid: false };
+    return {
+      issuer: "0x" + "00".repeat(20),
+      issuedAt: "0",
+      expiresAt: "0",
+      revoked: false,
+      valid: false,
+    };
   }
   let offset = 0;
-  const issuer = "0x" + data.subarray(offset, offset + 20).toString("hex"); offset += 20;
+  const issuer = "0x" + data.subarray(offset, offset + 20).toString("hex");
+  offset += 20;
   // subject (32 bytes) — skip, not needed for verification
   offset += 32;
-  const issuedAt = data.readBigUInt64LE(offset).toString(); offset += 8;
-  const expiresAt = data.readBigUInt64LE(offset).toString(); offset += 8;
-  const revoked = data[offset] !== 0; offset += 1;
+  const issuedAt = data.readBigUInt64LE(offset).toString();
+  offset += 8;
+  const expiresAt = data.readBigUInt64LE(offset).toString();
+  offset += 8;
+  const revoked = data[offset] !== 0;
+  offset += 1;
   const valid = data[offset] !== 0;
   return { issuer, issuedAt, expiresAt, revoked, valid };
 }
@@ -382,7 +411,12 @@ function parseCredentialViewBytes(clValue: any): {
  */
 export async function signCredential(
   ctx: CasperClientContext,
-  opts: { issuerKey: string; subject: string; capability: string; expiresInSeconds?: number },
+  opts: {
+    issuerKey: string;
+    subject: string;
+    capability: string;
+    expiresInSeconds?: number;
+  },
 ): Promise<{
   issuer: string;
   subject: string;
@@ -396,7 +430,8 @@ export async function signCredential(
   const capHash = parseCapability(opts.capability) as `0x${string}`;
   const issuer = addressFromSecpKey(opts.issuerKey);
   const issuedAt = BigInt(Math.floor(Date.now() / 1000));
-  const expiresAt = issuedAt + BigInt(opts.expiresInSeconds ?? DEFAULT_EXPIRY_SECONDS);
+  const expiresAt =
+    issuedAt + BigInt(opts.expiresInSeconds ?? DEFAULT_EXPIRY_SECONDS);
 
   // Try to read the issuer's nonce from the contract.
   // Odra stores the `issuer_nonce` mapping at field index 1.
@@ -415,7 +450,8 @@ export async function signCredential(
         `casper-client query-global-state --node-address ${rpcUrl} --key ${pkgHash} 2>&1`,
         { encoding: "utf-8", timeout: 15000 },
       );
-      const pkgData = JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
+      const pkgData =
+        JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
       const versions = pkgData?.versions ?? [];
       // Get the latest enabled version's contract hash
       const latestVersion = versions[versions.length - 1];
@@ -430,7 +466,8 @@ export async function signCredential(
         `casper-client query-global-state --node-address ${rpcUrl} --key ${contractHash} 2>&1`,
         { encoding: "utf-8", timeout: 15000 },
       );
-      const contractData = JSON.parse(contractOutput)?.result?.stored_value?.Contract;
+      const contractData =
+        JSON.parse(contractOutput)?.result?.stored_value?.Contract;
       const stateUref = contractData?.named_keys?.find(
         (k: any) => k.name === "state",
       )?.key;
@@ -440,7 +477,9 @@ export async function signCredential(
         const indexBytes = Buffer.alloc(4);
         indexBytes.writeUInt32BE(1, 0); // field index 1 for `issuer_nonce`
         const finalKey = Buffer.concat([indexBytes, issuerBytes]);
-        const dictItemKey = Buffer.from(blake2b(finalKey, { dkLen: 32 })).toString("hex");
+        const dictItemKey = Buffer.from(
+          blake2b(finalKey, { dkLen: 32 }),
+        ).toString("hex");
 
         // Get state root hash
         const srOutput = execSync(
@@ -452,9 +491,9 @@ export async function signCredential(
           const stateRoot = srMatch[1];
           const dictOutput = execSync(
             `casper-client get-dictionary-item --node-address ${rpcUrl} ` +
-            `--state-root-hash ${stateRoot} ` +
-            `--seed-uref "${stateUref}" ` +
-            `--dictionary-item-key "${dictItemKey}" 2>&1`,
+              `--state-root-hash ${stateRoot} ` +
+              `--seed-uref "${stateUref}" ` +
+              `--dictionary-item-key "${dictItemKey}" 2>&1`,
             { encoding: "utf-8", timeout: 15000 },
           );
           const clValue = JSON.parse(dictOutput)?.result?.stored_value?.CLValue;
@@ -556,13 +595,20 @@ export async function submitCredential(
  */
 export async function revokeCredential(
   ctx: CasperClientContext,
-  opts: { subject: string; capability: string; nonce: string; issuerKey: string },
+  opts: {
+    subject: string;
+    capability: string;
+    nonce: string;
+    issuerKey: string;
+  },
 ): Promise<{ txHash: string; blockNumber: string }> {
   const packageHash = requireDeployment(ctx, "credentialRegistry");
   const signer = requireSigner();
 
   if (!opts.issuerKey) {
-    throw new Error("revokeCredential: issuerKey is required to sign the revocation");
+    throw new Error(
+      "revokeCredential: issuerKey is required to sign the revocation",
+    );
   }
 
   const capHash = parseCapability(opts.capability) as `0x${string}`;

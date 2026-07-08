@@ -28,12 +28,12 @@ import type { CasperConfig } from "./config.js";
 
 /** The on-wire credential payload that gets signed and submitted on-chain. */
 export interface CredentialMessage extends Record<string, unknown> {
-  issuer: string;          // 0x-prefixed 20-byte secp256k1 Ethereum-style address
-  subject: string;         // chain-formatted subject identifier (account hash on Casper)
-  capabilityHash: string;  // 0x-prefixed 32-byte keccak256 hash
-  issuedAt: string;        // decimal string (uint64)
-  expiresAt: string;       // decimal string (uint64)
-  nonce: string;           // decimal string (uint256)
+  issuer: string; // 0x-prefixed 20-byte secp256k1 Ethereum-style address
+  subject: string; // chain-formatted subject identifier (account hash on Casper)
+  capabilityHash: string; // 0x-prefixed 32-byte keccak256 hash
+  issuedAt: string; // decimal string (uint64)
+  expiresAt: string; // decimal string (uint64)
+  nonce: string; // decimal string (uint256)
 }
 
 /** EIP-712 type definitions for the `Credential` primary type. */
@@ -86,9 +86,9 @@ function buildDomain(config: CasperConfig): Record<string, string> {
 
 /** The on-wire revocation payload that gets signed and submitted on-chain. */
 export interface RevocationMessage extends Record<string, unknown> {
-  subject: string;         // chain-formatted subject identifier (account hash on Casper)
-  capabilityHash: string;  // 0x-prefixed 32-byte keccak256 hash
-  nonce: string;           // decimal string (uint256)
+  subject: string; // chain-formatted subject identifier (account hash on Casper)
+  capabilityHash: string; // 0x-prefixed 32-byte keccak256 hash
+  nonce: string; // decimal string (uint256)
 }
 
 /** Compute the EIP-712 typed-data digest for a credential. */
@@ -97,9 +97,15 @@ export function buildCredentialDigest(
   message: CredentialMessage,
 ): `0x${string}` {
   const domain = buildDomain(config);
-  const digest = hashTypedData(domain, CREDENTIAL_TYPES, "Credential", message, {
-    domainTypes: CASPER_DOMAIN_TYPES,
-  });
+  const digest = hashTypedData(
+    domain,
+    CREDENTIAL_TYPES,
+    "Credential",
+    message,
+    {
+      domainTypes: CASPER_DOMAIN_TYPES,
+    },
+  );
   return ("0x" + Buffer.from(digest).toString("hex")) as `0x${string}`;
 }
 
@@ -109,9 +115,15 @@ export function buildRevokeDigest(
   message: RevocationMessage,
 ): `0x${string}` {
   const domain = buildDomain(config);
-  const digest = hashTypedData(domain, REVOCATION_TYPES, "Revocation", message, {
-    domainTypes: CASPER_DOMAIN_TYPES,
-  });
+  const digest = hashTypedData(
+    domain,
+    REVOCATION_TYPES,
+    "Revocation",
+    message,
+    {
+      domainTypes: CASPER_DOMAIN_TYPES,
+    },
+  );
   return ("0x" + Buffer.from(digest).toString("hex")) as `0x${string}`;
 }
 
@@ -122,9 +134,16 @@ export function recoverCredentialIssuer(
   signature: Uint8Array,
 ): string {
   const domain = buildDomain(config);
-  const addrBytes = recoverTypedDataSigner(domain, CREDENTIAL_TYPES, "Credential", message, signature, {
-    domainTypes: CASPER_DOMAIN_TYPES,
-  });
+  const addrBytes = recoverTypedDataSigner(
+    domain,
+    CREDENTIAL_TYPES,
+    "Credential",
+    message,
+    signature,
+    {
+      domainTypes: CASPER_DOMAIN_TYPES,
+    },
+  );
   return toHex(addrBytes);
 }
 
@@ -136,9 +155,15 @@ export function verifyCredentialSignature(
   expectedIssuer: string,
 ): boolean {
   const domain = buildDomain(config);
-  const digest = hashTypedData(domain, CREDENTIAL_TYPES, "Credential", message, {
-    domainTypes: CASPER_DOMAIN_TYPES,
-  });
+  const digest = hashTypedData(
+    domain,
+    CREDENTIAL_TYPES,
+    "Credential",
+    message,
+    {
+      domainTypes: CASPER_DOMAIN_TYPES,
+    },
+  );
   return verifySignature(digest, signature, expectedIssuer);
 }
 

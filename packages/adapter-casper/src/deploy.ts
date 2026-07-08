@@ -64,7 +64,9 @@ interface DeployResult {
  * Load the deployer's private key from env.
  */
 function loadDeployerKey(): PrivateKey {
-  const hexKey = process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY || process.env.LIGIS_CASPER_PRIVATE_KEY;
+  const hexKey =
+    process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY ||
+    process.env.LIGIS_CASPER_PRIVATE_KEY;
   if (!hexKey) {
     throw new Error(
       "No deployer key. Set LIGIS_CASPER_DEPLOYER_PRIVATE_KEY or LIGIS_CASPER_PRIVATE_KEY env var.",
@@ -107,7 +109,10 @@ function buildInstallTransaction(params: {
   // Odra-required runtime args for contract installation
   const odraArgs = new Map<string, CLValueType>();
   // Name under which the package hash is stored in account's named keys
-  odraArgs.set("odra_cfg_package_hash_key_name", CLValue.newCLString(`ligis_${contractName.toLowerCase()}_v5`));
+  odraArgs.set(
+    "odra_cfg_package_hash_key_name",
+    CLValue.newCLString(`ligis_${contractName.toLowerCase()}_v5`),
+  );
   // Entry point to call during install — Odra uses "init"
   odraArgs.set("entry_point", CLValue.newCLString("init"));
   // Serialized args for the init function — empty bytes for no-arg init
@@ -171,7 +176,10 @@ function extractPackageHash(result: any): string | null {
     const effects = result?.executionInfo?.executionResult?.effects;
     if (effects?.transforms) {
       for (const transform of effects.transforms) {
-        if (transform.transform === "WriteContractPackage" || transform.kind === "WriteContractPackage") {
+        if (
+          transform.transform === "WriteContractPackage" ||
+          transform.kind === "WriteContractPackage"
+        ) {
           const hash = transform.key ?? transform.hash ?? transform.value;
           if (typeof hash === "string") return hash;
         }
@@ -204,8 +212,11 @@ async function deployContract(params: {
   wasmPath: string;
 }): Promise<DeployResult> {
   const { chainName, contractName, wasmPath } = params;
-  const rpcUrl = process.env.LIGIS_CASPER_RPC_URL ?? "https://node.testnet.casper.network/rpc";
-  const keyPath = process.env.LIGIS_CASPER_KEY_PATH ?? ".env.d/casper-deployer.pem";
+  const rpcUrl =
+    process.env.LIGIS_CASPER_RPC_URL ??
+    "https://node.testnet.casper.network/rpc";
+  const keyPath =
+    process.env.LIGIS_CASPER_KEY_PATH ?? ".env.d/casper-deployer.pem";
   const paymentAmount = "800000000000"; // 800 CSPR max (refund for unused)
   const keyName = `ligis_${contractName.toLowerCase()}_v7`;
 
@@ -307,7 +318,9 @@ async function deployContract(params: {
 }
 
 async function main() {
-  const rpcUrl = process.env.LIGIS_CASPER_RPC_URL ?? "https://node.testnet.casper.network/rpc";
+  const rpcUrl =
+    process.env.LIGIS_CASPER_RPC_URL ??
+    "https://node.testnet.casper.network/rpc";
   const chainName = process.env.LIGIS_CASPER_CHAIN_NAME ?? "casper-test";
 
   console.log(`Casper Testnet deployment`);
@@ -324,23 +337,33 @@ async function main() {
   const rpc = new RpcClient(handler);
 
   // Find the WASM files — resolve from monorepo root
-  const wasmDir = resolve(process.cwd(), "../../packages/contracts-casper/wasm");
+  const wasmDir = resolve(
+    process.cwd(),
+    "../../packages/contracts-casper/wasm",
+  );
   if (!existsSync(wasmDir)) {
     // Fallback: try from repo root
     const altDir = resolve(process.cwd(), "packages/contracts-casper/wasm");
     if (existsSync(altDir)) {
       // use altDir
     } else {
-      console.error(`Cannot find wasm directory. Tried: ${wasmDir} and ${altDir}`);
+      console.error(
+        `Cannot find wasm directory. Tried: ${wasmDir} and ${altDir}`,
+      );
       process.exit(1);
     }
   }
-  const actualWasmDir = existsSync(resolve(process.cwd(), "packages/contracts-casper/wasm"))
+  const actualWasmDir = existsSync(
+    resolve(process.cwd(), "packages/contracts-casper/wasm"),
+  )
     ? resolve(process.cwd(), "packages/contracts-casper/wasm")
     : wasmDir;
   const allContracts = [
     { name: "AgentId", path: join(actualWasmDir, "AgentId.wasm") },
-    { name: "CredentialRegistry", path: join(actualWasmDir, "CredentialRegistry.wasm") },
+    {
+      name: "CredentialRegistry",
+      path: join(actualWasmDir, "CredentialRegistry.wasm"),
+    },
   ];
   // Allow filtering by contract name via CLI arg
   const filter = process.argv[2];
@@ -370,8 +393,12 @@ async function main() {
     // File may not exist yet
   }
 
-  const agentIdHash = results.find((r) => r.contractName === "AgentId")?.packageHash;
-  const credRegHash = results.find((r) => r.contractName === "CredentialRegistry")?.packageHash;
+  const agentIdHash = results.find(
+    (r) => r.contractName === "AgentId",
+  )?.packageHash;
+  const credRegHash = results.find(
+    (r) => r.contractName === "CredentialRegistry",
+  )?.packageHash;
 
   const newLines: string[] = [];
   if (agentIdHash) {

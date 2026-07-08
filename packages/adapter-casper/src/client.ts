@@ -38,10 +38,13 @@ export function buildCasperClient(config: CasperConfig): CasperClientContext {
   // We don't import the key material here — that happens in `signer.ts` at
   // operation time, so a missing key is a recoverable per-call error rather
   // than a startup failure.
-  const publicKeyHex = process.env.LIGIS_CASPER_PUBLIC_KEY
-    || process.env.LIGIS_CASPER_DEPLOYER_PUBKEY
-    || null;
-  const accountHash = publicKeyHex ? publicKeyToAccountHashHex(publicKeyHex) : null;
+  const publicKeyHex =
+    process.env.LIGIS_CASPER_PUBLIC_KEY ||
+    process.env.LIGIS_CASPER_DEPLOYER_PUBKEY ||
+    null;
+  const accountHash = publicKeyHex
+    ? publicKeyToAccountHashHex(publicKeyHex)
+    : null;
 
   return { config, rpc, publicKeyHex, accountHash };
 }

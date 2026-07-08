@@ -20,21 +20,59 @@ export interface CapabilitySpec {
  * capabilities returned by the LLM are flagged but not acted upon.
  */
 export const KNOWN_CAPABILITIES: CapabilitySpec[] = [
-  { name: "kyc.basic", hash: capabilityHash("kyc.basic"), description: "Basic KYC verification" },
-  { name: "trade.cex-retail", hash: capabilityHash("trade.cex-retail"), description: "Retail CEX trading" },
-  { name: "rwa.accredited", hash: capabilityHash("rwa.accredited"), description: "Accredited investor status" },
-  { name: "agent.commerce.escrow", hash: capabilityHash("agent.commerce.escrow"), description: "Open and manage escrows" },
-  { name: "agent.commerce.swap", hash: capabilityHash("agent.commerce.swap"), description: "Execute token swaps" },
-  { name: "agent.commerce.bridge", hash: capabilityHash("agent.commerce.bridge"), description: "Cross-chain bridge operations" },
-  { name: "agent.commerce.recurring", hash: capabilityHash("agent.commerce.recurring"), description: "Recurring payment mandates" },
-  { name: "agent.commerce.x402", hash: capabilityHash("agent.commerce.x402"), description: "x402 HTTP payment protocol" },
-  { name: "data.premium", hash: capabilityHash("data.premium"), description: "Premium data feed access" },
+  {
+    name: "kyc.basic",
+    hash: capabilityHash("kyc.basic"),
+    description: "Basic KYC verification",
+  },
+  {
+    name: "trade.cex-retail",
+    hash: capabilityHash("trade.cex-retail"),
+    description: "Retail CEX trading",
+  },
+  {
+    name: "rwa.accredited",
+    hash: capabilityHash("rwa.accredited"),
+    description: "Accredited investor status",
+  },
+  {
+    name: "agent.commerce.escrow",
+    hash: capabilityHash("agent.commerce.escrow"),
+    description: "Open and manage escrows",
+  },
+  {
+    name: "agent.commerce.swap",
+    hash: capabilityHash("agent.commerce.swap"),
+    description: "Execute token swaps",
+  },
+  {
+    name: "agent.commerce.bridge",
+    hash: capabilityHash("agent.commerce.bridge"),
+    description: "Cross-chain bridge operations",
+  },
+  {
+    name: "agent.commerce.recurring",
+    hash: capabilityHash("agent.commerce.recurring"),
+    description: "Recurring payment mandates",
+  },
+  {
+    name: "agent.commerce.x402",
+    hash: capabilityHash("agent.commerce.x402"),
+    description: "x402 HTTP payment protocol",
+  },
+  {
+    name: "data.premium",
+    hash: capabilityHash("data.premium"),
+    description: "Premium data feed access",
+  },
 ];
 
 /** Look up a capability by name or 0x...bytes32 hash. */
 export function findCapability(nameOrHash: string): CapabilitySpec | undefined {
   return KNOWN_CAPABILITIES.find(
-    (c) => c.name === nameOrHash || c.hash.toLowerCase() === nameOrHash.toLowerCase(),
+    (c) =>
+      c.name === nameOrHash ||
+      c.hash.toLowerCase() === nameOrHash.toLowerCase(),
   );
 }
 
@@ -95,8 +133,11 @@ export function parseReasoning(text: string): ParsedReasoning {
     return { capabilities: [], reasoning: text, unknown: [] };
   }
 
-  const rawCaps: string[] = Array.isArray(json.capabilities) ? json.capabilities : [];
-  const reasoning: string = typeof json.reasoning === "string" ? json.reasoning : "";
+  const rawCaps: string[] = Array.isArray(json.capabilities)
+    ? json.capabilities
+    : [];
+  const reasoning: string =
+    typeof json.reasoning === "string" ? json.reasoning : "";
 
   const capabilities: CapabilitySpec[] = [];
   const unknown: string[] = [];
@@ -117,7 +158,9 @@ export function parseReasoning(text: string): ParsedReasoning {
  * Extract a JSON object from a text string that may be wrapped in markdown
  * code fences or surrounded by prose.
  */
-function extractJson(text: string): { capabilities: unknown; reasoning?: unknown } | null {
+function extractJson(
+  text: string,
+): { capabilities: unknown; reasoning?: unknown } | null {
   // Try direct parse first
   try {
     return JSON.parse(text);

@@ -1,0 +1,38 @@
+{
+  "name": "@ligis/croo-adapter",
+  "version": "0.1.0",
+  "description": "CROO Agent Protocol (CAP) adapter for Ligis — sell credential verification and trust-steward services on the CROO Agent Store",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "ligis-croo-provider": "./dist/cli/provider.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "clean": "rm -rf dist",
+    "test": "node --test dist/test/*.test.js"
+  },
+  "dependencies": {
+    "@croo-network/sdk": "^0.2.1",
+    "@ligis/adapter-casper": "workspace:*",
+    "@ligis/adapter-evm": "workspace:*",
+    "@ligis/agent-logic": "workspace:*",
+    "@ligis/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

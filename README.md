@@ -1,7 +1,7 @@
 # Ligis
 
 > **Portable on-chain identity and verifiable credentials for AI agents.**
-> **Live on Pharos + Casper Testnet. Autonomous steward loop + x402 payments working end-to-end.**
+> **Live on Pharos + Casper Testnet. Autonomous steward loop + x402 payments + CROO CAP commerce working end-to-end.**
 
 ## Demo video
 
@@ -166,6 +166,25 @@ The steward loop produces 3-4 on-chain transactions on Casper Testnet:
 
 The x402 flow produces 1 additional on-chain transaction (a direct CSPR transfer in the demo's local-settlement fallback). Local settlement verifies the X-PAYMENT payload shape; full CEP-18 `transfer_with_authorization` settlement via the CSPR.cloud facilitator is wired but requires `CSPR_CLOUD_TOKEN`.
 
+## CROO Agent Protocol (CAP) integration
+
+Ligis is listed as a callable agent on the [CROO Agent Store](https://agent.croo.network).
+Other agents can hire Ligis to verify or issue credentials, with payment and
+settlement handled by CAP.
+
+```bash
+# Run the CAP provider (listens for CROO negotiations, accepts, verifies, delivers)
+export $(grep -v '^#' .env.d/croo.env | grep -v '^$' | xargs)
+pnpm croo
+```
+
+| Service | What you get | Input |
+|---|---|---|
+| `ligis.verify` | On-chain credential verification | `{ subject, capability, issuer? }` |
+| `ligis.issue` | Signed capability credential issuance | `{ subject, capability, expiresInSeconds? }` |
+
+See [`docs/croo-integration.md`](docs/croo-integration.md) and [`packages/croo-adapter/`](packages/croo-adapter/).
+
 ## Documentation
 
 | Doc | What's in it |
@@ -174,6 +193,7 @@ The x402 flow produces 1 additional on-chain transaction (a direct CSPR transfer
 | [Monorepo structure](MONOREPO_STRUCTURE.md) | Package layout, dependency graph, ChainAdapter interface, adding a new chain |
 | [Casper Buildathon](docs/casper-buildathon.md) | Submission plan, product story, day-by-day roadmap, demo storyboard |
 | [Trust Steward Agent](docs/trust-steward-agent.md) | The autonomous loop, 0G integration, build phases |
+| [CROO Integration](docs/croo-integration.md) | CAP adapter, Agent Store listing, provider/requester usage |
 | [Security](docs/security.md) | Non-custodial design, EIP-712 replay protection |
 | [Setup](docs/setup.md) | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify |
 | [SKILL.md](SKILL.md) | Director entry point for AI agents |

@@ -51,12 +51,15 @@ function getAdapter(chain: string | undefined): ChainAdapter {
 }
 
 function ok(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+  };
 }
 
 const chainProperty = {
   type: "string",
-  description: "Target chain: 'evm' (default, Pharos + EVM) or 'casper' (Casper Testnet).",
+  description:
+    "Target chain: 'evm' (default, Pharos + EVM) or 'casper' (Casper Testnet).",
 };
 
 // ---------- MCP server ----------
@@ -75,8 +78,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: {
         type: "object",
         properties: {
-          tokenUri: { type: "string", description: "Optional metadata URI (IPFS CID, HTTPS URL, 0g://...)" },
-          controller: { type: "string", description: "Optional controller address. Defaults to the caller's wallet." },
+          tokenUri: {
+            type: "string",
+            description:
+              "Optional metadata URI (IPFS CID, HTTPS URL, 0g://...)",
+          },
+          controller: {
+            type: "string",
+            description:
+              "Optional controller address. Defaults to the caller's wallet.",
+          },
           chain: chainProperty,
         },
       },
@@ -88,9 +99,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: {
         type: "object",
         properties: {
-          subject: { type: "string", description: "The agent's controller wallet" },
-          capability: { type: "string", description: "Capability name (e.g. 'agent.commerce.escrow') or 0x...bytes32 hash." },
-          issuer: { type: "string", description: "Optional. If provided, only credentials from this issuer are considered." },
+          subject: {
+            type: "string",
+            description: "The agent's controller wallet",
+          },
+          capability: {
+            type: "string",
+            description:
+              "Capability name (e.g. 'agent.commerce.escrow') or 0x...bytes32 hash.",
+          },
+          issuer: {
+            type: "string",
+            description:
+              "Optional. If provided, only credentials from this issuer are considered.",
+          },
           chain: chainProperty,
         },
         required: ["subject", "capability"],
@@ -105,8 +127,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           subject: { type: "string" },
           capability: { type: "string" },
-          nonce: { type: "string", description: "The credential nonce returned at issue time" },
-          issuerKey: { type: "string", description: "Optional issuer private key (falls back to $PRIVATE_KEY)" },
+          nonce: {
+            type: "string",
+            description: "The credential nonce returned at issue time",
+          },
+          issuerKey: {
+            type: "string",
+            description:
+              "Optional issuer private key (falls back to $PRIVATE_KEY)",
+          },
           chain: chainProperty,
         },
         required: ["subject", "capability", "nonce"],
@@ -133,7 +162,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: {
         type: "object",
         properties: {
-          capability: { type: "string", description: "Human-readable capability name" },
+          capability: {
+            type: "string",
+            description: "Human-readable capability name",
+          },
         },
         required: ["capability"],
       },
@@ -148,7 +180,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           issuerKey: { type: "string", description: "Issuer's private key" },
           subject: { type: "string" },
           capability: { type: "string" },
-          expiresInSeconds: { type: "number", description: "Default 2,592,000 (30 days)." },
+          expiresInSeconds: {
+            type: "number",
+            description: "Default 2,592,000 (30 days).",
+          },
           chain: chainProperty,
         },
         required: ["issuerKey", "subject", "capability"],
@@ -162,7 +197,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         type: "object",
         properties: {
           goal: { type: "string", description: "Natural-language goal" },
-          dryRun: { type: "boolean", description: "If true, reason + gate only — no on-chain writes or 0G Storage upload." },
+          dryRun: {
+            type: "boolean",
+            description:
+              "If true, reason + gate only — no on-chain writes or 0G Storage upload.",
+          },
           chain: chainProperty,
         },
         required: ["goal"],
@@ -179,34 +218,42 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case "ligis-issue-id": {
         const adapter = getAdapter(chain);
-        return ok(await adapter.issueAgentId({
-          controller: args.controller as string | undefined,
-          tokenUri: args.tokenUri as string | undefined,
-        }));
+        return ok(
+          await adapter.issueAgentId({
+            controller: args.controller as string | undefined,
+            tokenUri: args.tokenUri as string | undefined,
+          }),
+        );
       }
       case "ligis-verify": {
         const adapter = getAdapter(chain);
-        return ok(await adapter.verifyCapability({
-          subject: args.subject as string,
-          capability: args.capability as string,
-          issuer: args.issuer as string | undefined,
-        }));
+        return ok(
+          await adapter.verifyCapability({
+            subject: args.subject as string,
+            capability: args.capability as string,
+            issuer: args.issuer as string | undefined,
+          }),
+        );
       }
       case "ligis-revoke": {
         const adapter = getAdapter(chain);
-        return ok(await adapter.revokeCredential({
-          subject: args.subject as string,
-          capability: args.capability as string,
-          nonce: args.nonce as string,
-          issuerKey: args.issuerKey as string | undefined,
-        }));
+        return ok(
+          await adapter.revokeCredential({
+            subject: args.subject as string,
+            capability: args.capability as string,
+            nonce: args.nonce as string,
+            issuerKey: args.issuerKey as string | undefined,
+          }),
+        );
       }
       case "ligis-rotate": {
         const adapter = getAdapter(chain);
-        return ok(await adapter.rotateAgentId({
-          agentId: args.tokenId as string,
-          newController: args.newController as string,
-        }));
+        return ok(
+          await adapter.rotateAgentId({
+            agentId: args.tokenId as string,
+            newController: args.newController as string,
+          }),
+        );
       }
       case "ligis-hash":
         return ok({
@@ -217,27 +264,45 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         });
       case "ligis-sign-credential": {
         const adapter = getAdapter(chain);
-        return ok(await adapter.signCredential({
-          issuerKey: args.issuerKey as string,
-          subject: args.subject as string,
-          capability: args.capability as string,
-          expiresInSeconds: args.expiresInSeconds as number | undefined,
-        }));
+        return ok(
+          await adapter.signCredential({
+            issuerKey: args.issuerKey as string,
+            subject: args.subject as string,
+            capability: args.capability as string,
+            expiresInSeconds: args.expiresInSeconds as number | undefined,
+          }),
+        );
       }
       case "ligis-run-steward": {
         const adapter = getAdapter(chain);
         const reasoner = new ZeroGCompute(loadZeroGConfig());
         const store = new ZeroGStorage(loadZeroGStorageConfig());
         const steward = new TrustSteward(adapter, reasoner, store);
-        return ok(await steward.run(args.goal as string, { dryRun: args.dryRun as boolean | undefined }));
+        return ok(
+          await steward.run(args.goal as string, {
+            dryRun: args.dryRun as boolean | undefined,
+          }),
+        );
       }
       default:
-        return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
+        return {
+          content: [{ type: "text", text: `Unknown tool: ${name}` }],
+          isError: true,
+        };
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return {
-      content: [{ type: "text", text: JSON.stringify({ ok: false, error: message, tool: name }, null, 2) }],
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            { ok: false, error: message, tool: name },
+            null,
+            2,
+          ),
+        },
+      ],
       isError: true,
     };
   }

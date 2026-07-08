@@ -66,7 +66,8 @@ export interface Signer {
  */
 export function loadSigner(): Signer {
   const pemPath = process.env.LIGIS_CASPER_KEY_PATH;
-  const hexKey = process.env.LIGIS_CASPER_PRIVATE_KEY || process.env.PRIVATE_KEY;
+  const hexKey =
+    process.env.LIGIS_CASPER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 
   let privateKey: PrivateKeyType;
   if (pemPath) {
@@ -135,7 +136,9 @@ export async function callStoredContractViaCli(params: {
 
   const keyPath = process.env.LIGIS_CASPER_KEY_PATH;
   if (!keyPath) {
-    throw new Error("Casper signer: LIGIS_CASPER_KEY_PATH (PEM) required for casper-client CLI");
+    throw new Error(
+      "Casper signer: LIGIS_CASPER_KEY_PATH (PEM) required for casper-client CLI",
+    );
   }
 
   // Build casper-client session-arg strings
@@ -241,10 +244,12 @@ function clValueToCasperClientArg(name: string, clValue: CLValueType): string {
   // List — for Vec<u8> (signature), use byte_list
   if (v.list?.elements || Array.isArray(v.list?.values)) {
     const items = v.list?.elements ?? v.list?.values ?? [];
-    const hex = items.map((item: any) => {
-      const b = item.ui8?.toString?.() ?? item.parsed ?? 0;
-      return Number(b).toString(16).padStart(2, "0");
-    }).join("");
+    const hex = items
+      .map((item: any) => {
+        const b = item.ui8?.toString?.() ?? item.parsed ?? 0;
+        return Number(b).toString(16).padStart(2, "0");
+      })
+      .join("");
     return `${name}:byte_list='${hex}'`;
   }
 
@@ -287,8 +292,13 @@ export async function submitAndWait(
  * Poll for transaction confirmation using casper-client CLI.
  * Returns the block height as a string, or "0" if not found.
  */
-async function pollTransactionWithCli(txHash: string, timeoutMs: number): Promise<string> {
-  const rpcUrl = process.env.LIGIS_CASPER_RPC_URL ?? "https://node.testnet.casper.network/rpc";
+async function pollTransactionWithCli(
+  txHash: string,
+  timeoutMs: number,
+): Promise<string> {
+  const rpcUrl =
+    process.env.LIGIS_CASPER_RPC_URL ??
+    "https://node.testnet.casper.network/rpc";
   const maxAttempts = Math.floor(timeoutMs / 5000);
   for (let i = 0; i < maxAttempts; i++) {
     await sleep(5000);

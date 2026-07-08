@@ -11,7 +11,11 @@
  * (make-software/casper-x402). The signature format is:
  *   [1 algorithm byte (02=secp256k1) | 64 raw signature bytes]
  */
-import { CASPER_DOMAIN_TYPES, hashTypedData, buildDomain } from "@casper-ecosystem/casper-eip-712";
+import {
+  CASPER_DOMAIN_TYPES,
+  hashTypedData,
+  buildDomain,
+} from "@casper-ecosystem/casper-eip-712";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 
@@ -82,8 +86,12 @@ export function createPaymentPayload(
   accountHashHex: string,
   requirements: PaymentRequirements,
 ): string {
-  const cleanPriv = privateKeyHex.startsWith("0x") ? privateKeyHex.slice(2) : privateKeyHex;
-  const cleanPub = publicKeyHex.startsWith("0x") ? publicKeyHex.slice(2) : publicKeyHex;
+  const cleanPriv = privateKeyHex.startsWith("0x")
+    ? privateKeyHex.slice(2)
+    : privateKeyHex;
+  const cleanPub = publicKeyHex.startsWith("0x")
+    ? publicKeyHex.slice(2)
+    : publicKeyHex;
 
   // Token metadata for EIP-712 domain
   const name = requirements.extra?.name ?? "Cep18x402";
@@ -94,9 +102,10 @@ export function createPaymentPayload(
   // use a 32-byte zero hash as placeholder — the signature is still valid
   // EIP-712, just not tied to a specific token contract.
   const assetRaw = requirements.asset.replace(/^0x/, "");
-  const asset = assetRaw.length === 64
-    ? `0x${assetRaw}`
-    : "0x0000000000000000000000000000000000000000000000000000000000000000";
+  const asset =
+    assetRaw.length === 64
+      ? `0x${assetRaw}`
+      : "0x0000000000000000000000000000000000000000000000000000000000000000";
   const domain = buildDomain(name, version, requirements.network, asset);
 
   // Build the authorization message

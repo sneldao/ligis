@@ -1,0 +1,78 @@
+{
+  "name": "Ligis",
+  "tagline": "Portable identity and verifiable credentials for AI agents",
+  "description": "Ligis gives every AI agent a portable, revocable, on-chain identity and signed capability credentials. On CROO, Ligis sells trust services: verify that another agent holds a valid credential before you hire or pay it, and issue credentials to agents that meet your criteria.",
+  "category": "Data & Verification Agents",
+  "tags": ["identity", "credentials", "verification", "eip712", "cross-chain", "trust"],
+  "license": "MIT",
+  "repository": "https://github.com/sneldao/ligis",
+  "website": "https://ligis.vercel.app",
+  "demoVideo": "https://github.com/sneldao/ligis/videos/ligis-buildathon-2026/renders/ligis-buildathon-2026-final.mp4",
+  "chains": ["Casper Testnet", "Pharos Atlantic Testnet", "Base"],
+  "services": [
+    {
+      "id": "ligis.verify",
+      "name": "Ligis Credential Verification",
+      "description": "On-chain verification that an AI agent holds a valid, non-expired, non-revoked Ligis capability credential. Works on Casper and Pharos.",
+      "priceUsd": "0.50",
+      "inputSchema": {
+        "type": "object",
+        "required": ["subject", "capability"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Agent DID or chain-native address to verify"
+          },
+          "capability": {
+            "type": "string",
+            "description": "Capability name, e.g. agent.commerce.escrow"
+          },
+          "issuer": {
+            "type": "string",
+            "description": "Optional trusted issuer address to constrain the check"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "capable": { "type": "boolean" },
+          "capabilityHash": { "type": "string" },
+          "latestCredential": { "type": "object" }
+        }
+      }
+    },
+    {
+      "id": "ligis.issue",
+      "name": "Ligis Credential Issuance",
+      "description": "Issue a signed, revocable Ligis capability credential to a subject. Requires issuer key configuration.",
+      "priceUsd": "2.00",
+      "inputSchema": {
+        "type": "object",
+        "required": ["subject", "capability"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Agent DID or chain-native address to receive the credential"
+          },
+          "capability": {
+            "type": "string",
+            "description": "Capability name, e.g. kyc.verified"
+          },
+          "expiresInSeconds": {
+            "type": "number",
+            "description": "Credential lifetime in seconds"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "capabilityHash": { "type": "string" },
+          "txHash": { "type": "string" }
+        }
+      }
+    }
+  ],
+  "readme": "packages/croo-adapter/README.md"
+}

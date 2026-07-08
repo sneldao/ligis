@@ -88,7 +88,10 @@ export interface ChainAdapter {
   issueAgentId(opts?: IssueAgentIdOpts): Promise<IssueAgentIdResult>;
 
   /** Rotate the controller of an existing agent id. */
-  rotateAgentId(opts: { agentId: string; newController: string }): Promise<{ tx: TxRef }>;
+  rotateAgentId(opts: {
+    agentId: string;
+    newController: string;
+  }): Promise<{ tx: TxRef }>;
 
   // ---------- credentials ----------
 

@@ -60,7 +60,8 @@ contract CredentialRegistryTest is Test {
                 nonce
             )
         );
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", registry.DOMAIN_SEPARATOR(), structHash));
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", registry.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privKey, digest);
         return abi.encodePacked(r, s, v);
     }
@@ -68,7 +69,8 @@ contract CredentialRegistryTest is Test {
     function test_IssueCredential() public {
         uint256 issuerKey = 0xA11CE;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
 
         vm.expectEmit(true, true, true, true);
         emit CredentialIssued(computedIssuer, subject, CAP, 0, ISSUED, EXPIRES);
@@ -82,11 +84,13 @@ contract CredentialRegistryTest is Test {
     function test_IssueIncrementsNonce() public {
         uint256 issuerKey = 0xB0B;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig0 = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig0 =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig0);
         assertEq(registry.issuerNonce(computedIssuer), 1);
 
-        bytes memory sig1 = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP2, ISSUED, EXPIRES, 1);
+        bytes memory sig1 =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP2, ISSUED, EXPIRES, 1);
         registry.issue(computedIssuer, subject, CAP2, ISSUED, EXPIRES, 1, sig1);
         assertEq(registry.issuerNonce(computedIssuer), 2);
     }
@@ -94,7 +98,8 @@ contract CredentialRegistryTest is Test {
     function test_RevertWhen_ReplayAttack() public {
         uint256 issuerKey = 0xC0C;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig);
 
         // Same sig with nonce 0 again should fail because issuerNonce has advanced
@@ -106,7 +111,8 @@ contract CredentialRegistryTest is Test {
         uint256 issuerKey = 0xD0D;
         uint256 wrongKey = 0xBAD;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(wrongKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(wrongKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
 
         vm.expectRevert(CredentialRegistry.InvalidSignature.selector);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig);
@@ -115,12 +121,15 @@ contract CredentialRegistryTest is Test {
     function test_RevertWhen_AlreadyExpired() public {
         uint256 issuerKey = 0xE0E;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
 
         // warp past expiry
         vm.warp(uint256(EXPIRES) + 1);
         vm.expectRevert(
-            abi.encodeWithSelector(CredentialRegistry.Expired.selector, EXPIRES, uint64(block.timestamp))
+            abi.encodeWithSelector(
+                CredentialRegistry.Expired.selector, EXPIRES, uint64(block.timestamp)
+            )
         );
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig);
     }
@@ -128,7 +137,8 @@ contract CredentialRegistryTest is Test {
     function test_RevertWhen_BadExpiry() public {
         uint256 issuerKey = 0xF0F;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, EXPIRES, ISSUED, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, EXPIRES, ISSUED, 0);
 
         vm.expectRevert(CredentialRegistry.InvalidExpiry.selector);
         registry.issue(computedIssuer, subject, CAP, EXPIRES, ISSUED, 0, sig);
@@ -137,7 +147,8 @@ contract CredentialRegistryTest is Test {
     function test_RevertWhen_ZeroAddress() public {
         uint256 issuerKey = 0x111;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, address(0), CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, address(0), CAP, ISSUED, EXPIRES, 0);
 
         vm.expectRevert(CredentialRegistry.ZeroAddress.selector);
         registry.issue(computedIssuer, address(0), CAP, ISSUED, EXPIRES, 0, sig);
@@ -146,7 +157,8 @@ contract CredentialRegistryTest is Test {
     function test_RevokeCredential() public {
         uint256 issuerKey = 0x222;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig);
 
         assertTrue(registry.isCapable(subject, CAP));
@@ -162,7 +174,8 @@ contract CredentialRegistryTest is Test {
     function test_RevertWhen_RevokeByNonIssuer() public {
         uint256 issuerKey = 0x333;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig);
 
         vm.prank(other);
@@ -175,7 +188,8 @@ contract CredentialRegistryTest is Test {
     function test_RevertWhen_DoubleRevoke() public {
         uint256 issuerKey = 0x444;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig);
         vm.prank(computedIssuer);
         registry.revoke(subject, CAP, 0);
@@ -188,7 +202,8 @@ contract CredentialRegistryTest is Test {
     function test_ReissueAfterRevoke_ReplacesLatestValid() public {
         uint256 issuerKey = 0x555;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig0 = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig0 =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig0);
         vm.prank(computedIssuer);
         registry.revoke(subject, CAP, 0);
@@ -196,7 +211,8 @@ contract CredentialRegistryTest is Test {
         // Issue a fresh one
         uint64 newIssued = uint64(block.timestamp);
         uint64 newExpires = newIssued + 1000;
-        bytes memory sig1 = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, newIssued, newExpires, 1);
+        bytes memory sig1 =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, newIssued, newExpires, 1);
         registry.issue(computedIssuer, subject, CAP, newIssued, newExpires, 1, sig1);
 
         assertTrue(registry.isCapable(subject, CAP));
@@ -205,7 +221,8 @@ contract CredentialRegistryTest is Test {
     function test_ExpiredCredentialReturnsInvalid() public {
         uint256 issuerKey = 0x666;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig);
 
         assertTrue(registry.isCapable(subject, CAP));
@@ -229,7 +246,8 @@ contract CredentialRegistryTest is Test {
     function test_LatestCredentialView() public {
         uint256 issuerKey = 0x999;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig);
 
         CredentialRegistry.CredentialView memory v = registry.latestCredential(subject, CAP);
@@ -260,7 +278,8 @@ contract CredentialRegistryTest is Test {
                 uint256(0)
             )
         );
-        bytes32 expectedDigest = keccak256(abi.encodePacked("\x19\x01", registry.DOMAIN_SEPARATOR(), structHash));
+        bytes32 expectedDigest =
+            keccak256(abi.encodePacked("\x19\x01", registry.DOMAIN_SEPARATOR(), structHash));
         bytes32 actualDigest = registry.hashTypedData(issuer, subject, CAP, ISSUED, EXPIRES, 0);
         assertEq(actualDigest, expectedDigest);
     }
@@ -271,7 +290,7 @@ contract CredentialRegistryTest is Test {
         // on chain B. We simulate by deploying the same contract on two different chain IDs.
         bytes32 ds1 = registry.DOMAIN_SEPARATOR();
 
-        vm.chainId(999999);
+        vm.chainId(999_999);
         CredentialRegistry reg2 = new CredentialRegistry();
         assertTrue(ds1 != reg2.DOMAIN_SEPARATOR());
     }
@@ -281,10 +300,12 @@ contract CredentialRegistryTest is Test {
         address computedIssuer = vm.addr(issuerKey);
         address subj2 = makeAddr("subj2");
 
-        bytes memory sig1 = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig1 =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig1);
 
-        bytes memory sig2 = _signWithPrivKey(issuerKey, computedIssuer, subj2, CAP, ISSUED, EXPIRES, 1);
+        bytes memory sig2 =
+            _signWithPrivKey(issuerKey, computedIssuer, subj2, CAP, ISSUED, EXPIRES, 1);
         registry.issue(computedIssuer, subj2, CAP, ISSUED, EXPIRES, 1, sig2);
 
         assertTrue(registry.isCapable(subject, CAP));
@@ -295,7 +316,8 @@ contract CredentialRegistryTest is Test {
     function test_GetCredentialReturnsExactNonce() public {
         uint256 issuerKey = 0xBEEF;
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig0 = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
+        bytes memory sig0 =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, 0, sig0);
 
         CredentialRegistry.CredentialView memory missing = registry.getCredential(subject, CAP, 1);
@@ -307,13 +329,19 @@ contract CredentialRegistryTest is Test {
         assertTrue(existing.valid);
     }
 
-    function testFuzz_IssueCredentialWithValidSignature(uint128 rawKey, address fuzzSubject, bytes32 cap) public {
+    function testFuzz_IssueCredentialWithValidSignature(
+        uint128 rawKey,
+        address fuzzSubject,
+        bytes32 cap
+    ) public {
         uint256 issuerKey = uint256(bound(rawKey, 1, type(uint128).max));
         address computedIssuer = vm.addr(issuerKey);
         vm.assume(fuzzSubject != address(0));
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, fuzzSubject, cap, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, fuzzSubject, cap, ISSUED, EXPIRES, 0);
 
-        uint256 usedNonce = registry.issue(computedIssuer, fuzzSubject, cap, ISSUED, EXPIRES, 0, sig);
+        uint256 usedNonce =
+            registry.issue(computedIssuer, fuzzSubject, cap, ISSUED, EXPIRES, 0, sig);
 
         assertEq(usedNonce, 0);
         assertEq(registry.issuerNonce(computedIssuer), 1);
@@ -325,7 +353,8 @@ contract CredentialRegistryTest is Test {
         uint256 issuerKey = uint256(bound(rawKey, 1, type(uint128).max));
         uint256 badNonce = uint256(bound(nonce, 1, type(uint64).max));
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, badNonce);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, CAP, ISSUED, EXPIRES, badNonce);
 
         vm.expectRevert(CredentialRegistry.InvalidSignature.selector);
         registry.issue(computedIssuer, subject, CAP, ISSUED, EXPIRES, badNonce, sig);
@@ -334,7 +363,8 @@ contract CredentialRegistryTest is Test {
     function testFuzz_RevokeIssuedCredential(uint128 rawKey, bytes32 cap) public {
         uint256 issuerKey = uint256(bound(rawKey, 1, type(uint128).max));
         address computedIssuer = vm.addr(issuerKey);
-        bytes memory sig = _signWithPrivKey(issuerKey, computedIssuer, subject, cap, ISSUED, EXPIRES, 0);
+        bytes memory sig =
+            _signWithPrivKey(issuerKey, computedIssuer, subject, cap, ISSUED, EXPIRES, 0);
         registry.issue(computedIssuer, subject, cap, ISSUED, EXPIRES, 0, sig);
 
         vm.prank(computedIssuer);

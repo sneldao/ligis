@@ -5,7 +5,11 @@ import "forge-std/Test.sol";
 import "../packages/contracts-evm/src/PharosAgentID.sol";
 
 contract GoodReceiver is IERC721Receiver {
-    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata)
+        external
+        pure
+        returns (bytes4)
+    {
         return IERC721Receiver.onERC721Received.selector;
     }
 }

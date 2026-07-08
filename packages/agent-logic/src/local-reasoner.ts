@@ -15,12 +15,24 @@ import { KNOWN_CAPABILITIES } from "./policy.js";
 const GOAL_KEYWORDS: Array<{ pattern: RegExp; caps: string[] }> = [
   { pattern: /escrow|hold.*fund|custod/i, caps: ["agent.commerce.escrow"] },
   { pattern: /swap|trade|exchange.*token/i, caps: ["agent.commerce.swap"] },
-  { pattern: /bridge|cross.chain|transfer.*chain/i, caps: ["agent.commerce.bridge"] },
-  { pattern: /recurring|subscription|mandate|recurring.*payment/i, caps: ["agent.commerce.recurring"] },
-  { pattern: /x402|http.*payment|pay.*per.*request/i, caps: ["agent.commerce.x402"] },
+  {
+    pattern: /bridge|cross.chain|transfer.*chain/i,
+    caps: ["agent.commerce.bridge"],
+  },
+  {
+    pattern: /recurring|subscription|mandate|recurring.*payment/i,
+    caps: ["agent.commerce.recurring"],
+  },
+  {
+    pattern: /x402|http.*payment|pay.*per.*request/i,
+    caps: ["agent.commerce.x402"],
+  },
   { pattern: /kyc|identity.*verif|accred/i, caps: ["kyc.basic"] },
   { pattern: /accredited|investor|rwa|real.*world/i, caps: ["rwa.accredited"] },
-  { pattern: /premium.*data|data.*feed|oracle|market.*data/i, caps: ["data.premium"] },
+  {
+    pattern: /premium.*data|data.*feed|oracle|market.*data/i,
+    caps: ["data.premium"],
+  },
   { pattern: /cex|retail.*trad|exchange/i, caps: ["trade.cex-retail"] },
 ];
 

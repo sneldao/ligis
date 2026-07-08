@@ -65,7 +65,9 @@ export class TrustSteward {
     const dryRun = opts.dryRun ?? false;
     const controller = this.adapter.walletAddress();
     if (!controller) {
-      throw new Error("Adapter has no wallet — the Steward needs a signing key to operate.");
+      throw new Error(
+        "Adapter has no wallet — the Steward needs a signing key to operate.",
+      );
     }
 
     const txHashes: string[] = [];
@@ -94,7 +96,15 @@ export class TrustSteward {
       reasoning = await this.reasoner.reason(buildReasoningPrompt(goal));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      return this.fail(goal, controller, agentId, did, minted, txHashes, `reasoning failed: ${message}`);
+      return this.fail(
+        goal,
+        controller,
+        agentId,
+        did,
+        minted,
+        txHashes,
+        `reasoning failed: ${message}`,
+      );
     }
 
     // 3. PARSE — extract + validate against known capabilities
@@ -103,7 +113,10 @@ export class TrustSteward {
     // 4. GATE — check capability for each required cap
     const capResults: StewardResult["capabilities"] = [];
     for (const cap of parsed.capabilities) {
-      const check = await this.adapter.verifyCapability({ subject: controller, capability: cap.name });
+      const check = await this.adapter.verifyCapability({
+        subject: controller,
+        capability: cap.name,
+      });
       capResults.push({
         name: cap.name,
         hash: cap.hash,
@@ -116,8 +129,15 @@ export class TrustSteward {
     if (!dryRun) {
       const issuerKey = opts.issuerKey ?? process.env.PRIVATE_KEY;
       if (!issuerKey) {
-        return this.fail(goal, controller, agentId, did, minted, txHashes,
-          "PRIVATE_KEY not set — cannot self-issue credentials.");
+        return this.fail(
+          goal,
+          controller,
+          agentId,
+          did,
+          minted,
+          txHashes,
+          "PRIVATE_KEY not set — cannot self-issue credentials.",
+        );
       }
       for (const cap of capResults) {
         if (cap.capable) continue;
@@ -143,7 +163,10 @@ export class TrustSteward {
       if (dryRun) {
         if (!cap.capable) gated = false;
       } else {
-        const recheck = await this.adapter.verifyCapability({ subject: controller, capability: cap.name });
+        const recheck = await this.adapter.verifyCapability({
+          subject: controller,
+          capability: cap.name,
+        });
         if (!recheck.capable) gated = false;
       }
     }
@@ -155,13 +178,28 @@ export class TrustSteward {
 
     if (!dryRun) {
       const manifest = this.buildManifest(
-        agentId, did, controller, goal, reasoning, capResults, gated, txHashes, "",
+        agentId,
+        did,
+        controller,
+        goal,
+        reasoning,
+        capResults,
+        gated,
+        txHashes,
+        "",
       );
       try {
         storage = await this.store.store(manifest);
         anchoredTokenUri = `0g://${storage.rootHash}`;
-        const anchor = await this.adapter.anchorEvidence({ agentId, uri: anchoredTokenUri });
-        anchored = { agentId, tokenUri: anchoredTokenUri, txHash: anchor.tx.hash };
+        const anchor = await this.adapter.anchorEvidence({
+          agentId,
+          uri: anchoredTokenUri,
+        });
+        anchored = {
+          agentId,
+          tokenUri: anchoredTokenUri,
+          txHash: anchor.tx.hash,
+        };
         txHashes.push(anchor.tx.hash);
       } catch {
         // storage or anchoring failed — the run still succeeded, evidence is partial
@@ -169,7 +207,15 @@ export class TrustSteward {
     }
 
     const finalManifest = this.buildManifest(
-      agentId, did, controller, goal, reasoning, capResults, gated, txHashes, anchoredTokenUri,
+      agentId,
+      did,
+      controller,
+      goal,
+      reasoning,
+      capResults,
+      gated,
+      txHashes,
+      anchoredTokenUri,
     );
 
     return {
@@ -227,8 +273,23 @@ export class TrustSteward {
     txHashes: string[],
     error: string,
   ): StewardResult {
-    const empty: ReasoningResult = { text: "", verified: false, model: "", provider: "" };
-    const manifest = this.buildManifest(agentId, did, controller, goal, empty, [], false, txHashes, "");
+    const empty: ReasoningResult = {
+      text: "",
+      verified: false,
+      model: "",
+      provider: "",
+    };
+    const manifest = this.buildManifest(
+      agentId,
+      did,
+      controller,
+      goal,
+      empty,
+      [],
+      false,
+      txHashes,
+      "",
+    );
     return {
       ok: false,
       booted: { agentId, did, minted },

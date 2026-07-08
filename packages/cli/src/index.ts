@@ -23,14 +23,21 @@ import { capabilityHash, loadConfig, type ChainAdapter } from "@ligis/core";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
 import { TrustSteward, LocalReasoner } from "@ligis/agent-logic";
-import { ZeroGCompute, ZeroGStorage, loadZeroGConfig, loadZeroGStorageConfig } from "@ligis/zerog";
+import {
+  ZeroGCompute,
+  ZeroGStorage,
+  loadZeroGConfig,
+  loadZeroGStorageConfig,
+} from "@ligis/zerog";
 
 /** Read a --flag <value> or --flag=value argument. */
 function arg(name: string, aliases: string[] = []): string | undefined {
   const args = process.argv.slice(2);
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === `--${name}` || aliases.includes(args[i]!)) return args[i + 1];
-    if (args[i]?.startsWith(`--${name}=`)) return args[i]!.slice(`--${name}=`.length);
+    if (args[i] === `--${name}` || aliases.includes(args[i]!))
+      return args[i + 1];
+    if (args[i]?.startsWith(`--${name}=`))
+      return args[i]!.slice(`--${name}=`.length);
   }
   return undefined;
 }
@@ -132,7 +139,11 @@ async function cmdVerify() {
   const subject = arg("subject");
   const cap = arg("capability");
   if (!subject || !cap) throw new Error("--subject and --capability required");
-  const result = await adapter.verifyCapability({ subject, capability: cap, issuer: arg("issuer") });
+  const result = await adapter.verifyCapability({
+    subject,
+    capability: cap,
+    issuer: arg("issuer"),
+  });
   emit({ ok: true, action: "verify", chainId: adapter.chainId, ...result });
 }
 
@@ -141,20 +152,43 @@ async function cmdRevoke() {
   const subject = arg("subject");
   const cap = arg("capability");
   const nonce = arg("nonce");
-  if (!subject || !cap || !nonce) throw new Error("--subject, --capability, --nonce required");
+  if (!subject || !cap || !nonce)
+    throw new Error("--subject, --capability, --nonce required");
   const issuerKey = arg("issuer-key") || process.env.PRIVATE_KEY;
   if (!issuerKey) throw new Error("--issuer-key or PRIVATE_KEY required");
-  const result = await adapter.revokeCredential({ subject, capability: cap, nonce, issuerKey });
-  emit({ ok: true, action: "revoke", subject, capability: cap, nonce, ...result });
+  const result = await adapter.revokeCredential({
+    subject,
+    capability: cap,
+    nonce,
+    issuerKey,
+  });
+  emit({
+    ok: true,
+    action: "revoke",
+    subject,
+    capability: cap,
+    nonce,
+    ...result,
+  });
 }
 
 async function cmdRotate() {
   const adapter = getAdapter();
   const tokenId = arg("token-id");
   const newController = arg("new-controller");
-  if (!tokenId || !newController) throw new Error("--token-id and --new-controller required");
-  const result = await adapter.rotateAgentId({ agentId: tokenId, newController });
-  emit({ ok: true, action: "rotate", agentId: tokenId, newController, ...result });
+  if (!tokenId || !newController)
+    throw new Error("--token-id and --new-controller required");
+  const result = await adapter.rotateAgentId({
+    agentId: tokenId,
+    newController,
+  });
+  emit({
+    ok: true,
+    action: "rotate",
+    agentId: tokenId,
+    newController,
+    ...result,
+  });
 }
 
 async function cmdSign() {
@@ -187,13 +221,17 @@ async function cmdAgentRun() {
     reasoner = new ZeroGCompute(loadZeroGConfig());
     // Test connectivity by attempting a simple reason call
     const test = await Promise.race([
-      reasoner.reason("Reply with: {\"capabilities\":[],\"reasoning\":\"ok\"}"),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000)),
+      reasoner.reason('Reply with: {"capabilities":[],"reasoning":"ok"}'),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 15000),
+      ),
     ]);
     void test; // connectivity confirmed
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error(`  [steward] 0G Compute unavailable (${msg}), using local keyword reasoner.`);
+    console.error(
+      `  [steward] 0G Compute unavailable (${msg}), using local keyword reasoner.`,
+    );
     reasoner = new LocalReasoner();
   }
 
@@ -205,7 +243,9 @@ async function cmdAgentRun() {
 async function cmdBalance() {
   const adapter = getAdapter();
   if (typeof (adapter as any).getBalance !== "function") {
-    throw new Error("balance is only supported on the Casper chain (--chain casper)");
+    throw new Error(
+      "balance is only supported on the Casper chain (--chain casper)",
+    );
   }
   const pubKey = arg("public-key");
   const result = await (adapter as any).getBalance(pubKey);
@@ -221,14 +261,22 @@ async function main() {
     return;
   }
   switch (cmd) {
-    case "info":   return cmdInfo();
-    case "hash":   return cmdHash();
-    case "issue":  return cmdIssue();
-    case "verify": return cmdVerify();
-    case "revoke": return cmdRevoke();
-    case "rotate": return cmdRotate();
-    case "sign":   return cmdSign();
-    case "balance": return cmdBalance();
+    case "info":
+      return cmdInfo();
+    case "hash":
+      return cmdHash();
+    case "issue":
+      return cmdIssue();
+    case "verify":
+      return cmdVerify();
+    case "revoke":
+      return cmdRevoke();
+    case "rotate":
+      return cmdRotate();
+    case "sign":
+      return cmdSign();
+    case "balance":
+      return cmdBalance();
     case "agent":
       if (process.argv[3] === "run") return cmdAgentRun();
       console.error(`Unknown agent subcommand: ${process.argv[3] ?? "(none)"}`);

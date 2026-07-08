@@ -16,15 +16,8 @@ export {
   type CasperDeployment,
 } from "./config.js";
 
-export {
-  buildCasperClient,
-  type CasperClientContext,
-} from "./client.js";
+export { buildCasperClient, type CasperClientContext } from "./client.js";
 
-export {
-  loadSigner,
-  callStoredContractViaCli,
-  type Signer,
-} from "./signer.js";
+export { loadSigner, callStoredContractViaCli, type Signer } from "./signer.js";
 
 export { getBalance } from "./operations.js";

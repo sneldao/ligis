@@ -126,6 +126,34 @@ importers:
         specifier: ^5.6.0
         version: 5.9.3
 
+  packages/croo-adapter:
+    dependencies:
+      '@croo-network/sdk':
+        specifier: ^0.2.1
+        version: 0.2.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      '@ligis/adapter-casper':
+        specifier: workspace:*
+        version: link:../adapter-casper
+      '@ligis/adapter-evm':
+        specifier: workspace:*
+        version: link:../adapter-evm
+      '@ligis/agent-logic':
+        specifier: workspace:*
+        version: link:../agent-logic
+      '@ligis/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.0
+      tsx:
+        specifier: ^4.19.0
+        version: 4.22.4
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   packages/mcp-server:
     dependencies:
       '@ligis/adapter-casper':
@@ -330,6 +358,10 @@ packages:
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
     engines: {node: '>=0.1.90'}
+
+  '@croo-network/sdk@0.2.1':
+    resolution: {integrity: sha512-LWglqJO8ilzarKLt6j/gpzIL6aC8lMATi4d9FpD8ogkZT7W2Kx5iONDqzhQaV1c+T6goC5a/DBA3JDqyO0bUyA==}
+    engines: {node: '>=18'}
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
@@ -2687,6 +2719,14 @@ snapshots:
 
   '@colors/colors@1.5.0':
     optional: true
+
+  '@croo-network/sdk@0.2.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
+    dependencies:
+      ethers: 6.17.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.21.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 

@@ -43,12 +43,18 @@ interface PaymentRequirements {
 const CONFIG = {
   capability: process.env.LIGIS_GATE_CAPABILITY ?? "data.premium",
   priceSmallestUnit: process.env.LIGIS_GATE_PRICE ?? "1000000000", // 1 CSPR in motes
-  asset: process.env.LIGIS_GATE_ASSET ?? process.env.LIGIS_CASPER_X402_TOKEN ?? "",
+  asset:
+    process.env.LIGIS_GATE_ASSET ?? process.env.LIGIS_CASPER_X402_TOKEN ?? "",
   payTo: process.env.LIGIS_GATE_PAY_TO ?? "",
-  facilitatorUrl: process.env.LIGIS_FACILITATOR_URL ?? "https://x402-facilitator.cspr.cloud",
+  facilitatorUrl:
+    process.env.LIGIS_FACILITATOR_URL ?? "https://x402-facilitator.cspr.cloud",
   facilitatorToken: process.env.CSPR_CLOUD_TOKEN ?? "",
-  settlementMode: (process.env.X402_SETTLEMENT_MODE ?? "local") as "facilitator" | "local",
-  rpcUrl: process.env.LIGIS_CASPER_RPC_URL ?? "https://node.testnet.casper.network/rpc",
+  settlementMode: (process.env.X402_SETTLEMENT_MODE ?? "local") as
+    | "facilitator"
+    | "local",
+  rpcUrl:
+    process.env.LIGIS_CASPER_RPC_URL ??
+    "https://node.testnet.casper.network/rpc",
   keyPath: process.env.LIGIS_CASPER_KEY_PATH ?? "",
 };
 
@@ -57,57 +63,84 @@ const app = new Hono();
 
 // ---------- Routes ----------
 
-app.get("/", (c) => c.json({
-  service: "Ligis Trust Gate",
-  capability: CONFIG.capability,
-  chain: adapter.chainId,
-  endpoint: "/premium",
-  settlement: CONFIG.settlementMode,
-}));
+app.get("/", (c) =>
+  c.json({
+    service: "Ligis Trust Gate",
+    capability: CONFIG.capability,
+    chain: adapter.chainId,
+    endpoint: "/premium",
+    settlement: CONFIG.settlementMode,
+  }),
+);
 
-app.get("/health", (c) => c.json({ ok: true, settlement: CONFIG.settlementMode }));
+app.get("/health", (c) =>
+  c.json({ ok: true, settlement: CONFIG.settlementMode }),
+);
 
 app.get("/premium", async (c) => {
   const subject = c.req.header("X-Subject");
   if (!subject) {
-    return c.json({ ok: false, error: "missing X-Subject header (the agent's Casper account hash)" }, 400);
+    return c.json(
+      {
+        ok: false,
+        error: "missing X-Subject header (the agent's Casper account hash)",
+      },
+      400,
+    );
   }
 
   // 1. Gate: does this subject hold a valid Ligis credential?
   let capable = false;
   try {
-    const check = await adapter.verifyCapability({ subject, capability: CONFIG.capability });
+    const check = await adapter.verifyCapability({
+      subject,
+      capability: CONFIG.capability,
+    });
     capable = check.capable;
   } catch (err) {
-    return c.json({
-      ok: false,
-      error: "credential check failed",
-      detail: err instanceof Error ? err.message : String(err),
-      hint: "ensure LIGIS_CASPER_CREDENTIAL_REGISTRY is set and the contract is deployed",
-    }, 503);
+    return c.json(
+      {
+        ok: false,
+        error: "credential check failed",
+        detail: err instanceof Error ? err.message : String(err),
+        hint: "ensure LIGIS_CASPER_CREDENTIAL_REGISTRY is set and the contract is deployed",
+      },
+      503,
+    );
   }
   if (!capable) {
-    return c.json({
-      ok: false,
-      error: "not authorized",
-      requiredCapability: CONFIG.capability,
-      hint: `request a credential for ${CONFIG.capability} via Trust Steward, then retry`,
-    }, 401);
+    return c.json(
+      {
+        ok: false,
+        error: "not authorized",
+        requiredCapability: CONFIG.capability,
+        hint: `request a credential for ${CONFIG.capability} via Trust Steward, then retry`,
+      },
+      401,
+    );
   }
 
   // 2. Payment: do we have an X-PAYMENT header?
   const paymentHeader = c.req.header("X-PAYMENT");
   if (!paymentHeader) {
     const reqs = paymentRequirements(c.req.url);
-    return c.json({
-      x402Version: 2,
-      error: "X-PAYMENT header is required",
-      accepts: [reqs],
-    }, 402);
+    return c.json(
+      {
+        x402Version: 2,
+        error: "X-PAYMENT header is required",
+        accepts: [reqs],
+      },
+      402,
+    );
   }
 
   // 3. Settle
-  let settleResult: { ok: boolean; txHash?: string; error?: string; mode?: string };
+  let settleResult: {
+    ok: boolean;
+    txHash?: string;
+    error?: string;
+    mode?: string;
+  };
   if (CONFIG.settlementMode === "facilitator") {
     settleResult = await settleViaFacilitator(paymentHeader, c.req.url);
   } else {
@@ -115,7 +148,14 @@ app.get("/premium", async (c) => {
   }
 
   if (!settleResult.ok) {
-    return c.json({ ok: false, error: "payment settlement failed", detail: settleResult.error }, 402);
+    return c.json(
+      {
+        ok: false,
+        error: "payment settlement failed",
+        detail: settleResult.error,
+      },
+      402,
+    );
   }
 
   // 4. Deliver
@@ -139,8 +179,12 @@ function paymentRequirements(resourceUrl: string): PaymentRequirements {
   // If no CEP-18 token is configured, use the credential registry hash
   // as a placeholder asset for the EIP-712 domain. In local settlement mode,
   // payments are settled via native CSPR transfers.
-  const asset = CONFIG.asset ||
-    (process.env.LIGIS_CASPER_CREDENTIAL_REGISTRY ?? "").replace("contract-package-", "") ||
+  const asset =
+    CONFIG.asset ||
+    (process.env.LIGIS_CASPER_CREDENTIAL_REGISTRY ?? "").replace(
+      "contract-package-",
+      "",
+    ) ||
     "0000000000000000000000000000000000000000000000000000000000000000";
   // Convert the configured payTo (any of: bare 64-char hex, "0x" + 64 hex,
   // "01" + 64 hex, or "account-hash-" + 64 hex) into the Casper EIP-712
@@ -173,7 +217,9 @@ async function settleViaFacilitator(
   resourceUrl: string,
 ): Promise<{ ok: boolean; txHash?: string; error?: string; mode?: string }> {
   try {
-    const paymentPayload = JSON.parse(Buffer.from(paymentHeader, "base64").toString());
+    const paymentPayload = JSON.parse(
+      Buffer.from(paymentHeader, "base64").toString(),
+    );
     const reqs = paymentRequirements(resourceUrl);
 
     const body = {
@@ -189,7 +235,10 @@ async function settleViaFacilitator(
       },
     };
 
-    const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json" };
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      accept: "application/json",
+    };
     if (CONFIG.facilitatorToken) {
       headers.authorization = CONFIG.facilitatorToken;
     }
@@ -204,9 +253,15 @@ async function settleViaFacilitator(
     if (data.success) {
       return { ok: true, txHash: data.transaction, mode: "facilitator" };
     }
-    return { ok: false, error: `${data.errorReason ?? "unknown"}: ${data.errorMessage ?? ""}` };
+    return {
+      ok: false,
+      error: `${data.errorReason ?? "unknown"}: ${data.errorMessage ?? ""}`,
+    };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
@@ -229,12 +284,16 @@ async function settleLocally(
     // Decode and verify the payment payload
     const payload = JSON.parse(Buffer.from(paymentHeader, "base64").toString());
     const auth = payload?.payload?.authorization;
-    if (!auth) return { ok: false, error: "missing authorization in payment payload" };
+    if (!auth)
+      return { ok: false, error: "missing authorization in payment payload" };
 
     // Verify the signature is present and well-formed (65 bytes hex = 130 chars)
     const sig = payload?.payload?.signature;
     if (!sig || sig.length !== 130) {
-      return { ok: false, error: "invalid signature format (expected 65 bytes)" };
+      return {
+        ok: false,
+        error: "invalid signature format (expected 65 bytes)",
+      };
     }
 
     // Verify the authorization fields
@@ -253,7 +312,11 @@ async function settleLocally(
       return { ok: true, txHash: simHash, mode: "local-simulated" };
     }
 
-    const payToRaw = CONFIG.payTo.replace(/^account-hash-/, "").replace(/^0x/, "").replace(/^00/, "").replace(/^01/, "");
+    const payToRaw = CONFIG.payTo
+      .replace(/^account-hash-/, "")
+      .replace(/^0x/, "")
+      .replace(/^00/, "")
+      .replace(/^01/, "");
     const payTo = `account-hash-${payToRaw}`;
     const transferId = Math.floor(Math.random() * 0xffffffff);
     // Minimum transfer on Casper testnet is 2.5 CSPR = 2,500,000,000 motes
@@ -276,7 +339,10 @@ async function settleLocally(
     const txHash = hashMatch ? hashMatch[1] : "";
 
     if (!txHash) {
-      return { ok: false, error: "settlement deploy failed: no deploy hash returned" };
+      return {
+        ok: false,
+        error: "settlement deploy failed: no deploy hash returned",
+      };
     }
 
     return { ok: true, txHash, mode: "local-transfer" };
@@ -301,10 +367,46 @@ function cryptoRandomHash(): string {
  */
 function premiumPayload() {
   const properties = [
-    { token: "RWA-001", name: "Manhattan Lofts #42", location: "New York, NY", value: 2850000, change: "+2.3%", ltv: 0.65, yield: "4.2%", occupancy: "94%" },
-    { token: "RWA-002", name: "Miami Beach Villa #17", location: "Miami, FL", value: 1750000, change: "+1.1%", ltv: 0.58, yield: "3.8%", occupancy: "88%" },
-    { token: "RWA-003", name: "Tokyo Shibuya Office #3", location: "Tokyo, JP", value: 5200000, change: "-0.4%", ltv: 0.72, yield: "5.1%", occupancy: "91%" },
-    { token: "RWA-004", name: "London Mayfair Flat #8", location: "London, UK", value: 3200000, change: "+0.8%", ltv: 0.55, yield: "3.5%", occupancy: "97%" },
+    {
+      token: "RWA-001",
+      name: "Manhattan Lofts #42",
+      location: "New York, NY",
+      value: 2850000,
+      change: "+2.3%",
+      ltv: 0.65,
+      yield: "4.2%",
+      occupancy: "94%",
+    },
+    {
+      token: "RWA-002",
+      name: "Miami Beach Villa #17",
+      location: "Miami, FL",
+      value: 1750000,
+      change: "+1.1%",
+      ltv: 0.58,
+      yield: "3.8%",
+      occupancy: "88%",
+    },
+    {
+      token: "RWA-003",
+      name: "Tokyo Shibuya Office #3",
+      location: "Tokyo, JP",
+      value: 5200000,
+      change: "-0.4%",
+      ltv: 0.72,
+      yield: "5.1%",
+      occupancy: "91%",
+    },
+    {
+      token: "RWA-004",
+      name: "London Mayfair Flat #8",
+      location: "London, UK",
+      value: 3200000,
+      change: "+0.8%",
+      ltv: 0.55,
+      yield: "3.5%",
+      occupancy: "97%",
+    },
   ];
   return {
     type: "rwa_market_data",
@@ -318,12 +420,19 @@ function premiumPayload() {
     properties,
     summary: {
       totalValue: properties.reduce((s, p) => s + p.value, 0),
-      avgLtv: (properties.reduce((s, p) => s + p.ltv, 0) / properties.length).toFixed(2),
-      avgYield: (properties.reduce((s, p) => s + parseFloat(p.yield), 0) / properties.length).toFixed(1) + "%",
+      avgLtv: (
+        properties.reduce((s, p) => s + p.ltv, 0) / properties.length
+      ).toFixed(2),
+      avgYield:
+        (
+          properties.reduce((s, p) => s + parseFloat(p.yield), 0) /
+          properties.length
+        ).toFixed(1) + "%",
       trend: "bullish",
       riskLevel: "moderate",
     },
-    disclaimer: "This is simulated RWA market data for demonstration purposes. Not financial advice.",
+    disclaimer:
+      "This is simulated RWA market data for demonstration purposes. Not financial advice.",
   };
 }
 

@@ -43,7 +43,10 @@ export class CasperAdapter implements ChainAdapter {
   constructor(opts: CasperAdapterOptions = {}) {
     const config = opts.config ?? loadCasperConfig();
     this.ctx = buildCasperClient(config);
-    this.chainId = config.network.chainName === "casper" ? "casper-mainnet" : "casper-testnet";
+    this.chainId =
+      config.network.chainName === "casper"
+        ? "casper-mainnet"
+        : "casper-testnet";
     this.chainName = config.network.displayName;
     this.explorerUrl = config.network.explorerUrl;
   }
@@ -64,7 +67,10 @@ export class CasperAdapter implements ChainAdapter {
     };
   }
 
-  async rotateAgentId(opts: { agentId: string; newController: string }): Promise<{ tx: TxRef }> {
+  async rotateAgentId(opts: {
+    agentId: string;
+    newController: string;
+  }): Promise<{ tx: TxRef }> {
     const res = await ops.rotateAgentId(this.ctx, opts);
     return { tx: this.tx(res.txHash, res.blockNumber) };
   }
@@ -76,7 +82,10 @@ export class CasperAdapter implements ChainAdapter {
     capability: CapabilityRef;
     issuer?: string;
   }): Promise<VerifyResult> {
-    const capStr = typeof opts.capability === "string" ? opts.capability : (opts.capability as string);
+    const capStr =
+      typeof opts.capability === "string"
+        ? opts.capability
+        : (opts.capability as string);
     const res = await ops.verifyCapability(this.ctx, {
       subject: opts.subject,
       capability: capStr,
@@ -92,7 +101,10 @@ export class CasperAdapter implements ChainAdapter {
   }
 
   async signCredential(opts: SignCredentialOpts): Promise<SignedCredential> {
-    const capStr = typeof opts.capability === "string" ? opts.capability : (opts.capability as string);
+    const capStr =
+      typeof opts.capability === "string"
+        ? opts.capability
+        : (opts.capability as string);
     const res = await ops.signCredential(this.ctx, {
       issuerKey: opts.issuerKey,
       subject: opts.subject,
@@ -117,7 +129,10 @@ export class CasperAdapter implements ChainAdapter {
   }
 
   async revokeCredential(opts: RevokeOpts): Promise<{ tx: TxRef }> {
-    const capStr = typeof opts.capability === "string" ? opts.capability : (opts.capability as string);
+    const capStr =
+      typeof opts.capability === "string"
+        ? opts.capability
+        : (opts.capability as string);
     if (!opts.issuerKey) {
       throw new Error("CasperAdapter.revokeCredential: issuerKey is required");
     }
@@ -152,9 +167,14 @@ export class CasperAdapter implements ChainAdapter {
    * Query the CSPR balance of a public key or account hash.
    * Returns { balance: motes string, displayBalance: "X.XXXX CSPR" }.
    */
-  async getBalance(publicKeyOrAccountHash?: string): Promise<{ balance: string; displayBalance: string }> {
+  async getBalance(
+    publicKeyOrAccountHash?: string,
+  ): Promise<{ balance: string; displayBalance: string }> {
     const key = publicKeyOrAccountHash ?? this.ctx.publicKeyHex ?? "";
-    if (!key) throw new Error("CasperAdapter.getBalance: no public key configured and none provided");
+    if (!key)
+      throw new Error(
+        "CasperAdapter.getBalance: no public key configured and none provided",
+      );
     return ops.getBalance(this.ctx, key);
   }
 
@@ -170,7 +190,9 @@ export class CasperAdapter implements ChainAdapter {
 }
 
 /** Convenience factory. */
-export function createCasperAdapter(opts: CasperAdapterOptions = {}): CasperAdapter {
+export function createCasperAdapter(
+  opts: CasperAdapterOptions = {},
+): CasperAdapter {
   return new CasperAdapter(opts);
 }
 

@@ -16,7 +16,9 @@ contract DeployIdentitySkill is Script {
             try vm.envUint("DEPLOYER_KEY") returns (uint256 k) {
                 deployerKey = k;
             } catch {
-                revert("set PRIVATE_KEY or DEPLOYER_KEY env var (or pass --private-key to forge script)");
+                revert(
+                    "set PRIVATE_KEY or DEPLOYER_KEY env var (or pass --private-key to forge script)"
+                );
             }
         }
         address deployer = vm.addr(deployerKey);
@@ -40,7 +42,7 @@ contract DeployIdentitySkill is Script {
         // so multiple chains (e.g. atlantic + mainnet + local-anvil) coexist.
         // Format: a single JSON object (not wrapped in deployment:{...}).
         string memory networkKey;
-        if (block.chainid == 688689) {
+        if (block.chainid == 688_689) {
             networkKey = "atlantic-testnet";
         } else if (block.chainid == 1672) {
             networkKey = "mainnet";
@@ -49,12 +51,24 @@ contract DeployIdentitySkill is Script {
         }
 
         string memory dep = string.concat(
-            '{"network":"', networkKey, '",',
-            '"pharosAgentId":"', vm.toString(address(id)), '",',
-            '"credentialRegistry":"', vm.toString(address(registry)), '",',
-            '"chainId":', vm.toString(block.chainid), ',',
-            '"deployer":"', vm.toString(deployer), '",',
-            '"deployedAt":"', vm.toString(block.timestamp), '"}'
+            '{"network":"',
+            networkKey,
+            '",',
+            '"pharosAgentId":"',
+            vm.toString(address(id)),
+            '",',
+            '"credentialRegistry":"',
+            vm.toString(address(registry)),
+            '",',
+            '"chainId":',
+            vm.toString(block.chainid),
+            ",",
+            '"deployer":"',
+            vm.toString(deployer),
+            '",',
+            '"deployedAt":"',
+            vm.toString(block.timestamp),
+            '"}'
         );
 
         string memory path = vm.envOr("DEPLOYMENT_OUT", string("./.deployment-latest.json"));
