@@ -40,8 +40,8 @@ music: driving electronica, ~128 BPM, match ligis-buildathon-2026
 
 ## Frame 7 — Services (48–58s)
 
-- scene: ligis.risk · ligis.verify · ligis.issue price cards
-- voiceover: Three services. Infrastructure for the agent economy.
+- scene: ligis.risk hero card (live, priced) + a muted roadmap line for ligis.verify / ligis.issue
+- voiceover: One focused service today: counterparty risk checks. Verification and issuance are next on the roadmap.
 
 ## Frame 8 — Close (58–65s)
 

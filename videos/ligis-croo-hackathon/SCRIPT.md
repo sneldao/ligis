@@ -46,7 +46,7 @@
 
 **Time:** 48.0 – 58.0s
 
-    Three services: risk check, verify, and issue. Infrastructure for the agent economy.
+    One focused service today: counterparty risk checks. Verification and issuance are next on the roadmap.
 
 ## Line 8 — Close (Frame 8)
 

@@ -164,23 +164,16 @@ CredentialRegistry.is_capable(
       <!-- 7 SERVICES -->
       <div id="s7" class="scene dark clip" data-start="48" data-duration="10" data-track-index="0">
         <div class="content">
-          <div class="eyebrow" style="color: var(--croo); margin-bottom: 24px;">Agent Store services</div>
-          <div style="display: flex; gap: 24px; flex: 1;">
-            <div class="service-card s7a" style="background: var(--navy-soft); border-color: var(--dark-rule); color: #ECE7DF;">
+          <div class="eyebrow" style="color: var(--croo); margin-bottom: 24px;">Agent Store service — live today</div>
+          <div style="display: flex; gap: 24px; align-items: flex-start;">
+            <div class="service-card s7a" style="background: var(--navy-soft); border-color: var(--dark-rule); color: #ECE7DF; max-width: 460px;">
               <h3>ligis.risk</h3>
-              <p>Counterparty risk check — pass / warn / fail + score</p>
+              <p>Counterparty risk check — pass / warn / fail + 0–100 score, batched across every required capability</p>
               <div class="price">$0.75</div>
             </div>
-            <div class="service-card s7b" style="background: var(--navy-soft); border-color: var(--dark-rule); color: #ECE7DF;">
-              <h3>ligis.verify</h3>
-              <p>Single capability verification on Casper or Pharos</p>
-              <div class="price">$0.50</div>
-            </div>
-            <div class="service-card s7c" style="background: var(--navy-soft); border-color: var(--dark-rule); color: #ECE7DF;">
-              <h3>ligis.issue</h3>
-              <p>Issue signed capability credentials on-chain</p>
-              <div class="price">$2.00</div>
-            </div>
+          </div>
+          <div class="mono s7b" style="margin-top: 32px; font-size: 15px; color: #9A958C;">
+            Roadmap: <span style="color: #C9C4BA;">ligis.verify</span> · <span style="color: #C9C4BA;">ligis.issue</span> — implemented, not yet listed
           </div>
         </div>
       </div>
@@ -213,7 +206,8 @@ CredentialRegistry.is_capable(
       tl.from("#s6 .s6a", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 38.2);
       tl.from("#s6 .s6b", { x: -30, opacity: 0, duration: 0.8, ease: "power3.out" }, 39.0);
       tl.from("#s6 .s6c", { x: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 39.2);
-      tl.from("#s7 .service-card", { y: 40, opacity: 0, duration: 0.7, stagger: 0.12, ease: "power3.out" }, 48.2);
+      tl.from("#s7 .service-card", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 48.2);
+      tl.from("#s7 .s7b", { opacity: 0, duration: 0.6, ease: "power3.out" }, 49.2);
       tl.from("#s8 .s8a", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 58.2);
       tl.from("#s8 .s8b", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 58.8);
       tl.from("#s8 .s8c", { opacity: 0, duration: 0.5, ease: "power3.out" }, 59.4);

@@ -10,6 +10,6 @@ Ligis returns pass, warn, or fail — plus a zero-to-one-hundred risk score.
 
 Every verdict is backed by a live read of CredentialRegistry on Casper Testnet — the same contracts from our Casper Buildathon demo.
 
-Three services: risk check, verify, and issue. Infrastructure for the agent economy.
+One focused service today: counterparty risk checks. Verification and issuance are next on the roadmap.
 
 Ligis on CROO. Don't pay an agent until Ligis proves it's credentialed.

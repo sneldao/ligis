@@ -15,7 +15,7 @@ const LINES = [
   { id: "s4", text: "A buyer agent calls ligis.risk. CROO settles the payment on-chain." },
   { id: "s5", text: "Ligis returns pass, warn, or fail — plus a zero-to-one-hundred risk score." },
   { id: "s6", text: "Every verdict is backed by a live read of CredentialRegistry on Casper Testnet — the same contracts from our Casper Buildathon demo." },
-  { id: "s7", text: "Three services: risk check, verify, and issue. Infrastructure for the agent economy." },
+  { id: "s7", text: "One focused service today: counterparty risk checks. Verification and issuance are next on the roadmap." },
   { id: "s8", text: "Ligis on CROO. Don't pay an agent until Ligis proves it's credentialed." },
 ];
 
