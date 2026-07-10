@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Ligis on CROO — trust layer for A2A commerce</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --paper: #F4F1EC;
+        --paper-soft: #ECE7DF;
+        --ink: #1C1B1A;
+        --ink-quiet: #5C5852;
+        --terra: #B85D3E;
+        --sage: #6F8267;
+        --navy: #181615;
+        --navy-soft: #1F1C1B;
+        --rule: rgba(28, 27, 26, 0.12);
+        --dark-rule: rgba(236, 231, 223, 0.14);
+        --croo: #3D5AFE;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); color: var(--ink); font-family: "Hanken Grotesk", sans-serif; }
+      .mono { font-family: "JetBrains Mono", monospace; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      .scene { position: absolute; inset: 0; display: flex; flex-direction: column; }
+      .dark { background: var(--navy); color: #ECE7DF; }
+      .content { position: relative; width: 100%; height: 100%; padding: 80px 120px; display: flex; flex-direction: column; }
+      .eyebrow { font-family: "JetBrains Mono", monospace; font-weight: 500; font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; }
+      .display { font-weight: 400; line-height: 1.05; letter-spacing: -0.02em; }
+      .pill { display: inline-flex; align-items: center; gap: 6px; font-family: "JetBrains Mono", monospace; font-size: 12px; padding: 5px 10px; border: 1px solid var(--rule); background: var(--paper); }
+      .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+      .pill.croo { color: var(--croo); border-color: rgba(61, 90, 254, 0.35); }
+      .pill.sage { color: var(--sage); }
+      .pill.terra { color: var(--terra); }
+      .terminal { background: var(--navy); color: #D4D0C8; font-family: "JetBrains Mono", monospace; font-size: 14px; line-height: 1.55; padding: 28px 32px; border: 1px solid var(--dark-rule); white-space: pre-wrap; overflow: hidden; }
+      .terminal .green { color: #8BA888; }
+      .terminal .cyan { color: #7FA8B3; }
+      .terminal .yellow { color: #D4A96A; }
+      .terminal .dim { color: #6F6A62; }
+      .terminal .bold { font-weight: 700; color: #ECE7DF; }
+      .flow { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 40px; }
+      .flow-step { font-family: "JetBrains Mono", monospace; font-size: 18px; padding: 16px 24px; border: 1px solid var(--dark-rule); background: var(--navy-soft); }
+      .flow-arrow { color: var(--terra); font-size: 28px; }
+      .service-card { border: 1px solid var(--rule); padding: 28px 32px; background: var(--paper-soft); flex: 1; }
+      .service-card h3 { font-size: 22px; margin-bottom: 8px; font-family: "JetBrains Mono", monospace; }
+      .service-card p { font-size: 18px; color: var(--ink-quiet); line-height: 1.4; }
+      .service-card .price { margin-top: 16px; font-family: "JetBrains Mono", monospace; color: var(--terra); font-size: 20px; }
+      audio { display: none; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="ligis-croo-hackathon"
+      data-start="0"
+      data-duration="66"
+      data-width="1920"
+      data-height="1080"
+    >
+      <audio id="voiceover" src="audio/mixed.mp3" preload="auto" data-start="0" data-duration="66"></audio>
+
+      <!-- 1 HOOK -->
+      <div id="s1" class="scene clip" data-start="0" data-duration="5" data-track-index="0" style="background: var(--paper);">
+        <div class="content" style="justify-content: center;">
+          <div class="eyebrow" style="color: var(--croo); margin-bottom: 28px;">CROO Agent Hackathon 2026</div>
+          <div class="display s1a" style="font-size: 72px; max-width: 1500px;">Agents can hire agents on CROO.</div>
+          <div class="display s1b" style="font-size: 72px; max-width: 1500px; color: var(--terra); margin-top: 12px;">But who verifies the counterparty?</div>
+        </div>
+      </div>
+
+      <!-- 2 LIGIS ON CROO -->
+      <div id="s2" class="scene clip" data-start="5" data-duration="5" data-track-index="0" style="background: var(--paper);">
+        <div class="content" style="justify-content: center;">
+          <div class="display s2a" style="font-size: 160px;">Ligis</div>
+          <div class="display s2b" style="font-size: 44px; margin-top: 20px; max-width: 1200px;">The trust layer — callable on the CROO Agent Store, priced in USDC.</div>
+          <div style="margin-top: 36px; display: flex; gap: 16px;">
+            <div class="pill croo"><span class="dot"></span>CAP</div>
+            <div class="pill sage"><span class="dot"></span>ligis.risk</div>
+            <div class="pill sage"><span class="dot"></span>ligis.verify</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 CAP FLOW -->
+      <div id="s3" class="scene dark clip" data-start="10" data-duration="8" data-track-index="0">
+        <div class="content" style="justify-content: center;">
+          <div class="eyebrow" style="color: var(--terra);">CAP lifecycle</div>
+          <div class="display s3a" style="font-size: 52px; color: #ECE7DF; margin-top: 24px; max-width: 1300px;">Hire Ligis before your agent releases funds.</div>
+          <div class="flow s3b">
+            <div class="flow-step">negotiateOrder</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">payOrder</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">deliverOrder</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step" style="color: var(--sage);">JSON verdict</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 TERMINAL -->
+      <div id="s4" class="scene clip" data-start="18" data-duration="10" data-track-index="0" style="background: var(--paper);">
+        <div class="content">
+          <div class="eyebrow" style="margin-bottom: 16px;">pnpm demo:croo</div>
+          <div class="terminal s4a" style="flex: 1; font-size: 13px;"><span class="bold">╔══════════════════════════════════════════════════════════════╗
+║  Ligis on CROO — CAP Commerce + Casper On-Chain Verification ║
+╚══════════════════════════════════════════════════════════════╝</span>
+
+<span class="cyan">[1]</span> Hiring Ligis on CROO (CAP requester)...
+  <span class="dim">Lifecycle: negotiateOrder → OrderCreated → payOrder → OrderCompleted</span>
+  <span class="green">✓</span> Order completed in 4.2s
+
+<span class="cyan">[2]</span> Delivery received
+{
+  <span class="yellow">"service"</span>: <span class="green">"ligis.risk"</span>,
+  <span class="yellow">"overallVerdict"</span>: <span class="green">"pass"</span>,
+  <span class="yellow">"riskScore"</span>: <span class="green">87</span>,
+  <span class="yellow">"summary"</span>: <span class="green">"All required capabilities valid on Casper"</span>
+}</div>
+        </div>
+      </div>
+
+      <!-- 5 VERDICT -->
+      <div id="s5" class="scene dark clip" data-start="28" data-duration="10" data-track-index="0">
+        <div class="content" style="justify-content: center;">
+          <div class="display s5a" style="font-size: 120px; color: var(--sage);">PASS</div>
+          <div class="display s5b" style="font-size: 48px; color: #ECE7DF; margin-top: 16px;">Risk score: <span style="color: var(--terra);">87</span> / 100</div>
+          <div class="mono s5c" style="margin-top: 40px; font-size: 18px; color: #9A958C;">agent.commerce.escrow · kyc.verified · TTL OK</div>
+        </div>
+      </div>
+
+      <!-- 6 CASPER BRIDGE -->
+      <div id="s6" class="scene clip" data-start="38" data-duration="10" data-track-index="0" style="background: var(--paper);">
+        <div class="content">
+          <div class="eyebrow kicker" style="color: var(--terra);">Casper Buildathon · same contracts</div>
+          <div class="display s6a" style="font-size: 44px; margin-top: 20px; max-width: 1400px;">Every CAP verdict reads <span class="mono" style="font-size: 0.85em;">CredentialRegistry.isCapable</span> on Casper Testnet.</div>
+          <div style="margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; flex: 1;">
+            <div class="terminal s6b" style="font-size: 13px;"><span class="cyan">// CROO delivery</span>
+{ "capable": true, "capabilityHash": "0x3896aa..." }
+
+<span class="cyan">// Casper read (source of truth)</span>
+CredentialRegistry.is_capable(
+  subject, capability_hash
+) → <span class="green">true</span></div>
+            <div class="terminal s6c" style="font-size: 13px;"><span class="dim">testnet.cspr.live</span>
+<span class="bold">CredentialRegistry.issue</span>
+<span class="green">✓</span> secp256k1 issuer recovery
+
+<span class="bold">AgentId.mint_self</span>
+<span class="green">✓</span> portable agent identity
+
+<span class="dim">+ x402 Trust Gate in Casper demo</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7 SERVICES -->
+      <div id="s7" class="scene dark clip" data-start="48" data-duration="10" data-track-index="0">
+        <div class="content">
+          <div class="eyebrow" style="color: var(--croo); margin-bottom: 24px;">Agent Store services</div>
+          <div style="display: flex; gap: 24px; flex: 1;">
+            <div class="service-card s7a" style="background: var(--navy-soft); border-color: var(--dark-rule); color: #ECE7DF;">
+              <h3>ligis.risk</h3>
+              <p>Counterparty risk check — pass / warn / fail + score</p>
+              <div class="price">$0.75</div>
+            </div>
+            <div class="service-card s7b" style="background: var(--navy-soft); border-color: var(--dark-rule); color: #ECE7DF;">
+              <h3>ligis.verify</h3>
+              <p>Single capability verification on Casper or Pharos</p>
+              <div class="price">$0.50</div>
+            </div>
+            <div class="service-card s7c" style="background: var(--navy-soft); border-color: var(--dark-rule); color: #ECE7DF;">
+              <h3>ligis.issue</h3>
+              <p>Issue signed capability credentials on-chain</p>
+              <div class="price">$2.00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8 CLOSE -->
+      <div id="s8" class="scene clip" data-start="58" data-duration="8" data-track-index="0" style="background: var(--paper);">
+        <div class="content" style="justify-content: center;">
+          <div class="display s8a" style="font-size: 100px;">Ligis on CROO</div>
+          <div class="display s8b" style="font-size: 40px; color: var(--terra); margin-top: 16px; max-width: 1100px;">Don't pay an agent until Ligis proves it's credentialed.</div>
+          <div class="mono s8c" style="margin-top: 40px; font-size: 16px; color: var(--ink-quiet);">agent.croo.network · github.com/sneldao/ligis</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      tl.from("#s1 .s1a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.2);
+      tl.from("#s1 .s1b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.8);
+      tl.from("#s2 .s2a", { scale: 0.92, opacity: 0, duration: 0.8, ease: "power3.out" }, 5.2);
+      tl.from("#s2 .s2b", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 5.9);
+      tl.from("#s2 .pill", { y: 20, opacity: 0, duration: 0.5, stagger: 0.1 }, 6.4);
+      tl.from("#s3 .s3a", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 10.2);
+      tl.from("#s3 .s3b .flow-step", { y: 30, opacity: 0, duration: 0.5, stagger: 0.12, ease: "power3.out" }, 11.0);
+      tl.from("#s4 .s4a", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 18.2);
+      tl.from("#s5 .s5a", { scale: 0.9, opacity: 0, duration: 0.8, ease: "power3.out" }, 28.2);
+      tl.from("#s5 .s5b", { y: 20, opacity: 0, duration: 0.7, ease: "power3.out" }, 29.0);
+      tl.from("#s5 .s5c", { opacity: 0, duration: 0.6, ease: "power3.out" }, 29.6);
+      tl.from("#s6 .s6a", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 38.2);
+      tl.from("#s6 .s6b", { x: -30, opacity: 0, duration: 0.8, ease: "power3.out" }, 39.0);
+      tl.from("#s6 .s6c", { x: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 39.2);
+      tl.from("#s7 .service-card", { y: 40, opacity: 0, duration: 0.7, stagger: 0.12, ease: "power3.out" }, 48.2);
+      tl.from("#s8 .s8a", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 58.2);
+      tl.from("#s8 .s8b", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 58.8);
+      tl.from("#s8 .s8c", { opacity: 0, duration: 0.5, ease: "power3.out" }, 59.4);
+
+      window.__timelines["ligis-croo-hackathon"] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Ligis — portable on-chain identity for AI agents</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --paper: #F4F1EC;
+        --paper-soft: #ECE7DF;
+        --tile: #F3E1DA;
+        --ink: #1C1B1A;
+        --ink-quiet: #5C5852;
+        --ink-faint: #6F6A62;
+        --terra: #B85D3E;
+        --sage: #6F8267;
+        --navy: #181615;
+        --navy-soft: #1F1C1B;
+        --navy-elev: #252120;
+        --rule: rgba(28, 27, 26, 0.12);
+        --rule-soft: rgba(28, 27, 26, 0.06);
+        --dark-rule: rgba(236, 231, 223, 0.14);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); color: var(--ink); font-family: "Hanken Grotesk", sans-serif; }
+      .mono { font-family: "JetBrains Mono", monospace; }
+      .ink-quiet { color: var(--ink-quiet); }
+      .ink-faint { color: var(--ink-faint); }
+      .terra { color: var(--terra); }
+      .sage { color: var(--sage); }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--paper);
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        display: flex;
+        flex-direction: column;
+      }
+      .dark { background: var(--navy); color: #ECE7DF; }
+      .content { position: relative; width: 100%; height: 100%; padding: 80px 120px; display: flex; flex-direction: column; }
+      .eyebrow { font-family: "JetBrains Mono", monospace; font-weight: 500; font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; }
+      .display { font-family: "Hanken Grotesk", sans-serif; font-weight: 400; line-height: 1.05; letter-spacing: -0.02em; }
+      .body-text { font-family: "Hanken Grotesk", sans-serif; font-weight: 400; line-height: 1.45; }
+      .chain-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: "JetBrains Mono", monospace; font-size: 13px;
+        padding: 6px 12px; border: 1px solid var(--rule); background: var(--paper);
+      }
+      .chain-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      .chain-pill.casper { color: var(--terra); border-color: rgba(184, 93, 62, 0.35); }
+      .pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-family: "JetBrains Mono", monospace; font-size: 12px;
+        padding: 5px 10px; border: 1px solid var(--rule); background: var(--paper);
+      }
+      .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+      .pill.sage { color: var(--sage); border-color: rgba(111, 130, 103, 0.4); }
+      .pill.terra { color: var(--terra); border-color: rgba(184, 93, 62, 0.4); }
+      .frame {
+        position: relative; border: 1px solid var(--rule); overflow: hidden; background: var(--paper-soft);
+      }
+      .frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .frame .caption {
+        position: absolute; left: 14px; bottom: 12px;
+        font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-quiet);
+        background: var(--paper); padding: 4px 8px; border: 1px solid var(--rule-soft);
+      }
+      .terminal {
+        background: var(--navy); color: #D4D0C8;
+        font-family: "JetBrains Mono", monospace; font-size: 15px; line-height: 1.55;
+        padding: 28px 32px; border: 1px solid var(--dark-rule); overflow: hidden;
+      }
+      .terminal .green { color: #8BA888; }
+      .terminal .cyan { color: #7FA8B3; }
+      .terminal .yellow { color: #D4A96A; }
+      .terminal .red { color: #C97A6A; }
+      .terminal .dim { color: #6F6A62; }
+      .terminal .bold { font-weight: 700; color: #ECE7DF; }
+      .hash { font-family: "JetBrains Mono", monospace; font-size: 15px; word-break: break-all; line-height: 1.5; color: var(--ink-quiet); }
+      .cap-row {
+        display: flex; align-items: center; gap: 16px; padding: 14px 0;
+        border-top: 1px solid var(--rule); font-family: "JetBrains Mono", monospace; font-size: 16px;
+      }
+      .cap-row:last-child { border-bottom: 1px solid var(--rule); }
+      .cap-row .name { flex: 0 0 240px; font-weight: 500; color: var(--ink); }
+      .cap-row .hash-sm { flex: 1; font-size: 12px; color: var(--ink-quiet); }
+      .cap-row .status { flex: 0 0 90px; text-align: right; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+      .kicker-spike { color: var(--terra); }
+      .kicker-spike::before { content: "✱ "; }
+
+      audio { display: none; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="ligis-buildathon-2026"
+      data-start="0"
+      data-duration="56"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- AUDIO -->
+      <audio id="voiceover" src="audio/mixed.mp3" preload="auto" data-start="0" data-duration="56"></audio>
+
+      <!-- SCENE 1 — HOOK (0s..5s) -->
+      <div
+        id="s1-hook"
+        class="scene clip"
+        data-start="0"
+        data-duration="5"
+        data-track-index="0"
+        style="background: var(--paper);"
+      >
+        <div class="content" style="justify-content: center;">
+          <div class="eyebrow ink-quiet" style="margin-bottom: 32px;">Casper Agentic Buildathon 2026</div>
+          <div class="display s1-line1" style="font-size: 96px; max-width: 1500px;">
+            AI agents are getting smarter.
+          </div>
+          <div class="display s1-line2" style="font-size: 96px; max-width: 1500px; color: var(--terra); margin-top: 8px;">
+            But they're still anonymous.
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 2 — THE GAP (5s..10s) -->
+      <div
+        id="s2-gap"
+        class="scene dark clip"
+        data-start="5"
+        data-duration="5"
+        data-track-index="0"
+      >
+        <div class="content" style="justify-content: center; gap: 48px;">
+          <div class="display s2-line1" style="font-size: 80px; max-width: 1400px; color: #ECE7DF;">
+            A wallet isn't an identity.
+          </div>
+          <div class="display s2-line2" style="font-size: 80px; max-width: 1400px; color: var(--terra);">
+            A prompt isn't a permission.
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 3 — LIGIS (10s..15s) -->
+      <div
+        id="s3-ligis"
+        class="scene clip"
+        data-start="10"
+        data-duration="5"
+        data-track-index="0"
+        style="background: var(--paper);"
+      >
+        <div class="content" style="justify-content: space-between;">
+          <div class="display s3-logo" style="font-size: 180px; color: var(--ink);">Ligis</div>
+          <div style="max-width: 1200px;">
+            <div class="display s3-line1" style="font-size: 52px; color: var(--ink); margin-bottom: 24px;">
+              Portable on-chain identity, plus signed, revocable capability credentials.
+            </div>
+            <div style="display: flex; gap: 24px; margin-top: 40px;">
+              <div class="pill sage"><span class="dot"></span>Mint</div>
+              <div class="pill sage"><span class="dot"></span>Issue</div>
+              <div class="pill sage"><span class="dot"></span>Verify</div>
+              <div class="pill sage"><span class="dot"></span>Revoke</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 4 — CROSS-CHAIN HASH (15s..20s) -->
+      <div
+        id="s4-hash"
+        class="scene dark clip"
+        data-start="15"
+        data-duration="5"
+        data-track-index="0"
+      >
+        <div class="content">
+          <div class="eyebrow" style="color: var(--terra);">The load-bearing fact</div>
+          <div class="display s4-line" style="font-size: 56px; color: #ECE7DF; margin-top: 28px; max-width: 1400px;">
+            The same capability hash is recognized on <span style="color: var(--terra);">Casper</span> and on <span style="color: var(--terra);">EVM</span>.
+          </div>
+          <div class="terminal s4-code" style="margin-top: 48px; max-width: 900px;">
+<span class="cyan">function</span> <span class="bold">capabilityHash</span>(<span class="cyan">string memory</span> name) <span class="cyan">public pure returns</span> (bytes32) {
+  <span class="cyan">return</span> <span class="green">keccak256</span>(<span class="green">bytes</span>(name));
+}
+
+<span class="dim">// →</span> <span class="yellow">0x3896aa823fd86757d5571381d3b312d999ef106a612f9407f5c3a4b235f35e3e</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 5 — MINT (20s..25s) -->
+      <div
+        id="s5-mint"
+        class="scene clip"
+        data-start="20"
+        data-duration="5"
+        data-track-index="0"
+        style="background: var(--paper);"
+      >
+        <div class="content">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="eyebrow kicker-spike">01 · BOOT</div>
+            <div class="chain-pill casper"><span class="dot"></span>casper-testnet</div>
+          </div>
+          <div class="display s5-line" style="font-size: 64px; margin-top: 24px; max-width: 900px;">
+            On Casper Testnet, an agent mints its own identity.
+          </div>
+          <div class="frame s5-img" style="margin-top: 36px; flex: 1; min-height: 0;">
+            <img src="assets/images/02-cspr-smoke-mint.png" alt="cspr.live mint_self tx" />
+            <div class="caption">cspr.live · AgentId.mint_self</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 6 — ISSUE + SIGNATURE RECOVERY (25s..35s) -->
+      <div
+        id="s6-issue"
+        class="scene dark clip"
+        data-start="25"
+        data-duration="10"
+        data-track-index="0"
+      >
+        <div class="content">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="eyebrow kicker-spike">02 · ISSUE</div>
+            <div class="chain-pill casper" style="background: var(--navy-soft);"><span class="dot"></span>casper-testnet</div>
+          </div>
+          <div class="display s6-line" style="font-size: 48px; color: #ECE7DF; margin-top: 20px; max-width: 1300px;">
+            The Trust Steward signs an EIP-712 credential, and the Casper contract recovers the issuer on-chain using secp256k1.
+          </div>
+          <div style="margin-top: 32px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; flex: 1; min-height: 0;">
+            <div class="frame s6-img" style="min-height: 0;">
+              <img src="assets/images/03-cspr-smoke-issue.png" alt="cspr.live issue tx" />
+              <div class="caption">cspr.live · CredentialRegistry.issue</div>
+            </div>
+            <div class="terminal s6-code" style="min-height: 0; font-size: 14px;">
+<span class="dim">// credential_registry.rs</span>
+<span class="cyan">pub fn</span> <span class="bold">issue</span>(
+  &mut self,
+  subject: Address,
+  capability: String,
+  digest: [u8; 32],
+  signature: Vec<u8>,
+  expiry: u64,
+) {
+  <span class="cyan">let</span> issuer = <span class="bold">recover_issuer</span>(digest, signature);
+  <span class="cyan">assert_eq!</span>(issuer, <span class="bold">self.issuer</span>, "bad issuer");
+  <span class="green">// store credential...</span>
+}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 7 — AUTONOMOUS LOOP (35s..44s) -->
+      <div
+        id="s7-loop"
+        class="scene clip"
+        data-start="35"
+        data-duration="9"
+        data-track-index="0"
+        style="background: var(--paper);"
+      >
+        <div class="content">
+          <div class="eyebrow kicker-spike" style="margin-bottom: 16px;">03 · AUTONOMOUS LOOP</div>
+          <div class="display s7-line" style="font-size: 48px; max-width: 1300px; margin-bottom: 32px;">
+            Boot. Reason. Gate. Act. Record. All on Casper.
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; flex: 1; min-height: 0;">
+            <div class="frame s7-img1" style="min-height: 0;">
+              <img src="assets/images/06-cspr-e2e-rwa-accredited.png" alt="rwa.accredited issue tx" />
+              <div class="caption">rwa.accredited</div>
+            </div>
+            <div class="frame s7-img2" style="min-height: 0;">
+              <img src="assets/images/07-cspr-e2e-x402-commerce.png" alt="agent.commerce.x402 issue tx" />
+              <div class="caption">agent.commerce.x402</div>
+            </div>
+            <div class="frame s7-img3" style="min-height: 0;">
+              <img src="assets/images/08-cspr-e2e-data-premium.png" alt="data.premium issue tx" />
+              <div class="caption">data.premium</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 8 — x402 PAYOFF (44s..52s) -->
+      <div
+        id="s8-x402"
+        class="scene dark clip"
+        data-start="44"
+        data-duration="8"
+        data-track-index="0"
+      >
+        <div class="content" style="justify-content: center;">
+          <div class="eyebrow kicker-spike" style="margin-bottom: 24px;">04 · PAYOFF</div>
+          <div class="display s8-line" style="font-size: 56px; color: #ECE7DF; max-width: 1400px; margin-bottom: 48px;">
+            That credential unlocks a paid x402 endpoint — credential verified, payment settled on Casper.
+          </div>
+          <div style="display: flex; gap: 24px; align-items: center;">
+            <div class="pill sage" style="background: var(--navy-soft);"><span class="dot"></span>GET /premium-rwa</div>
+            <div class="mono" style="color: var(--ink-faint); font-size: 24px;">→</div>
+            <div class="pill terra" style="background: var(--navy-soft);"><span class="dot"></span>402 Payment Required</div>
+            <div class="mono" style="color: var(--ink-faint); font-size: 24px;">→</div>
+            <div class="pill sage" style="background: var(--navy-soft);"><span class="dot"></span>200 Credential OK</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 9 — CLOSE (52s..56s) -->
+      <div
+        id="s9-close"
+        class="scene clip"
+        data-start="52"
+        data-duration="4"
+        data-track-index="0"
+        style="background: var(--paper);"
+      >
+        <div class="content" style="justify-content: center;">
+          <div class="display s9-line1" style="font-size: 120px; color: var(--ink);">Ligis</div>
+          <div class="display s9-line2" style="font-size: 48px; color: var(--terra); margin-top: 16px; max-width: 1200px;">
+            Portable trust for the agent economy.
+          </div>
+          <div class="mono ink-quiet" style="margin-top: 48px; font-size: 16px;">
+            github.com/sneldao/ligis · ligis.vercel.app
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const root = document.getElementById("root");
+      const dur = parseFloat(root.dataset.duration);
+
+      // SCENE 1 — Hook
+      tl.from("#s1-hook .s1-line1", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.2);
+      tl.from("#s1-hook .s1-line2", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.9);
+
+      // SCENE 2 — Gap
+      tl.from("#s2-gap .s2-line1", { x: -60, opacity: 0, duration: 0.7, ease: "power3.out" }, 5.2);
+      tl.from("#s2-gap .s2-line2", { x: -60, opacity: 0, duration: 0.7, ease: "power3.out" }, 6.0);
+
+      // SCENE 3 — Ligis
+      tl.from("#s3-ligis .s3-logo", { scale: 0.92, opacity: 0, duration: 0.8, ease: "power3.out" }, 10.2);
+      tl.from("#s3-ligis .s3-line1", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 10.9);
+      tl.from("#s3-ligis .pill", { y: 20, opacity: 0, duration: 0.5, stagger: 0.1, ease: "power3.out" }, 11.4);
+
+      // SCENE 4 — Hash
+      tl.from("#s4-hash .s4-line", { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 15.2);
+      tl.from("#s4-hash .s4-code", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 15.9);
+
+      // SCENE 5 — Mint
+      tl.from("#s5-mint .s5-line", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 20.2);
+      tl.from("#s5-mint .s5-img", { scale: 1.03, opacity: 0, duration: 0.8, ease: "power3.out" }, 20.8);
+
+      // SCENE 6 — Issue
+      tl.from("#s6-issue .s6-line", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 25.2);
+      tl.from("#s6-issue .s6-img", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 25.9);
+      tl.from("#s6-issue .s6-code", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 26.2);
+
+      // SCENE 7 — Loop
+      tl.from("#s7-loop .s7-line", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 35.2);
+      tl.from("#s7-loop .s7-img1", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 35.9);
+      tl.from("#s7-loop .s7-img2", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 36.2);
+      tl.from("#s7-loop .s7-img3", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 36.5);
+
+      // SCENE 8 — x402
+      tl.from("#s8-x402 .s8-line", { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 44.2);
+      tl.from("#s8-x402 .pill", { y: 20, opacity: 0, duration: 0.5, stagger: 0.15, ease: "power3.out" }, 45.0);
+
+      // SCENE 9 — Close
+      tl.from("#s9-close .s9-line1", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 52.2);
+      tl.from("#s9-close .s9-line2", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 52.7);
+      tl.from("#s9-close .mono", { opacity: 0, duration: 0.5, ease: "power3.out" }, 53.3);
+
+      window.__timelines["ligis-buildathon-2026"] = tl;
+    </script>
+  </body>
+</html>

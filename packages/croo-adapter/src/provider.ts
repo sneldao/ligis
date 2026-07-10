@@ -138,6 +138,8 @@ export const defaultServices: ServiceDescriptor[] = [
 export class LigisCrooProvider {
   private client: CrooClient;
   private serviceMap: Map<string, ServiceDescriptor>;
+  /** Idempotent delivery: skip duplicate OrderPaid events for the same order. */
+  private fulfilledOrders = new Set<string>();
 
   constructor(opts: ProviderOptions) {
     this.client = opts.client;
@@ -200,6 +202,17 @@ export class LigisCrooProvider {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     event: any,
   ): Promise<void> {
+    if (this.fulfilledOrders.has(orderId)) {
+      console.log(
+        `[ligis-croo] order ${orderId} already fulfilled — skipping duplicate OrderPaid`,
+      );
+      return;
+    }
+    // Claim the order synchronously (before any await) so a duplicate
+    // OrderPaid arriving while this one is still in flight sees the claim
+    // and skips, instead of racing to a second deliverOrder call.
+    this.fulfilledOrders.add(orderId);
+
     console.log(`[ligis-croo] order paid: ${orderId}`);
 
     const serviceId: string | undefined = event.service_id ?? event.serviceId;
@@ -210,6 +223,7 @@ export class LigisCrooProvider {
       console.error(
         `[ligis-croo] cannot fulfill order ${orderId}: missing service or requirements`,
       );
+      this.fulfilledOrders.delete(orderId);
       return;
     }
 
@@ -236,6 +250,9 @@ export class LigisCrooProvider {
           `[ligis-croo] failed to deliver error payload:`,
           deliverErr,
         );
+        // Both the primary and error-payload deliveries failed — release the
+        // claim so a genuine retry (not just a duplicate event) can succeed.
+        this.fulfilledOrders.delete(orderId);
       }
     }
   }

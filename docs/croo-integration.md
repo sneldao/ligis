@@ -30,11 +30,15 @@ Requester Agent                       CROO/CAP                      Ligis Provid
 
 ## Services
 
+Listed on the CROO Agent Store:
+
 | Service | What it proves | On-chain action | Deliverable |
 |---|---|---|---|
 | `ligis.risk` | Counterparty risk check | `CredentialRegistry.isCapable` read(s) | `{ overallVerdict, riskScore, checks[], summary }` |
-| `ligis.verify` | Single credential validity | `CredentialRegistry.isCapable` read | `{ capable, capabilityHash, latestCredential }` |
-| `ligis.issue` | Issuer grants a capability | `CredentialRegistry.issue` write | `{ capabilityHash, txHash }` |
+
+`ligis.verify` and `ligis.issue` are implemented in the provider but not
+listed/priced on the Store yet — see "Why this is differentiated" below for
+why each needs more before it's a defensible paid service.
 
 ## Use case: verify an escrow agent
 
@@ -55,18 +59,38 @@ if (report.overallVerdict === "pass") {
 }
 ```
 
+## Judge repro
+
+```bash
+# Provider (Terminal 1)
+set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm croo
+
+# Requester (Terminal 2) — full CAP lifecycle
+set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm demo:croo
+
+# On-chain only — Casper CredentialRegistry read, no CROO payment
+set -a && source .env.d/casper.env && set +a && pnpm demo:croo -- --on-chain-only
+```
+
+> Note the `set -a` / `set +a` around the `source` calls: plain `source
+> file.env` only sets shell-local variables, it does not export them to the
+> `node` child process, so `pnpm croo` would otherwise fail with `Missing
+> required environment variable: CROO_SDK_KEY`.
+
+See [`docs/croo-hackathon-submission.md`](croo-hackathon-submission.md) for BUIDL copy.
+
 ## Setup
 
 1. Go to [CROO Agent Store](https://agent.croo.network).
 2. Create an agent named **Ligis**.
-3. Register the three services from `packages/croo-adapter/croo-store-manifest.json`.
+3. Register the `ligis.risk` service from `packages/croo-adapter/croo-store-manifest.json`.
 4. Copy the SDK key.
 5. Create `.env.d/croo.env` from `.env.d/croo.env.example`.
 
 ## Run the provider
 
 ```bash
-export $(grep -v '^#' .env.d/croo.env | grep -v '^$' | xargs)
+set -a && source .env.d/casper.env && source .env.d/croo.env && set +a
 pnpm croo
 ```
 
@@ -74,18 +98,27 @@ The provider will:
 
 1. Connect to the CROO WebSocket.
 2. Listen for `NegotiationCreated` events.
-3. Accept negotiations for `ligis.risk`, `ligis.verify`, and `ligis.issue`.
-4. On `OrderPaid`, read from or write to the configured Ligis chain.
+3. Accept negotiations for `ligis.risk` (the code also handles `ligis.verify`
+   and `ligis.issue` if hired directly, but only `ligis.risk` is listed on
+   the Store).
+4. On `OrderPaid`, read from the configured Ligis chain.
 5. Call `deliverOrder()` with a JSON verdict.
 
 ## Why this is differentiated
 
 - **Cross-chain credentials**: a credential issued on Casper is verifiable on
-  Pharos because `capabilityHash()` and the issuer secp256k1 key are shared.
+  Pharos because `capabilityHash()` and the issuer secp256k1 key are shared —
+  a buyer agent gets one verdict without needing to know or query which chain
+  the credential actually lives on.
 - **On-chain enforcement**: signatures are recovered and issuers are enforced
   by the contract, not by a server.
 - **Risk score**: `ligis.risk` goes beyond yes/no and returns a 0–100 score
-  plus TTL warnings, making it actionable for automated A2A decisions.
+  plus TTL warnings, making it actionable for automated A2A decisions. This is
+  also why it's the only service listed on the Store today: a raw
+  `CredentialRegistry.isCapable` read (`ligis.verify`) is a public view
+  function any counterparty can call directly for free, so a single-read
+  passthrough doesn't earn its fee — `ligis.risk`'s batching, TTL logic, and
+  scoring is real work a buyer agent would otherwise write itself.
 
 ## Files
 

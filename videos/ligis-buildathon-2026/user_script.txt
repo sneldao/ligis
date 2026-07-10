@@ -1,0 +1,20 @@
+Ligis — Portable on-chain identity and verifiable credentials for AI agents.
+
+Goal: A 1-minute, fast-paced hackathon demo video that proves Ligis works end-to-end on Casper Testnet.
+
+Angle: Show the problem (agents have wallets but no portable trust), the Ligis solution (AgentId + signed capability credentials + Trust Steward loop), and the live payoff (credential-gated x402 payment for premium RWA data, settled on Casper).
+
+Length: 60 seconds.
+Aspect: 16:9.
+Language: English.
+Tone: Dynamic, confident, builder-focused, hackathon-winning.
+
+Key beats:
+1. Hook — agents are powerful but can't prove who they are or who vouches for them.
+2. Ligis identity — mint a portable AgentId on Casper.
+3. Capabilities — the Trust Steward self-issues signed EIP-712 credentials on-chain.
+4. Verification — the same capability hash is recognized across Casper and EVM.
+5. Payoff — use the credential to unlock an x402 paid endpoint and settle CSPR on Casper.
+6. Close — Ligis is live, portable trust for the agent economy.
+
+Use live terminal captures, cspr.live transaction screenshots, code snippets, and bold kinetic typography. Voiceover should be clear, energetic, and under 60s.

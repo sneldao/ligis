@@ -57,7 +57,7 @@ debug.log
 .agents/
 .casper/
 
-# video project — source tracked, rendered output + captures ignored
+# video projects — source tracked, rendered output + captures ignored
 /video/*/ligis-demo.mp4
 /video/*/renders/
 /video/*/thumbs/
@@ -66,6 +66,14 @@ debug.log
 /video/*/assets/captures/
 /video/*/node_modules/
 /video/*/package-lock.json
+/videos/*/renders/
+/videos/*/thumbs/
+/videos/*/assets/images/
+/videos/*/assets/audio/
+/videos/*/audio/
+/videos/*/capture/
+/videos/*/node_modules/
+/videos/*/package-lock.json
 
 # accidental build output of an earlier tsc run — not the real package
 # (real one is packages/adapter-casper/); keep ignored unless user confirms

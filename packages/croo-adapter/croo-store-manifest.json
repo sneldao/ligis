@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": "https://github.com/sneldao/ligis",
   "website": "https://ligis.vercel.app",
-  "demoVideo": "https://github.com/sneldao/ligis/videos/ligis-buildathon-2026/renders/ligis-buildathon-2026-final.mp4",
+  "demoVideo": "https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4",
   "chains": ["Casper Testnet", "Pharos Atlantic Testnet", "Base"],
   "services": [
     {
@@ -59,69 +59,22 @@
           "summary": { "type": "string" }
         }
       }
-    },
+    }
+  ],
+  "roadmapServices": [
     {
       "id": "ligis.verify",
       "name": "Ligis Credential Verification",
-      "description": "On-chain verification that an AI agent holds a valid, non-expired, non-revoked Ligis capability credential. Works on Casper and Pharos.",
+      "description": "Single-capability on-chain read. Not listed on the Store yet: a bare CredentialRegistry.isCapable read is publicly queryable by any counterparty for the cost of an RPC call, so this needs a real value-add (e.g. multi-chain resolution in one call) before it's worth charging for.",
       "priceUsd": "0.50",
-      "inputSchema": {
-        "type": "object",
-        "required": ["subject", "capability"],
-        "properties": {
-          "subject": {
-            "type": "string",
-            "description": "Agent DID or chain-native address to verify"
-          },
-          "capability": {
-            "type": "string",
-            "description": "Capability name, e.g. agent.commerce.escrow"
-          },
-          "issuer": {
-            "type": "string",
-            "description": "Optional trusted issuer address to constrain the check"
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "properties": {
-          "capable": { "type": "boolean" },
-          "capabilityHash": { "type": "string" },
-          "latestCredential": { "type": "object" }
-        }
-      }
+      "status": "roadmap"
     },
     {
       "id": "ligis.issue",
       "name": "Ligis Credential Issuance",
-      "description": "Issue a signed, revocable Ligis capability credential to a subject. Requires issuer key configuration.",
+      "description": "Signs and submits a capability credential on-chain. Requires issuer key configuration. Not listed on the Store yet: only worth paying Ligis for once 'issued by Ligis' carries trust in the ecosystem, which the hackathon submission alone doesn't establish.",
       "priceUsd": "2.00",
-      "inputSchema": {
-        "type": "object",
-        "required": ["subject", "capability"],
-        "properties": {
-          "subject": {
-            "type": "string",
-            "description": "Agent DID or chain-native address to receive the credential"
-          },
-          "capability": {
-            "type": "string",
-            "description": "Capability name, e.g. kyc.verified"
-          },
-          "expiresInSeconds": {
-            "type": "number",
-            "description": "Credential lifetime in seconds"
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "properties": {
-          "capabilityHash": { "type": "string" },
-          "txHash": { "type": "string" }
-        }
-      }
+      "status": "roadmap"
     }
   ],
   "readme": "packages/croo-adapter/README.md"

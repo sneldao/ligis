@@ -174,6 +174,7 @@ address.
 - Repo: github.com/sneldao/ligis (MIT)
 - Web: ligis.vercel.app (live, chain-aware)
 - Demo video: github.com/sneldao/ligis/releases/download/buildathon-2026/ligis-demo.mp4
+- **CROO Hackathon** (parallel submission): same Casper contracts power CAP services on [agent.croo.network](https://agent.croo.network) — see [`docs/croo-hackathon-submission.md`](croo-hackathon-submission.md)
 - Twitter / X: (to be added before submission)
 
 ## Documentation

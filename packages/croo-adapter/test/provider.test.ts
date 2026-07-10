@@ -100,4 +100,24 @@ describe("LigisCrooProvider", () => {
     const payload = JSON.parse(String((deliverCall.args[1] as Record<string, string>).deliverableText));
     assert.strictEqual(payload.error, true);
   });
+
+  it("delivers only once on duplicate OrderPaid events", async () => {
+    const mock = new MockCrooClient();
+    const provider = new LigisCrooProvider({ client: mock });
+    await provider.start();
+
+    const event = {
+      order_id: "order-dup",
+      service_id: "ligis.verify",
+      requirements: JSON.stringify({ bad: "input" }),
+    };
+
+    mock.emitEvent(EventType.OrderPaid, event);
+    mock.emitEvent(EventType.OrderPaid, event);
+
+    await new Promise((r) => setTimeout(r, 150));
+
+    const deliverCalls = mock.calls.filter((c) => c.method === "deliverOrder");
+    assert.strictEqual(deliverCalls.length, 1, "expected exactly one deliverOrder");
+  });
 });

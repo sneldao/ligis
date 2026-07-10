@@ -3,17 +3,31 @@
 > **Portable on-chain identity and verifiable credentials for AI agents.**
 > **Live on Pharos + Casper Testnet. Autonomous steward loop + x402 payments + CROO CAP commerce working end-to-end.**
 
-## Demo video
+## Active hackathon submissions
+
+| Hackathon | Track | Demo | Submission doc |
+|---|---|---|---|
+| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:35 Casper walkthrough](https://github.com/sneldao/ligis/releases/download/buildathon-2026/ligis-demo.mp4) | [`docs/casper-buidl.md`](docs/casper-buidl.md) |
+| **CROO Agent Hackathon 2026** | Data & Verification + Open A2A | [CROO demo](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4) *(upload before deadline)* | [`docs/croo-hackathon-submission.md`](docs/croo-hackathon-submission.md) |
+
+**One product, two proofs:** Casper contracts are the on-chain source of truth; CROO is how other agents pay for verification before A2A commerce. Same `CredentialRegistry` backs both demos.
+
+## Demo videos
+
+### Casper Agentic Buildathon (on-chain identity + x402)
 
 [Watch the 1:35 walkthrough (MP4, 5.6 MB)](https://github.com/sneldao/ligis/releases/download/buildathon-2026/ligis-demo.mp4)
 — also viewable on the [release page](https://github.com/sneldao/ligis/releases/tag/buildathon-2026).
 
-The video is composed in [`video/ligis-demo/`](video/ligis-demo/) using
+### CROO Agent Hackathon (CAP commerce + verification)
+
+[Watch the CROO walkthrough](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4)
+— CAP negotiate → pay → deliver, with Casper on-chain proof. Source: [`videos/ligis-croo-hackathon/`](videos/ligis-croo-hackathon/).
+
+The Casper video is composed in [`videos/ligis-buildathon-2026/`](videos/ligis-buildathon-2026/) using
 [HyperFrames](https://github.com/heygen-com/hyperframes) with live terminal
 captures of `casper-e2e-demo.ts` and `casper-x402-demo.ts`, real cspr.live
-transaction screenshots, and a 9-segment TTS voiceover. The composition
-source (`index.html`) is committed; the rendered MP4 ships in the
-`buildathon-2026` GitHub Release.
+transaction screenshots, and a 9-segment TTS voiceover.
 
 A chain-agnostic agent identity runtime: one `ChainAdapter` interface, two
 implementations (EVM/Pharos live, Casper/Odra live), and a Trust
@@ -172,11 +186,21 @@ Ligis is listed as a callable agent on the [CROO Agent Store](https://agent.croo
 Before one agent pays another, it can hire Ligis to run a **counterparty risk
 check** and receive a pass/warn/fail verdict plus a 0–100 risk score.
 
+**Judge repro (CROO Hackathon):**
+
 ```bash
-# Run the CAP provider (listens for CROO negotiations, accepts, checks risk, delivers)
-export $(grep -v '^#' .env.d/croo.env | grep -v '^$' | xargs)
-pnpm croo
+# Terminal 1 — provider
+set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm croo
+
+# Terminal 2 — hire Ligis via CAP
+set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm demo:croo
 ```
+
+> `source file.env` alone only sets shell-local variables — it does not
+> export them to the `node`/`pnpm` child process. `set -a` (allexport) makes
+> everything sourced after it exported automatically; `set +a` turns that
+> back off. Without it, `pnpm croo` fails immediately with `Missing required
+> environment variable: CROO_SDK_KEY`.
 
 | Service | What you get | Input |
 |---|---|---|
@@ -192,9 +216,10 @@ See [`docs/croo-integration.md`](docs/croo-integration.md) and [`packages/croo-a
 |-----|-------------|
 | [Architecture](docs/architecture.md) | Contract design, module structure, repository layout |
 | [Monorepo structure](MONOREPO_STRUCTURE.md) | Package layout, dependency graph, ChainAdapter interface, adding a new chain |
+| [CROO Integration](docs/croo-integration.md) | CAP adapter, Agent Store listing, provider/requester usage |
+| [CROO Hackathon submission](docs/croo-hackathon-submission.md) | BUIDL copy, judge repro, track alignment |
 | [Casper Buildathon](docs/casper-buildathon.md) | Submission plan, product story, day-by-day roadmap, demo storyboard |
 | [Trust Steward Agent](docs/trust-steward-agent.md) | The autonomous loop, 0G integration, build phases |
-| [CROO Integration](docs/croo-integration.md) | CAP adapter, Agent Store listing, provider/requester usage |
 | [Security](docs/security.md) | Non-custodial design, EIP-712 replay protection |
 | [Setup](docs/setup.md) | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify |
 | [SKILL.md](SKILL.md) | Director entry point for AI agents |

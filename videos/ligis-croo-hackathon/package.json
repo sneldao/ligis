@@ -1,0 +1,14 @@
+{
+  "name": "ligis-croo-hackathon",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.7.41 preview",
+    "check": "npx --yes hyperframes@0.7.41 lint && npx --yes hyperframes@0.7.41 validate && npx --yes hyperframes@0.7.41 inspect",
+    "render": "npx --yes hyperframes@0.7.41 render",
+    "capture": "tsx capture-croo.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.0"
+  }
+}

@@ -1,0 +1,9 @@
+AI agents are getting smarter — but they're still anonymous.
+A wallet isn't an identity. A prompt isn't a permission.
+Ligis fixes that. Portable on-chain identity, plus signed, revocable capability credentials.
+The same capability hash is recognized on Casper and on EVM.
+On Casper Testnet, an agent mints its own identity.
+The Trust Steward signs an EIP-712 credential, and the Casper contract recovers the issuer on-chain using secp256k1.
+The Steward runs the full autonomous loop: boot, reason, gate, act, record — all on Casper.
+That credential unlocks a paid x402 endpoint — credential verified, payment settled on Casper.
+Ligis is live on Casper Testnet. Portable trust for the agent economy.
