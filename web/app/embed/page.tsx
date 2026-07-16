@@ -50,7 +50,17 @@ export default function EmbedPage() {
         </p>
       </section>
 
-      <section className="mt-24 space-y-6">
+      {/* Third live user of the reveal pattern. The three numbered
+          sections (URL / iframe / Preview) carry the same
+          `animate-triptych-reveal` opt-in the
+          StewardTriptych + /capabilities categories use. Uniform 280ms
+          cascade matches the trilogy: first live user is the
+          StewardTriptych on /steward, second is the /capabilities
+          IDENTITY/FINANCE/COMMERCE categories, this is the third. */}
+      <section
+        className="mt-24 space-y-6 animate-triptych-reveal"
+        data-anim-delay="0"
+      >
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">01 · The URL</p>
           <p className="font-mono text-[11px] tabular text-ink-quiet">GET</p>
@@ -63,7 +73,10 @@ export default function EmbedPage() {
         <Snippet code={directLink} lang="url" />
       </section>
 
-      <section className="mt-24 space-y-6">
+      <section
+        className="mt-24 space-y-6 animate-triptych-reveal"
+        data-anim-delay="120"
+      >
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">02 · The iframe</p>
           <p className="font-mono text-[11px] tabular text-ink-quiet">html</p>
@@ -76,7 +89,10 @@ export default function EmbedPage() {
         <Snippet code={iframeCode} lang="html" />
       </section>
 
-      <section className="mt-24 space-y-6">
+      <section
+        className="mt-24 space-y-6 animate-triptych-reveal"
+        data-anim-delay="280"
+      >
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">03 · Preview</p>
           <p className="font-mono text-[11px] tabular text-ink-quiet">live</p>

@@ -35,8 +35,10 @@ const REFERENCE = [
 // Three editorial groups that organise the reference set by prefix
 // taxonomy. The categories also drive the three-step staggered reveal
 // via the .animate-triptych-reveal utility (hoisted to globals.css).
-// First live user of the pattern is StewardTriptych on /steward;
-// this page is the second.
+// Live users of the pattern, in order:
+//   1. /steward — StewardTriptych (genesis / synthesis / stasis)
+//   2. /capabilities (this page) — IDENTITY / FINANCE / COMMERCE
+//   3. /embed — URL / iframe / Preview numbered sections
 const CATEGORIES = [
   {
     name: "IDENTITY",

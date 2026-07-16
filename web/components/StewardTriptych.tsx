@@ -28,8 +28,10 @@ type Panel = {
  * with per-panel delay selected via `data-anim-delay="0" | "120" | "280"`.
  * Server component — no `<style>`, no inline keyframes, no client hooks.
  *
- * Second live user of the same reveal pattern: the three category
- * sections (IDENTITY / FINANCE / COMMERCE) on `/capabilities`.
+ * Live users of the same reveal pattern, in cascade order:
+ *   1. this triptych on `/steward`              (genesis · synthesis · stasis)
+ *   2. `/capabilities` category sections        (IDENTITY · FINANCE · COMMERCE)
+ *   3. `/embed` numbered sections                (01 · URL / 02 · iframe / 03 · Preview)
  */
 export function StewardTriptych({
   isCasper = false,
