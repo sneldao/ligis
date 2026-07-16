@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ScrollHint } from "./DynamicIsland";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { type ChainNetwork } from "@/lib/network";
-import { ChainSelector } from "@/components/ChainSelector";
 
 const CatalogScene = dynamic(
   () => import("./CatalogScene").then((m) => m.CatalogScene),
@@ -89,12 +88,9 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
             read.
           </p>
           {chain ? (
-            <div className="mt-4 hidden flex-col items-center gap-1.5 sm:flex">
-              <ChainSelector activeId={chain.id} />
-              <p className="font-serif text-sm italic text-ink-quiet">
-                Same credential, verified on either chain.
-              </p>
-            </div>
+            <p className="mt-4 hidden font-serif text-sm italic text-ink-quiet sm:block">
+              Same credential, verified on either chain.
+            </p>
           ) : null}
         </motion.div>
 

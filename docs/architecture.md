@@ -20,7 +20,7 @@ user funds their own gas from the Casper Testnet faucet.
   │     generateKeyPair()            │         │   (public env: chain name,        │   │  proxy is the    │
   │     (@noble randomSecretKey)      │         │    AgentId +                      │   │  only bypass)    │
   │     ↓                            │         │    CredentialRegistry package    │   └──────────────────┘
-  │   WalletSlot in GlobalDock        │         │    hashes)                        │           │
+  │   WalletGate on /steward          │         │    hashes)                        │           │
   │     ↓                            │         │                                  │           │
   │   StewardRunner.run()             │         │                                  │           │
   │     chain=casper + wallet.pair ──│─────────│                                  │           │
@@ -164,7 +164,7 @@ web/
       ConditionalProviders.tsx  lazy mount on Casper pages
       WalletTree.tsx            dynamic-imported WalletProvider
       ConnectWallet[Inner].tsx  secp256k1 keypair gen + paste import UI
-      WalletSlot.tsx            shows wallet state in GlobalDock
+      WalletGate.tsx             wallet entry point on /steward (five visual states)
       StewardRunner.tsx         unified flow for both chains
   scripts/
     smoke-wallet-crypto.ts      byte-equality between @noble/curves and ethers

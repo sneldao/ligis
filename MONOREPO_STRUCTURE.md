@@ -73,7 +73,7 @@ ligis/
 │   │   ├── WalletTree.tsx                    # dynamic-imported WalletProvider wrapper
 │   │   ├── ConnectWallet.tsx                 # next/dynamic wrapper (ssr:false)
 │   │   ├── ConnectWalletInner.tsx            # secp256k1 keypair gen + paste import UI
-│   │   └── WalletSlot.tsx                    # shows wallet state in GlobalDock
+│   │   └── WalletGate.tsx                    # wallet entry point on /steward (five visual states)
 │   └── scripts/
 │       ├── smoke-wallet-crypto.ts            # @noble/curves ↔ ethers byte-identity (no Casper RPC)
 │       └── smoke-wallet-tx.ts                # builds mint_self TransactionV1 and checks wire bytes (no submit)

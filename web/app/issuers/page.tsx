@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { AddressDisplay } from "@/components/AddressDisplay";
-import { ChainSelector } from "@/components/ChainSelector";
 import { ChainBadge } from "@/components/ChainBadge";
 import { Rule } from "@/components/Rule";
 import { readIssuerActivity } from "@/lib/chain-router";
@@ -31,7 +30,6 @@ export default async function IssuersPage({
       <header className="flex items-baseline justify-between text-xs">
         <p className="eyebrow">Ligis · issuers 00</p>
         <div className="flex items-baseline gap-6">
-          <ChainSelector activeId={chain.id} />
           <ChainBadge chain={chain} />
           <Link
             href="/"

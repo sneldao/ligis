@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ChainSelector } from "@/components/ChainSelector";
 import { CopyButton } from "@/components/CopyButton";
 import { Rule } from "@/components/Rule";
 import { capabilities, network } from "@/lib/chain";
@@ -43,7 +42,6 @@ export default function CapabilitiesPage() {
       <header className="flex items-baseline justify-between text-xs">
         <p className="eyebrow">Ligis · capabilities 00</p>
         <div className="flex items-baseline gap-6">
-          <ChainSelector />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"

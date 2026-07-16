@@ -347,22 +347,14 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
               type="button"
               onClick={() => setLive((v) => !v)}
               className={`font-mono text-[11px] tabular transition-colors ${
-                walletReadyForLive
-                  ? "text-sky"
-                  : live
-                    ? "text-sage"
-                    : "text-ink-quiet"
+                live ? "text-sage" : "text-ink-quiet"
               }`}
             >
-              {!wallet.hydrated
-                ? "○ connecting…"
-                : walletReadyForLive
-                  ? "● live · your wallet"
-                  : isCasperChain && live && !wallet.pair
-                    ? "● live · connect to sign"
-                    : live
-                      ? "● live · on-chain"
-                      : "○ simulated · no writes"}
+              {running
+                ? "○ running…"
+                : live
+                  ? "● live · on-chain"
+                  : "○ simulated · no writes"}
             </button>
             {live && state.summary?.subject ? (
               <span className="font-mono text-[10px] tabular text-ink-soft">

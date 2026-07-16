@@ -5,8 +5,6 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { ChainSelector } from "@/components/ChainSelector";
-import { WalletSlot } from "@/components/WalletSlot";
-import { CASPER_TESTNET } from "@/lib/network";
 
 const NAV = [
   { href: "/#how", label: "How it works" },
@@ -68,13 +66,6 @@ export function GlobalDock() {
         </div>
 
         <span className="hidden h-3 w-px bg-paper-deep/30 sm:inline-block" aria-hidden />
-        {/* Wallet slot — connect pill or sky dot + pubkey prefix. Visible
-            on Casper pages only; on Pharos pages the dock stays slim. */}
-        <div className="hidden sm:block">
-          <WalletSlot />
-        </div>
-
-        <span className="hidden h-3 w-px bg-paper-deep/30 sm:inline-block" aria-hidden />
 
         {/* Nav links — always visible on desktop, never hidden by focus */}
         <nav className="hidden items-center gap-x-3 lg:flex">
@@ -120,9 +111,6 @@ export function GlobalDock() {
             style={{ borderRadius: 16 }}
           >          <div className="mb-4">
             <ChainSelector />
-          </div>
-          <div className="mb-4">
-            <WalletSlot />
           </div>
             <ul className="flex flex-col gap-y-3">
               {NAV.map((n) => (

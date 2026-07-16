@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ChainSelector } from "@/components/ChainSelector";
 import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
 import { capabilities, network } from "@/lib/chain";
@@ -29,7 +28,6 @@ export default function EmbedPage() {
       <header className="flex items-baseline justify-between text-xs">
         <p className="eyebrow">Ligis · embed 00</p>
         <div className="flex items-baseline gap-6">
-          <ChainSelector />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
@@ -98,19 +96,17 @@ export default function EmbedPage() {
             title="Ligis verification badge preview"
           />
         </div>
-      </section>
-
-      <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet">
-        <Link
-          href="/"
-          className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-        >
-          ← Return to the index
-        </Link>
-        <span className="font-mono tabular">
-          {network.name.toLowerCase()} · chain {network.chainId}
-        </span>
-      </footer>
+      </section>        <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet">
+          <Link
+            href="/"
+            className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+          >
+            ← Return to the index
+          </Link>
+          <span className="font-mono tabular">
+            {network.name.toLowerCase()} · chain {network.chainId}
+          </span>
+        </footer>
     </main>
   );
 }

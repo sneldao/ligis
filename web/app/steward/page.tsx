@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ChainSelector } from "@/components/ChainSelector";
 import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
 import { StewardRunner } from "@/components/StewardRunner";
+import { WalletGate } from "@/components/WalletGate";
 import { getChain, CASPER_TESTNET, PHAROS_ATLANTIC } from "@/lib/network";
 
 const PHAROS_GOAL =
@@ -53,7 +53,6 @@ export default async function StewardPage({
       <header className="flex items-baseline justify-between text-xs">
         <p className="eyebrow">Ligis · steward 00</p>
         <div className="flex items-baseline gap-6">
-          <ChainSelector />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
@@ -113,7 +112,14 @@ export default async function StewardPage({
         </div>
       </section>
 
-      <section className="mt-24">
+      {/* WalletGate — contextually-placed wallet entry point. Hidden on
+          Pharos. Provides the Connect / Funded / Awaiting funding CTA
+          that augments (and clarifies) the live-toggle indicator below. */}
+      <section className="mt-16">
+        <WalletGate />
+      </section>
+
+      <section className="mt-12">
         <Suspense fallback={<div className="font-mono text-sm text-ink-quiet">Loading steward…</div>}>
           <StewardRunner defaultGoal={defaultGoal} />
         </Suspense>

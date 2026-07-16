@@ -2,7 +2,6 @@ import { getAddress, type Address } from "viem";
 import { notFound } from "next/navigation";
 import { AddressDisplay } from "@/components/AddressDisplay";
 import { AgentHero } from "@/components/catalog/AgentHero";
-import { ChainSelector } from "@/components/ChainSelector";
 import { ChainBadge } from "@/components/ChainBadge";
 import { Rule } from "@/components/Rule";
 import { ShareRow } from "@/components/ShareRow";
@@ -76,7 +75,6 @@ export default async function AgentPage({
             {snap.exists ? "Agent · in the index" : "Agent · not in the index"}
           </p>
           <div className="flex items-baseline gap-6">
-            <ChainSelector activeId={chain.id} />
             <ChainBadge chain={chain} />
             <span className="font-mono tabular">
               {chain.name.toLowerCase()} · chain {chain.chainId}
