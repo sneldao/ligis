@@ -8,6 +8,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
+    "pretypecheck": "pnpm -r --filter \"./packages/*\" build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
