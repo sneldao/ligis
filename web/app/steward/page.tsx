@@ -71,45 +71,51 @@ export default async function StewardPage({
           who it is yet.
         </h1>
         <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
-          The Trust Steward arrives with nothing but a goal. No identity token,
-          no credentials, no proof of what it can do. Over the next few seconds
-          it mints its own agent ID on{" "}
-          <strong className="text-ink">{chain.name}</strong>, asks 0G Compute
-          what capabilities the goal requires, checks the credential registry,
-          self-issues whatever is missing, and anchors a tamper-proof manifest
-          of every step into 0G Storage. By the end it knows who it is, what it
-          can do, and can prove both. This is the autonomous loop.
+          A goal arrives with nothing: no identity, no credentials. The
+          Steward mints, reasons, gates, self-issues what is missing, then
+          roots a tamper-proof manifest of every step into 0G Storage.
         </p>
-        <div
-          className="mt-8 flex items-start gap-4 bg-paper-deep px-5 py-4"
-          style={{ borderLeft: "3px solid #B85D3E" }}
-        >
-          <span className="mt-0.5 shrink-0 font-mono text-[11px] uppercase tracking-[0.16em] text-terra">
-            three modes
-          </span>
-          <p className="font-serif text-sm leading-relaxed text-ink-soft">
-            The loop runs in three states: <strong>simulated</strong> (default —
-            no on-chain writes, no wallet needed), <strong>live reads</strong>{" "}
-            (real{" "}
-            <span className="font-mono text-ink">
-              {isCasper ? "isCapable" : "isCapableMulti"}
-            </span>{" "}
-            calls against the registry — happens automatically when contracts
-            are live), and <strong>live writes</strong> (toggle on to run real{" "}
-            <span className="font-mono text-ink">
-              {isCasper ? "mint_self" : "mintSelf"}
-            </span>
-            , self-issue credentials via signed EIP-712 transactions, and
-            anchor an evidence manifest on-chain via{" "}
-            <span className="font-mono text-ink">
-              {isCasper ? "set_token_uri" : "setTokenURI"}
-            </span>
-            ). When <span className="font-mono text-ink">ZEROG_PRIVATE_KEY</span>{" "}
-            is set, the REASON phase uses 0G Compute (TEE-verified LLM) and the
-            RECORD phase uploads to 0G Storage. Live mode requires a funded
-            wallet key on the server.
-          </p>
-        </div>
+        <ol className="mt-8 grid grid-cols-1 divide-y divide-rule border-t border-rule sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <li className="space-y-2 py-4 sm:pr-6">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              01 · simulated
+            </p>
+            <p className="font-serif text-sm leading-relaxed text-ink-soft">
+              Default. No wallet, no writes.
+            </p>
+          </li>
+          <li className="space-y-2 py-4 sm:px-6">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              02 · live reads
+            </p>
+            <p className="font-serif text-sm leading-relaxed text-ink-soft">
+              Real{" "}
+              <span className="font-mono text-ink">
+                {isCasper ? "isCapable" : "isCapableMulti"}
+              </span>{" "}
+              against the registry.
+            </p>
+          </li>
+          <li className="space-y-2 py-4 sm:pl-6">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              03 · live writes
+            </p>
+            <p className="font-serif text-sm leading-relaxed text-ink-soft">
+              <span className="font-mono text-ink">
+                {isCasper ? "mint_self" : "mintSelf"}
+              </span>
+              , EIP-712 self-issue, anchor via{" "}
+              <span className="font-mono text-ink">
+                {isCasper ? "set_token_uri" : "setTokenURI"}
+              </span>
+              . When{" "}
+              <span className="font-mono text-ink">ZEROG_PRIVATE_KEY</span>{" "}
+              is set, REASON uses 0G Compute (TEE-verified) and RECORD
+              uploads to 0G Storage.{" "}
+              <strong className="text-ink">Requires a funded wallet.</strong>
+            </p>
+          </li>
+        </ol>
       </section>
 
       {/* WalletGate — contextually-placed wallet entry point. Hidden on

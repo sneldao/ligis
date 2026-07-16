@@ -548,25 +548,44 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
       {state.summary?.ok ? (
         <section className="space-y-5 border-l-2 border-sage pl-6">
           <p className="eyebrow text-sage">what just happened</p>
-          <p className="max-w-prose font-serif text-lg leading-relaxed text-ink">
-            Agent {state.summary.subject ? <Link href={`/agent/${state.summary.subject}`} className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 hover:decoration-terra">{truncateAddress(state.summary.subject, 6, 4)}</Link> : "unknown"}{" "}
-            {state.summary.minted ? "minted its identity" : "found its identity"} as token #{state.summary.tokenId ?? "?"}.{" "}
-            {state.summary.source === "0g" && state.summary.model ? (
-              <>{state.summary.model} (0G Compute, TEE-verified) identified </>
-            ) : (
-              <>Local policy identified </>
-            )}
-            {state.capabilities.length} required {state.capabilities.length === 1 ? "capability" : "capabilities"}.{" "}
-            {state.capabilities.filter((c) => c.capable && !c.selfIssued).length > 0 && (
-              <>{state.capabilities.filter((c) => c.capable && !c.selfIssued).length} {state.capabilities.filter((c) => c.capable && !c.selfIssued).length === 1 ? "was" : "were"} already held. </>
-            )}
-            {state.txs.length > 0 && (
-              <>{state.txs.length} {state.txs.length === 1 ? "was" : "were"} self-issued on-chain. </>
-            )}
-            Evidence {state.manifest?.storageType === "0g" ? "anchored to 0G Storage" : "hashed locally"} and anchored on-chain.
-            {" "}
-            {state.txs.length > 0 ? `${state.txs.length + (state.manifest?.storageTxHash ? 1 : 0) + 1} on-chain transactions.` : ""}
-          </p>
+          <dl className="grid grid-cols-[6.5rem_1fr] gap-x-6 border-t border-rule divide-y divide-rule">
+            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">subject</dt>
+            <dd className="pt-3 font-mono tabular text-ink">
+              {state.summary.subject ? (
+                <Link href={`/agent/${state.summary.subject}`} className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 hover:decoration-terra">
+                  {truncateAddress(state.summary.subject, 6, 4)}
+                </Link>
+              ) : (
+                "unknown"
+              )}
+            </dd>
+            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">token</dt>
+            <dd className="pt-3 font-mono tabular text-ink">
+              #{state.summary.tokenId ?? "?"} · {state.summary.minted ? "minted" : "found"}
+            </dd>
+            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">reasoning</dt>
+            <dd className="pt-3 font-mono tabular text-ink">
+              {state.summary.model ?? "—"} · {state.summary.source === "0g" ? "0G Compute · TEE-verified" : "local keyword match"}
+            </dd>
+            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">capabilities</dt>
+            <dd className="pt-3 font-mono tabular text-ink">
+              {state.capabilities.length} required · {state.capabilities.filter((c) => c.capable).length} held · {state.txs.length} self-issued
+            </dd>
+            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">gated</dt>
+            <dd className="pt-3 font-mono tabular text-ink">{state.summary.gated ? "yes" : "no"}</dd>
+            {state.manifest ? (
+              <>
+                <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">evidence</dt>
+                <dd className="pt-3 font-mono tabular text-ink">
+                  {state.manifest.storageType === "0g" ? "0G Storage" : "local hash"} · root {truncateHash(state.manifest.rootHash, 10, 6)}
+                </dd>
+              </>
+            ) : null}
+            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">txs</dt>
+            <dd className="pt-3 font-mono tabular text-ink">
+              {state.txs.length + (state.manifest?.storageTxHash ? 1 : 0) + 1} on-chain
+            </dd>
+          </dl>
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
             <button
               type="button"
