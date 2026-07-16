@@ -118,21 +118,34 @@ For live Casper writes from the steward loop, also set:
 - `LIGIS_CASPER_DEPLOYER_PUBKEY`
 - `LIGIS_CASPER_DEPLOYER_PRIVATE_KEY`
 
-### Browser-side wallet env vars (Casper)
+### Browser-side Casper wallet (no new env vars)
 
-The browser-native wallet (`?chain=casper-testnet` page) needs the
-**same deployed-package hashes** exposed as **public** env vars so the
-client can read them without auth:
+The browser-native wallet (`?chain=casper-testnet` page) doesn't need
+any `NEXT_PUBLIC_` env vars. It reuses the existing **server-side**
+`LIGIS_CASPER_AGENT_ID` + `LIGIS_CASPER_CREDENTIAL_REGISTRY` you already
+have set on Vercel for Casper reads — the next two subsections describe
+how.
 
-- `NEXT_PUBLIC_LIGIS_CASPER_AGENT_ID` — AgentId contract package hash (e.g. `contract-package-<...>`)
-- `NEXT_PUBLIC_LIGIS_CASPER_CREDENTIAL_REGISTRY` — CredentialRegistry contract package hash
-- `NEXT_PUBLIC_LIGIS_CASPER_CHAIN_NAME` — `casper-test` (default), used in EIP-712 domain separator
+**Why no `NEXT_PUBLIC_LIGIS_CASPER_*`:** The browser never needs to know
+the package hashes, the RPC URL, or the chain name directly. Everything
+flows through two thin server routes:
 
-Reads from the server route `/api/casper-config/route.ts` re-export the
-chain name + the hashes with the `contract-package-` prefix stripped so the
-client doesn't need to know about prefix conventions. Writes go through
-`/api/casper-rpc/route.ts` (a stateless CORS byte-proxy; see
-`docs/architecture.md` for the signed-deploy round-trip flow).
+- **`/api/casper-config`** (`web/app/api/casper-config/route.ts`) — reads
+  `LIGIS_CASPER_AGENT_ID` + `LIGIS_CASPER_CREDENTIAL_REGISTRY` on the
+  server, strips the `contract-package-` prefix, and ships the bare
+  hex hashes to the browser as JSON. The EIP-712 domain separator is
+  reconstructed client-side from `casper-test` (a hardcoded constant).
+- **`/api/casper-rpc`** (`web/app/api/casper-rpc/route.ts`) — a stateless
+  CORS byte-proxy. The browser sends a signed deploy here; the proxy
+  relays it verbatim to the public testnet RPC
+  (`https://node.testnet.casper.network/rpc`). The proxy holds no keys
+  and signs nothing — it's safe to expose publicly.
+
+That means the only Vercel env vars the wallet UI needs are the same
+**server-side** `LIGIS_CASPER_*` vars listed in [Chain switching](#chain-switching-pharos--casper)
+above. If your Vercel project already has those set (and they look
+correct in your `LIGIS_CASPER_AGENT_ID` row), the wallet works without
+adding a single new variable.
 
 ### Browser-wallet smoke tests
 

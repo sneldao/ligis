@@ -216,16 +216,15 @@ pnpm --filter @ligis/web exec tsx web/scripts/smoke-wallet-tx.ts
 # the wire bytes (does NOT submit; uses a placeholder package hash)
 ```
 
-**Required Vercel env vars** for the browser wallet UI (Casper reads already
-configured):
-
-- `NEXT_PUBLIC_LIGIS_CASPER_AGENT_ID` — AgentId contract package hash
-- `NEXT_PUBLIC_LIGIS_CASPER_CREDENTIAL_REGISTRY` — CredentialRegistry contract package hash
-- `NEXT_PUBLIC_LIGIS_CASPER_CHAIN_NAME` — `casper-test` (default)
-
-Caspar-js-sdk (`web/node_modules/casper-js-sdk`) bundles to ~140KB but it's
-lazy-loaded — only the Casper pages fetch it. The CORS-proxy at
-`/api/casper-rpc` is a stateless byte-shim (no keys, no signing).
+**No new Vercel env vars required.** The wallet UI reuses the existing
+**server-side** `LIGIS_CASPER_AGENT_ID` + `LIGIS_CASPER_CREDENTIAL_REGISTRY`
+(already set on Vercel for Casper reads) through `/api/casper-config`,
+a tiny server route that strips the `contract-package-` prefix and
+serves the bare hex hashes to the browser. Writes go through
+`/api/casper-rpc`, a stateless CORS byte-proxy. The proxy holds no keys
+and signs nothing — it's safe to expose publicly. So a wallet click
+that round-trips to testnet needs zero new env vars beyond what the
+chain-switching section already lists.
 
 Files in `web/lib/casper-browser/{keypair,eip712,operations,rpc,store,steward}.ts(x)`
 compose the wallet.
