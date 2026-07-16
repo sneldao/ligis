@@ -43,9 +43,9 @@ async function liveStats(chain: ChainNetwork) {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const chain = getChain(searchParams);
+  const chain = getChain(await searchParams);
   const stats = await liveStats(chain);
   const capOptions = capabilities.map((c) => ({ id: c.id, label: c.label }));
   const isCasper = isCasperChain(chain);
@@ -55,11 +55,9 @@ export default async function HomePage({
 
   return (
     <>
-      <CatalogHero chain={chain} />
-
-      <StewardTeaser />
-
-      <main id="how" className="mx-auto max-w-5xl scroll-mt-24 px-8 pt-32 pb-24 sm:pt-44 sm:pb-32">
+      {/* Hero — the product, above the fold. H1 + live VerifyDemo so a
+          developer lands on an interactive on-chain read, not a 3D scene. */}
+      <main id="how" className="mx-auto max-w-5xl scroll-mt-24 px-8 pt-28 pb-16 sm:pt-36 sm:pb-24">
         <header className="flex items-baseline justify-between text-xs">
           <p className="eyebrow">Ligis · how it works 00</p>
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
@@ -99,13 +97,13 @@ export default async function HomePage({
           </div>
         </header>
 
-        <section className="mt-20">
+        <section className="mt-16">
           <h1 className="display max-w-3xl text-5xl text-ink sm:text-7xl">
             Identity and permissions
             <br />
             for AI agents, onchain.
           </h1>
-          <p className="mt-12 max-w-2xl font-serif text-xl leading-relaxed text-ink-soft">
+          <p className="mt-10 max-w-2xl font-serif text-xl leading-relaxed text-ink-soft">
             Every other system trusts agents implicitly. Ligis lets them prove
             what they&rsquo;re allowed to do: each agent holds a portable
             identity, plus credentials that anyone can issue, anyone can
@@ -123,9 +121,7 @@ export default async function HomePage({
                 <span className="font-mono not-italic tabular text-ink">
                   {Number(stats.block).toLocaleString("en")}
                 </span>{" "}
-                on {chain.name.toLowerCase()}. The catalog above shows the
-                live agent plus a preview set so the spatial pattern is legible
-                before the index fills out.
+                on {chain.name.toLowerCase()}.
               </>
             ) : stats.preview ? (
               <>
@@ -145,7 +141,7 @@ export default async function HomePage({
           </p>
         </section>
 
-        <section id="verify" className="mt-32 scroll-mt-24 sm:mt-44">
+        <section id="verify" className="mt-20 scroll-mt-24 sm:mt-28">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">01 · Verify</p>
             <p className="font-mono text-[11px] tabular text-ink-quiet">
@@ -171,8 +167,19 @@ export default async function HomePage({
             />
           </div>
         </section>
+      </main>
 
-        <section id="compose" className="mt-32 scroll-mt-24 sm:mt-44">
+      <StewardTeaser />
+
+      {/* The catalog — 3D agent scene + audience routing. Demoted from
+          full-viewport hero to a mid-page exploration zone. The live
+          verify demo above is the entry point; this is the gallery. */}
+      <section id="catalog" className="scroll-mt-24">
+        <CatalogHero chain={chain} />
+      </section>
+
+      <section className="mx-auto max-w-5xl px-8 pt-32 pb-24 sm:pt-44 sm:pb-32">
+        <section id="compose" className="mt-8 scroll-mt-24 sm:mt-12">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">02 · Compose</p>
             <p className="font-mono text-[11px] tabular text-ink-quiet">
@@ -300,7 +307,7 @@ export default async function HomePage({
                 </li>
                 <li className="flex items-baseline gap-3">
                   <span className="inline-block h-1 w-1 rounded-full bg-terra" />
-                  Verify it seconds later — right here in the demo above
+                  Verify it seconds later — right here in the verify demo at the top
                 </li>
               </ul>
             </div>
@@ -360,7 +367,7 @@ ligis sign \\
           </span>
           <span className="font-mono tabular">chain {chain.chainId ?? chain.chainName}</span>
         </footer>
-      </main>
+      </section>
     </>
   );
 }

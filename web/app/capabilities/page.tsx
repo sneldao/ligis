@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { RevealOnView } from "@/components/RevealOnView";
 import { Rule } from "@/components/Rule";
-import { capabilities, network } from "@/lib/chain";
+import { capabilities } from "@/lib/chain";
 import { truncateHash } from "@/lib/format";
 
 export const metadata = {
@@ -196,7 +196,7 @@ export default function CapabilitiesPage() {
           ← Return to the index
         </Link>
         <span className="font-mono tabular">
-          {network.name.toLowerCase()} · chain {network.chainId}
+          hashes stable across chains
         </span>
       </footer>
     </main>

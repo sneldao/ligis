@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { ChainBadge } from "@/components/ChainBadge";
 import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
 import { StewardRunner } from "@/components/StewardRunner";
@@ -39,12 +40,14 @@ export const metadata = {
     "An agent that doesn't know who it is yet. Watch it mint its own identity, reason about what it needs, earn credentials, and record its journey — all autonomously on Casper or Pharos.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function StewardPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const chain = getChain(searchParams);
+  const chain = getChain(await searchParams);
   const isCasper = chain.id === CASPER_TESTNET.id;
   const defaultGoal = isCasper ? CASPER_GOAL : PHAROS_GOAL;
   const cliSnippet = isCasper ? CASPER_CLI : PHAROS_CLI;
@@ -54,6 +57,7 @@ export default async function StewardPage({
       <header className="flex items-baseline justify-between text-xs">
         <p className="eyebrow">Ligis · steward 00</p>
         <div className="flex items-baseline gap-6">
+          <ChainBadge chain={chain} />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
@@ -117,27 +121,42 @@ export default async function StewardPage({
             </p>
           </li>
         </ol>
+        <p className="mt-4 font-serif text-xs italic leading-relaxed text-ink-quiet">
+          Operation names follow each chain&rsquo;s convention —{" "}
+          <span className="font-mono not-italic">mintSelf</span> on EVM,{" "}
+          <span className="font-mono not-italic">mint_self</span> on Casper.
+          Same operation, two chains.
+        </p>
       </section>
 
-      {/* StewardTriptych — the three-act narrative (genesis / synthesis
-          / stasis) that frames the loop above the wallet context. Static
-          SVG, one-time staggered fade-in on mount, honours
-          prefers-reduced-motion. */}
-      <section className="mt-16">
-        <StewardTriptych isCasper={isCasper} />
-      </section>
-
-      {/* WalletGate — contextually-placed wallet entry point. Hidden on
-          Pharos. Provides the Connect / Funded / Awaiting funding CTA
-          that augments (and clarifies) the live-toggle indicator below. */}
+      {/* WalletGate — the wallet entry point. On Casper it carries the
+          inline connect/fund action; on Pharos it nudges to Casper. */}
       <section className="mt-16">
         <WalletGate />
       </section>
 
+      {/* StewardRunner — the actual product. Primary, above the fold. */}
       <section className="mt-12">
         <Suspense fallback={<div className="font-mono text-sm text-ink-quiet">Loading steward…</div>}>
           <StewardRunner defaultGoal={defaultGoal} />
         </Suspense>
+      </section>
+
+      {/* StewardTriptych — the three-act narrative as a reflective coda
+          after the loop. genesis · synthesis · stasis. Static SVG,
+          one-time staggered fade-in on viewport entry, honours
+          prefers-reduced-motion. */}
+      <section className="mt-32">
+        <header className="flex items-baseline justify-between">
+          <p className="eyebrow">the story · three acts</p>
+          <p className="font-mono text-[11px] tabular text-ink-quiet">
+            genesis · synthesis · stasis
+          </p>
+        </header>
+        <Rule className="mt-4" />
+        <div className="mt-10">
+          <StewardTriptych isCasper={isCasper} />
+        </div>
       </section>
 
       <section className="mt-32">

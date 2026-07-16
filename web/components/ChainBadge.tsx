@@ -9,7 +9,8 @@ export function ChainBadge({ chain }: { chain: ChainNetwork }) {
   return (
     <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
       <span className={`inline-block h-1.5 w-1.5 rounded-full ${chainAccent(chain).bg}`} aria-hidden />
-      {label}
+      <span className="text-ink-quiet">reading ·</span>
+      <span className="text-ink-soft">{label}</span>
     </span>
   );
 }

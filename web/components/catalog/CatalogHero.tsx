@@ -62,27 +62,27 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
   ];
 
   return (
-    <section className="relative h-[100dvh] w-full overflow-hidden">
+    <section className="relative min-h-[70vh] w-full overflow-hidden">
       <div className="absolute inset-0">
         <SceneErrorBoundary>
           <CatalogScene />
         </SceneErrorBoundary>
       </div>
 
-      {/* Hero headline + audience routing */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-center px-6 pt-[8vh] sm:pt-[15vh]">
+      {/* Section headline + audience routing */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-center px-6 pt-12 sm:pt-20">
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.5 }}
           className="pointer-events-auto text-center"
         >
-          <h1 className="display max-w-3xl text-4xl text-ink sm:text-6xl">
+          <h2 className="display max-w-3xl text-4xl text-ink sm:text-5xl">
             AI agents are getting smarter.
             <br />
             But they&rsquo;re still anonymous.
-          </h1>
-          <p className="mt-3 font-serif text-lg italic leading-relaxed text-ink-soft sm:text-xl">
+          </h2>
+          <p className="mt-3 font-serif text-base italic leading-relaxed text-ink-soft sm:text-lg">
             Ligis gives them portable identities and verifiable credentials —
             so any app can verify what an agent is allowed to do in one on-chain
             read.
@@ -130,7 +130,7 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
         initial={reducedMotion ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.6 }}
-        className="pointer-events-none absolute inset-x-0 bottom-20 z-10 flex flex-col items-center gap-3 px-6 text-center sm:bottom-24"
+        className="pointer-events-none absolute inset-x-0 bottom-12 z-10 flex flex-col items-center gap-3 px-6 text-center sm:bottom-16"
       >
         <p className="hidden max-w-xl font-serif text-base italic leading-relaxed text-ink-soft sm:block">
           Click any tile to open an agent dossier.

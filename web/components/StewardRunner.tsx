@@ -86,6 +86,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   const [state, setState] = useState<State>(EMPTY);
   const [running, setRunning] = useState(false);
   const [showReal, setShowReal] = useState(false);
+  const [showEvents, setShowEvents] = useState(false);
   const [live, setLive] = useState(false);
   const [copied, setCopied] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -644,63 +645,77 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
         </section>
       ) : null}
 
-      {/* Real CLI commands toggle */}
-      <section className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setShowReal((v) => !v)}
-          className="eyebrow flex items-baseline gap-3 text-ink-soft transition-colors hover:text-ink"
-        >
-          <span>{showReal ? "▾" : "▸"}</span>
-          <span>Real CLI commands</span>
-        </button>
-        {showReal ? (
-          <div className="space-y-5">
-            <PhaseCommand
-              index={1}
-              label="boot"
-              command={`PRIVATE_KEY=0x... ligis issue --token-uri "ipfs://my-agent"`}
-              note="Mints a PharosAgentID to the signer's wallet. Returns tokenId."
-            />
-            <PhaseCommand
-              index={2}
-              label="reason"
-              command={`ligis agent run --goal "Operate as a Pharos agent…" --dry-run`}
-              note="Sends the goal to 0G Compute (TEE-verified LLM). Returns the required capability list."
-            />
-            <PhaseCommand
-              index={3}
-              label="gate"
-              command={`ligis verify --subject 0x... --capability "agent.commerce.escrow"`}
-              note="Reads isCapable from CredentialRegistry. Returns capable: true/false."
-            />
-            <PhaseCommand
-              index={4}
-              label="act"
-              command={`ligis sign --issuer-key 0x... --subject 0x... --capability "agent.commerce.escrow" --expires-in 15552000`}
-              note="Signs an EIP-712 credential off-chain, then submits it on-chain via cast send."
-            />
-            <PhaseCommand
-              index={5}
-              label="record"
-              command={`ligis agent run --goal "Operate as a Pharos agent…"`}
-              note="Full loop: boot → reason → gate → act → record. Requires PRIVATE_KEY + ZEROG_PRIVATE_KEY."
-            />
-          </div>
-        ) : null}
-      </section>
+      {/* Developer chrome — CLI commands + raw event stream, both
+          collapsed by default so the post-run page stays focused on
+          the summary and phase output above. */}
+      <section className="space-y-6 border-t border-rule pt-8">
+        <p className="eyebrow text-ink-quiet">for developers</p>
 
-      <section className="space-y-4">
-        <header className="flex items-baseline justify-between">
-          <p className="eyebrow">stream · raw events</p>
-          <span className="font-mono text-[11px] tabular text-ink-quiet">
-            {eventCount} events
-          </span>
-        </header>
-        <Rule />
-        <pre className="max-h-72 overflow-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink">
-          {eventCount === 0 ? "// Run the loop to populate the stream." : jsonPanel}
-        </pre>
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setShowReal((v) => !v)}
+            className="eyebrow flex items-baseline gap-3 text-ink-soft transition-colors hover:text-ink"
+          >
+            <span>{showReal ? "▾" : "▸"}</span>
+            <span>Real CLI commands</span>
+          </button>
+          {showReal ? (
+            <div className="space-y-5">
+              <PhaseCommand
+                index={1}
+                label="boot"
+                command={`PRIVATE_KEY=0x... ligis issue --token-uri "ipfs://my-agent"`}
+                note="Mints a PharosAgentID to the signer's wallet. Returns tokenId."
+              />
+              <PhaseCommand
+                index={2}
+                label="reason"
+                command={`ligis agent run --goal "Operate as a Pharos agent…" --dry-run`}
+                note="Sends the goal to 0G Compute (TEE-verified LLM). Returns the required capability list."
+              />
+              <PhaseCommand
+                index={3}
+                label="gate"
+                command={`ligis verify --subject 0x... --capability "agent.commerce.escrow"`}
+                note="Reads isCapable from CredentialRegistry. Returns capable: true/false."
+              />
+              <PhaseCommand
+                index={4}
+                label="act"
+                command={`ligis sign --issuer-key 0x... --subject 0x... --capability "agent.commerce.escrow" --expires-in 15552000`}
+                note="Signs an EIP-712 credential off-chain, then submits it on-chain via cast send."
+              />
+              <PhaseCommand
+                index={5}
+                label="record"
+                command={`ligis agent run --goal "Operate as a Pharos agent…"`}
+                note="Full loop: boot → reason → gate → act → record. Requires PRIVATE_KEY + ZEROG_PRIVATE_KEY."
+              />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setShowEvents((v) => !v)}
+            className="eyebrow flex items-baseline gap-3 text-ink-soft transition-colors hover:text-ink"
+          >
+            <span>{showEvents ? "▾" : "▸"}</span>
+            <span>Raw event stream</span>
+            {eventCount > 0 ? (
+              <span className="font-mono text-[10px] tabular text-ink-quiet">
+                {eventCount} events
+              </span>
+            ) : null}
+          </button>
+          {showEvents ? (
+            <pre className="max-h-72 overflow-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink">
+              {eventCount === 0 ? "// Run the loop to populate the stream." : jsonPanel}
+            </pre>
+          ) : null}
+        </div>
       </section>
     </div>
   );
