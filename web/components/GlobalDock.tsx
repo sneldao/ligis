@@ -8,7 +8,7 @@ import { ChainSelector } from "@/components/ChainSelector";
 
 const NAV = [
   { href: "/#how", label: "How it works" },
-  { href: "/steward", label: "Steward" },
+  { href: "/steward?chain=casper-testnet", label: "Steward" },
   { href: "/capabilities", label: "Capabilities" },
   { href: "/embed", label: "Embed" },
 ];

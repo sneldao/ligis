@@ -78,10 +78,10 @@ export default async function HomePage({
               Issuers
             </Link>
             <Link
-              href="/steward"
+              href="/steward?chain=casper-testnet"
               className="hover:text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
             >
-              Steward
+              Steward &middot; Casper
             </Link>
             <Link
               href="/embed"
@@ -335,7 +335,7 @@ ligis sign \\
                 </a>{" "}
                 or{" "}
                 <Link
-                  href="/steward"
+                  href="/steward?chain=casper-testnet"
                   className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
                 >
                   the Steward page

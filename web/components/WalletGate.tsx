@@ -40,6 +40,7 @@
  * component can short-circuit before reading wallet state.
  */
 
+import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -91,7 +92,32 @@ export function WalletGate() {
     };
   }, [open]);
 
-  if (!isCasperPage) return null;
+  if (!isCasperPage) {
+    return (
+      <div
+        className="flex flex-col gap-3 border border-terra/30 bg-terra/5 px-5 py-4 sm:flex-row sm:items-center sm:gap-6 sm:justify-between"
+        data-wallet-gate-root
+      >
+        <div className="space-y-1">
+          <p className="eyebrow text-terra">
+            Casper Buildathon · wallet unlocks in Casper mode
+          </p>
+          <p className="font-serif text-sm leading-relaxed text-ink-soft">
+            Ligis credentials are signed with secp256k1 keys generated in
+            your browser, then funded via the testnet faucet. Toggle the
+            chain above, or land directly on Casper below.
+          </p>
+        </div>
+        <Link
+          href="/steward?chain=casper-testnet"
+          className="shrink-0 border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper"
+          style={{ borderRadius: 0 }}
+        >
+          Switch to Casper →
+        </Link>
+      </div>
+    );
+  }
 
   const connected = wallet.pair !== null;
   const funded = wallet.balanceMotes !== null && wallet.balanceMotes !== "0";

@@ -156,7 +156,7 @@ export function FocusPanel() {
           <div className="mt-auto flex flex-col gap-3 pt-10">
             {snap && !snap.exists ? (
               <Link
-                href="/steward"
+                href="/steward?chain=casper-testnet"
                 className="text-sm text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
               >
                 Bootstrap an agent with the Steward →

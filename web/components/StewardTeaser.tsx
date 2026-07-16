@@ -67,10 +67,10 @@ export function StewardTeaser() {
             </blockquote>
           ) : null}
           <Link
-            href="/steward"
+            href="/steward?chain=casper-testnet"
             className="mt-8 inline-block text-sm text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
           >
-            Run the full loop →
+            Try on Casper · connect a wallet →
           </Link>
         </div>
 

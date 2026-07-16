@@ -234,7 +234,7 @@ export default async function AgentPage({
           </p>
           <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 text-sm">
             <a
-              href="/steward"
+              href="/steward?chain=casper-testnet"
               className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
             >
               Watch the simulation →
