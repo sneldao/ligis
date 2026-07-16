@@ -17,7 +17,13 @@
  *     if the user has ZEROG env config and a Live mode runtime. Skip for
  *     v1.
  */
-import { capabilityHash } from "@ligis/core";
+// Use the @ligis/core/hash subpath (not the barrel `@ligis/core`) to keep
+// the browser bundle out of `./dist/config.js` — which top-level
+// `import fs from "fs"` to read `assets/networks.json`. The barrel pulls
+// config.js in transitively when Webpack/Turbopack walks `capabilityHash`,
+// which Vercel flagged as `Module not found: Can't resolve 'fs'` during
+// commit 2fea2ec. The leaf module `dist/hash.js` is browser-safe.
+import { capabilityHash } from "@ligis/core/hash";
 import {
   mintSelf,
   submitCredential,
