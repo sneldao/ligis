@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RevealOnView } from "@/components/RevealOnView";
 import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
 import { capabilities, network } from "@/lib/chain";
@@ -50,69 +51,65 @@ export default function EmbedPage() {
         </p>
       </section>
 
-      {/* Third live user of the reveal pattern. The three numbered
-          sections (URL / iframe / Preview) carry the same
-          `animate-triptych-reveal` opt-in the
-          StewardTriptych + /capabilities categories use. Uniform 280ms
-          cascade matches the trilogy: first live user is the
-          StewardTriptych on /steward, second is the /capabilities
-          IDENTITY/FINANCE/COMMERCE categories, this is the third. */}
-      <section
-        className="mt-24 space-y-6 animate-triptych-reveal"
-        data-anim-delay="0"
-      >
-        <header className="flex items-baseline justify-between">
-          <p className="eyebrow">01 · The URL</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">GET</p>
-        </header>
-        <Rule />
-        <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-          One endpoint, two query parameters. Capability accepts either the
-          human-readable id or the 32-byte hash.
-        </p>
-        <Snippet code={directLink} lang="url" />
-      </section>
+      {/* Three live users of the reveal pattern. Each numbered section
+          is wrapped in `RevealOnView`, which uses IntersectionObserver
+          to flip `data-revealed="true"` on the wrapper when it scrolls
+          into view. Stagger via per-section `delayMs` — same 0/120/280
+          cadence as the StewardTriptych on /steward and the
+          /capabilities category sections. */}
+      <RevealOnView delayMs={0}>
+        <section className="mt-24 space-y-6">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">01 · The URL</p>
+            <p className="font-mono text-[11px] tabular text-ink-quiet">GET</p>
+          </header>
+          <Rule />
+          <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
+            One endpoint, two query parameters. Capability accepts either the
+            human-readable id or the 32-byte hash.
+          </p>
+          <Snippet code={directLink} lang="url" />
+        </section>
+      </RevealOnView>
 
-      <section
-        className="mt-24 space-y-6 animate-triptych-reveal"
-        data-anim-delay="120"
-      >
-        <header className="flex items-baseline justify-between">
-          <p className="eyebrow">02 · The iframe</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">html</p>
-        </header>
-        <Rule />
-        <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-          Recommended size is 520 × 120. Background is transparent so the badge
-          reads against any page.
-        </p>
-        <Snippet code={iframeCode} lang="html" />
-      </section>
+      <RevealOnView delayMs={120}>
+        <section className="mt-24 space-y-6">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">02 · The iframe</p>
+            <p className="font-mono text-[11px] tabular text-ink-quiet">html</p>
+          </header>
+          <Rule />
+          <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
+            Recommended size is 520 × 120. Background is transparent so the badge
+            reads against any page.
+          </p>
+          <Snippet code={iframeCode} lang="html" />
+        </section>
+      </RevealOnView>
 
-      <section
-        className="mt-24 space-y-6 animate-triptych-reveal"
-        data-anim-delay="280"
-      >
-        <header className="flex items-baseline justify-between">
-          <p className="eyebrow">03 · Preview</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">live</p>
-        </header>
-        <Rule />
-        <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-          A live badge for {EXAMPLE_SUBJECT.slice(0, 8)}··{EXAMPLE_SUBJECT.slice(-4)}{" "}
-          on {EXAMPLE_CAP}. Reads {network.name.toLowerCase()} every request.
-        </p>
-        <div className="mt-4">
-          <iframe
-            src={`/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}`}
-            width="520"
-            height="120"
-            style={{ border: 0, background: "transparent" }}
-            loading="lazy"
-            title="Ligis verification badge preview"
-          />
-        </div>
-      </section>        <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet">
+      <RevealOnView delayMs={280}>
+        <section className="mt-24 space-y-6">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">03 · Preview</p>
+            <p className="font-mono text-[11px] tabular text-ink-quiet">live</p>
+          </header>
+          <Rule />
+          <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
+            A live badge for {EXAMPLE_SUBJECT.slice(0, 8)}··{EXAMPLE_SUBJECT.slice(-4)}{" "}
+            on {EXAMPLE_CAP}. Reads {network.name.toLowerCase()} every request.
+          </p>
+          <div className="mt-4">
+            <iframe
+              src={`/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}`}
+              width="520"
+              height="120"
+              style={{ border: 0, background: "transparent" }}
+              loading="lazy"
+              title="Ligis verification badge preview"
+            />
+          </div>
+        </section>
+      </RevealOnView>        <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet">
           <Link
             href="/"
             className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
+import { RevealOnView } from "@/components/RevealOnView";
 import { Rule } from "@/components/Rule";
 import { capabilities, network } from "@/lib/chain";
 import { truncateHash } from "@/lib/format";
@@ -33,9 +34,12 @@ const REFERENCE = [
 ];
 
 // Three editorial groups that organise the reference set by prefix
-// taxonomy. The categories also drive the three-step staggered reveal
-// via the .animate-triptych-reveal utility (hoisted to globals.css).
-// Live users of the pattern, in order:
+// taxonomy. The category sections drive the three-step staggered reveal
+// via `RevealOnView` — a client component that uses
+// IntersectionObserver to flip `data-revealed="true"` on the wrapper
+// only when the section scrolls into view. Sets inline
+// `--triptych-delay` per-instance to stagger the cascade.
+// Live users of the pattern, in cascade order:
 //   1. /steward — StewardTriptych (genesis / synthesis / stasis)
 //   2. /capabilities (this page) — IDENTITY / FINANCE / COMMERCE
 //   3. /embed — URL / iframe / Preview numbered sections
@@ -105,63 +109,60 @@ export default function CapabilitiesPage() {
             .map((id) => capabilities.find((c) => c.id === id))
             .filter((c): c is (typeof capabilities)[number] => c !== undefined);
           return (
-            <section
-              key={cat.name}
-              className="animate-triptych-reveal"
-              data-anim-delay={String(cat.delayMs)}
-              aria-labelledby={`cat-${cat.name.toLowerCase()}`}
-            >
-              <header className="flex items-baseline justify-between">
-                <h2
-                  id={`cat-${cat.name.toLowerCase()}`}
-                  className="eyebrow text-ink"
-                >
-                  {cat.name}
-                </h2>
-                <span className="font-mono text-[11px] tabular text-ink-quiet">
-                  {caps.length}{" "}
-                  {caps.length === 1 ? "capability" : "capabilities"}
-                </span>
-              </header>
-              <Rule className="mt-4" />
-              <p className="mt-6 max-w-prose font-serif text-base italic leading-relaxed text-ink-soft">
-                {cat.gloss}
-              </p>
-              <div className="mt-2 space-y-0">
-                {caps.map((cap) => {
-                  const exp = expiryFor(cap.id);
-                  return (
-                    <div key={cap.id}>
-                      <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-6">
-                        <div className="space-y-3">
-                          <div className="flex flex-wrap items-baseline gap-x-4">
-                            <span className="font-mono text-sm tabular text-ink">
-                              {cap.id}
-                            </span>
-                            <span className="font-serif text-sm italic text-ink-soft">
-                              {cap.label.toLowerCase()}
-                            </span>
+            <RevealOnView key={cat.name} delayMs={cat.delayMs}>
+              <section aria-labelledby={`cat-${cat.name.toLowerCase()}`}>
+                <header className="flex items-baseline justify-between">
+                  <h2
+                    id={`cat-${cat.name.toLowerCase()}`}
+                    className="eyebrow text-ink"
+                  >
+                    {cat.name}
+                  </h2>
+                  <span className="font-mono text-[11px] tabular text-ink-quiet">
+                    {caps.length}{" "}
+                    {caps.length === 1 ? "capability" : "capabilities"}
+                  </span>
+                </header>
+                <Rule className="mt-4" />
+                <p className="mt-6 max-w-prose font-serif text-base italic leading-relaxed text-ink-soft">
+                  {cat.gloss}
+                </p>
+                <div className="mt-2 space-y-0">
+                  {caps.map((cap) => {
+                    const exp = expiryFor(cap.id);
+                    return (
+                      <div key={cap.id}>
+                        <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-6">
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap items-baseline gap-x-4">
+                              <span className="font-mono text-sm tabular text-ink">
+                                {cap.id}
+                              </span>
+                              <span className="font-serif text-sm italic text-ink-soft">
+                                {cap.label.toLowerCase()}
+                              </span>
+                            </div>
+                            <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
+                              {cap.description}
+                            </p>
+                            <div className="flex items-baseline gap-3">
+                              <span className="font-mono text-[12px] tabular text-ink-quiet">
+                                {truncateHash(cap.hash, 14, 8)}
+                              </span>
+                              <CopyButton value={cap.hash} />
+                            </div>
                           </div>
-                          <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
-                            {cap.description}
-                          </p>
-                          <div className="flex items-baseline gap-3">
-                            <span className="font-mono text-[12px] tabular text-ink-quiet">
-                              {truncateHash(cap.hash, 14, 8)}
-                            </span>
-                            <CopyButton value={cap.hash} />
-                          </div>
+                          <span className="whitespace-nowrap font-mono text-xs tabular text-ink-soft">
+                            {exp > 0 ? humanExpiry(exp) : "no default"}
+                          </span>
                         </div>
-                        <span className="whitespace-nowrap font-mono text-xs tabular text-ink-soft">
-                          {exp > 0 ? humanExpiry(exp) : "no default"}
-                        </span>
+                        <Rule tone="soft" />
                       </div>
-                      <Rule tone="soft" />
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+                    );
+                  })}
+                </div>
+              </section>
+            </RevealOnView>
           );
         })}
       </section>

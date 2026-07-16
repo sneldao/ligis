@@ -1,3 +1,7 @@
+"use client";
+
+import { useRevealOnView } from "./RevealOnView";
+
 type Panel = {
   roman: string;
   eyebrow: string;
@@ -16,19 +20,29 @@ type Panel = {
  * Maps the 5-phase loop (BOOT → REASON → GATE → ACT → RECORD) into three
  * editorial states, mirroring the hand-typeset idiom of {@link Diagram}
  * (hairlines, Fraunces titles, italic Fraunces glosses, JetBrains Mono
- * detail). One-time staggered reveal on mount; honours
- * prefers-reduced-motion via the blanket reduced-motion rule in
- * `web/app/globals.css`.
+ * detail). Each `<g>` panel reveals on viewport entry via
+ * {@link useRevealOnView}, so the cascade only fires when a panel is
+ * actually in (or entering) view — no wasted off-screen motion.
  *
  *   I  — genesis    · BOOT
  *   II — synthesis  · REASON · GATE · ACT
  *   III — stasis    · RECORD
  *
  * Stagger opt-in is hoisted to globals.css as `.animate-triptych-reveal`
- * with per-panel delay selected via `data-anim-delay="0" | "120" | "280"`.
- * Server component — no `<style>`, no inline keyframes, no client hooks.
+ * triggered via `data-revealed="true"` (set by useRevealOnView's
+ * IntersectionObserver) with per-panel delay via inline CSS variable
+ * `--triptych-delay`. The animation runs:
  *
- * Live users of the same reveal pattern, in cascade order:
+ *   t=0  → data-revealed flips true on the panel whose SVG <g>
+ *          entered the viewport first; CSS runs the keyframe over
+ *          540ms. Per-panel delay staggered via --triptych-delay.
+ *
+ * Server-rendered SVG markup with hydrated observer wiring (this is
+ * a "use client" component so the hook can attach to refs).
+ * prefers-reduced-motion is honoured — see the override in
+ * `web/app/globals.css`.
+ *
+ * Live users of the reveal pattern, in cascade order:
  *   1. this triptych on `/steward`              (genesis · synthesis · stasis)
  *   2. `/capabilities` category sections        (IDENTITY · FINANCE · COMMERCE)
  *   3. `/embed` numbered sections                (01 · URL / 02 · iframe / 03 · Preview)
@@ -42,6 +56,15 @@ export function StewardTriptych({
 }) {
   const mintName = isCasper ? "mint_self" : "mintSelf";
   const anchorName = isCasper ? "set_token_uri" : "setTokenURI";
+
+  // Three panels with fixed delays. Rule of hooks requires we call
+  // useRevealOnView the same number of times in the same order on
+  // every render — so we open three named refs and key them by index
+  // inside the JSX map below.
+  const revealI = useRevealOnView<SVGGElement>({ delayMs: 0 });
+  const revealII = useRevealOnView<SVGGElement>({ delayMs: 120 });
+  const revealIII = useRevealOnView<SVGGElement>({ delayMs: 280 });
+  const panelRefs = [revealI.ref, revealII.ref, revealIII.ref];
 
   const PANELS: readonly Panel[] = [
     {
@@ -137,8 +160,10 @@ export function StewardTriptych({
           return (
             <g
               key={p.roman}
+              ref={panelRefs[i]}
               className="animate-triptych-reveal"
-              data-anim-delay={String(p.delayMs)}
+              style={{ ["--triptych-delay" as string]: `${p.delayMs}ms` }}
+              data-revealed="false"
             >
               {/* eyebrow — Roman numeral + phase name, mono tracked,
                   one shade lighter than ink so the title remains primary */}
