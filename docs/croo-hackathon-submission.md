@@ -54,20 +54,26 @@ Manifest: [`packages/croo-adapter/croo-store-manifest.json`](../packages/croo-ad
 
 ## Judge repro (60 seconds)
 
+The Ligis provider runs 24/7 in production (`pm2`-managed), so judges only
+need to run a requester — no provider terminal required:
+
 ```bash
 git clone https://github.com/sneldao/ligis && cd ligis && pnpm install
 
-# Terminal 1 — Ligis CAP provider (accepts Store orders)
-set -a && source .env.d/casper.env && source .env.d/croo.env && set +a
-pnpm croo
-
-# Terminal 2 — hire Ligis as a requester (needs USDC on requester agent wallet)
+# Hire Ligis as a requester (needs USDC on requester agent wallet) — hits the live provider
 set -a && source .env.d/casper.env && source .env.d/croo.env && set +a
 pnpm demo:croo
 
 # On-chain-only fallback (no CROO keys): direct Casper registry read
 set -a && source .env.d/casper.env && set +a
 pnpm demo:croo -- --on-chain-only
+```
+
+To run your own provider instance instead of hitting the live one:
+
+```bash
+set -a && source .env.d/casper.env && source .env.d/croo.env && set +a
+pnpm croo
 ```
 
 > `set -a` / `set +a` is required around `source` — a plain `source

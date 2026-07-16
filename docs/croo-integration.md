@@ -61,15 +61,21 @@ if (report.overallVerdict === "pass") {
 
 ## Judge repro
 
-```bash
-# Provider (Terminal 1)
-set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm croo
+The Ligis provider is already running 24/7 in production, so hiring it just
+needs a requester — no need to run a provider yourself:
 
-# Requester (Terminal 2) — full CAP lifecycle
+```bash
+# Hire Ligis via CAP (hits the live provider)
 set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm demo:croo
 
 # On-chain only — Casper CredentialRegistry read, no CROO payment
 set -a && source .env.d/casper.env && set +a && pnpm demo:croo -- --on-chain-only
+```
+
+To run your own provider instance instead (e.g. to test changes locally):
+
+```bash
+set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm croo
 ```
 
 > Note the `set -a` / `set +a` around the `source` calls: plain `source
@@ -93,6 +99,12 @@ See [`docs/croo-hackathon-submission.md`](croo-hackathon-submission.md) for BUID
 set -a && source .env.d/casper.env && source .env.d/croo.env && set +a
 pnpm croo
 ```
+
+**In production this runs 24/7 under `pm2` on dedicated infrastructure**, not
+in a terminal — same `pm2` convention (`releases/<timestamp>/current` symlink,
+`ecosystem.config.js`, `pm2 save`) used by our other long-running services.
+The host isn't documented here since it's shared with unrelated projects;
+ask the team for deploy access if you need to ship an update.
 
 The provider will:
 

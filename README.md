@@ -180,19 +180,68 @@ The steward loop produces 3-4 on-chain transactions on Casper Testnet:
 
 The x402 flow produces 1 additional on-chain transaction (a direct CSPR transfer in the demo's local-settlement fallback). Local settlement verifies the X-PAYMENT payload shape; full CEP-18 `transfer_with_authorization` settlement via the CSPR.cloud facilitator is wired but requires `CSPR_CLOUD_TOKEN`.
 
+## Browser-side Casper wallet (no relayer, user-funded)
+
+There is now a **browser-native Casper Testnet wallet** wired into the web
+steward. Every transaction — `mint_self`, `issue`, `set_token_uri` — is
+signed locally in the browser and submitted through a stateless CORS-proxy
+(`/api/casper-rpc`) to the public testnet RPC. **No signing relayer. The
+user funds their own gas.**
+
+How it works:
+1. Visit `?chain=casper-testnet` on the web app. The wallet tree
+   (`ConditionalProviders` → `WalletTree`) lazy-mounts only on Casper pages;
+   Pharos pages never load `casper-js-sdk`.
+2. Click **Connect Wallet** → generate a 32-byte secp256k1 secp256k1 scalar
+   in the browser via `@noble/curves/utils.randomSecretKey()`, derive the
+   Casper public key + account hash + EVM-style issuer address, and copy the
+   key to your clipboard / paste it back later.
+3. **Fund** at <https://testnet.cspr.live/tools/faucet> (one-time per account,
+   100 CSPR from the faucet).
+4. Click **Run Steward** → the `web/lib/casper-browser/steward.ts` loop runs
+   `mint_self → verifyCapability → signCredential + submitCredential → anchorEvidence`,
+   each one signed in-browser via `@noble/curves/secp256k1.sign(digest, scalar)`.
+   The off-chain EIP-712 credential digest is byte-identical to the server
+   adapter's (both use `@casper-ecosystem/casper-eip-712`'s `hashTypedData`,
+   both sign with secp256k1), so on-chain signature recovery round-trips to
+   the same EVM address the server's signer would produce.
+
+Two smoke tests live in `web/scripts/` for pre-judging validation:
+
+```bash
+pnpm --filter @ligis/web exec tsx web/scripts/smoke-wallet-crypto.ts
+# → asserts @noble/curves r,s,v parity with ethers.Wallet (EVM addr roundtrips)
+pnpm --filter @ligis/web exec tsx web/scripts/smoke-wallet-tx.ts
+# → builds a CSSPR-2.0 mint_self TransactionV1 and asserts `mint_self` is on
+# the wire bytes (does NOT submit; uses a placeholder package hash)
+```
+
+**Required Vercel env vars** for the browser wallet UI (Casper reads already
+configured):
+
+- `NEXT_PUBLIC_LIGIS_CASPER_AGENT_ID` — AgentId contract package hash
+- `NEXT_PUBLIC_LIGIS_CASPER_CREDENTIAL_REGISTRY` — CredentialRegistry contract package hash
+- `NEXT_PUBLIC_LIGIS_CASPER_CHAIN_NAME` — `casper-test` (default)
+
+Caspar-js-sdk (`web/node_modules/casper-js-sdk`) bundles to ~140KB but it's
+lazy-loaded — only the Casper pages fetch it. The CORS-proxy at
+`/api/casper-rpc` is a stateless byte-shim (no keys, no signing).
+
+Files in `web/lib/casper-browser/{keypair,eip712,operations,rpc,store,steward}.ts(x)`
+compose the wallet.
+
 ## CROO Agent Protocol (CAP) integration
 
 Ligis is listed as a callable agent on the [CROO Agent Store](https://agent.croo.network).
 Before one agent pays another, it can hire Ligis to run a **counterparty risk
-check** and receive a pass/warn/fail verdict plus a 0–100 risk score.
+check** and receive a pass/warn/fail verdict plus a 0–100 risk score. The
+provider runs 24/7 in production (`pm2`-managed), so judges only need a
+requester — no need to run a provider yourself.
 
 **Judge repro (CROO Hackathon):**
 
 ```bash
-# Terminal 1 — provider
-set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm croo
-
-# Terminal 2 — hire Ligis via CAP
+# Hire Ligis via CAP (hits the live provider)
 set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm demo:croo
 ```
 

@@ -9,6 +9,9 @@ agent on the [CROO Agent Store](https://agent.croo.network) — focused on
 Ligis shares Casper Testnet contracts with our Casper Buildathon submission.
 CAP is the commerce layer; Casper is the trust layer.
 
+The provider runs 24/7 in production (`pm2`-managed), so you only need a
+requester to hire it — no provider terminal required:
+
 ```bash
 git clone https://github.com/sneldao/ligis && cd ligis && pnpm install
 
@@ -16,12 +19,14 @@ git clone https://github.com/sneldao/ligis && cd ligis && pnpm install
 set -a && source .env.d/casper.env && set +a
 pnpm demo:croo -- --on-chain-only
 
-# 2. Full CAP lifecycle (needs CROO_SDK_KEY + USDC on requester wallet)
-# Terminal A:
-set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm croo
-
-# Terminal B:
+# 2. Full CAP lifecycle (needs CROO_SDK_KEY + USDC on requester wallet) — hits the live provider
 set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm demo:croo
+```
+
+To run your own provider instance instead of hitting the live one:
+
+```bash
+set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm croo
 ```
 
 > `set -a` / `set +a` around each `source` is required — plain `source

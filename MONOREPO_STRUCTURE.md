@@ -56,6 +56,27 @@ ligis/
 │   └── x402-server/       # Credential-gated x402 resource server (Hono + CasperAdapter)
 │
 ├── web/                   # Next.js app — all pages chain-aware (ChainSelector + getChain(searchParams))
+│   ├── app/
+│   │   └── api/
+│   │       ├── casper-rpc/route.ts           # stateless CORS byte-proxy → public Casper Testnet RPC
+│   │       └── casper-config/route.ts        # public read for chain name + deployed package hashes
+│   ├── lib/
+│   │   └── casper-browser/                   # BROWSER-SIDE Casper wallet (user-funded, no relayer)
+│   │       ├── keypair.ts                    # secp256k1 keygen via @noble (scalar under our control)
+│   │       ├── eip712.ts                     # EIP-712 typed-data digest (same lib as server adapter)
+│   │       ├── operations.ts                 # SDK mirror of @ligis/adapter-casper (mintSelf, submitCredential, anchorEvidence, verifyCapability)
+│   │       ├── rpc.ts                        # JSON-RPC client over /api/casper-rpc
+│   │       ├── store.tsx                     # React Context + useReducer + sessionStorage + event bus
+│   │       └── steward.ts                    # browser boot → reason → gate → act → record generator
+│   ├── components/
+│   │   ├── ConditionalProviders.tsx          # lazy-mounts WalletTree only when chain=casper*
+│   │   ├── WalletTree.tsx                    # dynamic-imported WalletProvider wrapper
+│   │   ├── ConnectWallet.tsx                 # next/dynamic wrapper (ssr:false)
+│   │   ├── ConnectWalletInner.tsx            # secp256k1 keypair gen + paste import UI
+│   │   └── WalletSlot.tsx                    # shows wallet state in GlobalDock
+│   └── scripts/
+│       ├── smoke-wallet-crypto.ts            # @noble/curves ↔ ethers byte-identity (no Casper RPC)
+│       └── smoke-wallet-tx.ts                # builds mint_self TransactionV1 and checks wire bytes (no submit)
 ├── assets/                # Single source of truth: networks.json, credentials.example.json
 ├── foundry.toml           # Foundry pointed at packages/contracts-evm/src
 ├── tsconfig.json          # Root project references

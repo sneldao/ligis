@@ -118,6 +118,37 @@ For live Casper writes from the steward loop, also set:
 - `LIGIS_CASPER_DEPLOYER_PUBKEY`
 - `LIGIS_CASPER_DEPLOYER_PRIVATE_KEY`
 
+### Browser-side wallet env vars (Casper)
+
+The browser-native wallet (`?chain=casper-testnet` page) needs the
+**same deployed-package hashes** exposed as **public** env vars so the
+client can read them without auth:
+
+- `NEXT_PUBLIC_LIGIS_CASPER_AGENT_ID` — AgentId contract package hash (e.g. `contract-package-<...>`)
+- `NEXT_PUBLIC_LIGIS_CASPER_CREDENTIAL_REGISTRY` — CredentialRegistry contract package hash
+- `NEXT_PUBLIC_LIGIS_CASPER_CHAIN_NAME` — `casper-test` (default), used in EIP-712 domain separator
+
+Reads from the server route `/api/casper-config/route.ts` re-export the
+chain name + the hashes with the `contract-package-` prefix stripped so the
+client doesn't need to know about prefix conventions. Writes go through
+`/api/casper-rpc/route.ts` (a stateless CORS byte-proxy; see
+`docs/architecture.md` for the signed-deploy round-trip flow).
+
+### Browser-wallet smoke tests
+
+Two scripts validate the browser wallet's encoding without spending real
+gas:
+
+```bash
+pnpm --filter @ligis/web exec tsx web/scripts/smoke-wallet-crypto.ts
+# Asserts @noble/curves r,s,v parity with ethers.Wallet.signingKey.sign;
+# recovered EVM address round-trips. No Casper RPC.
+pnpm --filter @ligis/web exec tsx web/scripts/smoke-wallet-tx.ts
+# Builds a Casper 2.0 mint_self TransactionV1 (uses a placeholder package
+# hash) and asserts `mint_self` appears in Transaction.toBytes() output,
+# proving the entry-point is on the wire. Does NOT submit.
+```
+
 **Security recommendation: use a dedicated steward wallet, not your deployer
 key.** Create a separate wallet for the web steward, fund it with a small
 amount of testnet PHRS (enough for gas), and mint it an Agent ID + issue
