@@ -27,6 +27,9 @@ type Panel = {
  * Stagger opt-in is hoisted to globals.css as `.animate-triptych-reveal`
  * with per-panel delay selected via `data-anim-delay="0" | "120" | "280"`.
  * Server component — no `<style>`, no inline keyframes, no client hooks.
+ *
+ * Second live user of the same reveal pattern: the three category
+ * sections (IDENTITY / FINANCE / COMMERCE) on `/capabilities`.
  */
 export function StewardTriptych({
   isCasper = false,
