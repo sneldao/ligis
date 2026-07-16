@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { ChainSelector } from "@/components/ChainSelector";
+import { WalletChip } from "@/components/WalletChip";
 
 const NAV = [
   { href: "/#how", label: "How it works" },
@@ -88,6 +89,12 @@ export function GlobalDock() {
           })}
         </nav>
 
+        {/* Wallet chip — top-right chrome, hidden on Pharos pages */}
+        <span className="hidden h-3 w-px bg-paper-deep/30 sm:inline-block" aria-hidden />
+        <div className="hidden items-center sm:flex">
+          <WalletChip />
+        </div>
+
         <button
           type="button"
           onClick={() => setNavOpen((v) => !v)}
@@ -123,6 +130,9 @@ export function GlobalDock() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <WalletChip />
+              </li>
             </ul>
           </motion.div>
         ) : null}
