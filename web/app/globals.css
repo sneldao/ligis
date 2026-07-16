@@ -112,6 +112,15 @@ select:focus-visible {
   }
 }
 
+@keyframes triptych-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 420ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
@@ -123,6 +132,40 @@ select:focus-visible {
 .animate-draw-rule {
   transform-origin: left center;
   animation: draw-rule 620ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+}
+
+/* Stagger reveal — opt-in via class + data-anim-delay attribute.
+   Built for diagrams that need a one-time three-step reveal on
+   mount (triptychs, three-act frames). Reduced-motion is handled
+   by the blanket `*` rule below. Reuse on /capabilities and
+   /issuers later. */
+.animate-triptych-reveal {
+  animation: triptych-reveal 540ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+}
+
+.animate-triptych-reveal[data-anim-delay="0"] {
+  animation-delay: 0ms;
+}
+
+.animate-triptych-reveal[data-anim-delay="120"] {
+  animation-delay: 120ms;
+}
+
+.animate-triptych-reveal[data-anim-delay="280"] {
+  animation-delay: 280ms;
+}
+
+/* Reduced-motion override. The blanket `*` rule below sets duration to
+   0.001ms but preserves the per-element `animation-delay`, so without
+   this focused kill-switch, reduced-motion users would still see
+   panels I / II / III pop in at 0 / 120 / 280ms — exactly the motion
+   they opted out of. Force the panels to opacity 1 immediately
+   and skip the keyframe. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-triptych-reveal {
+    animation: none !important;
+    opacity: 1 !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

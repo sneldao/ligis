@@ -1,5 +1,3 @@
-import { type CSSProperties } from "react";
-
 type Panel = {
   roman: string;
   eyebrow: string;
@@ -19,14 +17,16 @@ type Panel = {
  * editorial states, mirroring the hand-typeset idiom of {@link Diagram}
  * (hairlines, Fraunces titles, italic Fraunces glosses, JetBrains Mono
  * detail). One-time staggered reveal on mount; honours
- * prefers-reduced-motion.
+ * prefers-reduced-motion via the blanket reduced-motion rule in
+ * `web/app/globals.css`.
  *
  *   I  — genesis    · BOOT
  *   II — synthesis  · REASON · GATE · ACT
  *   III — stasis    · RECORD
  *
- * Operates as a server component. The CSS keyframes travel inline and
- * animate on first paint — no client component needed.
+ * Stagger opt-in is hoisted to globals.css as `.animate-triptych-reveal`
+ * with per-panel delay selected via `data-anim-delay="0" | "120" | "280"`.
+ * Server component — no `<style>`, no inline keyframes, no client hooks.
  */
 export function StewardTriptych({
   isCasper = false,
@@ -92,19 +92,6 @@ export function StewardTriptych({
         role="img"
         aria-label="The Steward in three acts: i arrive (genesis), i become (synthesis), i remain (stasis)."
       >
-        <style>{`
-          @keyframes triptych-reveal {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            [data-anim="triptych-reveal"] {
-              animation: none !important;
-              opacity: 1 !important;
-            }
-          }
-        `}</style>
-
         {/* Triptych frame: unified top + bottom hairlines, two inner
             dividers. Hairline stroke weights match Diagram.tsx. */}
         <line
@@ -142,16 +129,11 @@ export function StewardTriptych({
 
         {PANELS.map((p, i) => {
           const cx = panelW * i + panelW / 2;
-          const groupStyle: CSSProperties = {
-            animation:
-              "triptych-reveal 540ms cubic-bezier(0.215, 0.61, 0.355, 1) both",
-            animationDelay: `${p.delayMs}ms`,
-          };
           return (
             <g
               key={p.roman}
-              data-anim="triptych-reveal"
-              style={groupStyle}
+              className="animate-triptych-reveal"
+              data-anim-delay={String(p.delayMs)}
             >
               {/* eyebrow — Roman numeral + phase name, mono tracked,
                   one shade lighter than ink so the title remains primary */}
