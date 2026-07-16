@@ -56,7 +56,17 @@
           "overallVerdict": { "type": "string" },
           "riskScore": { "type": "number" },
           "checks": { "type": "array" },
-          "summary": { "type": "string" }
+          "summary": { "type": "string" },
+          "breakdown": {
+            "type": "object",
+            "properties": {
+              "capabilityWeighted": { "type": "number" },
+              "ttlHealth": { "type": "number" },
+              "tenureMaturity": { "type": "number" },
+              "issuerDiversity": { "type": "number" }
+            }
+          },
+          "signals": { "type": "array" }
         }
       }
     }

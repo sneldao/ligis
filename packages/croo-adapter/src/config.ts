@@ -42,7 +42,8 @@ export function loadCrooConfig(): CrooConfig {
  * Load the Ligis chain adapter for the configured chain.
  *
  * Casper is loaded from environment via loadCasperConfig().
- * Pharos would be loaded similarly from @ligis/adapter-evm.
+ * Pharos (EVM) auto-loads from networks.json + env (LIGIS_RPC_URL,
+ * PHAROS_RPC_URL, PRIVATE_KEY) via the EvmAdapter constructor.
  */
 export async function loadLigisAdapter() {
   const chain = process.env.LIGIS_CHAIN ?? "casper";
@@ -52,8 +53,9 @@ export async function loadLigisAdapter() {
   }
   if (chain === "pharos") {
     const { EvmAdapter } = await import("@ligis/adapter-evm");
-    // TODO: wire pharos env loader when available
-    return new EvmAdapter({} as never);
+    // EvmAdapter auto-loads from networks.json + env vars.
+    // No explicit config needed — it reads LIGIS_RPC_URL / PHAROS_RPC_URL.
+    return new EvmAdapter();
   }
   throw new Error(`Unsupported LIGIS_CHAIN: ${chain}`);
 }

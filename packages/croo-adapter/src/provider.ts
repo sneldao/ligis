@@ -6,13 +6,23 @@ import type { CrooClient, EventStreamLike } from "./client.js";
 import {
   type ServiceDescriptor,
   type ServiceRequest,
+  type ServiceResult,
   type SupportedServiceId,
   SUPPORTED_SERVICES,
 } from "./services.js";
 
+/** Maximum time a service handler can run before timing out. */
+const HANDLER_TIMEOUT_MS = 30_000;
+
 export interface ProviderOptions {
   client: CrooClient;
   services?: ServiceDescriptor[];
+  /**
+   * Path to a SQLite file for persistent idempotency tracking.
+   * If set, fulfilled orders survive process restarts.
+   * If omitted, falls back to in-memory Set (lost on restart).
+   */
+  idempotencyDbPath?: string;
 }
 
 /**
@@ -135,17 +145,80 @@ export const defaultServices: ServiceDescriptor[] = [
   },
 ];
 
+/**
+ * Persistent idempotency store backed by SQLite.
+ *
+ * Survives process restarts so duplicate OrderPaid events after a
+ * restart don't cause double delivery. Falls back to in-memory Set
+ * when no DB path is configured.
+ */
+interface IdempotencyStore {
+  has(orderId: string): boolean;
+  add(orderId: string): void;
+  delete(orderId: string): void;
+  close(): void;
+}
+
+class MemoryIdempotencyStore implements IdempotencyStore {
+  private set = new Set<string>();
+  has(id: string) { return this.set.has(id); }
+  add(id: string) { this.set.add(id); }
+  delete(id: string) { this.set.delete(id); }
+  close() { this.set.clear(); }
+}
+
+class SqliteIdempotencyStore implements IdempotencyStore {
+  private db: import("node:sqlite").DatabaseSync;
+  private stmtHas: import("node:sqlite").StatementSync;
+  private stmtAdd: import("node:sqlite").StatementSync;
+  private stmtDel: import("node:sqlite").StatementSync;
+
+  constructor(path: string) {
+    const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
+    this.db = new DatabaseSync(path);
+    this.db.exec(
+      "CREATE TABLE IF NOT EXISTS fulfilled_orders (order_id TEXT PRIMARY KEY, fulfilled_at INTEGER NOT NULL)",
+    );
+    this.stmtHas = this.db.prepare("SELECT 1 FROM fulfilled_orders WHERE order_id = ?");
+    this.stmtAdd = this.db.prepare(
+      "INSERT OR IGNORE INTO fulfilled_orders (order_id, fulfilled_at) VALUES (?, ?)",
+    );
+    this.stmtDel = this.db.prepare("DELETE FROM fulfilled_orders WHERE order_id = ?");
+  }
+
+  has(id: string): boolean {
+    return this.stmtHas.get(id) !== undefined;
+  }
+  add(id: string): void {
+    this.stmtAdd.run(id, Date.now());
+  }
+  delete(id: string): void {
+    this.stmtDel.run(id);
+  }
+  close(): void {
+    this.db.close();
+  }
+}
+
 export class LigisCrooProvider {
   private client: CrooClient;
   private serviceMap: Map<string, ServiceDescriptor>;
-  /** Idempotent delivery: skip duplicate OrderPaid events for the same order. */
-  private fulfilledOrders = new Set<string>();
+  private fulfilledOrders: IdempotencyStore;
+  /** Timestamp of last successful delivery, for health monitoring. */
+  private lastDeliveryAt = 0;
+  /** Total orders delivered, for health monitoring. */
+  private deliveredCount = 0;
+  /** Total errors, for health monitoring. */
+  private errorCount = 0;
 
   constructor(opts: ProviderOptions) {
     this.client = opts.client;
     this.serviceMap = new Map(
       (opts.services ?? defaultServices).map((s) => [s.id, s]),
     );
+    this.fulfilledOrders = opts.idempotencyDbPath
+      ? new SqliteIdempotencyStore(opts.idempotencyDbPath)
+      : new MemoryIdempotencyStore();
   }
 
   /**
@@ -197,6 +270,32 @@ export class LigisCrooProvider {
     }
   }
 
+  /**
+   * Run a handler with a timeout. If the handler doesn't complete
+   * within HANDLER_TIMEOUT_MS, reject with a timeout error so the
+   * provider can deliver an error payload instead of hanging forever.
+   */
+  private async runHandlerWithTimeout(
+    handler: (req: ServiceRequest) => Promise<ServiceResult>,
+    request: ServiceRequest,
+  ): Promise<ServiceResult> {
+    return new Promise<ServiceResult>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(`Handler timed out after ${HANDLER_TIMEOUT_MS}ms`)),
+        HANDLER_TIMEOUT_MS,
+      );
+      handler(request)
+        .then((result) => {
+          clearTimeout(timer);
+          resolve(result);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
+  }
+
   private async onOrderPaid(
     orderId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -224,19 +323,23 @@ export class LigisCrooProvider {
         `[ligis-croo] cannot fulfill order ${orderId}: missing service or requirements`,
       );
       this.fulfilledOrders.delete(orderId);
+      this.errorCount++;
       return;
     }
 
     try {
       const request: ServiceRequest = { serviceId: service.id, requirements };
-      const result = await service.handler(request);
+      const result = await this.runHandlerWithTimeout(service.handler, request);
       await this.client.deliverOrder(orderId, {
         deliverableType: result.deliverableType,
         deliverableText: result.deliverableText,
       });
       console.log(`[ligis-croo] delivered order ${orderId}`);
+      this.lastDeliveryAt = Date.now();
+      this.deliveredCount++;
     } catch (err) {
       console.error(`[ligis-croo] delivery failed for order ${orderId}:`, err);
+      this.errorCount++;
       try {
         await this.client.deliverOrder(orderId, {
           deliverableType: "text",
@@ -259,5 +362,26 @@ export class LigisCrooProvider {
 
   getService(id: SupportedServiceId): ServiceDescriptor | undefined {
     return this.serviceMap.get(id);
+  }
+
+  /**
+   * Health snapshot for monitoring. Returns uptime, delivery counts,
+   * and last delivery timestamp.
+   */
+  health(): {
+    delivered: number;
+    errors: number;
+    lastDeliveryAt: number | null;
+  } {
+    return {
+      delivered: this.deliveredCount,
+      errors: this.errorCount,
+      lastDeliveryAt: this.lastDeliveryAt || null,
+    };
+  }
+
+  /** Close the idempotency store and release resources. */
+  close(): void {
+    this.fulfilledOrders.close();
   }
 }
