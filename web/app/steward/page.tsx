@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
 import { StewardRunner } from "@/components/StewardRunner";
+import { StewardTriptych } from "@/components/StewardTriptych";
 import { WalletGate } from "@/components/WalletGate";
 import { getChain, CASPER_TESTNET, PHAROS_ATLANTIC } from "@/lib/network";
 
@@ -116,6 +117,14 @@ export default async function StewardPage({
             </p>
           </li>
         </ol>
+      </section>
+
+      {/* StewardTriptych — the three-act narrative (genesis / synthesis
+          / stasis) that frames the loop above the wallet context. Static
+          SVG, one-time staggered fade-in on mount, honours
+          prefers-reduced-motion. */}
+      <section className="mt-16">
+        <StewardTriptych isCasper={isCasper} />
       </section>
 
       {/* WalletGate — contextually-placed wallet entry point. Hidden on
