@@ -74,18 +74,24 @@ export function WalletChip() {
   const connected = wallet.pair !== null;
   const funded = wallet.balanceMotes !== null && wallet.balanceMotes !== "0";
   const isHydrating = !wallet.hydrated;
-  const pubkeyPrefix = wallet.pair?.publicKeyHex.slice(0, 6);
-  const acctHashSuffix = wallet.pair?.accountHashHex.slice(-4);
 
+  // Visible label carries only the action-or-value, not the noun. The
+  // dot + aria-label provide identity for screen-readers and colour-vision.
   const label = isHydrating
-    ? "wallet · —"
+    ? "—"
     : !connected
-      ? "wallet · connect"
+      ? "connect"
       : funded
-        ? `wallet · ${formatMotes(wallet.balanceMotes)}`
-        : pubkeyPrefix && acctHashSuffix
-          ? `wallet · ${pubkeyPrefix}··${acctHashSuffix}`
-          : "wallet · connected";
+        ? `${formatMotes(wallet.balanceMotes)} cspr`
+        : "fund →";
+
+  const ariaLabel = isHydrating
+    ? "Wallet — reading state"
+    : !connected
+      ? "Connect wallet"
+      : funded
+        ? `Wallet — ${formatMotes(wallet.balanceMotes)} CSPR, funded`
+        : "Wallet — fund the Casper testnet faucet to continue";
 
   const dot = isHydrating
     ? "bg-paper-deep/60"
@@ -113,20 +119,20 @@ export function WalletChip() {
               ? "funded"
               : "pending"
       }
-      className="relative flex items-center gap-x-2"
+      className="relative flex items-center gap-x-1.5"
     >
       <button
         ref={buttonRef}
         type="button"
+        disabled={isHydrating}
         onClick={() => {
           if (isHydrating) return;
           setOpen((v) => !v);
         }}
         aria-expanded={open}
         aria-busy={isHydrating || undefined}
-        aria-disabled={isHydrating || undefined}
-        aria-label={connected ? "Wallet details" : "Connect wallet"}
-        className={`group inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors ${tone}`}
+        aria-label={ariaLabel}
+        className={`group inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors ${tone}`}
       >
         <span
           className={`inline-block h-1.5 w-1.5 translate-y-[1px] rounded-full ${dot}`}
@@ -135,7 +141,7 @@ export function WalletChip() {
         <span className="tabular">{label}</span>
         <span
           aria-hidden
-          className="text-paper-deep/60 transition-colors group-hover:text-paper/80"
+          className="text-paper-deep/50 transition-colors group-hover:text-paper/80"
         >
           {open ? "▴" : "▾"}
         </span>

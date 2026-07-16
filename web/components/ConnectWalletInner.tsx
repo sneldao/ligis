@@ -8,17 +8,16 @@
  * casper-js-sdk + noble crypto deps from being evaluated when the user
  * is on a Pharos-chain page (where the wallet is never reachable).
  *
- * Three connection paths, ordered by likelihood-of-success for a
- * Casper hackathon judge:
- *
- *   1. Sandbox Session — generate a secp256k1 keypair in the browser,
- *      store it in sessionStorage. Zero install.
- *   2. Paste a hex private key — for developers running
- *      `scripts/setup-casper-wallets.ts`.
- *
- * Both paths produce a key the user must fund via the Casper Testnet
- * faucet. While we wait for funding, the panel polls balance every
- * ~6s and flips green when the faucet delivers CSPR.
+ * Composition (DESIGN.md compliant — no card/tile/panel chrome):
+ *   - One full-width primary CTA: "Generate sandbox key". That's the
+ *     path that unblocks a judge in 30 seconds.
+ *   - Paste-a-hex-key sits inside a `<details>` disclosure so the prose
+ *     weight is gone by default.
+ *   - Once connected, two visible things: the pubkey (copy-able) and
+ *     the balance + faucet CTA. Account hash + key kind hide behind a
+ *     disclosure for the rare case anyone cares.
+ *   - The secp256k1 rationale is gone from this surface; the
+ *     /steward WalletGate companion carries it where prose belongs.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -67,19 +66,27 @@ function ConnectPanel() {
 
   if (!wallet.hydrated) {
     return (
-      <div className="border border-rule bg-paper px-4 py-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
+      <div
+        className="border border-rule bg-paper px-4 py-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet"
+        role="status"
+      >
         Loading wallet…
       </div>
     );
   }
 
   if (wallet.pair) {
-    return <ConnectedPanel wallet={wallet} onDisconnect={wallet.disconnect} />;
+    return (
+      <ConnectedPanel
+        wallet={wallet}
+        onDisconnect={wallet.disconnect}
+      />
+    );
   }
 
   return (
     <div
-      className="space-y-5 border border-rule bg-paper p-5"
+      className="space-y-4 border border-rule bg-paper p-5"
       style={{ borderRadius: 0 }}
       role="dialog"
       aria-label="Connect a Casper wallet"
@@ -87,94 +94,74 @@ function ConnectPanel() {
       <header className="flex items-baseline justify-between">
         <p className="eyebrow">Connect · Casper Testnet</p>
         <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
-          secp256k1
+          secp256k1 · ephemeral
         </span>
       </header>
-      <p className="font-serif text-sm leading-relaxed text-ink-soft">
-        Ligis credentials are signed with secp256k1 so they can be verified
-        across both Casper and Pharos. The official Casper Wallet extension
-        defaults new accounts to ed25519, which is why the sandbox key below
-        is the quickest path: it's a fresh secp256k1 wallet generated in your
-        browser, lives only in this tab, and disappears when you close it.
-      </p>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => {
-            wallet.connectSandbox();
-            setPoll(true);
-          }}
-          className="flex flex-col items-baseline gap-2 border border-rule bg-paper-deep px-4 py-3 text-left transition-colors hover:border-terra hover:bg-paper"
-          style={{ borderRadius: 0 }}
-        >
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink">
-            ● Sandbox session
-          </span>
-          <span className="font-serif text-xs leading-relaxed text-ink-soft">
-            Generate a secp256k1 key in this browser. Zero install.
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById("connect-paste-input");
-            el?.focus();
-          }}
-          className="flex flex-col items-baseline gap-2 border border-rule bg-paper-deep px-4 py-3 text-left transition-colors hover:border-terra hover:bg-paper"
-          style={{ borderRadius: 0 }}
-        >
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink">
-            ○ Paste hex key
-          </span>
-          <span className="font-serif text-xs leading-relaxed text-ink-soft">
-            Import a 32-byte hex key from your shell.
-          </span>
-        </button>
-      </div>
+      {/* Primary CTA — the sandbox key is the path that unblocks a
+          judge in under 30 seconds. Full-width, terra edge, sits above
+          everything else. Hover applies a terra tint (not a full bg
+          flip) so the title + description stay readable as-is. */}
+      <button
+        type="button"
+        onClick={() => {
+          wallet.connectSandbox();
+          setPoll(true);
+        }}
+        className="w-full border border-terra bg-paper px-4 py-3 text-left transition-colors hover:bg-terra/10"
+        style={{ borderRadius: 0 }}
+      >
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-terra">
+          ● Generate sandbox key
+        </span>
+        <span className="block pt-1 font-serif text-xs leading-relaxed text-ink-soft">
+          A secp256k1 key generated in this browser. Zero install. Fund
+          it at the faucet once generated.
+        </span>
+      </button>
 
-      <div className="space-y-2">
-        <label htmlFor="connect-paste-input" className="eyebrow block">
-          hex private key · 64 chars
-        </label>
-        <input
-          id="connect-paste-input"
-          value={pasteValue}
-          onChange={(e) => setPasteValue(e.target.value)}
-          placeholder="0x... or hex"
-          className="block w-full border border-rule bg-paper px-3 py-2 font-mono text-xs tabular text-ink outline-none focus:border-terra"
-          autoComplete="off"
-          spellCheck={false}
-        />
-        <div className="flex items-baseline gap-3">
-          <button
-            type="button"
-            disabled={pasteValue.trim().length === 0}
-            onClick={() => {
-              wallet.connectPaste(pasteValue.trim());
-              setPasteValue("");
-              setPoll(true);
-            }}
-            className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors disabled:text-ink-quiet hover:decoration-terra"
-          >
-            connect →
-          </button>
-          {wallet.error ? (
-            <span className="font-serif text-xs italic text-revoke">
-              {typeof wallet.error === "string" ? wallet.error : JSON.stringify(wallet.error)}
-            </span>
-          ) : null}
+      {/* Paste a hex key — collapsed disclosure. The prose weight is gone
+          unless a developer explicitly opens it. */}
+      <details className="border border-rule">
+        <summary className="cursor-pointer list-none px-4 py-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft transition-colors hover:text-ink">
+          ○ Paste a hex key
+        </summary>
+        <div className="space-y-3 border-t border-rule p-4">
+          <label htmlFor="connect-paste-input" className="eyebrow block">
+            hex private key · 64 chars
+          </label>
+          <input
+            id="connect-paste-input"
+            value={pasteValue}
+            onChange={(e) => setPasteValue(e.target.value)}
+            placeholder="0x... or hex"
+            className="block w-full border border-rule bg-paper px-3 py-2 font-mono text-xs tabular text-ink outline-none focus:border-terra"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <div className="flex items-baseline gap-3">
+            <button
+              type="button"
+              disabled={pasteValue.trim().length === 0}
+              onClick={() => {
+                wallet.connectPaste(pasteValue.trim());
+                setPasteValue("");
+                setPoll(true);
+              }}
+              className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors disabled:text-ink-quiet hover:decoration-terra"
+            >
+              connect →
+            </button>
+            {wallet.error ? (
+              <span className="font-serif text-xs italic text-revoke">
+                {typeof wallet.error === "string"
+                  ? wallet.error
+                  : JSON.stringify(wallet.error)}
+              </span>
+            ) : null}
+          </div>
         </div>
-      </div>
-
-      <p className="font-serif text-xs italic leading-relaxed text-ink-quiet">
-        Why secp256k1? Because <span className="font-mono not-italic">capabilityHash(&quot;…&quot;)</span> produces
-        the same 32 bytes on Casper and Pharos, and the on-chain{" "}
-        <span className="font-mono not-italic">CredentialRegistry</span>{" "}
-        recovers the EVM-style issuer address via{" "}
-        <span className="font-mono not-italic">k256</span>. Casper Wallet&apos;s
-        default ed25519 keys can&apos;t sign for that path.
-      </p>
+      </details>
     </div>
   );
 }
@@ -187,16 +174,17 @@ function ConnectedPanel({
   onDisconnect: () => void;
 }) {
   const pair = wallet.pair;
+  const funded = wallet.balanceMotes !== null && wallet.balanceMotes !== "0";
   if (!pair) return null;
   return (
     <div
-      className="space-y-5 border border-rule bg-paper p-5"
+      className="space-y-4 border border-rule bg-paper p-5"
       style={{ borderRadius: 0 }}
       role="dialog"
       aria-label="Wallet connected"
     >
       <header className="flex items-baseline justify-between">
-        <p className="eyebrow text-sky">● Connected · Casper Testnet</p>
+        <p className="eyebrow text-sky">● Connected</p>
         <button
           type="button"
           onClick={onDisconnect}
@@ -206,115 +194,96 @@ function ConnectedPanel({
         </button>
       </header>
 
-      <div className="space-y-3">
-        <Field label="public key">
-          <span className="font-mono tabular text-ink">{pair.publicKeyHex}</span>
-          <CopyButton value={pair.publicKeyHex} label="copy pubkey" />
-        </Field>
-        <Field label="account hash">
-          <span className="font-mono tabular text-ink">{pair.accountHash}</span>
-          <CopyButton value={pair.accountHash} label="copy hash" />
-        </Field>
-        <Field label="kind">
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft">
-            {wallet.kind === "sandbox" ? "ephemeral session key" : "imported · 64-hex secp256k1"}
-          </span>
-        </Field>
-        <Field label="balance">
+      {/* Two-line primary surface: pubkey (copy) + balance. Everything
+          else hides behind one disclosure so the visual footprint is
+          one row, not four. */}
+      <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-4 border-t border-rule pt-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+          public key
+        </span>
+        <div className="flex flex-wrap items-baseline gap-3">
           <span className="font-mono tabular text-ink">
-            {formatMotes(wallet.balanceMotes)}
+            {pair.publicKeyHex}
           </span>
-          <BalanceStatus status={wallet.balanceStatus} error={wallet.error} />
-        </Field>
+          <CopyButton value={pair.publicKeyHex} label="copy pubkey" />
+        </div>
       </div>
 
       <FaucetPanel
         pair={pair}
         balanceMotes={wallet.balanceMotes}
+        balanceStatus={wallet.balanceStatus}
         onPoll={async () => {
           await wallet.refreshBalance();
         }}
       />
+
+      {/* Rare-need disclosure: account hash + key kind. Most judges will
+          never open this. */}
+      <details className="border-t border-rule pt-3">
+        <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet transition-colors hover:text-ink">
+          account hash + key kind
+        </summary>
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <span className="font-mono tabular text-ink">
+              {pair.accountHash}
+            </span>
+            <CopyButton value={pair.accountHash} label="copy hash" />
+          </div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft">
+            {wallet.kind === "sandbox"
+              ? "ephemeral session key"
+              : "imported · 64-hex secp256k1"}
+          </p>
+        </div>
+      </details>
     </div>
   );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="grid grid-cols-[6.5rem_1fr] items-baseline gap-x-4 border-t border-rule pt-3">
-      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
-        {label}
-      </span>
-      <div className="flex flex-wrap items-baseline gap-3">{children}</div>
-    </div>
-  );
-}
-
-function BalanceStatus({
-  status,
-  error,
-}: {
-  status: "idle" | "polling" | "ok" | "error";
-  error: string | null;
-}) {
-  if (status === "polling") {
-    return (
-      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
-        polling…
-      </span>
-    );
-  }
-  if (status === "error") {
-    return (
-      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-revoke">
-        rpc error · click refresh below
-      </span>
-    );
-  }
-  if (error) {
-    return <span className="font-mono text-[10px] tabular text-revoke">{error}</span>;
-  }
-  return null;
 }
 
 function FaucetPanel({
   pair,
   balanceMotes,
+  balanceStatus,
   onPoll,
 }: {
   pair: { publicKeyHex: string };
   balanceMotes: string | null;
+  balanceStatus: "idle" | "polling" | "ok" | "error";
   onPoll: () => Promise<void>;
 }) {
   const funded = balanceMotes !== null && balanceMotes !== "0";
+  const balanceLabel = balanceMotes ? formatMotes(balanceMotes) : "—";
+
   return (
     <div
-      className={`space-y-3 border border-rule px-4 py-3 ${funded ? "border-sage" : ""}`}
+      className={`space-y-3 border px-4 py-3 ${
+        funded ? "border-sage bg-sage/5" : "border-terra bg-terra/5"
+      }`}
       style={{ borderRadius: 0 }}
+      data-state={funded ? "funded" : "awaiting-funding"}
     >
       <header className="flex items-baseline justify-between">
-        <span className="eyebrow">{funded ? "ready · funded" : "awaiting funding"}</span>
-        <button
-          type="button"
-          onClick={() => void onPoll()}
-          className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-        >
-          refresh
-        </button>
+        <span className="eyebrow">
+          {funded ? "✓ funded" : "awaiting funding"}
+        </span>
+        <span className="font-mono tabular text-ink">
+          {balanceLabel}
+          {funded ? " cspr" : ""}
+          {balanceStatus === "polling" ? (
+            <span className="ml-2 text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              polling…
+            </span>
+          ) : null}
+        </span>
       </header>
+
       {!funded ? (
-        <>
+        <div className="space-y-2">
           <p className="font-serif text-sm leading-relaxed text-ink-soft">
-            Sign deploys from this browser wallet cost testnet CSPR. Copy
-            the public key above, paste it into the Casper Testnet Faucet,
-            and click refresh once it lands. The faucet usually fills in
-            under 30 seconds.
+            Copy the public key, paste it into the Casper Testnet Faucet,
+            and click refresh once CSPR lands. Usually under 30 seconds.
           </p>
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <a
@@ -325,14 +294,20 @@ function FaucetPanel({
             >
               testnet.cspr.live/tools/faucet ↗
             </a>
-            <CopyButton value={pair.publicKeyHex} label="copy pubkey for faucet" />
+            <CopyButton value={pair.publicKeyHex} label="copy pubkey" />
+            <button
+              type="button"
+              onClick={() => void onPoll()}
+              className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+            >
+              refresh
+            </button>
           </div>
-        </>
+        </div>
       ) : (
         <p className="font-serif text-sm italic leading-relaxed text-sage">
-          You have testnet CSPR. The Steward loop will sign and submit
-          every transaction from this browser wallet — no server custodian
-          involved.
+          The Steward loop will sign and submit every transaction from
+          this browser wallet — no server custodian.
         </p>
       )}
     </div>
