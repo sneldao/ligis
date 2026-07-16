@@ -4,7 +4,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PHASES, type Phase, type StewardEvent } from "@/lib/steward-events";
-import { network, CHAINS } from "@/lib/network";
+import { network, CHAINS, CASPER_TESTNET } from "@/lib/network";
+import { useWallet } from "@/lib/casper-browser/store";
 import { Rule } from "./Rule";
 import { StewardDiagram } from "./StewardDiagram";
 import { truncateAddress, truncateHash } from "@/lib/format";
@@ -89,6 +90,10 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   const [copied, setCopied] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const searchParams = useSearchParams();
+  const wallet = useWallet();
+  const isCasperChain =
+    (searchParams.get("chain") ?? "pharos-atlantic") === CASPER_TESTNET.id;
+  const walletReadyForLive = isCasperChain && live && !!wallet.pair;
 
   const GOAL_PRESETS = [
     "I need to open an escrow with a counterparty and swap tokens on an approved venue.",
@@ -126,6 +131,46 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     // Resolve chain from URL query param
     const chainParam = searchParams.get("chain") ?? "pharos-atlantic";
     const activeChain = CHAINS.find((c) => c.id === chainParam) ?? CHAINS[0]!;
+
+    // Browser-side Casper path: user-connected wallet signs + submits
+    // directly via the stateless /api/casper-rpc proxy. No server
+    // custodian, no signing relayer — the user funds their own wallet.
+    if (activeChain.id === CASPER_TESTNET.id && live && wallet.pair) {
+      try {
+        const configRes = await fetch("/api/casper-config", { cache: "no-store" });
+        if (!configRes.ok) throw new Error(`casper-config HTTP ${configRes.status}`);
+        const cfg = (await configRes.json()) as {
+          chainName: string;
+          agentIdPackageHash: string | null;
+          credentialRegistryPackageHash: string | null;
+        };
+        if (!cfg.credentialRegistryPackageHash) {
+          throw new Error(
+            "Ligis CredentialRegistry is not deployed on the server. Set LIGIS_CASPER_CREDENTIAL_REGISTRY.",
+          );
+        }
+        const env = {
+          rpcUrl: "/api/casper-rpc",
+          chainName: cfg.chainName,
+          agentIdPackageHash: cfg.agentIdPackageHash,
+          credentialRegistryPackageHash: cfg.credentialRegistryPackageHash,
+        };
+        const { stewardLoopBrowser } = await import("@/lib/casper-browser/steward");
+        let acc = EMPTY;
+        for await (const ev of stewardLoopBrowser(goal, { env, signer: wallet.pair })) {
+          if (controller.signal.aborted) break;
+          acc = apply(acc, ev as StewardEvent);
+          setState(acc);
+        }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setState((s) => ({ ...s, error: (err as Error).message }));
+        }
+      } finally {
+        setRunning(false);
+      }
+      return;
+    }
 
     try {
       const res = await fetch("/api/steward", {
@@ -165,7 +210,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     } finally {
       setRunning(false);
     }
-  }, [goal, live]);
+  }, [goal, live, wallet.pair, isCasperChain]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -301,9 +346,23 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
             <button
               type="button"
               onClick={() => setLive((v) => !v)}
-              className={`font-mono text-[11px] tabular transition-colors ${live ? "text-sage" : "text-ink-quiet"}`}
+              className={`font-mono text-[11px] tabular transition-colors ${
+                walletReadyForLive
+                  ? "text-sky"
+                  : live
+                    ? "text-sage"
+                    : "text-ink-quiet"
+              }`}
             >
-              {live ? "● live · on-chain" : "○ simulated · no writes"}
+              {!wallet.hydrated
+                ? "○ connecting…"
+                : walletReadyForLive
+                  ? "● live · your wallet"
+                  : isCasperChain && live && !wallet.pair
+                    ? "● live · connect to sign"
+                    : live
+                      ? "● live · on-chain"
+                      : "○ simulated · no writes"}
             </button>
             {live && state.summary?.subject ? (
               <span className="font-mono text-[10px] tabular text-ink-soft">

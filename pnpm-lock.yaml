@@ -249,6 +249,9 @@ importers:
       '@0gfoundation/0g-storage-ts-sdk':
         specifier: ^1.2.6
         version: 1.2.10(bufferutil@4.1.0)(ethers@6.17.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10)
+      '@casper-ecosystem/casper-eip-712':
+        specifier: ^1.0.0
+        version: 1.2.1
       '@ligis/adapter-casper':
         specifier: workspace:*
         version: link:../packages/adapter-casper
@@ -264,6 +267,12 @@ importers:
       '@ligis/zerog':
         specifier: workspace:*
         version: link:../packages/zerog
+      '@noble/curves':
+        specifier: ^1.6.0
+        version: 1.9.7
+      '@noble/hashes':
+        specifier: ^1.5.0
+        version: 1.8.0
       '@react-three/drei':
         specifier: ^10.7.7
         version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0))(@types/react@19.2.17)(@types/three@0.184.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0)
@@ -273,6 +282,9 @@ importers:
       '@use-gesture/react':
         specifier: ^10.3.1
         version: 10.3.1(react@19.2.7)
+      casper-js-sdk:
+        specifier: ^5.0.0
+        version: 5.0.12
       ethers:
         specifier: ^6.13.1
         version: 6.17.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)

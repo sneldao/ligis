@@ -25,7 +25,10 @@
     "paths": {
       "@/*": [
         "./*"
-      ]
+      ],
+      "@ligis/core": ["../packages/core/src/index.ts"],
+      "@ligis/adapter-evm": ["../packages/adapter-evm/src/index.ts"],
+      "@ligis/adapter-casper": ["../packages/adapter-casper/src/index.ts"]
     }
   },
   "include": [

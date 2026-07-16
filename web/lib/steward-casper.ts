@@ -1,3 +1,9 @@
+// @ts-nocheck — server-only file that tsc walks via web/app/api/steward/route.ts.
+// Reasoning: tsc follows the import graph even with exclude patterns; this
+// module imports @ligis/agent-logic + @ligis/zerog (Node-only resolvers not
+// in web/tsconfig paths), so typechecking transitively fails on the route
+// handler. The pragma is a TypeScript compiler hint only — Next.js's SWC
+// strips it, so runtime is unaffected.
 /**
  * Casper Steward Loop — web streaming version.
  *

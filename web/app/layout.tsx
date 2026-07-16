@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Hanken_Grotesk, Fraunces, JetBrains_Mono } from "next/font/google";
+import { ConditionalProviders } from "@/components/ConditionalProviders";
 import { CommandPalette } from "@/components/CommandPalette";
 import { GlobalDock } from "@/components/GlobalDock";
 import { SITE_URL } from "@/lib/site";
@@ -116,10 +118,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to content
         </a>
-        <div id="main-content">{children}</div>
-        <GlobalDock />
-        <CommandPalette />
-        <PaletteHint />
+        <Suspense fallback={null}>
+          <ConditionalProviders>
+            <div id="main-content">{children}</div>
+            <GlobalDock />
+            <CommandPalette />
+            <PaletteHint />
+          </ConditionalProviders>
+        </Suspense>
       </body>
     </html>
   );
