@@ -77,7 +77,7 @@ export async function handleIssue(req: ServiceRequest): Promise<ServiceResult> {
       {
         service: "ligis.issue",
         subject: signed.subject,
-        capability: signed.capability,
+        capability: parsed.capability,
         capabilityHash: signed.capabilityHash,
         issuer: signed.issuer,
         issuedAt: signed.issuedAt,
