@@ -5,6 +5,7 @@ import { loadCrooConfig } from "../config.js";
 import { createCrooClient } from "../client.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { createServer, type Server } from "node:http";
 
 /**
  * Build a map of CROO listing UUIDs -> Ligis service names from env vars.
@@ -35,6 +36,28 @@ function loadServiceAliases(): Map<string, string> {
   return aliases;
 }
 
+/**
+ * Start a minimal HTTP health endpoint on localhost.
+ * Returns JSON with uptime, delivery counts, WS status, and in-flight count.
+ * Port defaults to 9430, overridable via LIGIS_CROO_HEALTH_PORT.
+ */
+function startHealthServer(provider: LigisCrooProvider): Server {
+  const port = parseInt(process.env.LIGIS_CROO_HEALTH_PORT ?? "9430", 10);
+  const server = createServer((req, res) => {
+    if (req.url === "/health") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(provider.health(), null, 2));
+    } else {
+      res.writeHead(404);
+      res.end("Not found");
+    }
+  });
+  server.listen(port, "127.0.0.1", () => {
+    console.log(`[ligis-croo] Health endpoint: http://127.0.0.1:${port}/health`);
+  });
+  return server;
+}
+
 async function main() {
   const config = loadCrooConfig();
   const sdkClient = createCrooClient(
@@ -59,6 +82,7 @@ async function main() {
     serviceIdAliases: serviceAliases,
   });
   const stream = await provider.start();
+  const healthServer = startHealthServer(provider);
 
   console.log("[ligis-croo] Provider started. Waiting for CROO negotiations...");
   console.log(
@@ -77,6 +101,7 @@ async function main() {
   process.on("SIGINT", () => {
     console.log("[ligis-croo] Shutting down...");
     stream.close?.();
+    healthServer.close();
     provider.close();
     process.exit(0);
   });

@@ -1,4 +1,6 @@
 import { createRequire } from "node:module";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { EventType } from "@croo-network/sdk";
 import { handleVerify } from "./verify.js";
 import { handleIssue } from "./issue.js";
@@ -16,6 +18,18 @@ const require = createRequire(import.meta.url);
 
 /** Maximum time a service handler can run before timing out. */
 const HANDLER_TIMEOUT_MS = 30_000;
+
+/** Max delivery retries before giving up. */
+const MAX_DELIVERY_RETRIES = 3;
+
+/** Retry backoff base in ms. */
+const RETRY_BASE_DELAY_MS = 1_000;
+
+/** Interval for pruning old idempotency entries. */
+const PRUNE_INTERVAL_MS = 3_600_000; // 1 hour
+
+/** Age threshold for pruning (7 days). */
+const PRUNE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface ProviderOptions {
   client: CrooClient;
@@ -167,6 +181,7 @@ interface IdempotencyStore {
   has(orderId: string): boolean;
   add(orderId: string): void;
   delete(orderId: string): void;
+  prune(maxAgeMs: number): number;
   close(): void;
 }
 
@@ -175,6 +190,7 @@ class MemoryIdempotencyStore implements IdempotencyStore {
   has(id: string) { return this.set.has(id); }
   add(id: string) { this.set.add(id); }
   delete(id: string) { this.set.delete(id); }
+  prune(): number { return 0; }
   close() { this.set.clear(); }
 }
 
@@ -183,8 +199,11 @@ class SqliteIdempotencyStore implements IdempotencyStore {
   private stmtHas: import("node:sqlite").StatementSync;
   private stmtAdd: import("node:sqlite").StatementSync;
   private stmtDel: import("node:sqlite").StatementSync;
+  private stmtPrune: import("node:sqlite").StatementSync;
 
   constructor(path: string) {
+    // Ensure the parent directory exists — SQLite won't create it.
+    mkdirSync(dirname(path), { recursive: true });
     const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
     this.db = new DatabaseSync(path);
     this.db.exec(
@@ -195,6 +214,7 @@ class SqliteIdempotencyStore implements IdempotencyStore {
       "INSERT OR IGNORE INTO fulfilled_orders (order_id, fulfilled_at) VALUES (?, ?)",
     );
     this.stmtDel = this.db.prepare("DELETE FROM fulfilled_orders WHERE order_id = ?");
+    this.stmtPrune = this.db.prepare("DELETE FROM fulfilled_orders WHERE fulfilled_at < ?");
   }
 
   has(id: string): boolean {
@@ -205,6 +225,11 @@ class SqliteIdempotencyStore implements IdempotencyStore {
   }
   delete(id: string): void {
     this.stmtDel.run(id);
+  }
+  prune(maxAgeMs: number): number {
+    const cutoff = Date.now() - maxAgeMs;
+    const result = this.stmtPrune.run(cutoff);
+    return Number(result.changes ?? 0);
   }
   close(): void {
     this.db.close();
@@ -218,12 +243,20 @@ export class LigisCrooProvider {
   private fulfilledOrders: IdempotencyStore;
   /** Cache of negotiationId -> { serviceId, requirements } for order fulfillment. */
   private negotiationCache: Map<string, { serviceId: string; requirements: string }> = new Map();
+  /** Orders currently being fulfilled (prevents duplicate concurrent processing). */
+  private inFlight: Set<string> = new Set();
   /** Timestamp of last successful delivery, for health monitoring. */
   private lastDeliveryAt = 0;
   /** Total orders delivered, for health monitoring. */
   private deliveredCount = 0;
   /** Total errors, for health monitoring. */
   private errorCount = 0;
+  /** Process start time, for uptime reporting. */
+  private startedAt = Date.now();
+  /** WebSocket connection status. */
+  private wsConnected = false;
+  /** Prune timer handle. */
+  private pruneTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(opts: ProviderOptions) {
     this.client = opts.client;
@@ -237,10 +270,11 @@ export class LigisCrooProvider {
   }
 
   /**
-   * Start the provider WebSocket loop.
+   * Start the provider WebSocket loop and background maintenance.
    */
   async start(): Promise<EventStreamLike> {
     const stream = await this.client.connectWebSocket();
+    this.wsConnected = true;
 
     stream.on(EventType.NegotiationCreated, async (event) => {
       const negotiationId = (event as { negotiation_id?: string })
@@ -254,6 +288,20 @@ export class LigisCrooProvider {
       if (!orderId) return;
       await this.onOrderPaid(orderId, event);
     });
+
+    // Periodic pruning of old idempotency entries.
+    // unref() so the timer doesn't keep the process alive in tests.
+    this.pruneTimer = setInterval(() => {
+      try {
+        const pruned = this.fulfilledOrders.prune(PRUNE_MAX_AGE_MS);
+        if (pruned > 0) {
+          console.log(`[ligis-croo] pruned ${pruned} old idempotency entries`);
+        }
+      } catch (err) {
+        console.error(`[ligis-croo] prune failed:`, err);
+      }
+    }, PRUNE_INTERVAL_MS);
+    this.pruneTimer.unref();
 
     return stream;
   }
@@ -275,8 +323,20 @@ export class LigisCrooProvider {
   ): Promise<void> {
     console.log(`[ligis-croo] negotiation created: ${negotiationId}`);
 
-    const rawServiceId: string | undefined = event.service_id ?? event.serviceId;
-    const requirements: string | undefined = event.requirements;
+    // The WebSocket event is sparse — fetch full details from the API
+    // so we have service_id and requirements before accepting.
+    let rawServiceId: string | undefined = event.service_id ?? event.serviceId;
+    let requirements: string | undefined = event.requirements;
+
+    if (!rawServiceId || !requirements) {
+      try {
+        const neg = await this.client.getNegotiation(negotiationId);
+        rawServiceId = neg.serviceId;
+        requirements = neg.requirements;
+      } catch (err) {
+        console.error(`[ligis-croo] failed to fetch negotiation ${negotiationId}:`, err);
+      }
+    }
 
     const serviceId = rawServiceId ? this.resolveServiceId(rawServiceId) : undefined;
 
@@ -297,7 +357,7 @@ export class LigisCrooProvider {
 
     try {
       await this.client.acceptNegotiation(negotiationId);
-      console.log(`[ligis-croo] accepted negotiation ${negotiationId}`);
+      console.log(`[ligis-croo] accepted negotiation ${negotiationId} (service: ${serviceId})`);
     } catch (err) {
       console.error(`[ligis-croo] accept failed:`, err);
     }
@@ -340,10 +400,14 @@ export class LigisCrooProvider {
       );
       return;
     }
-    // Claim the order synchronously (before any await) so a duplicate
-    // OrderPaid arriving while this one is still in flight sees the claim
-    // and skips, instead of racing to a second deliverOrder call.
-    this.fulfilledOrders.add(orderId);
+    if (this.inFlight.has(orderId)) {
+      console.log(
+        `[ligis-croo] order ${orderId} already in flight — skipping duplicate OrderPaid`,
+      );
+      return;
+    }
+    // Mark as in-flight to prevent concurrent processing of duplicate events.
+    this.inFlight.add(orderId);
 
     console.log(`[ligis-croo] order paid: ${orderId}`);
 
@@ -361,7 +425,6 @@ export class LigisCrooProvider {
         rawServiceId = cached.serviceId;
         requirements = cached.requirements;
       } else {
-        // Fallback: fetch from API
         try {
           const neg = await this.client.getNegotiation(negotiationId);
           rawServiceId = neg.serviceId;
@@ -378,7 +441,7 @@ export class LigisCrooProvider {
       console.error(
         `[ligis-croo] cannot fulfill order ${orderId}: missing service or requirements`,
       );
-      this.fulfilledOrders.delete(orderId);
+      this.inFlight.delete(orderId);
       this.errorCount++;
       return;
     }
@@ -386,16 +449,53 @@ export class LigisCrooProvider {
     try {
       const request: ServiceRequest = { serviceId: service.id, requirements };
       const result = await this.runHandlerWithTimeout(service.handler, request);
-      await this.client.deliverOrder(orderId, {
-        deliverableType: result.deliverableType,
-        deliverableText: result.deliverableText,
-      });
-      console.log(`[ligis-croo] delivered order ${orderId}`);
-      this.lastDeliveryAt = Date.now();
-      this.deliveredCount++;
+
+      // Log the deliverable payload for debugging (truncated for readability).
+      const preview = result.deliverableText.length > 200
+        ? result.deliverableText.slice(0, 200) + "…"
+        : result.deliverableText;
+      console.log(`[ligis-croo] handler result for ${orderId}: ${preview}`);
+
+      // Retry delivery with exponential backoff. Only mark as fulfilled
+      // after successful delivery — failed deliveries can be retried
+      // by duplicate OrderPaid events or manual intervention.
+      let delivered = false;
+      for (let attempt = 1; attempt <= MAX_DELIVERY_RETRIES; attempt++) {
+        try {
+          await this.client.deliverOrder(orderId, {
+            deliverableType: result.deliverableType,
+            deliverableText: result.deliverableText,
+          });
+          delivered = true;
+          break;
+        } catch (deliverErr) {
+          console.error(
+            `[ligis-croo] delivery attempt ${attempt}/${MAX_DELIVERY_RETRIES} failed for order ${orderId}:`,
+            deliverErr,
+          );
+          if (attempt < MAX_DELIVERY_RETRIES) {
+            const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+            await new Promise((r) => setTimeout(r, delay));
+          }
+        }
+      }
+
+      if (delivered) {
+        // Mark fulfilled only after successful delivery.
+        this.fulfilledOrders.add(orderId);
+        console.log(`[ligis-croo] delivered order ${orderId}`);
+        this.lastDeliveryAt = Date.now();
+        this.deliveredCount++;
+      } else {
+        console.error(
+          `[ligis-croo] all ${MAX_DELIVERY_RETRIES} delivery attempts failed for order ${orderId}`,
+        );
+        this.errorCount++;
+      }
     } catch (err) {
-      console.error(`[ligis-croo] delivery failed for order ${orderId}:`, err);
+      console.error(`[ligis-croo] handler failed for order ${orderId}:`, err);
       this.errorCount++;
+      // Deliver an error payload so the buyer gets a response.
       try {
         await this.client.deliverOrder(orderId, {
           deliverableType: "text",
@@ -404,15 +504,15 @@ export class LigisCrooProvider {
             message: err instanceof Error ? err.message : String(err),
           }),
         });
+        this.fulfilledOrders.add(orderId);
       } catch (deliverErr) {
         console.error(
           `[ligis-croo] failed to deliver error payload:`,
           deliverErr,
         );
-        // Both the primary and error-payload deliveries failed — release the
-        // claim so a genuine retry (not just a duplicate event) can succeed.
-        this.fulfilledOrders.delete(orderId);
       }
+    } finally {
+      this.inFlight.delete(orderId);
     }
   }
 
@@ -422,22 +522,32 @@ export class LigisCrooProvider {
 
   /**
    * Health snapshot for monitoring. Returns uptime, delivery counts,
-   * and last delivery timestamp.
+   * WebSocket status, and last delivery timestamp.
    */
   health(): {
+    uptime: number;
     delivered: number;
     errors: number;
     lastDeliveryAt: number | null;
+    wsConnected: boolean;
+    inFlight: number;
   } {
     return {
+      uptime: Date.now() - this.startedAt,
       delivered: this.deliveredCount,
       errors: this.errorCount,
       lastDeliveryAt: this.lastDeliveryAt || null,
+      wsConnected: this.wsConnected,
+      inFlight: this.inFlight.size,
     };
   }
 
-  /** Close the idempotency store and release resources. */
+  /** Close the idempotency store, clear timers, and release resources. */
   close(): void {
+    if (this.pruneTimer) {
+      clearInterval(this.pruneTimer);
+      this.pruneTimer = null;
+    }
     this.fulfilledOrders.close();
   }
 }
