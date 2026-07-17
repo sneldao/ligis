@@ -1,6 +1,9 @@
 packages:
   - 'packages/*'
   - 'web'
+auditConfig:
+  ignoreCves:
+    - CVE-2025-14505
 overrides:
   axios@<0.32.0: '>=0.32.0'
   axios@<1.8.2: '>=1.8.2'

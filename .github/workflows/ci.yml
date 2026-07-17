@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Audit dependencies
+        run: pnpm run audit:deps
+
       - name: Build workspace
         run: pnpm build
 

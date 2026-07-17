@@ -18,20 +18,36 @@ For a detailed security overview, see [docs/security.md](docs/security.md).
 |--------|-----------|
 | main   | yes       |
 
-## Known Transitive Dependency Alerts
+## Dependency Audit Policy
 
-GitHub Dependabot currently reports a small number of high-severity alerts for `axios` versions pulled in by our upstream SDK dependencies:
+Run dependency audits from the repository root:
 
-- `casper-js-sdk` (Casper Network official SDK) depends on `axios ^1.15.0`
-- `@0gfoundation/0g-storage-ts-sdk` pulls in `open-jsonrpc-provider`, which also resolves to `axios` 1.x
+```bash
+pnpm run audit:deps
+```
 
-As of the latest lockfile update, the newest `axios` release available on npm is `1.18.1`, and GitHub's advisory database still flags it with several high-severity issues. **There is no patched `axios` 1.x release to upgrade to** without either replacing the official Casper SDK or forking it. We have:
+This fails on moderate, high, and critical npm advisories. The current pnpm
+lockfile reports no moderate-or-higher npm vulnerabilities.
 
-- Applied pnpm overrides to force the latest available `axios` and `ws` versions
-- Reduced open high-severity alerts from 33 to 22
-- Confirmed the remaining alerts are exclusively in transitive SDK dependencies, not in Ligis contract or adapter code
+For a full npm audit, including low-severity advisories:
 
-We are tracking upstream releases and will update as soon as a patched `axios` 1.x or patched `casper-js-sdk` is published.
+```bash
+pnpm run audit:deps:all
+```
+
+The full audit ignores only `CVE-2025-14505` / `GHSA-848j-6mx2-7j84`, a
+low-severity `elliptic <= 6.6.1` advisory with no patched npm release. Ligis
+does not depend on `elliptic` directly; it is pulled transitively through
+`@0gfoundation/0g-compute-ts-sdk -> circomlibjs -> ethers@5` and
+`@0gfoundation/0g-compute-ts-sdk -> crypto-browserify`. The latest available
+0G compute SDK still contains this dependency path, so this exception should be
+removed as soon as upstream ships a version that no longer resolves to the
+vulnerable package. The exception is recorded in `pnpm-workspace.yaml` under
+`auditConfig.ignoreCves`.
+
+The workspace also uses pnpm overrides in `pnpm-workspace.yaml` to force patched
+transitive versions for known vulnerable `axios`, `postcss`, and `ws` ranges.
+Do not remove those overrides unless `pnpm audit` remains clean without them.
 
 ## Reporting a Vulnerability
 
