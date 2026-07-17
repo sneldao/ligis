@@ -46,7 +46,12 @@ export function HomeField({ children }: { children: ReactNode }) {
 
   return (
     <section ref={regionRef} className="relative isolate">
-      <div className="sticky top-0 h-dvh overflow-hidden bg-paper">
+      {/* Mobile is a reading surface, not an immersive viewport: retain the
+          quiet specimen texture without forcing a blank screen before copy. */}
+      <div className="absolute inset-0 bg-paper sm:hidden">
+        <QuietField />
+      </div>
+      <div className="sticky top-0 hidden h-dvh overflow-hidden bg-paper sm:block">
         <div className="absolute inset-0">
           {showScene ? (
             <SceneErrorBoundary>
@@ -57,7 +62,7 @@ export function HomeField({ children }: { children: ReactNode }) {
           )}
         </div>
       </div>
-      <div className="pointer-events-none relative z-10 -mt-dvh">
+      <div className="pointer-events-none relative z-10 sm:-mt-dvh">
         {children}
       </div>
     </section>

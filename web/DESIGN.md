@@ -43,6 +43,14 @@ and reach for typography, whitespace, and hairlines instead.
 
 - The home page is editorial, not a dashboard. Stats appear inline as numerals
   in prose ("1,247 agents minted on Pharos Atlantic"), not as tiles.
+- **Home-page hierarchy**: lead with the trust decision and a live registry
+  check. Risk, integration, contracts, and issuance are secondary paths:
+  reveal code samples, price lists, addresses, and CLI walkthroughs only when
+  a visitor explicitly opens their detail. The home page is not a README.
+- **Mobile home**: content begins immediately beneath the dock. The home field
+  becomes a quiet static specimen texture; it must not reserve a viewport or
+  show desktop-only navigation hints. Audience routing is three compact action
+  rows, with explanatory copy deferred to wider screens or the destination.
 - **Agent field**: the interactive agent field is a route-scoped home-page
   environment. It may span the home proposition, verification, and catalog
   sequence, but it must end before operational or integration content. It is

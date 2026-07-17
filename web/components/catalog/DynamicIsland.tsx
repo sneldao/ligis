@@ -113,7 +113,7 @@ export function ScrollHint() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.8, duration: 0.6 }}
-      className="pointer-events-none fixed inset-x-0 bottom-8 z-20 flex justify-center"
+      className="pointer-events-none fixed inset-x-0 bottom-8 z-20 hidden justify-center sm:flex"
     >
       <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-quiet">
         scroll for the spec sheet ↓
