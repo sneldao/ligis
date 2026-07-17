@@ -200,14 +200,15 @@ Subscription pricing or CROO-bundled pricing could address this.
 
 ## Roadmap
 
-### Phase 1: Credential verification + risk check on CROO (done)
+### Phase 1: Credential verification + risk check + issuance on CROO (done)
 
 - [x] `ligis.verify` — on-chain credential verification via CROO
 - [x] `ligis.risk` — counterparty risk check with pass/warn/fail + 0–100 score
+- [x] `ligis.issue` — credential issuance with on-chain transaction submission
 - [x] Provider running 24/7 under PM2 on dedicated infrastructure
 - [x] Health endpoint, idempotent delivery, retry with backoff
-- [x] CROO listing live with deliverable schema
-- [x] End-to-end tested: negotiate → pay → deliver → verify
+- [x] CROO listing live with deliverable schema for all three services
+- [x] End-to-end tested: issue → verify (`capable: true`) → risk (`warn`, maturing to `pass`)
 
 ### Phase 2: Aggregation issuance (next)
 

@@ -36,11 +36,11 @@ Listed on the CROO Agent Store:
 |---|---|---|---|---|
 | `ligis.risk` | $0.75 | Counterparty risk check | `CredentialRegistry.isCapable` read(s) | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }` |
 | `ligis.verify` | $0.50 | On-chain credential verification | `CredentialRegistry.isCapable` read | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }` |
+| `ligis.issue` | $1.00 | Credential issuance (on-chain tx) | `CredentialRegistry.issue` write | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt }` |
 
-`ligis.issue` is implemented in the provider but not yet listed — it will
-become an aggregation service that bridges external verifiers (Self
-Protocol, World ID, EAS) into unified on-chain credentials. See
-[`docs/strategy.md`](strategy.md) for the roadmap.
+All three services are live and tested end-to-end. The full loop works:
+issue a credential → verify returns `capable: true` → risk check returns
+`warn` (maturing to `pass` after 7 days) instead of `fail`.
 
 ## Use case: verify an escrow agent
 
@@ -112,9 +112,7 @@ The provider will:
 
 1. Connect to the CROO WebSocket.
 2. Listen for `NegotiationCreated` events.
-3. Accept negotiations for `ligis.risk` and `ligis.verify` (the code also
-   handles `ligis.issue` if hired directly, but it's not yet listed on
-   the Store).
+3. Accept negotiations for `ligis.risk`, `ligis.verify`, and `ligis.issue`.
 4. On `OrderPaid`, read from the configured Ligis chain.
 5. Call `deliverOrder()` with a JSON verdict.
 

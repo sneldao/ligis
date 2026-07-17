@@ -254,7 +254,9 @@ set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm d
 |---|---|---|---|
 | `ligis.risk` | $0.75 | **Counterparty risk check** — pass/warn/fail + 0–100 score | `{ subject, capabilities, issuer?, minTtlSeconds? }` |
 | `ligis.verify` | $0.50 | On-chain credential verification | `{ subject, capability, issuer? }` |
-| `ligis.issue` | TBD | Signed capability credential issuance (aggregation roadmap) | `{ subject, capability, expiresInSeconds? }` |
+| `ligis.issue` | $1.00 | Signed capability credential issuance (on-chain tx) | `{ subject, capability, expiresInSeconds? }` |
+
+All three services are live and tested end-to-end: issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass` after 7 days).
 
 See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/strategy.md`](docs/strategy.md), and [`packages/croo-adapter/`](packages/croo-adapter/).
 

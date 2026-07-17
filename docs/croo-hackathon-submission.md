@@ -43,11 +43,10 @@ Public. MIT licensed. CAP provider + requester in `packages/croo-adapter/`.
 |---|---|---|
 | `ligis.risk` | $0.75 | Counterparty risk check — pass/warn/fail + 0–100 score |
 | `ligis.verify` | $0.50 | On-chain credential verification — capable boolean + credential details |
+| `ligis.issue` | $1.00 | Credential issuance — signs + submits on-chain credential to CredentialRegistry |
 
-`ligis.issue` is implemented but not yet listed — it will become an
-aggregation service that bridges external verifiers (Self Protocol, World
-ID, EAS) into unified on-chain credentials. See
-[`docs/strategy.md`](strategy.md) for the roadmap.
+All three services are live and tested end-to-end. The full loop works:
+issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass`).
 
 Manifest: [`packages/croo-adapter/croo-store-manifest.json`](../packages/croo-adapter/croo-store-manifest.json)
 
