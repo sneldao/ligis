@@ -236,11 +236,6 @@ export default async function HomePage({
                   <code className="font-mono text-ink">ligis.verify</code>
                   &mdash; single credential check ($0.50)
                 </li>
-                <li className="flex items-baseline gap-3">
-                  <span className="inline-block h-1 w-1 rounded-full bg-terra" />
-                  <code className="font-mono text-ink">ligis.issue</code>
-                  &mdash; issue a credential ($2.00)
-                </li>
               </ul>
             </div>
             <div className="space-y-8">
