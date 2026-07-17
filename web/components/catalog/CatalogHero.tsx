@@ -46,9 +46,11 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
     {
       icon: "🤖",
       title: "I run an agent",
-      description: "CLI & MCP server for identity minting, credential issuance, and the autonomous boot loop.",
-      action: () => router.push("/steward"),
-      actionLabel: "Watch the steward →",
+      description: "Hire Ligis to check your counterparty before you pay. Risk score, breakdown, signals.",
+      action: () => {
+        document.getElementById("croo")?.scrollIntoView({ behavior: "smooth" });
+      },
+      actionLabel: "See the risk check →",
     },
     {
       icon: "👀",
@@ -78,14 +80,14 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
           className="pointer-events-auto text-center"
         >
           <h2 className="display max-w-3xl text-4xl text-ink sm:text-5xl">
-            AI agents are getting smarter.
+            Every agent is a stranger
             <br />
-            But they&rsquo;re still anonymous.
+            until you check.
           </h2>
           <p className="mt-3 font-serif text-base italic leading-relaxed text-ink-soft sm:text-lg">
-            Ligis gives them portable identities and verifiable credentials —
-            so any app can verify what an agent is allowed to do in one on-chain
-            read.
+            Ligis gives every agent a portable identity and verifiable
+            credentials &mdash; so you can know who you&rsquo;re paying
+            before you pay, in one on-chain read.
           </p>
           {chain ? (
             <p className="mt-4 hidden font-serif text-sm italic text-ink-quiet sm:block">

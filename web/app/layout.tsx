@@ -30,9 +30,9 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const TITLE = "Ligis — a trust layer for autonomous agents";
+const TITLE = "Ligis — know who you're paying before you pay";
 const DESCRIPTION =
-  "Portable identity and verifiable credentials for AI agents on Pharos. Two non-custodial contracts, one read: isCapable. No admin, no SDK, no oracle.";
+  "Your agent is about to pay a stranger. Ligis tells you if that stranger is trustworthy — in one on-chain read, before the transaction leaves your wallet. Portable identity and verifiable credentials for autonomous agents.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -51,7 +51,8 @@ export const metadata: Metadata = {
     "ERC-721",
     "AI agents",
     "0G",
-    "Trust Steward",
+    "counterparty risk",
+    "agent trust",
   ],
   authors: [{ name: "sneldao" }],
   creator: "sneldao",
@@ -62,6 +63,12 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
     locale: "en_US",
+    images: [
+      {
+        url: "/opengraph-image",
+        alt: "Ligis — know who you're paying before you pay",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
