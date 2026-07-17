@@ -55,6 +55,8 @@ debug.log
 # npm
 .npm
 .npmrc
+package-lock.json
+web/package-lock.json
 
 # claude code / commandcode / agent session-local config
 .claude/

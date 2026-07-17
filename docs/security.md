@@ -26,6 +26,11 @@ Both contracts never hold funds, never call external contracts on write paths. T
 - Revocation always succeeds; rotation always succeeds; expiry is checked at read time (not in a push that could lock state).
 - Bounded revocation scan (max 50 nonces) prevents gas griefing.
 - O(1) lookups via existence flags and per-issuer latest-valid-nonce trackers.
+- Casper `AgentId.mint(controller, token_uri)` intentionally remains public to
+  match the Phase-1 EVM `PharosAgentID.mint` behavior. Active product flows use
+  `mint_self`. If delegated/admin minting becomes part of the trust boundary,
+  introduce a role model on both EVM and Casper together rather than changing
+  Casper semantics alone.
 
 ## Key hygiene
 

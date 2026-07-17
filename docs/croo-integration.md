@@ -42,6 +42,22 @@ All three services are live and tested end-to-end. The full loop works:
 issue a credential → verify returns `capable: true` → risk check returns
 `warn` (maturing to `pass` after 7 days) instead of `fail`.
 
+## Product hardening roadmap
+
+The next CROO work is polish and operational hardening, not new protocol shape:
+
+- Keep `ligis.risk`, `ligis.verify`, and `ligis.issue` listing copy, pricing,
+  and schemas in the CROO dashboard aligned with
+  `packages/croo-adapter/croo-store-manifest.json`.
+- Add production smoke checks for all three services after each provider deploy:
+  issue → verify → risk.
+- Surface provider delivery metrics (`delivered`, `errors`, `lastDeliveryAt`,
+  `wsConnected`, `inFlight`) in the release checklist before marking a deploy
+  healthy.
+- Revisit `ligis.issue` once external verifier aggregation ships, so CROO can
+  become the intake channel for imported trust signals rather than only direct
+  issuer writes.
+
 ## Use case: verify an escrow agent
 
 Before your agent sends $5000 to an escrow agent, hire Ligis:

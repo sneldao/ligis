@@ -21,6 +21,7 @@
     "test:all": "bash scripts/forge.sh test -vvv && pnpm run test:ts",
     "audit:deps": "pnpm audit --audit-level moderate",
     "audit:deps:all": "pnpm audit",
+    "audit:cargo": "cd packages/contracts-casper && cargo audit",
     "test:coverage": "bash scripts/forge.sh coverage",
     "deploy:atlantic": "bash scripts/deploy.sh atlantic",
     "verify:atlantic": "bash scripts/verify.sh atlantic",

@@ -49,6 +49,23 @@ The workspace also uses pnpm overrides in `pnpm-workspace.yaml` to force patched
 transitive versions for known vulnerable `axios`, `postcss`, and `ws` ranges.
 Do not remove those overrides unless `pnpm audit` remains clean without them.
 
+Cargo dependencies for the Casper contracts are audited separately:
+
+```bash
+pnpm run audit:cargo
+```
+
+CI runs this audit against `packages/contracts-casper/Cargo.lock`. The local
+command requires `cargo-audit` to be installed. Current RustSec output has no
+vulnerabilities, but reports unmaintained/yanked transitive warnings from the
+Odra/Casper dependency graph (`bincode`, `dotenv`, `proc-macro-error`,
+`proc-macro-error2`, and `spin`). Track upstream Odra/Casper releases before
+turning warnings into CI failures.
+
+GitHub Dependabot may continue to show stale npm alerts when alternate lockfiles
+exist. This repository is a pnpm workspace; `package-lock.json` files should not
+be committed.
+
 ## Reporting a Vulnerability
 
 Please report vulnerabilities privately via GitHub Security Advisories:

@@ -80,7 +80,9 @@ it gets added here first, with a rule for when to use it.
   generating any new surface.
 - The `/styleguide` route is the source of truth. Features compose from it.
 - Production builds use webpack (`next build --webpack`) until the local
-  Next 16 Turbopack build no longer stalls during optimized compilation.
+  Next 16 Turbopack build no longer stalls during optimized compilation. When
+  revisiting this, verify `pnpm --filter @ligis/web build` and a direct
+  `next build --turbopack` run before switching the script back.
 - Pull requests that introduce a banned word or break a required rule are
   rejected.
 
