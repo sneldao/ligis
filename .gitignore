@@ -13,6 +13,12 @@ dist/
 # typescript incremental build cache
 *.tsbuildinfo
 
+# next.js auto-generated
+web/next-env.d.ts
+
+# casper wasm build output
+packages/contracts-casper/wasm/
+
 # secrets — never commit these
 .env
 .env.local
