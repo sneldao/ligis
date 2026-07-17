@@ -268,6 +268,7 @@ See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/strategy.md`]
 | [Architecture](docs/architecture.md) | Contract design, module structure, repository layout |
 | [Monorepo structure](MONOREPO_STRUCTURE.md) | Package layout, dependency graph, ChainAdapter interface, adding a new chain |
 | [CROO Integration](docs/croo-integration.md) | CAP adapter, Agent Store listing, provider/requester usage |
+| [API Reference](docs/api.md) | Service schemas, input/output examples, capability names, chains |
 | [CROO Hackathon submission](docs/croo-hackathon-submission.md) | BUIDL copy, judge repro, track alignment |
 | [Casper Buildathon](docs/casper-buildathon.md) | Submission plan, product story, day-by-day roadmap, demo storyboard |
 | [Trust Steward Agent](docs/trust-steward-agent.md) | The autonomous loop, 0G integration, build phases |
