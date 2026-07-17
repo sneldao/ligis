@@ -57,6 +57,11 @@ and reach for typography, whitespace, and hairlines instead.
   live tools use the wider editorial frame on desktop. Core state is visible
   immediately; hashes, CLI instructions, protocol narratives, and embed code
   are disclosed on intent.
+- **Wallet control**: the dock owns the persistent, chain-aware account
+  control. Public reads never ask for a connection. On Pharos it connects an
+  injected EVM wallet and validates the active network; on Casper it opens the
+  local secp256k1 wallet flow. A route may repeat the action only when setup
+  context is essential (the Steward loop), never as competing global chrome.
 - **Agent field**: the interactive agent field is a route-scoped home-page
   environment. It may span the home proposition, verification, and catalog
   sequence, but it must end before operational or integration content. It is

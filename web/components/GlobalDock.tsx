@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { ChainSelector } from "@/components/ChainSelector";
 import { WalletChip } from "@/components/WalletChip";
+import { EvmWalletChip } from "@/components/EvmWalletChip";
 
 const NAV = [
   { href: "/#how", label: "How it works" },
@@ -83,6 +84,7 @@ export function GlobalDock() {
           </div>
           <div className="hidden sm:flex items-center">
             <WalletChip />
+            <EvmWalletChip />
           </div>
         </div>
 
@@ -125,6 +127,7 @@ export function GlobalDock() {
               ))}
               <li>
                 <WalletChip />
+                <EvmWalletChip />
               </li>
             </ul>
           </motion.div>

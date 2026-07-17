@@ -106,6 +106,16 @@ All pages are chain-aware:
 The chain dispatch layer is in `web/lib/chain-router.ts`, with Casper reads
 implemented in `web/lib/chain-casper.ts` (using `@ligis/adapter-casper`).
 
+### Browser wallet controls
+
+The fixed navigation is deliberately chain-aware. In **Pharos** mode it can
+connect any EIP-1193 browser wallet, requests Pharos Atlantic Testnet
+(`688689`), and offers to add the network if it is absent. This identifies the
+visitor's account only; public registry reads and verification remain wallet
+free, and the current web Steward's Pharos writes still use its configured
+server-side steward key. In **Casper** mode the same dock position opens the
+browser-local secp256k1 wallet flow described below.
+
 **Casper env vars required on Vercel** for reads to work:
 
 - `LIGIS_CASPER_RPC_URL`
