@@ -56,7 +56,7 @@ async function main() {
     client: sdkClient,
     services: defaultServices,
     idempotencyDbPath: dbPath,
-    serviceAliases,
+    serviceIdAliases: serviceAliases,
   });
   const stream = await provider.start();
 
