@@ -216,6 +216,8 @@ export class LigisCrooProvider {
   private serviceMap: Map<string, ServiceDescriptor>;
   private serviceAliases: Map<string, string>;
   private fulfilledOrders: IdempotencyStore;
+  /** Cache of negotiationId -> { serviceId, requirements } for order fulfillment. */
+  private negotiationCache: Map<string, { serviceId: string; requirements: string }> = new Map();
   /** Timestamp of last successful delivery, for health monitoring. */
   private lastDeliveryAt = 0;
   /** Total orders delivered, for health monitoring. */
@@ -287,6 +289,12 @@ export class LigisCrooProvider {
       return;
     }
 
+    // Cache for order fulfillment — the order_paid event doesn't
+    // include service_id or requirements, so we need them from here.
+    if (requirements) {
+      this.negotiationCache.set(negotiationId, { serviceId, requirements });
+    }
+
     try {
       await this.client.acceptNegotiation(negotiationId);
       console.log(`[ligis-croo] accepted negotiation ${negotiationId}`);
@@ -339,8 +347,30 @@ export class LigisCrooProvider {
 
     console.log(`[ligis-croo] order paid: ${orderId}`);
 
-    const rawServiceId: string | undefined = event.service_id ?? event.serviceId;
-    const requirements: string | undefined = event.requirements;
+    // The order_paid event only has order_id + negotiation_id — no
+    // service_id or requirements. Try the cache first (populated when
+    // we accepted the negotiation), then fall back to the API.
+    const negotiationId: string | undefined =
+      event.negotiation_id ?? event.negotiationId;
+    let rawServiceId: string | undefined = event.service_id ?? event.serviceId;
+    let requirements: string | undefined = event.requirements;
+
+    if ((!rawServiceId || !requirements) && negotiationId) {
+      const cached = this.negotiationCache.get(negotiationId);
+      if (cached) {
+        rawServiceId = cached.serviceId;
+        requirements = cached.requirements;
+      } else {
+        // Fallback: fetch from API
+        try {
+          const neg = await this.client.getNegotiation(negotiationId);
+          rawServiceId = neg.serviceId;
+          requirements = neg.requirements;
+        } catch (err) {
+          console.error(`[ligis-croo] failed to fetch negotiation ${negotiationId}:`, err);
+        }
+      }
+    }
 
     const serviceId = rawServiceId ? this.resolveServiceId(rawServiceId) : undefined;
     const service = serviceId ? this.serviceMap.get(serviceId) : undefined;

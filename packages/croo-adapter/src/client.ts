@@ -32,6 +32,13 @@ export interface CrooClient {
   }): Promise<{ negotiationId?: string; orderId?: string }>;
   payOrder(orderId: string): Promise<{ txHash?: string }>;
   getDelivery(orderId: string): Promise<{ deliverableText?: string } | null>;
+  /** Fetch negotiation details (includes requirements + serviceId). */
+  getNegotiation(negotiationId: string): Promise<{
+    negotiationId: string;
+    serviceId: string;
+    requirements: string;
+    status: string;
+  }>;
 }
 
 export function createCrooClient(

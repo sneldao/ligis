@@ -51,6 +51,16 @@ export class MockCrooClient implements CrooClient {
     return null;
   }
 
+  async getNegotiation(negotiationId: string) {
+    this.record("getNegotiation", [negotiationId]);
+    return {
+      negotiationId,
+      serviceId: "ligis.verify",
+      requirements: "{}",
+      status: "accepted",
+    };
+  }
+
   /** Helper to emit events into the provider loop. */
   emitEvent(event: string, payload: unknown) {
     this.stream.emit(event, payload);
