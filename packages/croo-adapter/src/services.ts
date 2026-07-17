@@ -41,7 +41,23 @@ export type SupportedServiceId = (typeof SUPPORTED_SERVICES)[number];
 
 export function parseServiceRequirements(requirements: string): unknown {
   try {
-    return JSON.parse(requirements);
+    const parsed = JSON.parse(requirements);
+    // CROO wraps the buyer's requirements in a { text: "..." } envelope.
+    // Unwrap it so handlers receive the actual requirements object.
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      typeof parsed.text === "string" &&
+      Object.keys(parsed).length === 1
+    ) {
+      try {
+        return JSON.parse(parsed.text);
+      } catch {
+        // text field wasn't JSON — return it as a plain string
+        return parsed.text;
+      }
+    }
+    return parsed;
   } catch {
     throw new Error("Invalid JSON in negotiation requirements");
   }

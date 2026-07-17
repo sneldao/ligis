@@ -448,7 +448,6 @@ export class LigisCrooProvider {
 
     try {
       const request: ServiceRequest = { serviceId: service.id, requirements };
-      console.log(`[ligis-croo] fulfilling order ${orderId} with service ${service.id}, requirements: ${requirements.slice(0, 200)}`);
       const result = await this.runHandlerWithTimeout(service.handler, request);
 
       // Log the deliverable payload for debugging (truncated for readability).
