@@ -194,6 +194,103 @@ export async function callStoredContractViaCli(params: {
 }
 
 /**
+ * Build a TransactionV1 that calls a stored contract by package hash,
+ * using the casper-js-sdk directly (no casper-client CLI required).
+ *
+ * This is the SDK-based alternative to callStoredContractViaCli for
+ * environments where the casper-client Rust binary is not installed.
+ */
+export async function callStoredContractViaSdk(params: {
+  chainName: string;
+  signer: Signer;
+  packageHash: string;
+  entryPoint: string;
+  args: Map<string, CLValueType>;
+  ttlMs?: number;
+  paymentAmount?: number;
+  rpcUrl: string;
+}): Promise<{ txHash: string; blockNumber: string }> {
+  const {
+    chainName,
+    signer,
+    packageHash,
+    entryPoint,
+    args,
+    rpcUrl,
+    ttlMs = DEFAULT_TTL_MS,
+    paymentAmount = 10_000_000_000,
+  } = params;
+
+  // Normalize package hash to raw hex
+  const hashHex = packageHash
+    .replace(/^contract-package-/, "")
+    .replace(/^hash-/, "")
+    .replace(/^0x/, "");
+
+  // Build the invocation target
+  const byPackageHash = new ByPackageHashInvocationTarget();
+  (byPackageHash as any).packageHash = Hash.fromHex(hashHex);
+  (byPackageHash as any).entryPoint = entryPoint;
+
+  const storedTarget = new StoredTarget();
+  (storedTarget as any).byPackageHash = byPackageHash;
+
+  const target = new TransactionTarget(undefined, undefined, storedTarget as any);
+
+  // Build args
+  const argsObj = new Args(args);
+
+  const initiatorAddr = new InitiatorAddr(signer.publicKey);
+  const ttl = new Duration(ttlMs);
+  const timestamp = new Timestamp(new Date());
+  const txnEntryPoint = new TransactionEntryPoint(TransactionEntryPointEnum.Call);
+
+  const pricingMode = new PricingMode();
+  pricingMode.paymentLimited = new PaymentLimitedMode();
+  pricingMode.paymentLimited.gasPriceTolerance = 1;
+  pricingMode.paymentLimited.paymentAmount = paymentAmount;
+  pricingMode.paymentLimited.standardPayment = false;
+
+  const scheduling = new TransactionScheduling();
+  scheduling.standard = {};
+
+  const payload = TransactionV1Payload.build({
+    initiatorAddr,
+    args: argsObj,
+    ttl,
+    entryPoint: txnEntryPoint,
+    pricingMode,
+    timestamp,
+    transactionTarget: target,
+    scheduling,
+    chainName,
+  });
+
+  const v1 = TransactionV1.makeTransactionV1(payload);
+  v1.sign(signer.privateKey);
+  const tx = Transaction.fromTransactionV1(v1);
+
+  // Submit via RPC
+  const handler = new casperSdk.HttpHandler(rpcUrl, "fetch");
+  const rpc = new casperSdk.RpcClient(handler);
+  const putResult: any = await rpc.putTransaction(tx);
+  const txHash =
+    putResult.transactionHash ??
+    putResult.deployHash ??
+    (tx as any).hash?.transactionV1?.toHex?.() ??
+    "";
+  if (!txHash) {
+    throw new Error(
+      `Failed to get transaction hash from putTransaction: ${JSON.stringify(putResult)}`,
+    );
+  }
+
+  // Poll for confirmation
+  const blockNumber = await pollTransactionWithCli(txHash, 120_000);
+  return { txHash, blockNumber };
+}
+
+/**
  * Convert a CLValue to a casper-client --session-arg string.
  * Format: "name:TYPE='value'"
  */

@@ -28,7 +28,12 @@ import {
   type CredentialMessage,
   type RevocationMessage,
 } from "./eip712.js";
-import { loadSigner, callStoredContractViaCli, type Signer } from "./signer.js";
+import {
+  loadSigner,
+  callStoredContractViaCli,
+  callStoredContractViaSdk,
+  type Signer,
+} from "./signer.js";
 
 const DEFAULT_EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
@@ -597,14 +602,38 @@ export async function submitCredential(
   // signature is [u8; 65] on the contract — fixed-size ByteArray
   args.set("signature", CLValue.newCLByteArray(sigBytes));
 
-  return callStoredContractViaCli({
-    chainName: ctx.config.network.chainName,
-    signer,
-    packageHash,
-    entryPoint: "issue",
-    args,
-    rpcUrl: ctx.config.network.rpcUrl,
-  });
+  // Use SDK-based submission (no casper-client CLI required).
+  // Falls back to CLI if the SDK submission fails and casper-client is available.
+  try {
+    return await callStoredContractViaSdk({
+      chainName: ctx.config.network.chainName,
+      signer,
+      packageHash,
+      entryPoint: "issue",
+      args,
+      rpcUrl: ctx.config.network.rpcUrl,
+    });
+  } catch (sdkErr) {
+    // Fall back to CLI if available
+    if (process.env.LIGIS_CASPER_KEY_PATH) {
+      try {
+        return await callStoredContractViaCli({
+          chainName: ctx.config.network.chainName,
+          signer,
+          packageHash,
+          entryPoint: "issue",
+          args,
+          rpcUrl: ctx.config.network.rpcUrl,
+        });
+      } catch (cliErr) {
+        throw new Error(
+          `SDK submission failed: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}\n` +
+          `CLI fallback also failed: ${cliErr instanceof Error ? cliErr.message : cliErr}`,
+        );
+      }
+    }
+    throw sdkErr;
+  }
 }
 
 /**
@@ -660,14 +689,36 @@ export async function revokeCredential(
   args.set("digest", CLValue.newCLByteArray(hexToBytes(digest)));
   args.set("signature", CLValue.newCLByteArray(hexToBytes(signature)));
 
-  return callStoredContractViaCli({
-    chainName: ctx.config.network.chainName,
-    signer,
-    packageHash,
-    entryPoint: "revoke",
-    args,
-    rpcUrl: ctx.config.network.rpcUrl,
-  });
+  // Use SDK-based submission (no casper-client CLI required).
+  try {
+    return await callStoredContractViaSdk({
+      chainName: ctx.config.network.chainName,
+      signer,
+      packageHash,
+      entryPoint: "revoke",
+      args,
+      rpcUrl: ctx.config.network.rpcUrl,
+    });
+  } catch (sdkErr) {
+    if (process.env.LIGIS_CASPER_KEY_PATH) {
+      try {
+        return await callStoredContractViaCli({
+          chainName: ctx.config.network.chainName,
+          signer,
+          packageHash,
+          entryPoint: "revoke",
+          args,
+          rpcUrl: ctx.config.network.rpcUrl,
+        });
+      } catch (cliErr) {
+        throw new Error(
+          `SDK submission failed: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}\n` +
+          `CLI fallback also failed: ${cliErr instanceof Error ? cliErr.message : cliErr}`,
+        );
+      }
+    }
+    throw sdkErr;
+  }
 }
 
 // ---------- evidence anchoring ----------
