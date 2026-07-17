@@ -274,6 +274,7 @@ export async function handleRisk(
   opts?: { adapter?: ChainAdapter },
 ): Promise<ServiceResult> {
   const parsed = parseServiceRequirements(req.requirements);
+  console.log(`[ligis-croo] risk parsed requirements: ${JSON.stringify(parsed).slice(0, 300)}`);
   if (!isRiskRequirements(parsed)) {
     throw new Error(
       "ligis.risk requirements must include { subject, capabilities: string[] | string, issuer?, minTtlSeconds? }",
