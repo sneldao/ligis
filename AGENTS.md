@@ -182,10 +182,36 @@ curl http://127.0.0.1:9430/health
 
 **Required env vars in `/opt/ligis-croo/.env`:**
 - `CROO_SDK_KEY` — from CROO Dashboard
+- `CROO_SERVICE_ID_LIGIS_RISK` — listing UUID from CROO Dashboard
 - `CROO_SERVICE_ID_LIGIS_VERIFY` — listing UUID from CROO Dashboard
-- `CROO_SERVICE_ID_LIGIS_RISK` — listing UUID (when risk service is listed)
+- `CROO_SERVICE_ID_LIGIS_ISSUE` — listing UUID from CROO Dashboard
 - `LIGIS_CHAIN` — `casper` or `pharos`
+- `LIGIS_ISSUER_PRIVATE_KEY` — hex private key for signing credentials (required for ligis.issue)
+- `LIGIS_CASPER_KEY_PATH` — path to PEM file for casper-client CLI (required for ligis.issue on Casper)
 - All `LIGIS_CASPER_*` vars from `.env.d/casper.env`
+
+**casper-client CLI (required for ligis.issue on Casper):**
+The `submitCredential` function uses `casper-client` to submit signed
+transactions to the Casper network. Install it on the server:
+```bash
+curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source $HOME/.cargo/env
+sudo apt-get install -y libssl-dev pkg-config
+cargo install casper-client
+sudo ln -sf $HOME/.cargo/bin/casper-client /usr/local/bin/casper-client
+```
+
+**PEM file generation (required for ligis.issue on Casper):**
+The `casper-client` CLI requires a PEM key file. Generate it from the
+deployer's hex private key:
+```bash
+node -e "
+const fs = require('fs');
+const { PrivateKey, KeyAlgorithm } = require('casper-js-sdk');
+const pk = PrivateKey.fromHex(process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY, KeyAlgorithm.SECP256K1);
+fs.writeFileSync('.env.d/casper-deployer.pem', pk.exportPrivateKeyInPem());
+"
+```
 
 **Key implementation notes:**
 - CROO sends listing UUIDs as `service_id` in WebSocket events, not service

@@ -69,23 +69,82 @@
           "signals": { "type": "array" }
         }
       }
-    }
-  ],
-  "roadmapServices": [
+    },
     {
       "id": "ligis.verify",
       "name": "Ligis Credential Verification",
-      "description": "Single-capability on-chain read. Not listed on the Store yet: a bare CredentialRegistry.isCapable read is publicly queryable by any counterparty for the cost of an RPC call, so this needs a real value-add (e.g. multi-chain resolution in one call) before it's worth charging for.",
+      "description": "Single-capability on-chain verification. Returns whether a subject holds a valid credential for a given capability, plus the credential details (issuer, issuedAt, expiresAt). Cross-chain on Casper and Pharos.",
       "priceUsd": "0.50",
-      "status": "roadmap"
+      "inputSchema": {
+        "type": "object",
+        "required": ["subject", "capability"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Agent DID or chain-native address"
+          },
+          "capability": {
+            "type": "string",
+            "description": "Capability name, e.g. kyc.basic"
+          },
+          "issuer": {
+            "type": "string",
+            "description": "Optional trusted issuer address to constrain the check"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "service": { "type": "string" },
+          "capable": { "type": "boolean" },
+          "subject": { "type": "string" },
+          "capability": { "type": "string" },
+          "capabilityHash": { "type": "string" },
+          "latestCredential": { "type": "object" },
+          "checkedAt": { "type": "string" }
+        }
+      }
     },
     {
       "id": "ligis.issue",
       "name": "Ligis Credential Issuance",
-      "description": "Signs and submits a capability credential on-chain. Requires issuer key configuration. Not listed on the Store yet: only worth paying Ligis for once 'issued by Ligis' carries trust in the ecosystem, which the hackathon submission alone doesn't establish.",
-      "priceUsd": "2.00",
-      "status": "roadmap"
+      "description": "Issue a verifiable on-chain credential to any agent. Ligis signs an EIP-712 attestation and submits it to the CredentialRegistry on Casper or Pharos, making it instantly verifiable by any agent or contract.",
+      "priceUsd": "1.00",
+      "inputSchema": {
+        "type": "object",
+        "required": ["subject", "capability"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Agent address to receive the credential"
+          },
+          "capability": {
+            "type": "string",
+            "description": "Capability name to issue, e.g. kyc.basic"
+          },
+          "expiresInSeconds": {
+            "type": "number",
+            "description": "Credential lifetime in seconds (default 86400 = 24h)"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "service": { "type": "string" },
+          "subject": { "type": "string" },
+          "capability": { "type": "string" },
+          "capabilityHash": { "type": "string" },
+          "issuer": { "type": "string" },
+          "issuedAt": { "type": "string" },
+          "expiresAt": { "type": "string" },
+          "txHash": { "type": "string" },
+          "submittedAt": { "type": "string" }
+        }
+      }
     }
   ],
+  "roadmapServices": [],
   "readme": "packages/croo-adapter/README.md"
 }
