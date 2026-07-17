@@ -255,7 +255,13 @@ export async function verifyCapability(
   const packageHash = requireDeployment(ctx, "credentialRegistry");
   const capHash = parseCapability(opts.capability) as `0x${string}`;
 
-  const subjectBytes = accountHashToBytes(opts.subject);
+  // Pad subject to 32 bytes — EVM addresses (20 bytes) must be left-padded
+  // to match the 32-byte key used by the on-chain CredentialRegistry.
+  const subjectRaw = stripAccountHashPrefix(opts.subject);
+  const subjectPadded = subjectRaw.length === 64
+    ? subjectRaw
+    : subjectRaw.padStart(64, "0");
+  const subjectBytes = hexToBytes(subjectPadded);
   const capHashBytes = hexToBytes(capHash);
 
   // Odra storage key computation:
@@ -509,9 +515,16 @@ export async function signCredential(
     // Contract not deployed or query failed — default nonce "0" is fine.
   }
 
+  // Subject must be 32 bytes for EIP-712 bytes32. EVM addresses (20 bytes)
+  // are left-padded to 32 bytes. Casper account hashes are already 32 bytes.
+  const subjectHex = stripAccountHashPrefix(opts.subject);
+  const subjectPadded = subjectHex.length === 64
+    ? subjectHex
+    : subjectHex.padStart(64, "0");
+
   const message: CredentialMessage = {
     issuer,
-    subject: `0x${stripAccountHashPrefix(opts.subject)}`,
+    subject: `0x${subjectPadded}`,
     capabilityHash: capHash,
     issuedAt: BigInt(issuedAt).toString(16).padStart(2, "0"),
     expiresAt: BigInt(expiresAt).toString(16).padStart(2, "0"),
@@ -563,7 +576,12 @@ export async function submitCredential(
   const signer = requireSigner();
 
   const issuerBytes = hexToBytes(signed.issuer);
-  const subjectBytes = accountHashToBytes(signed.subject);
+  // Pad subject to 32 bytes for the on-chain contract (same as signCredential).
+  const subjectRaw = stripAccountHashPrefix(signed.subject);
+  const subjectPadded = subjectRaw.length === 64
+    ? subjectRaw
+    : subjectRaw.padStart(64, "0");
+  const subjectBytes = hexToBytes(subjectPadded);
   const capHashBytes = hexToBytes(signed.capabilityHash);
   const digestBytes = hexToBytes(signed.digest);
   const sigBytes = hexToBytes(signed.signature);
@@ -612,11 +630,16 @@ export async function revokeCredential(
   }
 
   const capHash = parseCapability(opts.capability) as `0x${string}`;
-  const subjectBytes = accountHashToBytes(opts.subject);
+  // Pad subject to 32 bytes for consistency with issue/verify.
+  const subjectRaw = stripAccountHashPrefix(opts.subject);
+  const subjectPadded = subjectRaw.length === 64
+    ? subjectRaw
+    : subjectRaw.padStart(64, "0");
+  const subjectBytes = hexToBytes(subjectPadded);
   const capHashBytes = hexToBytes(capHash);
 
   const message: RevocationMessage = {
-    subject: `0x${stripAccountHashPrefix(opts.subject)}`,
+    subject: `0x${subjectPadded}`,
     capabilityHash: capHash,
     nonce: BigInt(opts.nonce).toString(16).padStart(2, "0"),
   };
