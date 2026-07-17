@@ -22,6 +22,22 @@ const ok = await readContract({
   args: [subject, capabilityHash],
 });`;
 
+const CROO_SNIPPET = `import { LigisCrooRequester } from "@ligis/croo-adapter";
+
+// Hire Ligis to check a counterparty before you pay it.
+const requester = new LigisCrooRequester({ sdkKey: "croo_sk_..." });
+
+const result = await requester.request("ligis.risk", {
+  subject: "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+  capabilities: ["kyc.basic", "agent.commerce.escrow"],
+  minTtlSeconds: 86400, // require 24h remaining
+});
+
+// result.overallVerdict → "pass" | "warn" | "fail"
+// result.riskScore      → 0-100 (higher is safer)
+// result.breakdown      → { capabilityWeighted, ttlHealth, ... }
+// result.signals        → [{ code, detail }, ...]`;
+
 async function liveStats(chain: ChainNetwork) {
   if (!chain.live) {
     return { ok: false as const, preview: true as const };
@@ -86,6 +102,12 @@ export default async function HomePage({
               className="hover:text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
             >
               Embed
+            </Link>
+            <Link
+              href="/#croo"
+              className="hover:text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+            >
+              CROO
             </Link>
             <a
               href="https://github.com/sneldao/ligis"
@@ -348,6 +370,96 @@ ligis sign \\
                   the Steward page
                 </Link>{" "}
                 for the full walkthrough.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="croo" className="mt-32 scroll-mt-24 sm:mt-44">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">05 · Hire via CROO</p>
+            <p className="font-mono text-[11px] tabular text-ink-quiet">
+              agent store · x402 payment
+            </p>
+          </header>
+          <Rule className="mt-4" />
+          <div className="mt-10 grid grid-cols-1 gap-x-16 gap-y-12 lg:grid-cols-[18rem_1fr]">
+            <div>
+              <h2 className="display text-3xl text-ink">
+                Sell risk checks.
+                <br />
+                Buy trust.
+              </h2>
+              <p className="mt-6 font-serif text-base leading-relaxed text-ink-soft">
+                Ligis is listed on the{" "}
+                <a
+                  href="https://agent.croo.network"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:text-terra"
+                >
+                  CROO Agent Store
+                </a>
+                . Other agents can hire Ligis to check whether a
+                counterparty holds the credentials required for a paid
+                job &mdash; before they pay. The risk report returns a
+                weighted 0&ndash;100 score with per-capability
+                sub-scores, TTL health, credential maturity, and issuer
+                diversity.
+              </p>
+              <ul className="mt-4 space-y-2 font-serif text-sm leading-relaxed text-ink-soft">
+                <li className="flex items-baseline gap-3">
+                  <span className="inline-block h-1 w-1 rounded-full bg-terra" />
+                  <code className="font-mono text-ink">ligis.risk</code>
+                  &mdash; counterparty risk check ($0.75)
+                </li>
+                <li className="flex items-baseline gap-3">
+                  <span className="inline-block h-1 w-1 rounded-full bg-terra" />
+                  <code className="font-mono text-ink">ligis.verify</code>
+                  &mdash; single credential verification ($0.50)
+                </li>
+                <li className="flex items-baseline gap-3">
+                  <span className="inline-block h-1 w-1 rounded-full bg-terra" />
+                  <code className="font-mono text-ink">ligis.issue</code>
+                  &mdash; credential issuance ($2.00)
+                </li>
+              </ul>
+            </div>
+            <div className="space-y-8">
+              <Snippet code={CROO_SNIPPET} lang="ts" />
+              <div className="space-y-3">
+                <p className="eyebrow">Risk report shape</p>
+                <pre className="overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[13px] leading-relaxed tabular text-ink">
+{`{
+  "overallVerdict": "pass",      // pass | warn | fail
+  "riskScore": 92,               // 0-100, higher is safer
+  "breakdown": {
+    "capabilityWeighted": 95,    // weighted by criticality
+    "ttlHealth": 100,            // TTL vs requested minimum
+    "tenureMaturity": 80,        // 7-day maturity ramp
+    "issuerDiversity": 100       // single-issuer penalty
+  },
+  "checks": [{
+    "capability": "kyc.basic",
+    "verdict": "pass",
+    "subScore": 100,
+    "criticality": "critical",   // weight 4
+    "ttlSeconds": 15552000,
+    "credentialAgeSeconds": 2592000,
+    "signals": [...]
+  }],
+  "signals": [...]               // cross-cutting signals
+}`}
+                </pre>
+              </div>
+              <p className="font-serif text-xs italic leading-relaxed text-ink-quiet">
+                The provider runs a 30s handler timeout and persistent
+                idempotency (SQLite). Capabilities are weighted by
+                criticality: <code className="font-mono not-italic">kyc.basic</code>{" "}
+                (weight 4) drags the score 4&times; harder than{" "}
+                <code className="font-mono not-italic">data.premium</code>{" "}
+                (weight 1). A critical capability with TTL below half the
+                minimum is a hard fail, not a warning.
               </p>
             </div>
           </div>

@@ -12,6 +12,7 @@ const NAV = [
   { href: "/steward?chain=casper-testnet", label: "Steward" },
   { href: "/capabilities", label: "Capabilities" },
   { href: "/embed", label: "Embed" },
+  { href: "/#croo", label: "CROO" },
 ];
 
 export function GlobalDock() {
