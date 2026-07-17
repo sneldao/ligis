@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { EventType } from "@croo-network/sdk";
 import { handleVerify } from "./verify.js";
 import { handleIssue } from "./issue.js";
@@ -10,6 +11,8 @@ import {
   type SupportedServiceId,
   SUPPORTED_SERVICES,
 } from "./services.js";
+
+const require = createRequire(import.meta.url);
 
 /** Maximum time a service handler can run before timing out. */
 const HANDLER_TIMEOUT_MS = 30_000;
