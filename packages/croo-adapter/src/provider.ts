@@ -26,6 +26,14 @@ export interface ProviderOptions {
    * If omitted, falls back to in-memory Set (lost on restart).
    */
   idempotencyDbPath?: string;
+  /**
+   * Map of CROO listing UUIDs to Ligis service IDs.
+   * CROO sends the listing UUID as `service_id` in negotiation events,
+   * but the provider matches by service name (e.g. "ligis.verify").
+   * This map bridges the two. Example:
+   *   { "10d687a6-...": "ligis.verify", "abc-...": "ligis.risk" }
+   */
+  serviceIdAliases?: Map<string, string>;
 }
 
 /**
@@ -206,6 +214,7 @@ class SqliteIdempotencyStore implements IdempotencyStore {
 export class LigisCrooProvider {
   private client: CrooClient;
   private serviceMap: Map<string, ServiceDescriptor>;
+  private serviceAliases: Map<string, string>;
   private fulfilledOrders: IdempotencyStore;
   /** Timestamp of last successful delivery, for health monitoring. */
   private lastDeliveryAt = 0;
@@ -219,6 +228,7 @@ export class LigisCrooProvider {
     this.serviceMap = new Map(
       (opts.services ?? defaultServices).map((s) => [s.id, s]),
     );
+    this.serviceAliases = opts.serviceIdAliases ?? new Map();
     this.fulfilledOrders = opts.idempotencyDbPath
       ? new SqliteIdempotencyStore(opts.idempotencyDbPath)
       : new MemoryIdempotencyStore();
@@ -246,6 +256,16 @@ export class LigisCrooProvider {
     return stream;
   }
 
+  /**
+   * Resolve a CROO service ID (which may be a listing UUID) to a
+   * Ligis service name. Checks the alias map first, then falls back
+   * to direct lookup.
+   */
+  private resolveServiceId(rawId: string): string | undefined {
+    if (this.serviceMap.has(rawId)) return rawId;
+    return this.serviceAliases.get(rawId);
+  }
+
   private async onNegotiationCreated(
     negotiationId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -253,14 +273,16 @@ export class LigisCrooProvider {
   ): Promise<void> {
     console.log(`[ligis-croo] negotiation created: ${negotiationId}`);
 
-    const serviceId: string | undefined = event.service_id ?? event.serviceId;
+    const rawServiceId: string | undefined = event.service_id ?? event.serviceId;
     const requirements: string | undefined = event.requirements;
 
+    const serviceId = rawServiceId ? this.resolveServiceId(rawServiceId) : undefined;
+
     if (!serviceId || !this.serviceMap.has(serviceId)) {
-      console.log(`[ligis-croo] rejecting: unsupported service ${serviceId}`);
+      console.log(`[ligis-croo] rejecting: unsupported service ${rawServiceId}`);
       await this.client.rejectNegotiation(
         negotiationId,
-        `Unsupported service: ${serviceId ?? "unknown"}`,
+        `Unsupported service: ${rawServiceId ?? "unknown"}`,
       );
       return;
     }
@@ -317,9 +339,10 @@ export class LigisCrooProvider {
 
     console.log(`[ligis-croo] order paid: ${orderId}`);
 
-    const serviceId: string | undefined = event.service_id ?? event.serviceId;
+    const rawServiceId: string | undefined = event.service_id ?? event.serviceId;
     const requirements: string | undefined = event.requirements;
 
+    const serviceId = rawServiceId ? this.resolveServiceId(rawServiceId) : undefined;
     const service = serviceId ? this.serviceMap.get(serviceId) : undefined;
     if (!service || !requirements) {
       console.error(
