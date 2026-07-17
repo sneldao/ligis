@@ -42,19 +42,21 @@ export type SupportedServiceId = (typeof SUPPORTED_SERVICES)[number];
 export function parseServiceRequirements(requirements: string): unknown {
   try {
     const parsed = JSON.parse(requirements);
-    // CROO wraps the buyer's requirements in a { text: "..." } envelope.
-    // Unwrap it so handlers receive the actual requirements object.
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      typeof parsed.text === "string" &&
-      Object.keys(parsed).length === 1
-    ) {
-      try {
-        return JSON.parse(parsed.text);
-      } catch {
-        // text field wasn't JSON — return it as a plain string
-        return parsed.text;
+    // CROO wraps the buyer's requirements in an envelope. The wrapper
+    // key varies — we've seen both { text: "..." } and { deliverableText: "..." }.
+    // Detect any single-key object whose value is a JSON string and unwrap it.
+    if (typeof parsed === "object" && parsed !== null) {
+      const keys = Object.keys(parsed);
+      if (keys.length === 1) {
+        const val = (parsed as Record<string, unknown>)[keys[0]];
+        if (typeof val === "string") {
+          try {
+            return JSON.parse(val);
+          } catch {
+            // Inner value wasn't JSON — return as plain string
+            return val;
+          }
+        }
       }
     }
     return parsed;
