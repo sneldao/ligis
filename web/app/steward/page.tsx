@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ChainBadge } from "@/components/ChainBadge";
-import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
 import { StewardRunner } from "@/components/StewardRunner";
 import { StewardTriptych } from "@/components/StewardTriptych";
 import { WalletGate } from "@/components/WalletGate";
-import { getChain, CASPER_TESTNET, PHAROS_ATLANTIC } from "@/lib/network";
+import { getChain, CASPER_TESTNET } from "@/lib/network";
 
 const PHAROS_GOAL =
   "I am a Pharos agent. I need to participate in escrow-backed commerce and swap between approved venues. Figure out what credentials I need and make sure I have them.";
@@ -53,8 +52,8 @@ export default async function StewardPage({
   const cliSnippet = isCasper ? CASPER_CLI : PHAROS_CLI;
 
   return (
-    <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
-      <header className="flex items-baseline justify-between text-xs">
+    <main className="route-shell max-w-5xl">
+      <header className="route-header text-xs">
         <p className="eyebrow">Ligis · autonomous bootstrap demo</p>
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
@@ -67,7 +66,7 @@ export default async function StewardPage({
         </div>
       </header>
 
-      <section className="mt-20">
+      <section className="mt-14 max-w-3xl sm:mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
           An agent that
           <br />
@@ -75,15 +74,13 @@ export default async function StewardPage({
           <br />
           who it is yet.
         </h1>
-        <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
-          A goal arrives with nothing: no identity, no credentials. The
-          Steward mints its own identity, reasons about what the goal
-          requires, checks what it already holds, self-issues anything
-          missing, and anchors a tamper-proof manifest of every step into
-          0G Storage. This is the same loop an agent runs before it can
-          pass a risk check.
+        <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
+          Give an agent a goal. It finds or mints its identity, checks what it
+          can prove, fills the gaps, and records the evidence.
         </p>
-        <ol className="mt-8 grid grid-cols-1 divide-y divide-rule border-t border-rule sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <details className="group mt-6 border-y border-rule">
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">How the loop works +</span><span className="hidden group-open:inline">Close loop details −</span></summary>
+          <ol className="grid grid-cols-1 divide-y divide-rule border-t border-rule sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <li className="space-y-2 py-4 sm:pr-6">
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
               01 · simulated
@@ -123,23 +120,24 @@ export default async function StewardPage({
               <strong className="text-ink">Requires a funded wallet.</strong>
             </p>
           </li>
-        </ol>
-        <p className="mt-4 font-serif text-xs italic leading-relaxed text-ink-quiet">
+          </ol>
+          <p className="py-4 font-serif text-xs italic leading-relaxed text-ink-quiet">
           Operation names follow each chain&rsquo;s convention —{" "}
           <span className="font-mono not-italic">mintSelf</span> on EVM,{" "}
           <span className="font-mono not-italic">mint_self</span> on Casper.
           Same operation, two chains.
-        </p>
+          </p>
+        </details>
       </section>
 
       {/* WalletGate — the wallet entry point. On Casper it carries the
           inline connect/fund action; on Pharos it nudges to Casper. */}
-      <section className="mt-16">
+      <section className="mt-12 max-w-3xl sm:mt-16">
         <WalletGate />
       </section>
 
       {/* StewardRunner — the actual product. Primary, above the fold. */}
-      <section className="mt-12">
+      <section className="mt-10">
         <Suspense fallback={<div className="font-mono text-sm text-ink-quiet">Loading steward…</div>}>
           <StewardRunner defaultGoal={defaultGoal} />
         </Suspense>
@@ -149,37 +147,21 @@ export default async function StewardPage({
           after the loop. genesis · synthesis · stasis. Static SVG,
           one-time staggered fade-in on viewport entry, honours
           prefers-reduced-motion. */}
-      <section className="mt-32">
-        <header className="flex items-baseline justify-between">
-          <p className="eyebrow">the story · three acts</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
-            genesis · synthesis · stasis
-          </p>
-        </header>
-        <Rule className="mt-4" />
-        <div className="mt-10">
-          <StewardTriptych isCasper={isCasper} />
-        </div>
+      <section className="mt-20 max-w-3xl sm:mt-28">
+        <details className="group border-y border-rule">
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">See the three-act protocol story +</span><span className="hidden group-open:inline">Close protocol story −</span></summary>
+          <div className="border-t border-rule-soft py-6"><StewardTriptych isCasper={isCasper} /></div>
+        </details>
       </section>
 
-      <section className="mt-32">
-        <header className="flex items-baseline justify-between">
-          <p className="eyebrow">Or run it yourself</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
-            cli · {isCasper ? "casper" : "pharos"} · authentic
-          </p>
-        </header>
-        <Rule className="mt-4" />
-        <p className="mt-8 max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-          The CLI runs the same loop against your own keys. Nothing is shared
-          with this site. The output is identical JSON to the stream above.
-        </p>
-        <div className="mt-8">
-          <Snippet code={cliSnippet} lang="sh" />
-        </div>
+      <section className="mt-12 max-w-3xl sm:mt-16">
+        <details className="group border-y border-rule">
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Run the same loop locally +</span><span className="hidden group-open:inline">Hide CLI instructions −</span></summary>
+          <div className="border-t border-rule-soft py-5"><p className="mb-6 max-w-prose font-serif text-base leading-relaxed text-ink-soft">The CLI uses your own keys. Nothing is shared with this site.</p><Snippet code={cliSnippet} lang="sh" /></div>
+        </details>
       </section>
 
-      <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet">
+      <footer className="route-footer mt-20 text-xs text-ink-quiet sm:mt-32">
         <Link
           href="/"
           className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"

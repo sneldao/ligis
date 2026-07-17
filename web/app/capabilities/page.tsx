@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
-import { RevealOnView } from "@/components/RevealOnView";
 import { Rule } from "@/components/Rule";
 import { capabilities } from "@/lib/chain";
 import { truncateHash } from "@/lib/format";
@@ -36,22 +35,18 @@ const REFERENCE = [
   { id: "data.premium", typicalExpiry: 86_400, weight: 1, criticality: "low" },
 ] as const;
 
-// Three editorial groups that organise the reference set by what's
-// at stake. The category sections drive the three-step staggered
-// reveal via `RevealOnView` — a client component that uses
-// IntersectionObserver to flip `data-revealed="true"` on the wrapper
-// only when the section scrolls into view.
+// Three editorial groups organise the reference set by what's at stake.
+// Core reference content renders immediately; its supporting hash material is
+// available on intent so the page remains useful as a field guide on phones.
 const CATEGORIES = [
   {
     name: "IDENTITY",
     gloss: "Who the agent claims to be. Lose these and the transaction should stop.",
-    delayMs: 0,
     ids: ["kyc.basic", "rwa.accredited"],
   },
   {
     name: "MONEY",
     gloss: "What the agent is allowed to do with funds. Direct exposure if it goes wrong.",
-    delayMs: 120,
     ids: [
       "agent.commerce.escrow",
       "agent.commerce.swap",
@@ -64,7 +59,6 @@ const CATEGORIES = [
   {
     name: "ACCESS",
     gloss: "What the agent can read. No direct fund risk, but data has value.",
-    delayMs: 280,
     ids: ["data.premium"],
   },
 ] as const;
@@ -87,8 +81,8 @@ function criticalityFor(id: string): string {
 
 export default function CapabilitiesPage() {
   return (
-    <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
-      <header className="flex items-baseline justify-between text-xs">
+    <main className="route-shell max-w-5xl">
+      <header className="route-header text-xs">
         <p className="eyebrow">Ligis · what an agent can prove</p>
         <div className="flex items-baseline gap-6">
           <Link
@@ -100,37 +94,30 @@ export default function CapabilitiesPage() {
         </div>
       </header>
 
-      <section className="mt-20">
+      <section className="mt-14 max-w-3xl sm:mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
           What an agent
           <br />
           can prove.
         </h1>
-        <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
-          Before you trust an agent with a transaction, you need to know
-          what it&rsquo;s authorized to do. These are the capabilities an
-          agent can hold &mdash; each one is a verifiable, on-chain claim
-          that an issuer has vouched for. The risk check weighs them by
-          criticality: a missing <code className="font-mono text-ink">kyc.basic</code>{" "}
-          (weight 4) is a hard stop. A missing{" "}
-          <code className="font-mono text-ink">data.premium</code>{" "}
-          (weight 1) is a footnote.
+        <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
+          Capabilities are the claims an agent can prove on-chain. Critical
+          claims stop a transaction when missing; low-stakes claims only lower
+          confidence.
         </p>
-        <p className="mt-6 max-w-prose font-serif text-base italic leading-relaxed text-ink-quiet">
-          {capabilities.length} capabilities in the reference set. Hashes are
-          keccak256 of the human name and are stable across chains &mdash; the
-          same capability has the same hash on Casper and Pharos.
+        <p className="mt-4 max-w-prose font-serif text-sm italic leading-relaxed text-ink-quiet">
+          {capabilities.length} reference capabilities. Their hashes are stable
+          across Casper and Pharos.
         </p>
       </section>
 
-      <section className="mt-20 space-y-12">
+      <section className="mt-16 max-w-5xl space-y-12 sm:mt-20">
         {CATEGORIES.map((cat) => {
           const caps = cat.ids
             .map((id) => capabilities.find((c) => c.id === id))
             .filter((c): c is (typeof capabilities)[number] => c !== undefined);
           return (
-            <RevealOnView key={cat.name} delayMs={cat.delayMs}>
-              <section aria-labelledby={`cat-${cat.name.toLowerCase()}`}>
+            <section key={cat.name} aria-labelledby={`cat-${cat.name.toLowerCase()}`}>
                 <header className="flex items-baseline justify-between">
                   <h2
                     id={`cat-${cat.name.toLowerCase()}`}
@@ -144,7 +131,7 @@ export default function CapabilitiesPage() {
                   </span>
                 </header>
                 <Rule className="mt-4" />
-                <p className="mt-6 max-w-prose font-serif text-base italic leading-relaxed text-ink-soft">
+                <p className="mt-5 max-w-prose font-serif text-sm italic leading-relaxed text-ink-soft sm:mt-6 sm:text-base">
                   {cat.gloss}
                 </p>
                 <div className="mt-2 space-y-0">
@@ -168,13 +155,18 @@ export default function CapabilitiesPage() {
                               {cap.description}
                             </p>
                             <div className="flex flex-wrap items-baseline gap-3">
-                              <span className="font-mono text-[12px] tabular text-ink-quiet">
-                                {truncateHash(cap.hash, 14, 8)}
-                              </span>
-                              <CopyButton value={cap.hash} />
                               <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-terra">
                                 {criticality} &middot; w{weight}
                               </span>
+                              <details className="group">
+                                <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.14em] text-ink-quiet marker:hidden hover:text-ink">
+                                  <span className="group-open:hidden">hash +</span><span className="hidden group-open:inline">hide hash −</span>
+                                </summary>
+                                <div className="mt-2 flex flex-wrap items-baseline gap-3">
+                                  <span className="font-mono text-[12px] tabular text-ink-quiet">{truncateHash(cap.hash, 14, 8)}</span>
+                                  <CopyButton value={cap.hash} />
+                                </div>
+                              </details>
                             </div>
                           </div>
                           <span className="whitespace-nowrap font-mono text-xs tabular text-ink-soft">
@@ -186,13 +178,12 @@ export default function CapabilitiesPage() {
                     );
                   })}
                 </div>
-              </section>
-            </RevealOnView>
+            </section>
           );
         })}
       </section>
 
-      <section className="mt-24">
+      <section className="mt-20 max-w-3xl sm:mt-24">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Define a new capability</p>
           <p className="font-mono text-[11px] tabular text-ink-quiet">
@@ -200,21 +191,18 @@ export default function CapabilitiesPage() {
           </p>
         </header>
         <Rule className="mt-4" />
-        <p className="mt-8 max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-          Need to check something that isn&rsquo;t in this list? Pick a name,
-          hash it with keccak256, and that&rsquo;s the capability. There is no
-          central registry to ask. The convention is{" "}
-          <span className="font-mono text-ink">domain.subject.verb</span>{" "}
-          (lowercase, dot-separated). Anything else works; consistency just
-          makes it easier for other agents to check the same thing.
-        </p>
-        <pre className="mt-8 overflow-x-auto bg-paper-deep px-6 py-5 font-mono text-[13px] leading-relaxed tabular text-ink">
-          {`ligis hash agent.commerce.escrow
+        <details className="group mt-6 border-y border-rule">
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">How to define one +</span><span className="hidden group-open:inline">Close naming guidance −</span></summary>
+          <div className="border-t border-rule-soft py-5">
+            <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">Pick a name, hash it with keccak256, and that&rsquo;s the capability. The convention is <span className="font-mono text-ink">domain.subject.verb</span>; consistency helps other agents check the same thing.</p>
+            <pre className="mt-6 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[13px] leading-relaxed tabular text-ink">{`ligis hash agent.commerce.escrow
 # -> 0x17775e488d090dd8527e0139b3472d4d03c3372525b10a7c1449f04027a3ebf8`}
-        </pre>
+            </pre>
+          </div>
+        </details>
       </section>
 
-      <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet">
+      <footer className="route-footer mt-20 text-xs text-ink-quiet sm:mt-32">
         <Link
           href="/"
           className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"

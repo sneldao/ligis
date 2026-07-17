@@ -77,26 +77,26 @@ export default async function AgentPage({
     <>
       <AgentHero address={address} heldCount={heldCount} />
 
-      <main className="mx-auto max-w-5xl px-8 pt-16 pb-16 sm:pb-24">
-        <header className="flex items-baseline justify-between text-xs text-ink-quiet">
+      <main className="route-shell max-w-5xl pb-16 sm:pb-24">
+        <header className="route-header text-xs text-ink-quiet">
           <p className="eyebrow">
             {snap.exists ? "Agent · in the index" : "Agent · not in the index"}
           </p>
-          <div className="flex items-baseline gap-6">
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 sm:gap-x-6">
             <ChainBadge chain={chain} />
-            <span className="font-mono tabular">
+            <span className="hidden font-mono tabular sm:inline">
               {chain.name.toLowerCase()} · chain {chain.chainId}
             </span>
           </div>
         </header>
 
-        <section className="mt-12">
-          <h1 className="display text-5xl text-ink sm:text-[5rem]">
+        <section className="mt-10 sm:mt-12">
+          <h1 className="display text-4xl text-ink sm:text-[5rem]">
             {truncateAddress(address, 6, 4)}
           </h1>
-          <p className="mt-8 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
+          <p className="mt-6 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-8">
             {snap.exists
-              ? `Held by a single controller on ${chain.name}. Three reads from chain compose this page: ownership of the agent token, the controller, and the credential ledger.`
+              ? `A portable agent identity on ${chain.name}, with its controller and credential ledger read directly from chain state.`
               : "This address has not minted an agent. It has no portable identity, no credentials, no evidence trail. To bootstrap one, use the Steward loop or the CLI."}
           </p>
           <div className="mt-10">
@@ -104,8 +104,8 @@ export default async function AgentPage({
           </div>
         </section>
 
-        <section className="mt-24">
-          <div className="grid grid-cols-2 gap-y-6 gap-x-10 text-sm sm:grid-cols-4">
+        <section className="mt-16 sm:mt-24">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-6 text-sm sm:grid-cols-4 sm:gap-x-10">
             <Fact label="status">{snap.exists ? "active" : "no agent"}</Fact>
             <Fact label="token">
               {snap.exists ? `#${snap.tokenId.toString()}` : "—"}
@@ -128,10 +128,10 @@ export default async function AgentPage({
           </div>
         </section>
 
-        <section className="mt-24">
+        <section className="mt-16 sm:mt-24">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">Credentials</p>
-            <p className="font-mono text-[11px] tabular text-ink-quiet">
+            <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
               scanned against {chain.name.toLowerCase()} reference set
             </p>
           </header>
@@ -182,7 +182,7 @@ export default async function AgentPage({
         </section>
 
         {snap.exists ? (
-          <section className="mt-24">
+          <section className="mt-16 sm:mt-24">
             <header className="flex items-baseline justify-between">
               <p className="eyebrow">Capability history</p>
               <p className="font-mono text-[11px] tabular text-ink-quiet">
@@ -295,7 +295,7 @@ export default async function AgentPage({
           chainId={chain.id}
         />
 
-        <footer className="mt-24 flex items-baseline justify-between text-xs">
+        <footer className="route-footer mt-16 text-xs sm:mt-24">
           <a
             href="/"
             className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
@@ -344,7 +344,7 @@ function ShareSection({
 
   return (
     <>
-      <section className="mt-24">
+      <section className="mt-16 sm:mt-24">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Share this agent</p>
           <p className="font-mono text-[11px] tabular text-ink-quiet">
@@ -361,7 +361,7 @@ function ShareSection({
         </div>
       </section>
 
-      <section className="mt-16">
+      <section className="mt-12 sm:mt-16">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Embed verification</p>
           <p className="font-mono text-[11px] tabular text-ink-quiet">
@@ -374,9 +374,10 @@ function ShareSection({
           <span className="font-mono text-ink">isCapable</span> badge for{" "}
           <span className="font-mono text-ink">{firstCapability}</span>.
         </p>
-        <div className="mt-6">
-          <Snippet code={iframeCode} lang="html" />
-        </div>
+        <details className="group mt-6 border-y border-rule">
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Show embed code +</span><span className="hidden group-open:inline">Hide embed code −</span></summary>
+          <div className="border-t border-rule-soft py-5"><Snippet code={iframeCode} lang="html" /></div>
+        </details>
       </section>
     </>
   );

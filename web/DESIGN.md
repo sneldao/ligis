@@ -51,6 +51,12 @@ and reach for typography, whitespace, and hairlines instead.
   becomes a quiet static specimen texture; it must not reserve a viewport or
   show desktop-only navigation hints. Audience routing is three compact action
   rows, with explanatory copy deferred to wider screens or the destination.
+- **Reference and operational routes**: begin below the fixed dock using the
+  shared route shell; never make a route header compete with global chrome on a
+  phone. Keep a reading-width introduction, but let ledgers, diagrams, and
+  live tools use the wider editorial frame on desktop. Core state is visible
+  immediately; hashes, CLI instructions, protocol narratives, and embed code
+  are disclosed on intent.
 - **Agent field**: the interactive agent field is a route-scoped home-page
   environment. It may span the home proposition, verification, and catalog
   sequence, but it must end before operational or integration content. It is

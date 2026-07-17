@@ -23,6 +23,10 @@ export function GlobalDock() {
     setNavOpen(false);
   }, [pathname]);
 
+  // An embed is a borrowed surface. The host owns its navigation and the
+  // verification document must contain only the compact result.
+  if (pathname.startsWith("/embed/verify")) return null;
+
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-40 flex justify-center px-3 sm:top-6 sm:px-4">
       <motion.div

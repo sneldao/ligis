@@ -27,8 +27,8 @@ export default async function IssuersPage({
   const top = log.issuers.slice(0, 50);
 
   return (
-    <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
-      <header className="flex items-baseline justify-between text-xs">
+    <main className="route-shell max-w-5xl">
+      <header className="route-header text-xs">
         <p className="eyebrow">Ligis · who vouches for agents</p>
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
@@ -41,21 +41,17 @@ export default async function IssuersPage({
         </div>
       </header>
 
-      <section className="mt-20">
+      <section className="mt-14 max-w-3xl sm:mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
           Who vouches
           <br />
           for agents.
         </h1>
-        <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
-          Every credential is signed by an issuer. The issuer is the one
-          vouching &mdash; saying &ldquo;I checked this agent, and it&rsquo;s
-          authorized to do X.&rdquo; When you run a risk check, the report shows
-          who issued each credential. If all credentials come from one issuer,
-          that&rsquo;s concentration risk. These are the addresses that have
-          vouched on {chain.name.toLowerCase()}.
+        <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
+          Issuers are the parties who sign an agent&rsquo;s credentials. Their
+          signatures make a claim independently verifiable by any caller.
         </p>
-        <p className="mt-6 max-w-prose font-serif text-base italic leading-relaxed text-ink-quiet">
+        <p className="mt-4 max-w-prose font-serif text-sm italic leading-relaxed text-ink-quiet">
           {log.issuers.length === 0
             ? "No issuances detected in the scanned range yet."
             : `${log.issuers.length} ${log.issuers.length === 1 ? "issuer has" : "issuers have"} vouched, ${log.totalIssuances} ${log.totalIssuances === 1 ? "credential" : "credentials"} signed.`}{" "}
@@ -65,7 +61,7 @@ export default async function IssuersPage({
         </p>
       </section>
 
-      <section className="mt-20 space-y-0">
+      <section className="mt-16 max-w-5xl space-y-0 sm:mt-20">
         <div className="hidden grid-cols-[2rem_1fr_auto_auto] items-baseline gap-x-8 py-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet sm:grid">
           <span>#</span>
           <span>issuer</span>
@@ -74,10 +70,10 @@ export default async function IssuersPage({
         </div>
         <Rule />
         {top.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="font-serif text-base italic text-ink-quiet">
-              Be the first.
-            </p>
+          <div className="max-w-xl py-12 sm:py-16">
+            <p className="display text-2xl text-ink">No issuers in this scan yet.</p>
+            <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">An issuer is a KYC provider, compliance service, or protocol team that can attest to what an agent is allowed to do.</p>
+            <a href="https://github.com/sneldao/ligis?tab=readme-ov-file#quickstart" target="_blank" rel="noreferrer" className="mt-5 inline-block font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline decoration-rule underline-offset-4 hover:decoration-terra">Read the issuer quickstart ↗</a>
           </div>
         ) : (
           top.map((entry, i) => (
@@ -110,7 +106,7 @@ export default async function IssuersPage({
         )}
       </section>
 
-      <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet">
+      <footer className="route-footer mt-20 text-xs text-ink-quiet sm:mt-32">
         <Link
           href="/"
           className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"

@@ -8,6 +8,15 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
 
+function withTimeout<T>(operation: Promise<T>, timeoutMs = 3_500): Promise<T> {
+  return Promise.race([
+    operation,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error("verification timed out")), timeoutMs);
+    }),
+  ]);
+}
+
 export const metadata = {
   title: "Verify · Ligis",
   robots: { index: false, follow: false },
@@ -46,8 +55,21 @@ export default async function EmbedVerifyPage({
 
   const subject = getAddress(rawSubject) as Address;
   const capHash: Hex = cap.hash;
-  const capable = await isCapable(subject, capHash).catch(() => false);
-  const view = capable ? await readCredential(subject, capHash).catch(() => null) : null;
+  let capable: boolean;
+  try {
+    capable = await withTimeout(isCapable(subject, capHash));
+  } catch {
+    return (
+      <Frame
+        subject={subject}
+        capabilityId={cap.id}
+        error="Verification is temporarily unavailable."
+      />
+    );
+  }
+  const view = capable
+    ? await withTimeout(readCredential(subject, capHash)).catch(() => null)
+    : null;
 
   return (
     <Frame

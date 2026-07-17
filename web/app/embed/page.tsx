@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { RevealOnView } from "@/components/RevealOnView";
 import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
 import { capabilities, network } from "@/lib/chain";
@@ -25,8 +24,8 @@ export default function EmbedPage() {
   const directLink = `${SITE_URL}/embed/verify?subject={SUBJECT}&capability={CAPABILITY}`;
 
   return (
-    <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
-      <header className="flex items-baseline justify-between text-xs">
+    <main className="route-shell max-w-5xl">
+      <header className="route-header text-xs">
         <p className="eyebrow">Ligis · embed 00</p>
         <div className="flex items-baseline gap-6">
           <Link
@@ -38,78 +37,41 @@ export default function EmbedPage() {
         </div>
       </header>
 
-      <section className="mt-20">
+      <section className="mt-14 max-w-3xl sm:mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
           Drop a verification
           <br />
           into any page.
         </h1>
-        <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
-          Any site can ask Ligis whether an agent holds a capability. The badge
-          is a server-rendered iframe — no JavaScript, no SDK, no tracking.
-          Click it and the visitor lands on the full agent page.
+        <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
+          A live, server-rendered verification badge for any page. No client
+          SDK, no tracking, and no database between the visitor and chain state.
         </p>
       </section>
 
-      {/* Three live users of the reveal pattern. Each numbered section
-          is wrapped in `RevealOnView`, which uses IntersectionObserver
-          to flip `data-revealed="true"` on the wrapper when it scrolls
-          into view. Stagger via per-section `delayMs` — same 0/120/280
-          cadence as the StewardTriptych on /steward and the
-          /capabilities category sections. */}
-      <RevealOnView delayMs={0}>
-        <section className="mt-24 space-y-6">
-          <header className="flex items-baseline justify-between">
-            <p className="eyebrow">01 · The URL</p>
-            <p className="font-mono text-[11px] tabular text-ink-quiet">GET</p>
-          </header>
-          <Rule />
-          <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-            One endpoint, two query parameters. Capability accepts either the
-            human-readable id or the 32-byte hash.
-          </p>
-          <Snippet code={directLink} lang="url" />
-        </section>
-      </RevealOnView>
+      <section className="mt-16 max-w-5xl sm:mt-20">
+        <header className="flex items-baseline justify-between">
+          <p className="eyebrow">Live preview</p>
+          <p className="font-mono text-[11px] tabular text-ink-quiet">{network.name.toLowerCase()}</p>
+        </header>
+        <Rule className="mt-4" />
+        <div className="mt-6 overflow-hidden border-y border-rule-soft py-3 sm:max-w-[520px]">
+          <iframe className="h-[120px] w-full max-w-[520px]" src={`/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}`} width="520" height="120" style={{ border: 0, background: "transparent" }} loading="lazy" title="Ligis verification badge preview" />
+        </div>
+        <p className="mt-4 max-w-prose font-serif text-sm italic leading-relaxed text-ink-quiet">Live for {EXAMPLE_SUBJECT.slice(0, 8)}··{EXAMPLE_SUBJECT.slice(-4)} · {EXAMPLE_CAP}</p>
+      </section>
 
-      <RevealOnView delayMs={120}>
-        <section className="mt-24 space-y-6">
-          <header className="flex items-baseline justify-between">
-            <p className="eyebrow">02 · The iframe</p>
-            <p className="font-mono text-[11px] tabular text-ink-quiet">html</p>
-          </header>
-          <Rule />
-          <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-            Recommended size is 520 × 120. Background is transparent so the badge
-            reads against any page.
-          </p>
-          <Snippet code={iframeCode} lang="html" />
-        </section>
-      </RevealOnView>
-
-      <RevealOnView delayMs={280}>
-        <section className="mt-24 space-y-6">
-          <header className="flex items-baseline justify-between">
-            <p className="eyebrow">03 · Preview</p>
-            <p className="font-mono text-[11px] tabular text-ink-quiet">live</p>
-          </header>
-          <Rule />
-          <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-            A live badge for {EXAMPLE_SUBJECT.slice(0, 8)}··{EXAMPLE_SUBJECT.slice(-4)}{" "}
-            on {EXAMPLE_CAP}. Reads {network.name.toLowerCase()} every request.
-          </p>
-          <div className="mt-4">
-            <iframe
-              src={`/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}`}
-              width="520"
-              height="120"
-              style={{ border: 0, background: "transparent" }}
-              loading="lazy"
-              title="Ligis verification badge preview"
-            />
-          </div>
-        </section>
-      </RevealOnView>        <footer className="mt-32 flex items-baseline justify-between text-xs text-ink-quiet">
+      <section className="mt-12 max-w-3xl sm:mt-16">
+        <details className="group border-y border-rule">
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Get the iframe code +</span><span className="hidden group-open:inline">Hide iframe code −</span></summary>
+          <div className="border-t border-rule-soft py-5"><p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">Recommended size is 520 × 120. Its transparent background works on any page.</p><Snippet code={iframeCode} lang="html" /></div>
+        </details>
+        <details className="group border-b border-rule">
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Use the verification URL directly +</span><span className="hidden group-open:inline">Hide URL format −</span></summary>
+          <div className="border-t border-rule-soft py-5"><p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">Pass a subject and capability. The capability can be a human-readable id or 32-byte hash.</p><Snippet code={directLink} lang="url" /></div>
+        </details>
+      </section>
+      <footer className="route-footer mt-20 text-xs text-ink-quiet sm:mt-32">
           <Link
             href="/"
             className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
