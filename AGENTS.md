@@ -149,3 +149,50 @@ Required Vercel env vars for Casper reads:
 `LIGIS_CASPER_RPC_URL`, `LIGIS_CASPER_NETWORK`, `LIGIS_CASPER_AGENT_ID`,
 `LIGIS_CASPER_CREDENTIAL_REGISTRY`. For live writes also set
 `LIGIS_CASPER_DEPLOYER_PUBKEY` and `LIGIS_CASPER_DEPLOYER_PRIVATE_KEY`.
+
+### CROO Provider Deployment
+
+The CROO provider runs on the Vultr server (`nuncio-vultr`) under PM2.
+
+**Layout:**
+- `/opt/ligis-croo/current` → symlink to `releases/<timestamp>/`
+- `/opt/ligis-croo/.env` — all secrets (CROO_SDK_KEY, Casper keys, service UUIDs)
+- `/opt/ligis-croo/ecosystem.config.js` — PM2 config
+- `/opt/ligis-croo/logs/` — stdout + stderr logs
+
+**Deploy:**
+```bash
+ssh nuncio-vultr
+cd /opt/ligis-croo/releases
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+cp -a /opt/ligis-croo/current/ releases/$TIMESTAMP/
+cd releases/$TIMESTAMP
+git fetch origin && git reset --hard origin/main
+pnpm install --frozen-lockfile --filter @ligis/croo-adapter...
+pnpm --filter @ligis/croo-adapter build
+ln -sfn /opt/ligis-croo/releases/$TIMESTAMP /opt/ligis-croo/current
+cd /opt/ligis-croo && pm2 restart ecosystem.config.js --update-env
+```
+
+**Health check:**
+```bash
+curl http://127.0.0.1:9430/health
+# Returns: { uptime, delivered, errors, lastDeliveryAt, wsConnected, inFlight }
+```
+
+**Required env vars in `/opt/ligis-croo/.env`:**
+- `CROO_SDK_KEY` — from CROO Dashboard
+- `CROO_SERVICE_ID_LIGIS_VERIFY` — listing UUID from CROO Dashboard
+- `CROO_SERVICE_ID_LIGIS_RISK` — listing UUID (when risk service is listed)
+- `LIGIS_CHAIN` — `casper` or `pharos`
+- All `LIGIS_CASPER_*` vars from `.env.d/casper.env`
+
+**Key implementation notes:**
+- CROO sends listing UUIDs as `service_id` in WebSocket events, not service
+  names. The provider maps UUIDs via `CROO_SERVICE_ID_*` env vars.
+- The `order_paid` WebSocket event is sparse (only `order_id` + `negotiation_id`).
+  The provider fetches full negotiation details from the API and caches them.
+- CROO wraps buyer requirements in a `{ text: "..." }` envelope.
+  `parseServiceRequirements` unwraps it automatically.
+- Orders are marked fulfilled only after successful delivery (with 3 retries).
+- Idempotency DB at `~/.ligis/croo-idempotency.db` (SQLite, auto-pruned hourly).
