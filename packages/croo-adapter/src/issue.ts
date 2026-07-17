@@ -41,9 +41,12 @@ export async function handleIssue(req: ServiceRequest): Promise<ServiceResult> {
   const adapter = await loadLigisAdapter();
 
   // Cast is safe: adapters share the ChainAdapter contract.
+  // Bind methods to preserve `this` context (CasperAdapter methods
+  // reference this.ctx internally).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const signCredential = (adapter as any).signCredential;
-  const submitCredential = (adapter as any).submitCredential;
+  const anyAdapter = adapter as any;
+  const signCredential = anyAdapter.signCredential?.bind(adapter);
+  const submitCredential = anyAdapter.submitCredential?.bind(adapter);
 
   if (
     typeof signCredential !== "function" ||
