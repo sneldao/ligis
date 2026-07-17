@@ -12,7 +12,13 @@ function makeReq(requirements: object) {
 }
 
 function parseResult(res: { deliverableText: string }) {
-  return JSON.parse(res.deliverableText);
+  const parsed = JSON.parse(res.deliverableText);
+  // The CROO deliverable flattens checks/signals/breakdown into JSON strings.
+  // Unwrap them for test assertions.
+  if (typeof parsed.checks === "string") parsed.checks = JSON.parse(parsed.checks);
+  if (typeof parsed.signals === "string") parsed.signals = JSON.parse(parsed.signals);
+  if (typeof parsed.breakdown === "string") parsed.breakdown = JSON.parse(parsed.breakdown);
+  return parsed;
 }
 
 describe("handleRisk scoring", () => {

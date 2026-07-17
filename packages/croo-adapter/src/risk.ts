@@ -448,8 +448,25 @@ export async function handleRisk(
     signals: overallSignals,
   };
 
+  // CROO's deliverable schema doesn't support arrays of objects.
+  // Flatten checks and signals into JSON strings for the deliverable,
+  // while keeping the full report for logging.
+  const deliverable = {
+    service: report.service,
+    subject: report.subject,
+    overallVerdict: report.overallVerdict,
+    riskScore: report.riskScore,
+    summary: report.summary,
+    checkedAt: report.checkedAt,
+    checks: JSON.stringify(report.checks),
+    signals: JSON.stringify(report.signals),
+    breakdown: JSON.stringify(report.breakdown),
+  };
+
+  console.log(`[ligis-croo] risk report: verdict=${overallVerdict} score=${riskScore} checks=${checks.length}`);
+
   return {
     deliverableType: "text",
-    deliverableText: JSON.stringify(report, null, 2),
+    deliverableText: JSON.stringify(deliverable, null, 2),
   };
 }
