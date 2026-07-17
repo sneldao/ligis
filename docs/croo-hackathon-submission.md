@@ -42,13 +42,12 @@ Public. MIT licensed. CAP provider + requester in `packages/croo-adapter/`.
 | Service ID | Price | What it does |
 |---|---|---|
 | `ligis.risk` | $0.75 | Counterparty risk check — pass/warn/fail + 0–100 score |
+| `ligis.verify` | $0.50 | On-chain credential verification — capable boolean + credential details |
 
-`ligis.verify` and `ligis.issue` are implemented but intentionally not
-listed — we'd rather ship one defensible, priced service than pad the
-listing with a bare on-chain-read passthrough (`ligis.verify`, which any
-counterparty can already call for free) or a credential-issuance service
-whose value depends on issuer trust we haven't earned yet (`ligis.issue`).
-See the roadmap note in the manifest.
+`ligis.issue` is implemented but not yet listed — it will become an
+aggregation service that bridges external verifiers (Self Protocol, World
+ID, EAS) into unified on-chain credentials. See
+[`docs/strategy.md`](strategy.md) for the roadmap.
 
 Manifest: [`packages/croo-adapter/croo-store-manifest.json`](../packages/croo-adapter/croo-store-manifest.json)
 
@@ -124,8 +123,10 @@ Ligis is a callable CAP provider on the CROO Agent Store. Before your agent rele
 
 - **On-chain enforcement** — signatures recovered and issuers enforced by contract, not a server promise
 - **Cross-chain credentials** — same `capabilityHash()` and issuer key on Casper and Pharos
+- **Transparent risk scoring** — every verdict includes a breakdown of sub-scores and signals, not a black-box score
 - **A2A composability** — DeFi, escrow, and research agents hire Ligis as a pre-payment dependency
-- **Idempotent CAP delivery** — duplicate `OrderPaid` events do not double-deliver
+- **Aggregation roadmap** — `ligis.issue` will bridge external verifiers (Self, World ID, EAS) into unified credentials, solving the chicken-and-egg problem by importing trust
+- **Idempotent CAP delivery** — duplicate `OrderPaid` events do not double-deliver; retry with exponential backoff
 
 ### Integration notes
 

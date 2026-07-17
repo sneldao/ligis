@@ -32,13 +32,15 @@ Requester Agent                       CROO/CAP                      Ligis Provid
 
 Listed on the CROO Agent Store:
 
-| Service | What it proves | On-chain action | Deliverable |
-|---|---|---|---|
-| `ligis.risk` | Counterparty risk check | `CredentialRegistry.isCapable` read(s) | `{ overallVerdict, riskScore, checks[], summary }` |
+| Service | Price | What it proves | On-chain action | Deliverable |
+|---|---|---|---|---|
+| `ligis.risk` | $0.75 | Counterparty risk check | `CredentialRegistry.isCapable` read(s) | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }` |
+| `ligis.verify` | $0.50 | On-chain credential verification | `CredentialRegistry.isCapable` read | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }` |
 
-`ligis.verify` and `ligis.issue` are implemented in the provider but not
-listed/priced on the Store yet — see "Why this is differentiated" below for
-why each needs more before it's a defensible paid service.
+`ligis.issue` is implemented in the provider but not yet listed — it will
+become an aggregation service that bridges external verifiers (Self
+Protocol, World ID, EAS) into unified on-chain credentials. See
+[`docs/strategy.md`](strategy.md) for the roadmap.
 
 ## Use case: verify an escrow agent
 
@@ -110,8 +112,8 @@ The provider will:
 
 1. Connect to the CROO WebSocket.
 2. Listen for `NegotiationCreated` events.
-3. Accept negotiations for `ligis.risk` (the code also handles `ligis.verify`
-   and `ligis.issue` if hired directly, but only `ligis.risk` is listed on
+3. Accept negotiations for `ligis.risk` and `ligis.verify` (the code also
+   handles `ligis.issue` if hired directly, but it's not yet listed on
    the Store).
 4. On `OrderPaid`, read from the configured Ligis chain.
 5. Call `deliverOrder()` with a JSON verdict.
@@ -125,12 +127,18 @@ The provider will:
 - **On-chain enforcement**: signatures are recovered and issuers are enforced
   by the contract, not by a server.
 - **Risk score**: `ligis.risk` goes beyond yes/no and returns a 0–100 score
-  plus TTL warnings, making it actionable for automated A2A decisions. This is
-  also why it's the only service listed on the Store today: a raw
-  `CredentialRegistry.isCapable` read (`ligis.verify`) is a public view
-  function any counterparty can call directly for free, so a single-read
-  passthrough doesn't earn its fee — `ligis.risk`'s batching, TTL logic, and
-  scoring is real work a buyer agent would otherwise write itself.
+  plus TTL warnings, capability criticality weighting, credential maturity
+  checks, and issuer diversity analysis — making it actionable for automated
+  A2A decisions. The scoring model is transparent: every verdict includes a
+  breakdown of sub-scores and signals so the buyer agent can understand why
+  it got `warn` instead of `pass`.
+- **Aggregation play (roadmap)**: `ligis.issue` will aggregate external
+  verifiers (Self Protocol, World ID, EAS) into unified on-chain credentials,
+  solving the chicken-and-egg problem by importing trust rather than
+  bootstrapping it. See [`docs/strategy.md`](strategy.md) for the full plan.
+- **Distribution built into the product**: every agent on CROO can hire
+  Ligis and get credentialed by Ligis. The marketplace is the distribution
+  channel — no separate user acquisition needed.
 
 ## Files
 

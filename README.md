@@ -250,18 +250,19 @@ set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm d
 > back off. Without it, `pnpm croo` fails immediately with `Missing required
 > environment variable: CROO_SDK_KEY`.
 
-| Service | What you get | Input |
-|---|---|---|
-| `ligis.risk` | **Counterparty risk check** — pass/warn/fail + score | `{ subject, capabilities, issuer?, minTtlSeconds? }` |
-| `ligis.verify` | On-chain credential verification | `{ subject, capability, issuer? }` |
-| `ligis.issue` | Signed capability credential issuance | `{ subject, capability, expiresInSeconds? }` |
+| Service | Price | What you get | Input |
+|---|---|---|---|
+| `ligis.risk` | $0.75 | **Counterparty risk check** — pass/warn/fail + 0–100 score | `{ subject, capabilities, issuer?, minTtlSeconds? }` |
+| `ligis.verify` | $0.50 | On-chain credential verification | `{ subject, capability, issuer? }` |
+| `ligis.issue` | TBD | Signed capability credential issuance (aggregation roadmap) | `{ subject, capability, expiresInSeconds? }` |
 
-See [`docs/croo-integration.md`](docs/croo-integration.md) and [`packages/croo-adapter/`](packages/croo-adapter/).
+See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/strategy.md`](docs/strategy.md), and [`packages/croo-adapter/`](packages/croo-adapter/).
 
 ## Documentation
 
 | Doc | What's in it |
 |-----|-------------|
+| [Strategy](docs/strategy.md) | Product strategy, competitive landscape, differentiation, roadmap, business model |
 | [Architecture](docs/architecture.md) | Contract design, module structure, repository layout |
 | [Monorepo structure](MONOREPO_STRUCTURE.md) | Package layout, dependency graph, ChainAdapter interface, adding a new chain |
 | [CROO Integration](docs/croo-integration.md) | CAP adapter, Agent Store listing, provider/requester usage |
