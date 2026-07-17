@@ -10,7 +10,8 @@ export const revalidate = 60;
 
 export const metadata = {
   title: "Issuers — Ligis",
-  description: "Addresses that have signed credentials onto Ligis.",
+  description:
+    "Who vouches for agents. Every credential is signed by an issuer — the one saying 'I checked this agent, and it's authorized.' These are the addresses that have vouched on chain.",
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -28,34 +29,38 @@ export default async function IssuersPage({
   return (
     <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
       <header className="flex items-baseline justify-between text-xs">
-        <p className="eyebrow">Ligis · issuers 00</p>
+        <p className="eyebrow">Ligis · who vouches for agents</p>
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
-            ← Index
+            &larr; Index
           </Link>
         </div>
       </header>
 
       <section className="mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
-          Who has signed.
+          Who vouches
+          <br />
+          for agents.
         </h1>
         <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
-          Issuance is permissionless. Anyone can sign a credential and submit
-          it. The page below counts the addresses that have done so on{" "}
-          {chain.name.toLowerCase()} and ranks them by the number of
-          credentials they have signed.
+          Every credential is signed by an issuer. The issuer is the one
+          vouching &mdash; saying &ldquo;I checked this agent, and it&rsquo;s
+          authorized to do X.&rdquo; When you run a risk check, the report
+          shows who issued each credential. If all credentials come from one
+          issuer, that&rsquo;s concentration risk. These are the addresses
+          that have vouched on {chain.name.toLowerCase()}.
         </p>
         <p className="mt-6 max-w-prose font-serif text-base italic leading-relaxed text-ink-quiet">
           {log.issuers.length === 0
             ? "No issuances detected in the scanned range yet."
-            : `${log.issuers.length} addresses, ${log.totalIssuances} credentials signed.`}{" "}
+            : `${log.issuers.length} ${log.issuers.length === 1 ? "issuer has" : "issuers have"} vouched, ${log.totalIssuances} ${log.totalIssuances === 1 ? "credential" : "credentials"} signed.`}{" "}
           {log.truncated
-            ? `Scanned blocks ${log.blockRange.from.toString()} → ${log.blockRange.to.toString()}.`
+            ? `Scanned blocks ${log.blockRange.from.toString()} -> ${log.blockRange.to.toString()}.`
             : null}
         </p>
       </section>
@@ -64,7 +69,7 @@ export default async function IssuersPage({
         <div className="grid grid-cols-[2rem_1fr_auto_auto] items-baseline gap-x-8 py-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           <span>#</span>
           <span>issuer</span>
-          <span>signed</span>
+          <span>vouched</span>
           <span className="w-32 text-right">last seen at block</span>
         </div>
         <Rule />

@@ -35,9 +35,9 @@ ligis agent run --chain casper \\
   --goal "Fetch premium RWA market data and pay via x402"`;
 
 export const metadata = {
-  title: "The Steward — Ligis",
+  title: "Steward — Ligis",
   description:
-    "An agent that doesn't know who it is yet. Watch it mint its own identity, reason about what it needs, earn credentials, and record its journey — all autonomously on Casper or Pharos.",
+    "Watch an agent bootstrap its own identity: mint, reason about what it needs, earn credentials, and anchor the proof on-chain. A live demo of the autonomous loop on Casper or Pharos.",
 };
 
 export const dynamic = "force-dynamic";
@@ -55,14 +55,14 @@ export default async function StewardPage({
   return (
     <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
       <header className="flex items-baseline justify-between text-xs">
-        <p className="eyebrow">Ligis · steward 00</p>
+        <p className="eyebrow">Ligis · autonomous bootstrap demo</p>
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
-            ← Index
+            &larr; Index
           </Link>
         </div>
       </header>
@@ -77,8 +77,11 @@ export default async function StewardPage({
         </h1>
         <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
           A goal arrives with nothing: no identity, no credentials. The
-          Steward mints, reasons, gates, self-issues what is missing, then
-          roots a tamper-proof manifest of every step into 0G Storage.
+          Steward mints its own identity, reasons about what the goal
+          requires, checks what it already holds, self-issues anything
+          missing, and anchors a tamper-proof manifest of every step into
+          0G Storage. This is the same loop an agent runs before it can
+          pass a risk check.
         </p>
         <ol className="mt-8 grid grid-cols-1 divide-y divide-rule border-t border-rule sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <li className="space-y-2 py-4 sm:pr-6">
