@@ -12,7 +12,7 @@
  * Wallet extension's default ed25519 key is therefore insufficient — see
  * the `ConnectWallet` UI for the explanation shown to users.
  */
-import casperSdk from "casper-js-sdk";
+import * as casperSdk from "casper-js-sdk";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
 

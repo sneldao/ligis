@@ -19,7 +19,7 @@
  *   - Writes use `account_put_transaction` JSON-RPC, bypassing the
  *     casper-client CLI entirely.
  */
-import casperSdk from "casper-js-sdk";
+import * as casperSdk from "casper-js-sdk";
 import { blake2b } from "@noble/hashes/blake2b";
 import { keccak_256 } from "@noble/hashes/sha3";
 import {
