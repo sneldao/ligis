@@ -1,25 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { ScrollHint } from "./DynamicIsland";
-import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { type ChainNetwork } from "@/lib/network";
-
-const CatalogScene = dynamic(
-  () => import("./CatalogScene").then((m) => m.CatalogScene),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="absolute inset-0 flex items-center justify-center bg-paper">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet">
-          composing the catalog…
-        </p>
-      </div>
-    ),
-  }
-);
 
 type Card = {
   icon: string;
@@ -30,23 +13,26 @@ type Card = {
 };
 
 export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
-  const router = useRouter();
   const reducedMotion = useReducedMotion();
 
   const cards: Card[] = [
     {
       icon: "🛠️",
       title: "I build contracts",
-      description: "Gate any function with one read: isCapable(subject, hash). No SDK, no oracle.",
+      description:
+        "Gate any function with one read: isCapable(subject, hash). No SDK, no oracle.",
       action: () => {
-        document.getElementById("compose")?.scrollIntoView({ behavior: "smooth" });
+        document
+          .getElementById("compose")
+          ?.scrollIntoView({ behavior: "smooth" });
       },
       actionLabel: "See the snippet →",
     },
     {
       icon: "🤖",
       title: "I run an agent",
-      description: "Hire Ligis to check your counterparty before you pay. Risk score, breakdown, signals.",
+      description:
+        "Hire Ligis to check your counterparty before you pay. Risk score, breakdown, signals.",
       action: () => {
         document.getElementById("croo")?.scrollIntoView({ behavior: "smooth" });
       },
@@ -55,22 +41,19 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
     {
       icon: "👀",
       title: "I'm just looking",
-      description: "Verify a live credential against the registry right now. No wallet, no install.",
+      description:
+        "Verify a live credential against the registry right now. No wallet, no install.",
       action: () => {
-        document.getElementById("verify")?.scrollIntoView({ behavior: "smooth" });
+        document
+          .getElementById("verify")
+          ?.scrollIntoView({ behavior: "smooth" });
       },
       actionLabel: "Try the demo →",
     },
   ];
 
   return (
-    <section className="relative min-h-[70vh] w-full overflow-hidden">
-      <div className="absolute inset-0">
-        <SceneErrorBoundary>
-          <CatalogScene />
-        </SceneErrorBoundary>
-      </div>
-
+    <section className="pointer-events-none relative min-h-[78vh] w-full sm:min-h-[90vh]">
       {/* Section headline + audience routing */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-center px-6 pt-12 sm:pt-20">
         <motion.div
@@ -86,8 +69,8 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
           </h2>
           <p className="mt-3 font-serif text-base italic leading-relaxed text-ink-soft sm:text-lg">
             Ligis gives every agent a portable identity and verifiable
-            credentials &mdash; so you can know who you&rsquo;re paying
-            before you pay, in one on-chain read.
+            credentials &mdash; so you can know who you&rsquo;re paying before
+            you pay, in one on-chain read.
           </p>
           {chain ? (
             <p className="mt-4 hidden font-serif text-sm italic text-ink-quiet sm:block">
@@ -107,8 +90,7 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
               key={card.title}
               type="button"
               onClick={card.action}
-              className="group flex flex-col gap-1.5 bg-paper/80 px-5 py-4 text-left backdrop-blur-sm transition-colors hover:bg-paper hover:border-terra sm:gap-2 sm:px-6 sm:py-6"
-              style={{ border: "1px solid #D9D3CB" }}
+              className="group flex flex-col gap-1.5 border-t border-rule bg-paper/35 px-1 py-4 text-left backdrop-blur-[1px] transition-colors hover:border-terra hover:bg-paper/55 sm:gap-2 sm:px-4 sm:py-5"
             >
               <span className="text-lg" aria-hidden>
                 {card.icon}

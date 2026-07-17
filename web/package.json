@@ -6,9 +6,9 @@
   "packageManager": "pnpm@10.33.2",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build --webpack",
     "start": "next start",
-    "pretypecheck": "pnpm -r --filter \"./packages/*\" build",
+    "pretypecheck": "cd .. && pnpm --filter @ligis/zerog build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

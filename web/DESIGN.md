@@ -25,8 +25,10 @@ and reach for typography, whitespace, and hairlines instead.
 - **Containment** is done by hairlines (`<Rule />`), whitespace, and
   typography hierarchy. Not by enclosed boxes.
 - **Typography**: Hanken Grotesk (UI), Fraunces (editorial display), JetBrains
-  Mono (hashes, addresses, capability names). All hashes and addresses use
-  `tabular-nums` and the `··` mid-glyph for truncation, never `…`.
+  Mono (hashes, addresses, capability names). These faces are self-hosted in
+  `web/app/fonts`; do not replace them with runtime Google Font requests. All
+  hashes and addresses use `tabular-nums` and the `··` mid-glyph for
+  truncation, never `…`.
 - **Palette**: warm paper background, deep graphite ink, terracotta as the
   single ceremonial accent (never used for chrome). Sage for valid, terra for
   attention, ink-quiet for revoked / inactive. One dominant tone per surface.
@@ -41,9 +43,20 @@ and reach for typography, whitespace, and hairlines instead.
 
 - The home page is editorial, not a dashboard. Stats appear inline as numerals
   in prose ("1,247 agents minted on Pharos Atlantic"), not as tiles.
+- **Agent field**: the interactive agent field is a route-scoped home-page
+  environment. It may span the home proposition, verification, and catalog
+  sequence, but it must end before operational or integration content. It is
+  never global page chrome and never appears behind ledger, reference, embed,
+  or Steward surfaces.
+- **Progressive enhancement**: the agent field loads only on capable desktop
+  clients. Small screens and reduced-motion users receive its static specimen
+  field; WebGL errors must leave all content usable.
 - Agent pages are full-bleed identity documents, not cards in a feed.
 - Credential lists are ledger rows: columnar layout with hairlines between
   rows. No pills, no chips, no rounded containers.
+- **Small screens**: preserve the ledger’s information order, but collapse
+  secondary columns into labelled lines below the primary identifier. Never
+  force horizontal scrolling for core credential, issuer, or history data.
 - Architecture diagrams are hand-typeset SVG with proper labels, never the
   output of an auto-layout tool.
 
@@ -51,12 +64,12 @@ and reach for typography, whitespace, and hairlines instead.
 
 Only these compose surfaces:
 
-| Primitive | What it is |
-|---|---|
-| `Rule` | hairline (0.5px) or edge (1px), tone default or soft |
-| `AddressDisplay` | mono address, optional link to explorer, optional copy |
-| `CopyButton` | quiet tracked-uppercase action, no border |
-| typography classes (`display`, `eyebrow`, `font-mono`, `tabular`) | hierarchy |
+| Primitive                                                         | What it is                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------------ |
+| `Rule`                                                            | hairline (0.5px) or edge (1px), tone default or soft   |
+| `AddressDisplay`                                                  | mono address, optional link to explorer, optional copy |
+| `CopyButton`                                                      | quiet tracked-uppercase action, no border              |
+| typography classes (`display`, `eyebrow`, `font-mono`, `tabular`) | hierarchy                                              |
 
 New compositions extend these. If a new feature truly needs a new primitive,
 it gets added here first, with a rule for when to use it.
@@ -66,6 +79,8 @@ it gets added here first, with a rule for when to use it.
 - The `frontend-design` and `emil-design-eng` skills are invoked before
   generating any new surface.
 - The `/styleguide` route is the source of truth. Features compose from it.
+- Production builds use webpack (`next build --webpack`) until the local
+  Next 16 Turbopack build no longer stalls during optimized compilation.
 - Pull requests that introduce a banned word or break a required rule are
   rejected.
 

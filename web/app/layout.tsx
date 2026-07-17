@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Hanken_Grotesk, Fraunces, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { ConditionalProviders } from "@/components/ConditionalProviders";
 import { CommandPalette } from "@/components/CommandPalette";
 import { GlobalDock } from "@/components/GlobalDock";
@@ -8,24 +8,34 @@ import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const EMOJI_FAVICON = `data:image/svg+xml;utf8,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="88">🪪</text></svg>'
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="88">🪪</text></svg>',
 )}`;
 
-const hanken = Hanken_Grotesk({
-  subsets: ["latin"],
+const hanken = localFont({
+  src: [
+    { path: "./fonts/HankenGrotesk-400.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/HankenGrotesk-500.ttf", weight: "500", style: "normal" },
+  ],
   variable: "--font-hanken",
   display: "swap",
 });
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
+const fraunces = localFont({
+  src: [
+    { path: "./fonts/Fraunces-300.ttf", weight: "300", style: "normal" },
+    { path: "./fonts/Fraunces-400.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/Fraunces-500.ttf", weight: "500", style: "normal" },
+    { path: "./fonts/Fraunces-600.ttf", weight: "600", style: "normal" },
+    { path: "./fonts/Fraunces-700.ttf", weight: "700", style: "normal" },
+  ],
   variable: "--font-fraunces",
   display: "swap",
-  weight: ["300", "400", "500", "600", "700"],
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
+const jetbrains = localFont({
+  src: [
+    { path: "./fonts/JetBrainsMono-400.ttf", weight: "400", style: "normal" },
+  ],
   variable: "--font-jetbrains",
   display: "swap",
 });
@@ -112,7 +122,11 @@ function PaletteHint() {
   );
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"

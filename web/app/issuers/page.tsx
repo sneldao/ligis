@@ -50,10 +50,10 @@ export default async function IssuersPage({
         <p className="mt-10 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
           Every credential is signed by an issuer. The issuer is the one
           vouching &mdash; saying &ldquo;I checked this agent, and it&rsquo;s
-          authorized to do X.&rdquo; When you run a risk check, the report
-          shows who issued each credential. If all credentials come from one
-          issuer, that&rsquo;s concentration risk. These are the addresses
-          that have vouched on {chain.name.toLowerCase()}.
+          authorized to do X.&rdquo; When you run a risk check, the report shows
+          who issued each credential. If all credentials come from one issuer,
+          that&rsquo;s concentration risk. These are the addresses that have
+          vouched on {chain.name.toLowerCase()}.
         </p>
         <p className="mt-6 max-w-prose font-serif text-base italic leading-relaxed text-ink-quiet">
           {log.issuers.length === 0
@@ -66,7 +66,7 @@ export default async function IssuersPage({
       </section>
 
       <section className="mt-20 space-y-0">
-        <div className="grid grid-cols-[2rem_1fr_auto_auto] items-baseline gap-x-8 py-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
+        <div className="hidden grid-cols-[2rem_1fr_auto_auto] items-baseline gap-x-8 py-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet sm:grid">
           <span>#</span>
           <span>issuer</span>
           <span>vouched</span>
@@ -82,15 +82,25 @@ export default async function IssuersPage({
         ) : (
           top.map((entry, i) => (
             <div key={entry.issuer}>
-              <div className="grid grid-cols-[2rem_1fr_auto_auto] items-baseline gap-x-8 py-4 text-sm">
+              <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-baseline gap-x-4 py-4 text-sm sm:grid-cols-[2rem_1fr_auto_auto] sm:gap-x-8">
                 <span className="font-mono tabular text-ink-quiet">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <AddressDisplay address={entry.issuer} copy={false} head={6} tail={4} />
+                <div className="min-w-0">
+                  <AddressDisplay
+                    address={entry.issuer}
+                    copy={false}
+                    head={6}
+                    tail={4}
+                  />
+                  <p className="mt-1 font-mono text-[10px] tabular text-ink-quiet sm:hidden">
+                    last seen · {entry.lastSeen.toString()}
+                  </p>
+                </div>
                 <span className="font-mono tabular text-ink">
                   {entry.count.toLocaleString("en")}
                 </span>
-                <span className="w-32 text-right font-mono tabular text-ink-soft">
+                <span className="hidden w-32 text-right font-mono tabular text-ink-soft sm:block">
                   {entry.lastSeen.toString()}
                 </span>
               </div>
