@@ -235,7 +235,7 @@ export async function callStoredContractViaSdk(params: {
   const storedTarget = new StoredTarget();
   (storedTarget as any).byPackageHash = byPackageHash;
 
-  const target = new TransactionTarget(undefined, undefined, storedTarget as any);
+  const target = new TransactionTarget(undefined, storedTarget as any, undefined);
 
   // Build args
   const argsObj = new Args(args);
