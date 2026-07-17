@@ -279,9 +279,17 @@ trusted issuers only.
 |---|---|---|
 | Casper | Testnet | Live |
 | Pharos | Atlantic Testnet | Live (cross-chain portability) |
+| Base | Sepolia | Planned |
+| Optimism | Sepolia | Planned |
 
 Capability hashes are deterministic across chains — the same
 `capabilityHash("kyc.basic")` is identical on Casper and Pharos.
+
+The architecture is chain-agnostic: each chain is a `ChainAdapter`
+implementation, and EIP-712 capability hashes are computed deterministically
+from the capability name (not the chain). Adding a chain is an adapter
+implementation, not a redesign. Next targets are EVM L2s (Base, Optimism)
+where agent activity is highest.
 
 ## How hiring works
 
