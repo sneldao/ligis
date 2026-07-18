@@ -102,6 +102,9 @@ export function evaluateAttestationPolicy(
   if (!policy.acceptedSources.includes(attestation.evidence.source)) {
     return fail("Attestation source is not accepted by policy", "source-untrusted");
   }
+  if (policy.maxAgeSeconds <= 0 || !Number.isFinite(policy.maxAgeSeconds)) {
+    return fail("Attestation policy max age is invalid", "policy-max-age-invalid");
+  }
   if (attestation.status !== "valid") {
     return fail(`Attestation is ${attestation.status}`, `source-${attestation.status}`);
   }
@@ -112,7 +115,8 @@ export function evaluateAttestationPolicy(
   }
 
   const checkedAt = Date.parse(attestation.checkedAt);
-  if (!Number.isFinite(checkedAt) || now - checkedAt > policy.maxAgeSeconds * 1000) {
+  const ageMs = now - checkedAt;
+  if (!Number.isFinite(checkedAt) || ageMs < 0 || ageMs > policy.maxAgeSeconds * 1000) {
     return fail("Attestation status is stale", "source-stale");
   }
 
@@ -120,8 +124,21 @@ export function evaluateAttestationPolicy(
     return fail("Attestation has no expiry or freshness boundary", "expiry-missing");
   }
 
-  if (attestation.expiresAt && Date.parse(attestation.expiresAt) <= now) {
-    return fail("Attestation has expired", "source-expired");
+  if (attestation.expiresAt) {
+    const expiresAt = Date.parse(attestation.expiresAt);
+    if (!Number.isFinite(expiresAt)) {
+      return fail("Attestation expiry is invalid", "expiry-invalid");
+    }
+    if (expiresAt <= now) {
+      return fail("Attestation has expired", "source-expired");
+    }
+  }
+
+  if (attestation.issuedAt) {
+    const issuedAt = Date.parse(attestation.issuedAt);
+    if (!Number.isFinite(issuedAt) || issuedAt > now) {
+      return fail("Attestation issue time is invalid", "issued-at-invalid");
+    }
   }
 
   const schemaKey = attestation.evidence.schema

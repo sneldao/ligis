@@ -212,6 +212,11 @@ Issues a verifiable on-chain credential to an agent. Ligis signs an EIP-712
 attestation and submits it to the CredentialRegistry on Casper (or Pharos),
 making it instantly verifiable by any agent or contract.
 
+By default this is a direct Ligis-issued credential. If the request includes
+`externalAttestation.source="eas"`, Ligis first reads the EAS attestation,
+checks the configured schema and attester allowlists, verifies freshness and
+revocation status, and records provenance in the deliverable.
+
 #### Input
 
 | Field | Type | Required | Description |
@@ -219,12 +224,19 @@ making it instantly verifiable by any agent or contract.
 | `subject` | string | yes | Agent address to receive the credential |
 | `capability` | string | yes | Capability name to issue, e.g. `kyc.basic` |
 | `expiresInSeconds` | number | no | Credential lifetime in seconds (default 86400 = 24h) |
+| `externalAttestation` | object | no | Optional upstream EAS evidence to verify before issuing |
 
 ```json
 {
   "subject": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
   "capability": "kyc.basic",
-  "expiresInSeconds": 86400
+  "expiresInSeconds": 86400,
+  "externalAttestation": {
+    "source": "eas",
+    "uid": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "chainId": "8453",
+    "schema": "0x2222222222222222222222222222222222222222222222222222222222222222"
+  }
 }
 ```
 
@@ -241,6 +253,7 @@ making it instantly verifiable by any agent or contract.
 | `expiresAt` | string | Unix timestamp of expiry |
 | `txHash` | string | On-chain transaction hash |
 | `submittedAt` | string | ISO timestamp of submission |
+| `provenance` | object \| null | EAS source metadata when external evidence was used |
 
 ```json
 {
@@ -252,7 +265,18 @@ making it instantly verifiable by any agent or contract.
   "issuedAt": "1784294089",
   "expiresAt": "1784380489",
   "txHash": "a52c439a3d1317787d7bd0d7cfa1ff2aad54078c78a5b26f8255c49f48c402b3",
-  "submittedAt": "2026-07-17T15:25:00.000Z"
+  "submittedAt": "2026-07-17T15:25:00.000Z",
+  "provenance": {
+    "source": "eas",
+    "uid": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "chainId": "8453",
+    "schema": "0x2222222222222222222222222222222222222222222222222222222222222222",
+    "attester": "0x4444444444444444444444444444444444444444",
+    "checkedAt": "2026-07-17T15:24:59.000Z",
+    "expiresAt": "2026-10-15T00:00:00.000Z",
+    "capability": "kyc.basic",
+    "signals": ["source-verified", "attester-trusted", "schema-mapped"]
+  }
 }
 ```
 

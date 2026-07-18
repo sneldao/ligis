@@ -210,15 +210,17 @@ Subscription pricing or CROO-bundled pricing could address this.
 - [x] CROO listing live with deliverable schema for all three services
 - [x] End-to-end tested: issue → verify (`capable: true`) → risk (`warn`, maturing to `pass`)
 
-### Phase 2: Aggregation issuance (next)
+### Phase 2: Aggregation issuance (in progress)
 
-- [ ] `ligis.issue` becomes an aggregation service, not self-issuance
-- [ ] Ship the chain-neutral external attestation boundary
-- [ ] Add an EAS read adapter with schema + attester allowlists
+- [x] `ligis.issue` supports external evidence import, not only self-issuance
+- [x] Ship the chain-neutral external attestation boundary
+- [x] Add a read-only EAS adapter foundation
+- [x] Wire EAS-backed issuance into `ligis.issue`
+- [ ] Configure production EAS schema + attester allowlists
 - [ ] Integrate Self Protocol as the first human/controller verifier
-- [ ] Agent requests credential through CROO (or directly)
-- [ ] Ligis verifies the source proof and records provenance (no raw PII)
-- [ ] Ligis issues unified on-chain credential on Casper/Pharos
+- [x] Agent can request externally backed credential issuance through CROO
+- [x] Ligis verifies the source proof and records provenance (no raw PII)
+- [x] Ligis issues unified on-chain credential on Casper/Pharos after policy passes
 - [ ] Agent now has a credential that any CROO risk check can verify
 - [ ] Demo: agent gets credentialed → another agent runs risk check → gets `pass`
 

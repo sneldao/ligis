@@ -36,7 +36,7 @@ Listed on the CROO Agent Store:
 |---|---|---|---|---|
 | `ligis.risk` | $0.75 | Counterparty risk check | `CredentialRegistry.isCapable` read(s) | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }` |
 | `ligis.verify` | $0.50 | On-chain credential verification | `CredentialRegistry.isCapable` read | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }` |
-| `ligis.issue` | $1.00 | Credential issuance (on-chain tx) | `CredentialRegistry.issue` write | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt }` |
+| `ligis.issue` | $1.00 | Credential issuance; optional EAS import | EAS read, then `CredentialRegistry.issue` write | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt, provenance }` |
 
 All three services are live and tested end-to-end. The full loop works:
 issue a credential → verify returns `capable: true` → risk check returns
@@ -54,9 +54,8 @@ The next CROO work is polish and operational hardening, not new protocol shape:
 - Surface provider delivery metrics (`delivered`, `errors`, `lastDeliveryAt`,
   `wsConnected`, `inFlight`) in the release checklist before marking a deploy
   healthy.
-- Revisit `ligis.issue` once external verifier aggregation ships, so CROO can
-  become the intake channel for imported trust signals rather than only direct
-  issuer writes.
+- Keep the EAS-backed `ligis.issue` path covered by production smoke checks
+  once `LIGIS_EAS_*` env vars and allowlists are configured.
 
 ## Use case: verify an escrow agent
 
@@ -146,10 +145,11 @@ The provider will:
   A2A decisions. The scoring model is transparent: every verdict includes a
   breakdown of sub-scores and signals so the buyer agent can understand why
   it got `warn` instead of `pass`.
-- **Aggregation play (roadmap)**: `ligis.issue` will aggregate external
-  verifiers (Self Protocol, World ID, EAS) into unified on-chain credentials,
-  solving the chicken-and-egg problem by importing trust rather than
-  bootstrapping it. See [`docs/strategy.md`](strategy.md) for the full plan.
+- **Aggregation play**: `ligis.issue` can now import EAS attestations behind
+  configured schema and attester allowlists before issuing unified on-chain
+  credentials. Self Protocol remains the next verifier integration. See
+  [`docs/attestation-integrations.md`](attestation-integrations.md) and
+  [`docs/strategy.md`](strategy.md) for the full plan.
 - **Distribution built into the product**: every agent on CROO can hire
   Ligis and get credentialed by Ligis. The marketplace is the distribution
   channel — no separate user acquisition needed.

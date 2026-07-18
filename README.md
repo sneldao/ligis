@@ -39,7 +39,7 @@ every chain, which is what makes cross-chain credential portability possible.
 1. **BOOT** — Agent mints its own identity (`AgentId.mint_self`) on Casper Testnet
 2. **REASON** — 0G Compute (or local fallback) maps the goal to required capabilities
 3. **GATE** — Checks `CredentialRegistry.is_capable` for each capability
-4. **ACT** — Self-issues missing credentials via signed EIP-712 `issue` calls
+4. **ACT** — Issues missing credentials via signed EIP-712 `issue` calls
 5. **RECORD** — Anchors evidence manifest to 0G Storage + Casper (`set_token_uri`)
 
 **Then the agent pays for premium RWA data via x402:**
@@ -48,7 +48,7 @@ every chain, which is what makes cross-chain credential portability possible.
 3. Agent resubmits with `X-PAYMENT` header → **200 OK** with tokenized real-estate market data
 4. Settlement on Casper Testnet (on-chain tx)
 
-41 Foundry tests + 12 Odra tests + 17 TypeScript tests passing. 4 on-chain Skills + 2 helpers
+41 Foundry tests + 12 Odra tests + 47 TypeScript tests passing. 4 on-chain Skills + 2 helpers
 + Trust Steward Agent. CLI. MCP server. x402 Trust Gate. MIT.
 
 ---
@@ -254,11 +254,11 @@ set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm d
 |---|---|---|---|
 | `ligis.risk` | $0.75 | **Counterparty risk check** — pass/warn/fail + 0–100 score | `{ subject, capabilities, issuer?, minTtlSeconds? }` |
 | `ligis.verify` | $0.50 | On-chain credential verification | `{ subject, capability, issuer? }` |
-| `ligis.issue` | $1.00 | Signed capability credential issuance (on-chain tx) | `{ subject, capability, expiresInSeconds? }` |
+| `ligis.issue` | $1.00 | Signed capability credential issuance; optionally imports EAS provenance before issuing | `{ subject, capability, expiresInSeconds?, externalAttestation? }` |
 
 All three services are live and tested end-to-end: issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass` after 7 days).
 
-See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/strategy.md`](docs/strategy.md), and [`packages/croo-adapter/`](packages/croo-adapter/).
+See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/attestation-integrations.md`](docs/attestation-integrations.md), [`docs/strategy.md`](docs/strategy.md), and [`packages/croo-adapter/`](packages/croo-adapter/).
 
 ## Documentation
 

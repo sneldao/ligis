@@ -56,6 +56,16 @@ bash scripts/demo.sh
 | `LIGIS_CASPER_CHAIN_NAME` | Casper all ops | Chain name (default: `casper-test`) |
 | `LIGIS_CASPER_AGENT_ID` | Casper adapter | Deployed AgentId contract package hash (`hash-...`) |
 | `LIGIS_CASPER_CREDENTIAL_REGISTRY` | Casper adapter | Deployed CredentialRegistry contract package hash (`hash-...`) |
+| `CROO_SDK_KEY` | CROO provider | SDK key from the CROO Dashboard |
+| `CROO_SERVICE_ID_LIGIS_RISK` | CROO provider | Listing UUID for `ligis.risk` |
+| `CROO_SERVICE_ID_LIGIS_VERIFY` | CROO provider | Listing UUID for `ligis.verify` |
+| `CROO_SERVICE_ID_LIGIS_ISSUE` | CROO provider | Listing UUID for `ligis.issue` |
+| `LIGIS_ISSUER_PRIVATE_KEY` | CROO `ligis.issue` | Issuer key used to sign credentials |
+| `LIGIS_EAS_ADDRESS` | EAS-backed `ligis.issue` | EAS contract address for the source chain |
+| `LIGIS_EAS_RPC_URL` | EAS-backed `ligis.issue` | RPC URL for the source EAS chain |
+| `LIGIS_EAS_CHAIN_ID` | EAS-backed `ligis.issue` | Numeric source chain ID |
+| `LIGIS_EAS_TRUSTED_ATTESTERS` | EAS-backed `ligis.issue` | Comma-separated allowlist of EAS attester addresses |
+| `LIGIS_EAS_SCHEMA_CAPABILITIES` | EAS-backed `ligis.issue` | JSON map from EAS schema keys to Ligis capabilities |
 
 Store keys in `.env.d/` (gitignored). Example:
 ```bash

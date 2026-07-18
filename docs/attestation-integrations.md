@@ -69,16 +69,58 @@ Unknown schemas, unknown attesters, stale proofs, revoked evidence, and
 ambiguous subject bindings must fail closed. A source outage must produce an
 `unavailable` operational error, not a fresh credential.
 
+## EAS operator setup
+
+EAS-backed issuance is opt-in per `ligis.issue` request. If a request includes
+`externalAttestation.source="eas"`, the CROO provider requires these
+environment variables:
+
+| Variable | Source |
+|---|---|
+| `LIGIS_EAS_ADDRESS` | EAS contract address for the source chain. Use the official EAS deployment artifacts: <https://github.com/ethereum-attestation-service/eas-contracts/tree/master/deployments> |
+| `LIGIS_EAS_RPC_URL` | RPC URL for the same EVM chain that hosts the attestation |
+| `LIGIS_EAS_CHAIN_ID` | Numeric chain ID for that EAS source chain |
+| `LIGIS_EAS_TRUSTED_ATTESTERS` | Comma-separated allowlist of upstream attester addresses |
+| `LIGIS_EAS_SCHEMA_CAPABILITIES` | JSON map from EAS schema keys to Ligis capability names |
+| `LIGIS_EAS_MAX_AGE_SECONDS` | Optional freshness window for the source status check; defaults to `300` |
+| `LIGIS_EAS_REQUIRE_FRESH_STATUS` | Optional; defaults to `true` and requires an expiry boundary |
+
+Use EASScan or the EASScan GraphQL API to inspect attestation UIDs, schema IDs,
+attesters, recipients, expiry, and revocation status:
+<https://docs.attest.org/docs/developer-tools/api>.
+
+Example capability map:
+
+```json
+{
+  "eas:0x2222222222222222222222222222222222222222222222222222222222222222": "kyc.basic"
+}
+```
+
+Example `ligis.issue` requirements:
+
+```json
+{
+  "subject": "0x3333333333333333333333333333333333333333",
+  "capability": "kyc.basic",
+  "externalAttestation": {
+    "source": "eas",
+    "uid": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "chainId": "8453",
+    "schema": "0x2222222222222222222222222222222222222222222222222222222222222222"
+  }
+}
+
 ## Rollout
 
 1. Ship the chain-neutral verifier boundary in `@ligis/core`.
-2. Implement an EAS read adapter and test schema/attester allowlists.
-3. Implement Self disclosure verification and bind the result to a Ligis
+2. Ship the read-only EAS adapter in `@ligis/adapter-evm`.
+3. Wire EAS-backed issuance into `ligis.issue`.
+4. Configure production EAS schema and attester allowlists per environment.
+5. Implement Self disclosure verification and bind the result to a Ligis
    Agent ID or wallet subject.
-4. Add an aggregation issuance flow to `ligis.issue`, including provenance in
-   the deliverable and risk report.
-5. Add UI provenance chips and source-specific freshness/revocation signals.
-6. Add a second independent issuer before treating issuer diversity as a
+6. Add UI provenance chips and source-specific freshness/revocation signals.
+7. Add a second independent issuer before treating issuer diversity as a
    meaningful risk signal.
 
 The existing self-issued demo path may remain available on testnet, but must

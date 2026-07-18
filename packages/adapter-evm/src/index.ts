@@ -25,3 +25,6 @@ export {
 
 // EVM-only helpers
 export { parseAddress } from "./address.js";
+
+// External attestation sources
+export * from "./eas.js";

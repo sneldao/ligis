@@ -36,7 +36,7 @@ end-to-end x402 payment flow. Featured tx hashes (view on testnet.cspr.live):
 
 `https://github.com/sneldao/ligis`
 
-Public. MIT licensed. 41 Foundry tests (EVM/Solidity contracts) + 12 Odra tests (Casper contracts) + 17 TypeScript tests + Casper smoke test passing.
+Public. MIT licensed. 41 Foundry tests (EVM/Solidity contracts) + 12 Odra tests (Casper contracts) + 47 TypeScript tests + Casper smoke test passing.
 
 ## Deployed contracts (Casper Testnet)
 

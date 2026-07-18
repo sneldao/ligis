@@ -106,6 +106,54 @@ pnpm croo
 | `CROO_SDK_KEY` | SDK key from CROO Dashboard |
 | `LIGIS_CHAIN` | `casper` or `pharos` |
 | `LIGIS_ISSUER_PRIVATE_KEY` | Required only for `ligis.issue` |
+| `LIGIS_EAS_ADDRESS` | Required for EAS-backed `ligis.issue` imports |
+| `LIGIS_EAS_RPC_URL` | EVM RPC used to read EAS attestations |
+| `LIGIS_EAS_CHAIN_ID` | Source chain ID for EAS provenance |
+| `LIGIS_EAS_TRUSTED_ATTESTERS` | Comma-separated EAS attester allowlist |
+| `LIGIS_EAS_SCHEMA_CAPABILITIES` | JSON map of EAS schema IDs to Ligis capabilities |
+
+### EAS-backed issuance
+
+`ligis.issue` remains backward-compatible. Without `externalAttestation`, it
+uses the existing Ligis-issued path. With `externalAttestation.source="eas"`,
+the provider reads EAS, applies the configured trust policy, and only then
+submits the Ligis credential.
+
+Example request:
+
+```json
+{
+  "subject": "0x3333333333333333333333333333333333333333",
+  "capability": "kyc.basic",
+  "expiresInSeconds": 86400,
+  "externalAttestation": {
+    "source": "eas",
+    "uid": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "chainId": "8453",
+    "schema": "0x2222222222222222222222222222222222222222222222222222222222222222"
+  }
+}
+```
+
+Where to get the EAS values:
+
+- `LIGIS_EAS_ADDRESS`: the EAS contract for the source chain. Use the official
+  EAS deployment artifacts:
+  <https://github.com/ethereum-attestation-service/eas-contracts/tree/master/deployments>
+- `LIGIS_EAS_RPC_URL`: an RPC URL for that same EVM chain, from your RPC
+  provider or infrastructure account.
+- `LIGIS_EAS_CHAIN_ID`: the numeric chain ID for the source EAS chain.
+- `LIGIS_EAS_TRUSTED_ATTESTERS`: the attester address or comma-separated
+  addresses you are willing to trust for imported credentials. Get this from
+  the EAS attestation record or from the upstream verifier's published issuer
+  address.
+- `LIGIS_EAS_SCHEMA_CAPABILITIES`: JSON mapping from source schemas to Ligis
+  capabilities, for example
+  `{"eas:0x...schema":"kyc.basic"}`. Get schema IDs from EASScan or the
+  upstream verifier's schema documentation.
+- Attestation `uid`, `schema`, `recipient`, `attester`, expiry, and revocation
+  status can be inspected on EASScan or through the EASScan GraphQL API:
+  <https://docs.attest.org/docs/developer-tools/api>
 
 ## Example: verify an escrow agent before payment
 
