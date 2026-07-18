@@ -12,3 +12,4 @@ export * from "./config.js";
 export * from "./adapter.js";
 export * from "./reasoner.js";
 export * from "./evidence.js";
+export * from "./attestations.js";

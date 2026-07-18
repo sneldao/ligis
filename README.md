@@ -266,6 +266,7 @@ See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/strategy.md`]
 |-----|-------------|
 | [Strategy](docs/strategy.md) | Product strategy, competitive landscape, differentiation, roadmap, business model |
 | [Architecture](docs/architecture.md) | Contract design, module structure, repository layout |
+| [Attestation integrations](docs/attestation-integrations.md) | Self Protocol and EAS provenance, privacy boundaries, and rollout |
 | [Monorepo structure](MONOREPO_STRUCTURE.md) | Package layout, dependency graph, ChainAdapter interface, adding a new chain |
 | [CROO Integration](docs/croo-integration.md) | CAP adapter, Agent Store listing, provider/requester usage |
 | [API Reference](docs/api.md) | Service schemas, input/output examples, capability names, chains |

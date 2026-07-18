@@ -102,6 +102,7 @@ Two independent contracts that compose:
 packages/
   core/           chain-neutral primitives (only dep: @noble/hashes)
     src/types.ts        CredentialView, SignedCredential, TxRef, Network, ...
+    src/attestations.ts External verifier boundary + provenance types
     src/hash.ts         capabilityHash (keccak256)
     src/did.ts          did:ligis:<chain>:<id>
     src/adapter.ts      ChainAdapter interface (the boundary)
