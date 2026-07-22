@@ -138,7 +138,19 @@ export default async function StewardPage({
 
       {/* StewardRunner — the actual product. Primary, above the fold. */}
       <section className="mt-10">
-        <Suspense fallback={<div className="font-mono text-sm text-ink-quiet">Loading steward…</div>}>
+        <Suspense fallback={
+          <div className="space-y-8">
+            <div className="h-[3px] w-full bg-rule" />
+            <div className="space-y-3">
+              <div className="h-4 w-24 bg-rule-soft" />
+              <div className="h-6 w-full max-w-md bg-rule-soft" />
+            </div>
+            <div className="space-y-3">
+              <div className="h-4 w-16 bg-rule-soft" />
+              <div className="h-24 w-full bg-rule-soft" />
+            </div>
+          </div>
+        }>
           <StewardRunner defaultGoal={defaultGoal} />
         </Suspense>
       </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState, useActionState, useRef } from "react";
 import {
   verifyAction,
   batchVerifyAction,
@@ -34,6 +34,8 @@ export function VerifyDemo({
   >(batchVerifyAction, null);
 
   const pending = singlePending || batchPending;
+  const singleFormRef = useRef<HTMLFormElement>(null);
+  const batchFormRef = useRef<HTMLFormElement>(null);
 
   return (
     <div className="space-y-8">
@@ -65,6 +67,7 @@ export function VerifyDemo({
 
       {mode === "single" ? (
         <form
+          ref={singleFormRef}
           action={singleAction}
           className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
         >
@@ -106,6 +109,7 @@ export function VerifyDemo({
         </form>
       ) : (
         <form
+          ref={batchFormRef}
           action={batchAction}
           className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[1fr_auto] sm:items-end"
         >
@@ -146,7 +150,10 @@ export function VerifyDemo({
               appears here. One on-chain read, no SDK.
             </p>
           ) : !singleState.ok ? (
-            <p className="font-serif text-base text-revoke">{singleState.error}</p>
+            <ErrorRetry
+              message={singleState.error}
+              formRef={singleFormRef}
+            />
           ) : (
             <ResultPanel result={singleState} explorerUrl={explorerUrl} />
           )}
@@ -163,7 +170,10 @@ export function VerifyDemo({
               appears here. All capabilities, one on-chain read.
             </p>
           ) : !batchState.ok ? (
-            <p className="font-serif text-base text-revoke">{batchState.error}</p>
+            <ErrorRetry
+              message={batchState.error}
+              formRef={batchFormRef}
+            />
           ) : (
             <BatchResultPanel result={batchState} explorerUrl={explorerUrl} />
           )}
@@ -271,6 +281,27 @@ function BatchResultPanel({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ErrorRetry({
+  message,
+  formRef,
+}: {
+  message: string;
+  formRef: React.RefObject<HTMLFormElement | null>;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="font-serif text-base text-revoke">{message}</p>
+      <button
+        type="button"
+        onClick={() => formRef.current?.requestSubmit()}
+        className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+      >
+        retry →
+      </button>
     </div>
   );
 }

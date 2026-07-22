@@ -143,10 +143,20 @@ export default async function AgentPage({
             </div>
             <Rule />
             {snap.held.length === 0 ? (
-              <div className="py-12 text-center text-sm text-ink-quiet">
-                <p className="font-serif text-base italic">
+              <div className="py-12">
+                <p className="font-serif text-base italic text-ink-quiet">
                   No credentials held against the reference set.
                 </p>
+                <p className="mt-3 font-serif text-sm leading-relaxed text-ink-quiet">
+                  {snap.exists
+                    ? "An issuer must grant a capability to this agent. Use the CLI: "
+                    : "This address has no agent identity. Mint one first, then an issuer can grant capabilities."}
+                </p>
+                {snap.exists ? (
+                  <pre className="mt-4 inline-block overflow-x-auto bg-paper-deep px-4 py-3 font-mono text-[12px] leading-relaxed tabular text-ink-soft">
+                    ligis sign --subject {truncateAddress(address, 6, 4)}·· --capability "kyc.basic"
+                  </pre>
+                ) : null}
               </div>
             ) : (
               snap.held.map(({ capability, view }) => (

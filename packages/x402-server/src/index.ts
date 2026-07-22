@@ -450,7 +450,17 @@ function cryptoRandomHash(): string {
  *   - Maple (MPL) — tokenized credit
  *   - RealT — tokenized real estate (via static metadata + market proxy)
  */
+// Cache for CoinGecko RWA oracle data (60-second TTL).
+// Avoids hitting the CoinGecko API on every /premium request.
+let oracleCache: { data: any; fetchedAt: number } | null = null;
+const ORACLE_CACHE_TTL_MS = 60_000;
+
 async function premiumPayload() {
+  // Return cached data if fresh enough
+  if (oracleCache && Date.now() - oracleCache.fetchedAt < ORACLE_CACHE_TTL_MS) {
+    return { ...oracleCache.data, cached: true };
+  }
+
   // CoinGecko coin IDs for major RWA tokens
   const rwaTokens = [
     { coinId: "ondo-finance", symbol: "ONDO", name: "Ondo Finance", category: "Tokenized Treasuries", platform: "Ethereum" },
@@ -481,6 +491,10 @@ async function premiumPayload() {
   } catch (err) {
     isLive = false;
     dataSource = `CoinGecko API unavailable — using fallback estimates`;
+    // If we have stale cache, use it rather than zeros
+    if (oracleCache) {
+      return { ...oracleCache.data, cached: true, stale: true };
+    }
   }
 
   const assets = rwaTokens.map((t) => {
@@ -507,11 +521,12 @@ async function premiumPayload() {
     ? Number((assets.reduce((s, a) => s + a.change24h, 0) / assets.length).toFixed(2))
     : 0;
 
-  return {
+  const payload = {
     type: "rwa_oracle_feed",
     timestamp: new Date().toISOString(),
     dataSource,
     live: isLive,
+    cached: false,
     oracle: {
       provider: "Ligis RWA Oracle",
       credential: CONFIG.capability,
@@ -530,6 +545,11 @@ async function premiumPayload() {
     disclaimer:
       "Real market data from CoinGecko public API. For informational purposes only. Not financial advice.",
   };
+
+  // Update cache
+  oracleCache = { data: payload, fetchedAt: Date.now() };
+
+  return payload;
 }
 
 function sleep(ms: number): Promise<void> {

@@ -28,7 +28,9 @@ export function CopyButton({
           setCopied(true);
         } catch {}
       }}
-      className={`inline-flex items-baseline text-[11px] tracking-[0.16em] uppercase text-ink-quiet transition-colors hover:text-ink ${className}`}
+      className={`inline-flex items-baseline text-[11px] tracking-[0.16em] uppercase transition-colors ${
+        copied ? "text-sage" : "text-ink-quiet hover:text-ink"
+      } ${className}`}
       aria-label={`copy ${value}`}
     >
       {copied ? "copied" : label}

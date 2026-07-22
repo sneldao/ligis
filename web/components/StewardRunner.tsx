@@ -642,6 +642,15 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
           <p className="eyebrow">error</p>
           <Rule />
           <p className="font-serif text-base italic text-revoke">{state.error}</p>
+          {!running ? (
+            <button
+              type="button"
+              onClick={run}
+              className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+            >
+              retry →
+            </button>
+          ) : null}
         </section>
       ) : null}
 
