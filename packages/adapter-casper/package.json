@@ -25,7 +25,7 @@
     "casper-js-sdk": "^5.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.1.1",
     "tsx": "^4.22.0",
     "typescript": "^5.6.0"
   },
