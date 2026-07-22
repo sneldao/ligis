@@ -216,7 +216,7 @@ importers:
         version: 1.2.1
       '@hono/node-server':
         specifier: '>=2.0.5'
-        version: 2.0.11(hono@4.12.27)
+        version: 2.0.11(hono@4.12.31)
       '@ligis/adapter-casper':
         specifier: workspace:*
         version: link:../adapter-casper
@@ -230,8 +230,8 @@ importers:
         specifier: ^1.5.0
         version: 1.8.0
       hono:
-        specifier: ^4.6.0
-        version: 4.12.27
+        specifier: ^4.12.31
+        version: 4.12.31
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -1266,6 +1266,9 @@ packages:
   bn.js@5.2.3:
     resolution: {integrity: sha512-EAcmnPkxpntVL+DS7bO1zhcZNvCkxqtkd0ZY53h06GNQ3DEkkGZ/gKgmDv6DdZQGj9BgfSPKtJJ7Dp1GPP8f7w==}
 
+  bn.js@5.2.5:
+    resolution: {integrity: sha512-Vq886eXykuP5E6HcKSSStP3bJgrE6In5WKxVUvJ8XGpWWYs2xZHWqUwzCtGgEtBcxyd57KBFDPFoUfNzdaHCNg==}
+
   body-parser@2.3.0:
     resolution: {integrity: sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==}
     engines: {node: '>=18'}
@@ -1777,6 +1780,10 @@ packages:
 
   hono@4.12.27:
     resolution: {integrity: sha512-1yrb/+w6HWQJrUCLkJ2IF5jNIPvvFkblV5RNOYl6bV+OA6p9GLcMpHFFGTosSvHvcAUibuUukRqhlYI4z32C7Q==}
+    engines: {node: '>=16.9.0'}
+
+  hono@4.12.31:
+    resolution: {integrity: sha512-zJIHFrl6bq3RDd2YusFNCDlM8qUprxKswyi/OPzPyzKDdyBXDqWx8bZlZ7R+saTdSTatUmb3O7K4SspGPaEOQg==}
     engines: {node: '>=16.9.0'}
 
   http-errors@2.0.1:
@@ -3078,7 +3085,7 @@ snapshots:
       '@ethersproject/bytes': 5.8.0
       '@ethersproject/logger': 5.8.0
       '@ethersproject/properties': 5.8.0
-      bn.js: 5.2.3
+      bn.js: 5.2.5
       elliptic: 6.6.1
       hash.js: 1.1.7
 
@@ -3152,6 +3159,10 @@ snapshots:
   '@hono/node-server@2.0.11(hono@4.12.27)':
     dependencies:
       hono: 4.12.27
+
+  '@hono/node-server@2.0.11(hono@4.12.31)':
+    dependencies:
+      hono: 4.12.31
 
   '@img/colour@1.1.0':
     optional: true
@@ -3675,6 +3686,8 @@ snapshots:
   bn.js@4.12.3: {}
 
   bn.js@5.2.3: {}
+
+  bn.js@5.2.5: {}
 
   body-parser@2.3.0:
     dependencies:
@@ -4392,6 +4405,8 @@ snapshots:
       minimalistic-crypto-utils: 1.0.1
 
   hono@4.12.27: {}
+
+  hono@4.12.31: {}
 
   http-errors@2.0.1:
     dependencies:
