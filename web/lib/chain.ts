@@ -266,6 +266,31 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
   }
 }
 
+/** Read unique agent addresses (subjects) from recent CredentialIssued events. */
+export async function readRecentSubjects(limit = 100): Promise<Address[]> {
+  try {
+    const head = await publicClient.getBlockNumber();
+    const SPAN = 200_000n;
+    const fromBlock = head > SPAN ? head - SPAN : 0n;
+
+    const logs = await publicClient.getLogs({
+      address: addresses.credentialRegistry,
+      event: CREDENTIAL_ISSUED_EVENT,
+      fromBlock,
+      toBlock: head,
+    });
+
+    const seen = new Set<Address>();
+    for (const log of logs) {
+      const subject = (log.args as { subject?: Address }).subject;
+      if (subject) seen.add(subject);
+    }
+    return Array.from(seen).slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
 export { PHAROS_AGENT_ID_ABI, CREDENTIAL_REGISTRY_ABI };
 
 // ---------- Capability change history (AgentCapabilityChanged events) ----------

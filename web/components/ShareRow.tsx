@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { recordVisit } from "@/lib/recent-agents";
+import { copyToClipboard } from "@/lib/clipboard";
 
 export function ShareRow({
   url,
@@ -37,12 +38,12 @@ export function ShareRow({
       <button
         type="button"
         onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(url);
-            setCopied(true);
-          } catch {}
+          const ok = await copyToClipboard(url);
+          if (ok) setCopied(true);
         }}
-        className="text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+        className={`underline decoration-rule decoration-1 underline-offset-4 transition-colors ${
+          copied ? "text-sage decoration-sage" : "text-ink hover:decoration-terra"
+        }`}
       >
         {copied ? "url copied" : "copy url"}
       </button>

@@ -68,8 +68,23 @@ export default function EmbedPage() {
         </details>
         <details className="group border-b border-rule">
           <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Use the verification URL directly +</span><span className="hidden group-open:inline">Hide URL format −</span></summary>
-          <div className="border-t border-rule-soft py-5"><p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">Pass a subject and capability. The capability can be a human-readable id or 32-byte hash.</p><Snippet code={directLink} lang="url" /></div>
+          <div className="border-t border-rule-soft py-5"><p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">Pass a subject and capability. The capability can be a human-readable id or 32-byte hash. Append <span className="font-mono not-italic text-ink">&chain=casper-testnet</span> for Casper.</p><Snippet code={directLink} lang="url" /></div>
         </details>
+      </section>
+
+      <section className="mt-12 max-w-3xl sm:mt-16">
+        <header className="flex items-baseline justify-between">
+          <p className="eyebrow">Available capabilities</p>
+          <p className="font-mono text-[11px] tabular text-ink-quiet">{capabilities.length} total</p>
+        </header>
+        <Rule className="mt-4" />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {capabilities.map((cap) => (
+            <code key={cap.id} className="font-mono text-[11px] tabular text-ink-soft bg-paper-deep px-2 py-1">
+              {cap.id}
+            </code>
+          ))}
+        </div>
       </section>
       <footer className="route-footer mt-20 text-xs text-ink-quiet sm:mt-32">
           <Link

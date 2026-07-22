@@ -94,7 +94,7 @@ export function VerifyDemo({
             >
               {capabilities.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.id}
+                  {c.id} — {c.label}
                 </option>
               ))}
             </select>

@@ -87,6 +87,22 @@ export default async function HomePage({
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            name: "Ligis",
+            description:
+              "Portable identity and verifiable credentials for autonomous agents. One on-chain read before money moves.",
+            applicationCategory: "DeveloperApplication",
+            operatingSystem: "Web",
+            offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+            creator: { "@type": "Organization", name: "sneldao" },
+          }),
+        }}
+      />
       {/* The home route earns attention with a live check first. The rest of
           the protocol is available on intent, rather than competing with it. */}
       <HomeField>

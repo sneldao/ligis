@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { copyToClipboard } from "@/lib/clipboard";
 
 export function Snippet({ code, lang = "ts" }: { code: string; lang?: string }) {
   const [copied, setCopied] = useState(false);
@@ -18,12 +19,12 @@ export function Snippet({ code, lang = "ts" }: { code: string; lang?: string }) 
         <button
           type="button"
           onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(code);
-              setCopied(true);
-            } catch {}
+            const ok = await copyToClipboard(code);
+            if (ok) setCopied(true);
           }}
-          className="text-[11px] uppercase tracking-[0.16em] text-ink-quiet transition-colors hover:text-ink"
+          className={`text-[11px] uppercase tracking-[0.16em] transition-colors ${
+            copied ? "text-sage" : "text-ink-quiet hover:text-ink"
+          }`}
           aria-label="Copy snippet"
         >
           {copied ? "copied" : "copy"}
