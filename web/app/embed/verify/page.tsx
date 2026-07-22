@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem";
-import { getAddress } from "viem";
 import { capabilities, isCapable, network, readCredential } from "@/lib/chain";
+import { isCapable as isCapableCasper, readCredential as readCredentialCasper, isCasperAddress } from "@/lib/chain-casper";
+import { isCasperChain } from "@/lib/chain-router";
 import { getChain } from "@/lib/network";
 import { isAddressLike, monthYear, truncateAddress } from "@/lib/format";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
 
-function withTimeout<T>(operation: Promise<T>, timeoutMs = 3_500): Promise<T> {
+function withTimeout<T>(operation: Promise<T>, timeoutMs = 6_000): Promise<T> {
   return Promise.race([
     operation,
     new Promise<T>((_, reject) => {
@@ -30,34 +31,46 @@ export default async function EmbedVerifyPage({
   const { subject: rawSubject, capability: rawCap } = await searchParams;
   const chain = getChain(await searchParams);
 
-  if (!rawSubject || !rawCap || !isAddressLike(rawSubject)) {
-    return <Frame error="Provide subject and capability query parameters." />;
+  if (!rawSubject || !rawCap) {
+    return <Frame error="Missing parameters. Use ?subject=0x...&capability=kyc.basic" />;
   }
 
   const cap = capabilities.find(
     (c) => c.id === rawCap || c.hash.toLowerCase() === rawCap.toLowerCase()
   );
   if (!cap) {
-    return <Frame error={`Unknown capability: ${rawCap}`} />;
+    return <Frame error={`Unknown capability "${rawCap}". Available: ${capabilities.map(c => c.id).join(", ")}`} />;
+  }
+
+  const casper = isCasperChain(chain);
+
+  // Validate address format for the active chain
+  if (!casper && !isAddressLike(rawSubject)) {
+    return <Frame error="Invalid subject address. Expected 0x... format." />;
+  }
+  if (casper && !isCasperAddress(rawSubject)) {
+    return <Frame error="Invalid subject. Expected account-hash-... format for Casper." />;
   }
 
   // Non-live chains can't do on-chain verification.
   if (!chain.live) {
     return (
       <Frame
-        subject={getAddress(rawSubject) as Address}
+        subject={rawSubject as Address}
         capabilityId={cap.id}
         capable={false}
-        error={`${chain.name} is not yet live. Switch to Pharos Atlantic for on-chain verification.`}
+        error={`${chain.name} is not yet live.`}
       />
     );
   }
 
-  const subject = getAddress(rawSubject) as Address;
+  const subject = rawSubject as Address;
   const capHash: Hex = cap.hash;
   let capable: boolean;
   try {
-    capable = await withTimeout(isCapable(subject, capHash));
+    capable = casper
+      ? await withTimeout(isCapableCasper(subject, capHash))
+      : await withTimeout(isCapable(subject, capHash));
   } catch {
     return (
       <Frame
@@ -68,7 +81,9 @@ export default async function EmbedVerifyPage({
     );
   }
   const view = capable
-    ? await withTimeout(readCredential(subject, capHash)).catch(() => null)
+    ? casper
+      ? await withTimeout(readCredentialCasper(subject, capHash)).catch(() => null)
+      : await withTimeout(readCredential(subject, capHash)).catch(() => null)
     : null;
 
   return (

@@ -23,7 +23,38 @@ export default async function IssuersPage({
 }) {
   const chain = getChain(await searchParams);
 
-  const log = await readIssuerActivity(chain);
+  let log;
+  try {
+    log = await readIssuerActivity(chain);
+  } catch {
+    return (
+      <main className="route-shell max-w-5xl">
+        <header className="route-header text-xs">
+          <p className="eyebrow">Ligis · who vouches for agents</p>
+          <div className="flex items-baseline gap-6">
+            <ChainBadge chain={chain} />
+            <Link
+              href="/"
+              className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              &larr; Index
+            </Link>
+          </div>
+        </header>
+
+        <section className="mt-14 max-w-3xl sm:mt-20">
+          <h1 className="display text-5xl text-ink sm:text-6xl">
+            Unable to load
+            <br />
+            issuers.
+          </h1>
+          <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
+            The chain RPC is temporarily unavailable. Please try again in a moment.
+          </p>
+        </section>
+      </main>
+    );
+  }
   const top = log.issuers.slice(0, 50);
 
   return (

@@ -24,6 +24,16 @@ export function GlobalDock() {
     setNavOpen(false);
   }, [pathname]);
 
+  // Close mobile drawer on Escape
+  useEffect(() => {
+    if (!navOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [navOpen]);
+
   // An embed is a borrowed surface. The host owns its navigation and the
   // verification document must contain only the compact result.
   if (pathname.startsWith("/embed/verify")) return null;

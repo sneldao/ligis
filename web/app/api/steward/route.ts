@@ -9,7 +9,12 @@ export async function POST(req: NextRequest) {
   let body: { goal?: string; live?: boolean; chain?: string } = {};
   try {
     body = await req.json();
-  } catch {}
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "Invalid JSON body" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
   const goal = (body.goal ?? "").trim() || "Operate as a Pharos agent.";
   const live = body.live === true;
   const chain = body.chain ?? "pharos-atlantic";
@@ -29,10 +34,14 @@ export async function POST(req: NextRequest) {
           controller.enqueue(enc(event));
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const retryable = msg.includes("timeout") || msg.includes("network") || msg.includes("fetch");
+        console.error("[steward API] Error:", msg);
         controller.enqueue(
           enc({
             type: "error",
-            message: err instanceof Error ? err.message : String(err),
+            message: msg,
+            retryable,
           })
         );
       } finally {

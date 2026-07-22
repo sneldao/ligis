@@ -11,7 +11,7 @@ export function CatalogScene() {
     <Canvas
       shadows
       camera={{ position: [0, 0, CATALOG_CONFIG.zoomOut], fov: 38 }}
-      dpr={[1, 1.5]}
+      dpr={[1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       style={{ background: "#F4F1EC", touchAction: "none" }}
     >
@@ -32,7 +32,12 @@ export function CatalogScene() {
       />
       <directionalLight position={[-6, -4, 6]} intensity={0.3} color="#d6e0d2" />
 
-      <Suspense fallback={null}>
+      <Suspense fallback={
+        <group>
+          {/* Minimal in-scene fallback — the fog + background make this
+              nearly invisible, just prevents a blank flash */}
+        </group>
+      }>
         <ChunkedField />
       </Suspense>
 
