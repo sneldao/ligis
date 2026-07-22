@@ -19,7 +19,7 @@
     "@hono/node-server": "^2.0.5",
     "@ligis/adapter-casper": "workspace:*",
     "@ligis/core": "workspace:*",
-    "@noble/curves": "^1.6.0",
+    "@noble/curves": "^2.2.0",
     "@noble/hashes": "^1.5.0",
     "hono": "^4.6.0"
   },
