@@ -73,13 +73,19 @@ export function GlobalDock() {
               <Link
                 key={n.href}
                 href={n.href}
-                className={`font-mono text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                className={`font-mono text-[11px] uppercase tracking-[0.18em] transition-colors relative ${
                   isActive
                     ? "text-terra"
                     : "text-paper-deep/80 hover:text-paper"
                 }`}
               >
                 {n.label}
+                {isActive ? (
+                  <span
+                    className="absolute -bottom-1 left-0 right-0 h-px bg-terra"
+                    aria-hidden
+                  />
+                ) : null}
               </Link>
             );
           })}

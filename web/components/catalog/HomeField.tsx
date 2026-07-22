@@ -22,6 +22,7 @@ export function HomeField({ children }: { children: ReactNode }) {
   const reducedMotion = useReducedMotion();
   const [wideViewport, setWideViewport] = useState(false);
   const [inView, setInView] = useState(false);
+  const [webglOk, setWebglOk] = useState(false);
 
   useEffect(() => {
     const query = window.matchMedia("(min-width: 640px)");
@@ -29,6 +30,17 @@ export function HomeField({ children }: { children: ReactNode }) {
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    // Pre-check WebGL before attempting to render the scene
+    try {
+      const canvas = document.createElement("canvas");
+      const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+      setWebglOk(!!gl);
+    } catch {
+      setWebglOk(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -42,7 +54,7 @@ export function HomeField({ children }: { children: ReactNode }) {
     return () => observer.disconnect();
   }, []);
 
-  const showScene = wideViewport && !reducedMotion && inView;
+  const showScene = wideViewport && !reducedMotion && inView && webglOk;
 
   return (
     <section ref={regionRef} className="relative isolate">

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { ScrollHint } from "./DynamicIsland";
 import { type ChainNetwork } from "@/lib/network";
 
@@ -14,6 +15,14 @@ type Card = {
 
 export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
   const reducedMotion = useReducedMotion();
+  const [hintDismissed, setHintDismissed] = useState(false);
+
+  // Auto-dismiss the controls hint after 8 seconds
+  useEffect(() => {
+    if (hintDismissed) return;
+    const id = setTimeout(() => setHintDismissed(true), 8_000);
+    return () => clearTimeout(id);
+  }, [hintDismissed]);
 
   const cards: Card[] = [
     {
@@ -107,23 +116,29 @@ export function CatalogHero({ chain }: { chain?: ChainNetwork }) {
         </motion.div>
       </div>
 
-      {/* Bottom controls hint */}
-      <motion.div
-        initial={reducedMotion ? false : { opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.6 }}
-        className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex flex-col items-center gap-3 px-6 text-center sm:bottom-16"
-      >
-        <p className="hidden max-w-xl font-serif text-base italic leading-relaxed text-ink-soft sm:block">
-          Click any tile to open an agent dossier.
-        </p>
-        <p className="hidden max-w-md font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet sm:mt-2 sm:block">
-          drag · scroll · WASD · click
-        </p>
-        <p className="max-w-md font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet sm:hidden">
-          drag · pinch · tap
-        </p>
-      </motion.div>
+      {/* Bottom controls hint — auto-dismisses after 8s or on click */}
+      {hintDismissed ? null : (
+        <motion.button
+          type="button"
+          onClick={() => setHintDismissed(true)}
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reducedMotion ? undefined : { opacity: 0, y: 8 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="pointer-events-auto absolute inset-x-0 bottom-6 z-10 flex flex-col items-center gap-3 px-6 text-center sm:bottom-16"
+          aria-label="Dismiss controls hint"
+        >
+          <p className="hidden max-w-xl font-serif text-base italic leading-relaxed text-ink-soft sm:block">
+            Click any tile to open an agent dossier.
+          </p>
+          <p className="hidden max-w-md font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet sm:mt-2 sm:block">
+            drag · scroll · WASD · click · tap to dismiss
+          </p>
+          <p className="max-w-md font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet sm:hidden">
+            drag · pinch · tap
+          </p>
+        </motion.button>
+      )}
 
       <ScrollHint />
     </section>

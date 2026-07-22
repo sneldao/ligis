@@ -127,9 +127,16 @@ function ConnectPanel() {
           ○ Paste a hex key
         </summary>
         <div className="space-y-3 border-t border-rule p-4">
-          <label htmlFor="connect-paste-input" className="eyebrow block">
-            hex private key · 64 chars
-          </label>
+          <div className="flex items-baseline justify-between">
+            <label htmlFor="connect-paste-input" className="eyebrow block">
+              hex private key · 64 chars
+            </label>
+            {pasteValue.length > 0 ? (
+              <span className="font-mono text-[10px] tabular text-ink-quiet">
+                {pasteValue.replace(/^0x/, "").length}/64
+              </span>
+            ) : null}
+          </div>
           <input
             id="connect-paste-input"
             value={pasteValue}
@@ -156,7 +163,7 @@ function ConnectPanel() {
               <span className="font-serif text-xs italic text-revoke">
                 {typeof wallet.error === "string"
                   ? wallet.error
-                  : JSON.stringify(wallet.error)}
+                  : "Invalid key format — expected 64 hex chars (with or without 0x prefix)"}
               </span>
             ) : null}
           </div>
@@ -272,8 +279,9 @@ function FaucetPanel({
           {balanceLabel}
           {funded ? " cspr" : ""}
           {balanceStatus === "polling" ? (
-            <span className="ml-2 text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
-              polling…
+            <span className="ml-2 flex items-center gap-1 text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-terra" />
+              polling
             </span>
           ) : null}
         </span>
