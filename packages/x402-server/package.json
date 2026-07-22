@@ -21,7 +21,7 @@
     "@ligis/core": "workspace:*",
     "@noble/curves": "^1.6.0",
     "@noble/hashes": "^1.5.0",
-    "hono": "^4.6.0"
+    "hono": "^4.12.31"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
