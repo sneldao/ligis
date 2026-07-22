@@ -32,6 +32,23 @@ end-to-end x402 payment flow. Featured tx hashes (view on testnet.cspr.live):
 - `c26fe5d64ebb7fca2dc553bab209567370eb4786716848a22c4f912c73521cb3` — `AgentId.set_token_uri` (0G evidence anchor)
 - `27a9ac885613ad2f13a6640058544f70b787d5ab4db5e5e72f5f77648129c6bb` — x402 CSPR transfer settlement
 
+### Fresh testnet transactions (2026-07-22)
+
+All three demos re-run live on Casper Testnet with the new multi-agent +
+real x402 settlement + live RWA oracle features:
+
+**E2E Steward Loop:**
+- `e6598292da37cf8710057be0a148d12395f3415c5df6a7cd79bfa7b894b8e405` — `AgentId.mint_self` (boot)
+- `cb432f29a54e4cb655f33b698cd1467ceb4b1e43fb8b8ec291434c6a681e7495` — `AgentId.set_token_uri` (0G evidence anchor)
+- 0G Storage root: `0x628db010e1fdb063571bb382633d47aa69ca285ad7fe182d3777e4416c91a92a`
+
+**x402 Payment Demo (local settlement, live CoinGecko RWA data):**
+- `f94490e65a53c1e4908cba34071ae4d2a563fa36b1228591a4c12cebdc8a04ee` — x402 CSPR transfer settlement (1 CSPR for premium RWA oracle feed)
+
+**Multi-Agent Coordination (Risk → Issuer → Treasury):**
+- `a2e94ca4749ac1e5f6d52cfa98bac3faa08989340acd7171bf9b8af87340ab58` — `AgentId.mint_self` (swarm boot)
+- `9c662d177aac1732781def6ffb545e6abc69bfbd1ff136627d989266fabe20a3` — x402 settlement (Treasury Agent pays for RWA data after Risk Agent approves + Issuer Agent authorizes)
+
 ## Repo
 
 `https://github.com/sneldao/ligis`
@@ -44,9 +61,14 @@ Public. MIT licensed. 41 Foundry tests (EVM/Solidity contracts) + 12 Odra tests 
 |----------|--------------|
 | `AgentId` (Odra, soulbound-style) | `contract-package-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1` |
 | `CredentialRegistry` (Odra, EIP-712, on-chain secp256k1 recovery) | `contract-package-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37` |
+| `GatedVault` (Odra, credential-gated escrow — **deploy-ready**, WASM built, deploy script ready) | _pending testnet funding_ |
 
 Built with Odra 2.8.1 against Casper 2.0, deployed via `casper-client put-deploy`
 on testnet (block ~8,429,998). Source: `packages/contracts-casper/`.
+
+GatedVault WASM: `packages/contracts-casper/wasm/GatedVault.wasm` (294 KB).
+Deploy script: `npx tsx scripts/deploy-gated-vault.ts` (serializes Odra init args
+with correct CLType::Key for Address + CLType::ByteArray(32) for capability hash).
 
 ## End-to-end demo txs (executed live on Casper Testnet, today)
 

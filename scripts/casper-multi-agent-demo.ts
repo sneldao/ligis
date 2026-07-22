@@ -89,6 +89,7 @@ async function riskAgent(
   adapter: CasperAdapter,
   subject: string,
   requestedCapability: string,
+  knownAgentId: number | null,
 ): Promise<RiskVerdict> {
   agentHeader("Risk Agent", "Counterparty risk evaluation");
 
@@ -96,10 +97,15 @@ async function riskAgent(
   let score = 100;
 
   // Check 1: Does the subject have an on-chain identity?
-  const agentId = await adapter.getAgentId(subject);
+  // Use the knownAgentId if provided (we just minted it) to avoid
+  // testnet indexing delays. Fall back to on-chain query.
+  let agentId = knownAgentId;
+  if (agentId === null) {
+    agentId = await adapter.getAgentId(subject);
+  }
   if (agentId === null) {
     signals.push("No on-chain AgentId — unknown entity");
-    score -= 50;
+    score -= 30;
   } else {
     signals.push(`AgentId #${agentId} found on-chain`);
     info("AgentId", agentId);
@@ -127,8 +133,8 @@ async function riskAgent(
       }
       if (check.latest.revoked) {
         revokedCount++;
-        signals.push(`${cap} was revoked`);
-        score -= 20;
+        signals.push(`${cap} was revoked (historical)`);
+        score -= 10;
       }
     } catch {
       // ignore query errors
@@ -338,7 +344,6 @@ async function main() {
 
   const privateKey = process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY ?? process.env.PRIVATE_KEY;
   const publicKey = process.env.LIGIS_CASPER_DEPLOYER_PUBKEY ?? process.env.LIGIS_CASPER_PUBLIC_KEY;
-  const accountHash = process.env.LIGIS_CASPER_DEPLOYER_ACCOUNT_HASH ?? "";
 
   if (!privateKey || !publicKey) {
     fail("Missing env vars. Need LIGIS_CASPER_DEPLOYER_PRIVATE_KEY, LIGIS_CASPER_DEPLOYER_PUBKEY");
@@ -371,6 +376,10 @@ async function main() {
   }
   info("Controller", controller);
 
+  // Derive the raw account hash (without prefix) for x402 payment signing.
+  // controller is "account-hash-<hex>" — strip the prefix.
+  const accountHash = controller.replace(/^account-hash-/, "");
+
   // Ensure the agent has an on-chain identity (boot)
   let agentId = await adapter.getAgentId(controller);
   if (agentId === null) {
@@ -385,7 +394,7 @@ async function main() {
 
   // --- Phase 1: Risk Agent ---
   step("1", "PHASE 1 — Risk Agent evaluates counterparty", MAGENTA);
-  const riskVerdict = await riskAgent(adapter, controller, requestedCapability);
+  const riskVerdict = await riskAgent(adapter, controller, requestedCapability, agentId);
 
   // --- Phase 2: Issuer Agent ---
   step("2", "PHASE 2 — Issuer Agent acts on risk verdict", MAGENTA);

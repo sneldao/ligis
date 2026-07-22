@@ -58,6 +58,15 @@ npx tsx src/deploy.ts AgentId   # deploy only AgentId
 npx tsx src/deploy.ts CredentialRegistry  # deploy only CredentialRegistry
 ```
 
+**GatedVault** (has init args — uses dedicated deploy script):
+```bash
+set -a && source .env.d/casper.env && set +a
+npx tsx scripts/deploy-gated-vault.ts
+```
+The deploy script serializes Odra init args (credential_registry: Address as
+CLType::Key, required_capability: [u8;32] as CLType::ByteArray(32)) into
+Casper RuntimeArgs format and passes them as the `args:byte_array_N` session arg.
+
 **IMPORTANT:** The deploy script uses `standardPayment=false` so failed deployments only cost actual gas consumed, not the full payment amount. This prevents burning through testnet funds on failed deployments.
 
 ### Casper Smoke Test
