@@ -118,7 +118,8 @@ export function createPaymentPayload(
   crypto.getRandomValues(nonceBytes);
   const nonceHex = bytesToHex(nonceBytes);
 
-  // Account hash format: "00" + 32-byte hash (for the from field)
+  // Account hash format for EIP-712: "0x" + "00" tag byte + 32-byte account hash
+  // The "00" prefix is the Casper EIP-712 address tag for account hashes.
   const fromAddress = `0x00${accountHashHex}`;
   const toAddress = requirements.payTo.startsWith("0x")
     ? requirements.payTo
@@ -165,7 +166,7 @@ export function createPaymentPayload(
       network: requirements.network,
       asset: requirements.asset.replace(/^0x/, ""),
       amount: requirements.maxAmountRequired,
-      payTo: requirements.payTo.replace(/^0x/, "").replace(/^00/, "00"),
+      payTo: requirements.payTo.replace(/^0x/, ""),
       maxTimeoutSeconds: requirements.maxTimeoutSeconds,
       extra: { name, version },
     },
@@ -174,7 +175,7 @@ export function createPaymentPayload(
       publicKey: cleanPub,
       authorization: {
         from: `00${accountHashHex}`,
-        to: requirements.payTo.replace(/^0x/, "").replace(/^00/, "00"),
+        to: requirements.payTo.replace(/^0x/, ""),
         value: requirements.maxAmountRequired,
         validAfter: String(validAfter),
         validBefore: String(validBefore),

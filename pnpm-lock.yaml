@@ -24,6 +24,22 @@ importers:
         specifier: ^4.19.0
         version: 4.22.4
 
+  packages/adapter-0g:
+    dependencies:
+      '@ligis/adapter-evm':
+        specifier: workspace:*
+        version: link:../adapter-evm
+      '@ligis/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.0
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   packages/adapter-casper:
     dependencies:
       '@casper-ecosystem/casper-eip-712':
@@ -83,6 +99,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@ligis/adapter-0g':
+        specifier: workspace:*
+        version: link:../adapter-0g
       '@ligis/adapter-casper':
         specifier: workspace:*
         version: link:../adapter-casper
@@ -156,6 +175,9 @@ importers:
 
   packages/mcp-server:
     dependencies:
+      '@ligis/adapter-0g':
+        specifier: workspace:*
+        version: link:../adapter-0g
       '@ligis/adapter-casper':
         specifier: workspace:*
         version: link:../adapter-casper

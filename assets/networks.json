@@ -38,6 +38,30 @@
         "name": "Ether",
         "decimals": 18
       }
+    },
+    "0g-mainnet": {
+      "name": "0G Mainnet",
+      "chainId": 16661,
+      "rpcUrl": "https://evmrpc.0g.ai",
+      "explorerUrl": "https://chainscan.0g.ai",
+      "explorerApiUrl": "",
+      "nativeToken": {
+        "symbol": "0G",
+        "name": "0G",
+        "decimals": 18
+      }
+    },
+    "0g-newton-testnet": {
+      "name": "0G Newton Testnet",
+      "chainId": 16600,
+      "rpcUrl": "https://evmrpc-testnet.0g.ai",
+      "explorerUrl": "https://chainscan-newton.0g.ai",
+      "explorerApiUrl": "",
+      "nativeToken": {
+        "symbol": "A0GI",
+        "name": "A0GI",
+        "decimals": 18
+      }
     }
   },
   "defaultNetwork": "atlantic-testnet",

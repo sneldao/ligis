@@ -17,6 +17,7 @@ import {
 import { capabilityHash, type ChainAdapter } from "@ligis/core";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
+import { ZeroGAdapter } from "@ligis/adapter-0g";
 import { TrustSteward } from "@ligis/agent-logic";
 import {
   ZeroGCompute,
@@ -43,8 +44,12 @@ function getAdapter(chain: string | undefined): ChainAdapter {
     case "casper":
       adapter = new CasperAdapter();
       break;
+    case "0g":
+    case "zerog":
+      adapter = new ZeroGAdapter();
+      break;
     default:
-      throw new Error(`Unknown chain: ${key}. Supported: evm, casper.`);
+      throw new Error(`Unknown chain: ${key}. Supported: evm, casper, 0g.`);
   }
   adapterCache.set(key, adapter);
   return adapter;
@@ -59,7 +64,7 @@ function ok(data: unknown) {
 const chainProperty = {
   type: "string",
   description:
-    "Target chain: 'evm' (default, Pharos + EVM) or 'casper' (Casper Testnet).",
+    "Target chain: 'evm' (default, Pharos + EVM), 'casper' (Casper Testnet), or '0g' (0G Chain)."
 };
 
 // ---------- MCP server ----------

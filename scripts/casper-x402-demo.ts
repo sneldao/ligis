@@ -132,19 +132,24 @@ async function main() {
     console.log(`  ${DIM}${EXPLORER}/transaction/${payBody.settled.txHash}${RESET}`);
   }
 
-  // --- Step 4: Display the premium RWA data ---
-  step(4, "Premium RWA Market Data");
+  // --- Step 4: Display the premium RWA oracle feed ---
+  step(4, "Premium RWA Oracle Feed");
   const payload = payBody.payload;
   if (payload) {
     info("Data source", payload.dataSource);
+    info("Live data", payload.live ? "yes" : "no (fallback)");
     info("Timestamp", payload.timestamp);
-    info("Total value", `$${payload.summary?.totalValue?.toLocaleString()}`);
-    info("Average LTV", payload.summary?.avgLtv);
-    info("Trend", payload.summary?.trend);
-    console.log(`\n  ${BOLD}Tokenized Properties:${RESET}`);
-    for (const prop of payload.properties ?? []) {
-      console.log(`  ${BOLD}${prop.token}${RESET} ${prop.name}`);
-      console.log(`    Value: $${prop.value.toLocaleString()}  Change: ${prop.change}  LTV: ${(prop.ltv * 100).toFixed(0)}%`);
+    info("Total market cap", `$${Number(payload.summary?.totalMarketCapUsd ?? 0).toLocaleString()}`);
+    info("Avg 24h change", `${payload.summary?.avgChange24h}%`);
+    info("Overall trend", payload.summary?.overallTrend);
+    info("Risk level", payload.summary?.riskLevel);
+    console.log(`\n  ${BOLD}Tokenized RWA Assets:${RESET}`);
+    for (const asset of payload.assets ?? []) {
+      const changeStr = asset.change24h >= 0
+        ? `${GREEN}+${asset.change24h}%${RESET}`
+        : `${RED}${asset.change24h}%${RESET}`;
+      console.log(`  ${BOLD}${asset.symbol}${RESET} ${asset.name} (${asset.category})`);
+      console.log(`    Price: $${asset.priceUsd.toLocaleString()}  24h: ${changeStr}  MCap: $${(asset.marketCapUsd / 1e6).toFixed(1)}M`);
     }
   }
 

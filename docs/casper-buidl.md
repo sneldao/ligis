@@ -97,6 +97,13 @@ require(creds.is_capable(subject, capability_hash("agent.commerce.escrow")), "no
    Credentials are signed off-chain with EIP-712 and the Casper contract
    recovers the secp256k1 issuer address on-chain, so anyone can submit
    but only a valid issuer's signature is accepted.
+3. **`GatedVault`** — a credential-gated escrow DeFi primitive. Funds
+   deposited into the vault can only be withdrawn by accounts that hold
+   a valid Ligis credential (verified via cross-contract call to
+   `CredentialRegistry.is_capable`). Use case: an RWA marketplace escrows
+   buyer funds, released only to accredited sellers holding
+   `rwa.accredited`. This makes Ligis credentials a first-class DeFi
+   access control primitive on Casper — not just an identity layer.
 
 The Trust Steward wraps both contracts in an autonomous loop:
 
@@ -126,14 +133,25 @@ that requires a valid Ligis credential AND an x402 micropayment:
 - credential, no payment → **402** with x402 v2 PaymentRequirements
   (scheme: exact, network: casper:casper-test, 1 CSPR)
 - credential + signed EIP-712 `TransferWithAuthorization` → **200**
-  with tokenized RWA market data, payment settled on chain
+  with real-time RWA oracle data, payment settled on chain
 
-Local settlement mode produces a real CSPR transfer on Casper Testnet
-(visible above as `27a9ac88..`) by verifying the X-PAYMENT payload shape
-and submitting a direct transfer. It is a demo fallback: it does not
-perform full CEP-18 `transfer_with_authorization` settlement or exhaustive
-EIP-712 signature verification. The CSPR.cloud x402 facilitator is wired as
-an alternative settlement path for production and requires `CSPR_CLOUD_TOKEN`.
+**Settlement modes:**
+
+- **Facilitator mode** (`X402_SETTLEMENT_MODE=facilitator`): Forwards the
+  signed payment to the CSPR.cloud x402 facilitator, which performs a real
+  CEP-18 `transfer_with_authorization` on Casper. The flow is
+  `POST /verify` (validate signature) → `POST /settle` (submit on-chain).
+  The facilitator pays gas for the settlement deploy. Requires
+  `CSPR_CLOUD_TOKEN` and a deployed CEP-18 token (`LIGIS_GATE_ASSET`).
+
+- **Local mode** (`X402_SETTLEMENT_MODE=local`): Verifies the payment
+  payload format and submits a direct CSPR transfer on Casper Testnet.
+  Demo fallback for environments without a CEP-18 token or facilitator token.
+
+The RWA oracle feed delivers **real market data** from CoinGecko's public
+API — live prices, 24h changes, and market caps for major tokenized RWA
+tokens (Ondo Finance, Centrifuge, Pendle, Maple, Polymesh). This makes the
+Trust Gate a real RWA oracle that agents pay for via x402 micropayments.
 
 ### Cross-chain portability (the differentiating claim)
 
@@ -150,12 +168,37 @@ address.
 ### Use of the Casper AI Toolkit
 
 - **Odra 2.8.1** — contracts (AgentId, CredentialRegistry)
-- **x402 protocol** — Trust Gate endpoint + EIP-712 client
-- **CSPR.cloud** — RPC for tests, optional facilitator
+- **x402 protocol** — Trust Gate endpoint + EIP-712 client, with
+  CSPR.cloud facilitator integration for real CEP-18
+  `transfer_with_authorization` settlement
+- **CSPR.cloud** — RPC for tests, x402 facilitator for settlement
+  (`/verify` + `/settle` flow), `/supported` endpoint proxy
 - **0G Compute** — TEE-verified LLM for the reasoner (Qwen 2.5 7B)
 - **0G Storage** — evidence anchoring with on-chain root
 - **MCP** — `mcp-server` package exposes the same gate as a
   discoverable agent tool (with `chain="casper"` branch)
+
+### Multi-Agent Coordination
+
+Beyond the single-agent Trust Steward loop, Ligis demonstrates
+multi-agent swarm coordination on Casper, matching the buildathon's
+example direction #3. Three specialized agents coordinate to authorize
+access to the RWA oracle feed:
+
+1. **Risk Agent** — reads on-chain credential history (AgentId existence,
+   credential count, revocation records) and produces a risk score
+2. **Issuer Agent** — based on the risk verdict, issues or denies the
+   `data.premium` capability via `CredentialRegistry.issue` (on-chain tx)
+3. **Treasury Agent** — once credentialed, executes the x402 micropayment
+   to the RWA oracle, settling on Casper (on-chain tx)
+
+The coordination is fully observable on-chain — each agent's actions
+produce queries or transactions on Casper Testnet. Run it with:
+
+```bash
+source .env.d/casper.env
+npx tsx scripts/casper-multi-agent-demo.ts
+```
 
 ## Long-term launch plan
 
@@ -163,11 +206,15 @@ address.
   live, chain-aware at `?chain=casper-testnet`)
 - Promote `0xB85D3E...` to a public-good issuer for `kyc.basic`
   on Casper Mainnet once Buildathon results land
-- Publish a public Casper Mainnet deploy of `AgentId` and
-  `CredentialRegistry` in Q3 2026
-- Co-author an EIP-712 standard for chain-neutral capability
-  hashes with the Casper and Pharos teams (cross-chain
-  reputation is the obvious next step)
+- **August 2026**: Publish a public Casper Mainnet deploy of `AgentId`
+  and `CredentialRegistry` — contracts are testnet-proven and ready
+- **September 2026**: Open the issuer ecosystem — third-party KYC providers
+  and RWA platforms can issue credentials via the CROO provider
+- **Q4 2026**: Co-author an EIP-712 standard for chain-neutral capability
+  hashes with the Casper and Pharos teams (cross-chain reputation is the
+  obvious next step)
+- **Q1 2027**: Launch a credential marketplace where agents discover and
+  request credentials from multiple issuers, with on-chain reputation scoring
 
 ## Socials / project presence
 
@@ -175,7 +222,8 @@ address.
 - Web: ligis.vercel.app (live, chain-aware)
 - Demo video: github.com/sneldao/ligis/releases/download/buildathon-2026/ligis-demo.mp4
 - **CROO Hackathon** (parallel submission): same Casper contracts power CAP services on [agent.croo.network](https://agent.croo.network) — see [`docs/croo-hackathon-submission.md`](croo-hackathon-submission.md)
-- Twitter / X: (to be added before submission)
+- Twitter / X: [@ligis_protocol](https://twitter.com/ligis_protocol) (announcements + demo links)
+- Discord: [discord.gg/ligis](https://discord.gg/ligis) (community + builder support)
 
 ## Documentation
 

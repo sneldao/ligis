@@ -54,6 +54,11 @@ export function loadConfig(): LoadedConfig {
     process.env.LIGIS_NETWORK ||
     process.env.PHAROS_NETWORK ||
     networksFile.defaultNetwork;
+  if (!networkName) {
+    throw new Error(
+      "No network configured. Set LIGIS_NETWORK or add a defaultNetwork to assets/networks.json.",
+    );
+  }
   const network = networksFile.networks[networkName];
   if (!network) throw new Error(`Unknown network: ${networkName}`);
 

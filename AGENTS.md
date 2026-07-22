@@ -29,6 +29,17 @@ RUSTFLAGS="-C target-feature=-bulk-memory,-bulk-memory-opt" \
     -Zbuild-std=core,alloc \
     -- -C linker=/usr/local/bin/wasm-ld
 cp target/wasm32-unknown-unknown/release/ligis_contracts_casper_build_contract.wasm wasm/CredentialRegistry.wasm
+
+# GatedVault (credential-gated escrow DeFi primitive):
+RUSTFLAGS="-C target-feature=-bulk-memory,-bulk-memory-opt" \
+  ODRA_MODULE=GatedVault \
+  RUSTC_BOOTSTRAP=1 \
+  rustup run nightly-2026-01-01 cargo rustc \
+    --release --target wasm32-unknown-unknown \
+    --bin ligis_contracts_casper_build_contract \
+    -Zbuild-std=core,alloc \
+    -- -C linker=/usr/local/bin/wasm-ld
+cp target/wasm32-unknown-unknown/release/ligis_contracts_casper_build_contract.wasm wasm/GatedVault.wasm
 ```
 
 Key points:
@@ -68,6 +79,21 @@ npx tsx scripts/casper-e2e-demo.ts
 
 This runs the full autonomous loop: boot → reason → gate → act → record.
 Produces 3-4 on-chain transactions on Casper Testnet.
+
+### Casper Multi-Agent Coordination Demo
+
+```bash
+source .env.d/casper.env
+export PRIVATE_KEY=$LIGIS_CASPER_DEPLOYER_PRIVATE_KEY
+export LIGIS_CASPER_PUBLIC_KEY=$LIGIS_CASPER_DEPLOYER_PUBKEY
+# Start x402 server first (in another terminal)
+npx tsx scripts/casper-multi-agent-demo.ts
+```
+
+This runs a three-agent swarm: Risk Agent (evaluates counterparty risk from
+on-chain credential history) → Issuer Agent (issues credential based on risk
+verdict) → Treasury Agent (executes x402 payment for RWA oracle data).
+Produces 2+ on-chain transactions on Casper Testnet.
 
 ### x402 Payment Demo
 

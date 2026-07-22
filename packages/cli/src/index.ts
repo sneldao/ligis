@@ -22,6 +22,7 @@
 import { capabilityHash, loadConfig, type ChainAdapter } from "@ligis/core";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
+import { ZeroGAdapter } from "@ligis/adapter-0g";
 import { TrustSteward, LocalReasoner } from "@ligis/agent-logic";
 import {
   ZeroGCompute,
@@ -51,8 +52,11 @@ function getAdapter(): ChainAdapter {
       return new EvmAdapter();
     case "casper":
       return new CasperAdapter();
+    case "0g":
+    case "zerog":
+      return new ZeroGAdapter();
     default:
-      throw new Error(`Unknown --chain: ${chain}. Supported: evm, casper.`);
+      throw new Error(`Unknown --chain: ${chain}. Supported: evm, casper, 0g.`);
   }
 }
 
@@ -71,7 +75,7 @@ Usage:
   ligis agent run --goal <text> [--dry-run]
 
 Global flags:
-  --chain <evm|casper>  chain to target (default: evm)
+  --chain <evm|casper|0g>  chain to target (default: evm)
 
 Environment:
   PRIVATE_KEY           wallet private key (for write operations)

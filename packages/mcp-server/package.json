@@ -11,6 +11,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@ligis/adapter-0g": "workspace:*",
     "@ligis/adapter-casper": "workspace:*",
     "@ligis/adapter-evm": "workspace:*",
     "@ligis/agent-logic": "workspace:*",
