@@ -38,7 +38,14 @@ export function WalletChip() {
   const capture = () => {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
-    setAnchor({ left: rect.left, top: rect.bottom + 8, width: rect.width });
+    // Center the panel on the button, but clamp so it stays in-viewport.
+    const panelMaxWidth = Math.min(window.innerWidth * 0.92, 480);
+    const halfPanel = panelMaxWidth / 2;
+    const left = Math.max(
+      halfPanel + 8, // don't overflow left edge
+      Math.min(rect.left + rect.width / 2, window.innerWidth - halfPanel - 8), // don't overflow right
+    );
+    setAnchor({ left, top: rect.bottom + 8, width: rect.width });
   };
 
   useEffect(() => {
@@ -155,9 +162,9 @@ export function WalletChip() {
             animate={{ opacity: 1, y: 0 }}
             exit={reducedMotion ? undefined : { opacity: 0, y: -4 }}
             transition={{ duration: 0.18 }}
-            className="fixed z-50 -translate-x-1/2"
+            className="fixed z-50 -translate-x-1/2 max-h-[calc(100vh-8rem)] overflow-y-auto"
             style={{
-              left: anchor.left + anchor.width / 2,
+              left: anchor.left,
               top: anchor.top,
               maxWidth: "min(92vw, 30rem)",
             }}
