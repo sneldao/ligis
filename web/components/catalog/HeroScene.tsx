@@ -17,7 +17,7 @@ function HeroTile({ address }: { address: string }) {
 
   useFrame((state, delta) => {
     if (!group.current) return;
-    const t = state.timer.elapsedTime;
+    const t = state.clock.elapsedTime;
     const bob = Math.sin(t * 0.5) * 0.08;
     easing.damp(group.current.position, "y", bob, 0.25, delta);
     easing.damp(group.current.rotation, "y", Math.sin(t * 0.18) * 0.12, 0.4, delta);
@@ -65,7 +65,7 @@ function CredentialOrbit({ count }: { count: number }) {
 
   useFrame((state) => {
     if (!group.current) return;
-    group.current.rotation.z = state.timer.elapsedTime * 0.05;
+    group.current.rotation.z = state.clock.elapsedTime * 0.05;
   });
 
   if (count <= 0) return null;
@@ -92,7 +92,7 @@ function Marker({ x, y, index }: { x: number; y: number; index: number }) {
   const ref = useRef<Mesh>(null);
   useFrame((state) => {
     if (!ref.current) return;
-    const pulse = 1 + Math.sin(state.timer.elapsedTime * 1.4 + index) * 0.08;
+    const pulse = 1 + Math.sin(state.clock.elapsedTime * 1.4 + index) * 0.08;
     ref.current.scale.set(pulse, pulse, 1);
   });
   return (
