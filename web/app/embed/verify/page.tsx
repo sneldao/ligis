@@ -1,22 +1,11 @@
-import type { Address, Hex } from "viem";
-import { capabilities, isCapable, network, readCredential } from "@/lib/chain";
-import { isCapable as isCapableCasper, readCredential as readCredentialCasper, isCasperAddress } from "@/lib/chain-casper";
-import { isCasperChain } from "@/lib/chain-router";
-import { getChain } from "@/lib/network";
-import { isAddressLike, monthYear, truncateAddress } from "@/lib/format";
+import type { Address } from "viem";
+import { getChain, type ChainNetwork } from "@/lib/network";
+import { verifySubject } from "@/lib/verify";
+import { monthYear, truncateAddress } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
-
-function withTimeout<T>(operation: Promise<T>, timeoutMs = 6_000): Promise<T> {
-  return Promise.race([
-    operation,
-    new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error("verification timed out")), timeoutMs);
-    }),
-  ]);
-}
 
 export const metadata = {
   title: "Verify · Ligis",
@@ -28,81 +17,44 @@ export default async function EmbedVerifyPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { subject: rawSubject, capability: rawCap } = await searchParams;
-  const chain = getChain(await searchParams);
+  const params = await searchParams;
+  const { subject: rawSubject, capability: rawCap } = params;
+  const chain = getChain(params);
 
   if (!rawSubject || !rawCap) {
-    return <Frame error="Missing parameters. Use ?subject=0x...&capability=kyc.basic" />;
-  }
-
-  const cap = capabilities.find(
-    (c) => c.id === rawCap || c.hash.toLowerCase() === rawCap.toLowerCase()
-  );
-  if (!cap) {
-    return <Frame error={`Unknown capability "${rawCap}". Available: ${capabilities.map(c => c.id).join(", ")}`} />;
-  }
-
-  const casper = isCasperChain(chain);
-
-  // Validate address format for the active chain
-  if (!casper && !isAddressLike(rawSubject)) {
-    return <Frame error="Invalid subject address. Expected 0x... format." />;
-  }
-  if (casper && !isCasperAddress(rawSubject)) {
-    return <Frame error="Invalid subject. Expected account-hash-... format for Casper." />;
+    return <Frame chain={chain} error="Missing parameters. Use ?subject=0x...&capability=kyc.basic" />;
   }
 
   // Non-live chains can't do on-chain verification.
   if (!chain.live) {
-    return (
-      <Frame
-        subject={rawSubject as Address}
-        capabilityId={cap.id}
-        capable={false}
-        error={`${chain.name} is not yet live.`}
-      />
-    );
+    return <Frame chain={chain} error={`${chain.name} is not yet live.`} />;
   }
 
-  const subject = rawSubject as Address;
-  const capHash: Hex = cap.hash;
-  let capable: boolean;
-  try {
-    capable = casper
-      ? await withTimeout(isCapableCasper(subject, capHash))
-      : await withTimeout(isCapable(subject, capHash));
-  } catch {
-    return (
-      <Frame
-        subject={subject}
-        capabilityId={cap.id}
-        error="Verification is temporarily unavailable."
-      />
-    );
+  const outcome = await verifySubject(chain, rawSubject, rawCap);
+
+  if (!outcome.ok) {
+    return <Frame chain={chain} error={outcome.error} />;
   }
-  const view = capable
-    ? casper
-      ? await withTimeout(readCredentialCasper(subject, capHash)).catch(() => null)
-      : await withTimeout(readCredential(subject, capHash)).catch(() => null)
-    : null;
 
   return (
     <Frame
-      subject={subject}
-      capabilityId={cap.id}
-      capable={capable}
-      issuer={view?.issuer ?? null}
-      expiresAt={view?.expiresAt ?? null}
+      chain={chain}
+      subject={outcome.subject as Address}
+      capabilityId={outcome.capabilityId}
+      capable={outcome.capable}
+      issuer={outcome.issuer}
+      expiresAt={outcome.expiresAt}
     />
   );
 }
 
 function Frame(props: {
+  chain: ChainNetwork;
   error?: string;
   subject?: Address;
   capabilityId?: string;
   capable?: boolean;
-  issuer?: Address | null;
+  issuer?: `0x${string}` | null;
   expiresAt?: bigint | null;
 }) {
   const link =
@@ -123,16 +75,28 @@ function Frame(props: {
 
   const dotClass = props.capable ? "bg-sage" : "bg-ink-quiet";
   const verb = props.capable ? "is capable" : "is not capable";
+  const ariaLabel = [
+    `Ligis verification: ${truncateAddress(props.subject!, 6, 4)} ${verb} of ${props.capabilityId}`,
+    props.capable && props.issuer
+      ? `, issued by ${truncateAddress(props.issuer, 5, 3)}${
+          props.expiresAt && props.expiresAt > 0n
+            ? `, expires ${monthYear(props.expiresAt)}`
+            : ", no expiry"
+        }`
+      : "",
+    ". Opens the agent page on Ligis.",
+  ].join("");
 
   return (
     <a
       href={link}
       target="_top"
+      aria-label={ariaLabel}
       className="block bg-paper px-5 py-4 no-underline"
     >
       <div className="flex items-baseline justify-between gap-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
         <span>Ligis · verify</span>
-        <span className="font-mono tabular">{network.name.toLowerCase()}</span>
+        <span className="font-mono tabular">{props.chain.name.toLowerCase()}</span>
       </div>
       <div className="mt-3 flex items-baseline gap-3">
         <span

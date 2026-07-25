@@ -429,213 +429,32 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                 </div>
               ) : null}
 
-              {p.key === "GATE" && state.capabilities.length > 0 ? (
-                <div className="space-y-0">
-                  {state.capabilities.map((c) => (
-                    <div key={c.name}>
-                      <div className="grid grid-cols-[auto_1fr_auto_auto] items-baseline gap-x-4 py-3 text-sm">
-                        <span className={`text-base ${c.capable ? "text-sage" : "text-ink-quiet"}`} aria-hidden>
-                          {c.capable ? "✓" : "✕"}
-                        </span>
-                        <div className="space-y-0.5">
-                          <span className="font-mono tabular text-ink">{c.name}</span>
-                          {c.selfIssued ? (
-                            <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.12em] text-terra">self-issued</span>
-                          ) : null}
-                        </div>
-                        <span
-                          className={`font-mono text-[11px] uppercase tracking-[0.16em] ${c.capable ? "text-sage" : "text-ink-quiet"}`}
-                        >
-                          {c.capable ? "held" : "not held"}
-                        </span>
-                        <span className="w-28 text-right font-mono text-[10px] tabular text-ink-soft">
-                          {c.issueTxHash ? (
-                            <a
-                              href={`${network.explorerUrl}/tx/${c.issueTxHash}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-                            >
-                              {truncateHash(c.issueTxHash, 8, 6)}
-                            </a>
-                          ) : ""}
-                        </span>
-                      </div>
-                      <Rule tone="soft" />
-                    </div>
-                  ))}
-                  {state.phaseStatus.GATE === "done" ? (
-                    <p className="pt-3 font-mono text-[11px] tabular text-ink-quiet">
-                      {state.capabilities.filter((c) => c.capable).length} held · {state.capabilities.filter((c) => !c.capable).length} missing
-                    </p>
-                  ) : null}
-                </div>
+      {p.key === "GATE" && state.capabilities.length > 0 ? (
+                <CapabilityLedger
+                  capabilities={state.capabilities}
+                  gateDone={state.phaseStatus.GATE === "done"}
+                  explorerUrl={network.explorerUrl}
+                />
               ) : null}
 
               {p.key === "ACT" && state.txs.length > 0 ? (
-                <div className="space-y-0">
-                  {state.txs.map((t) => (
-                    <div key={t.txHash}>
-                      <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
-                        <span className="font-mono tabular text-ink">
-                          issued {t.name}
-                        </span>
-                        <a
-                          href={`${network.explorerUrl}/tx/${t.txHash}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-mono tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-                        >
-                          {truncateHash(t.txHash, 10, 6)}
-                        </a>
-                      </div>
-                      <Rule tone="soft" />
-                    </div>
-                  ))}
-                </div>
+                <TransactionLog txs={state.txs} explorerUrl={network.explorerUrl} />
               ) : null}
 
               {p.key === "RECORD" && state.manifest ? (
-                <div className="space-y-3 text-sm">
-                  <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
-                    <span className="text-ink-quiet">manifest root</span>
-                    <span className="font-mono tabular text-ink">
-                      {truncateHash(state.manifest.rootHash, 10, 6)}
-                    </span>
-                  </div>
-                  {state.manifest.storageTxHash ? (
-                    <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
-                      <span className="text-ink-quiet">0G upload</span>
-                      <a
-                        href={`${network.explorerUrl}/tx/${state.manifest.storageTxHash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-mono tabular text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
-                      >
-                        {truncateHash(state.manifest.storageTxHash, 10, 6)}
-                      </a>
-                    </div>
-                  ) : null}
-                  <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
-                    <span className="text-ink-quiet">anchor tx</span>
-                    <a
-                      href={`${network.explorerUrl}/tx/${state.manifest.anchorTx}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-mono tabular text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
-                    >
-                      {truncateAddress(state.manifest.anchorTx, 10, 6)}
-                    </a>
-                  </div>
-                  <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
-                    <span className="text-ink-quiet">token URI</span>
-                    <span className="font-mono tabular text-ink-soft">
-                      {state.manifest.tokenUri}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
-                    <span className="text-ink-quiet">storage</span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft">
-                      {state.manifest.storageType === "0g" ? "0G Storage" : "local hash"}
-                    </span>
-                  </div>
-                </div>
+                <ManifestSummary manifest={state.manifest} explorerUrl={network.explorerUrl} />
               ) : null}
             </PhaseRow>
           );
         })}
       </section>
 
-      {state.summary?.ok ? (
-        <section className="space-y-5 border-l-2 border-sage pl-6">
-          <p className="eyebrow text-sage">what just happened</p>
-          <dl className="grid grid-cols-[6.5rem_1fr] gap-x-6 border-t border-rule divide-y divide-rule">
-            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">subject</dt>
-            <dd className="pt-3 font-mono tabular text-ink">
-              {state.summary.subject ? (
-                <Link href={`/agent/${state.summary.subject}`} className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 hover:decoration-terra">
-                  {truncateAddress(state.summary.subject, 6, 4)}
-                </Link>
-              ) : (
-                "unknown"
-              )}
-            </dd>
-            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">token</dt>
-            <dd className="pt-3 font-mono tabular text-ink">
-              #{state.summary.tokenId ?? "?"} · {state.summary.minted ? "minted" : "found"}
-            </dd>
-            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">reasoning</dt>
-            <dd className="pt-3 font-mono tabular text-ink">
-              {state.summary.model ?? "—"} · {state.summary.source === "0g" ? "0G Compute · TEE-verified" : "local keyword match"}
-            </dd>
-            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">capabilities</dt>
-            <dd className="pt-3 font-mono tabular text-ink">
-              {state.capabilities.length} required · {state.capabilities.filter((c) => c.capable).length} held · {state.txs.length} self-issued
-            </dd>
-            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">gated</dt>
-            <dd className="pt-3 font-mono tabular text-ink">{state.summary.gated ? "yes" : "no"}</dd>
-            {state.manifest ? (
-              <>
-                <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">evidence</dt>
-                <dd className="pt-3 font-mono tabular text-ink">
-                  {state.manifest.storageType === "0g" ? "0G Storage" : "local hash"} · root {truncateHash(state.manifest.rootHash, 10, 6)}
-                </dd>
-              </>
-            ) : null}
-            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">txs</dt>
-            <dd className="pt-3 font-mono tabular text-ink">
-              {state.txs.length + (state.manifest?.storageTxHash ? 1 : 0) + 1} on-chain
-            </dd>
-          </dl>
-          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-            <button
-              type="button"
-              onClick={copyAsProof}
-              className="font-mono text-[11px] tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-            >
-              {copied ? "✓ copied to clipboard" : "copy as proof"}
-            </button>
-            {state.summary.live && state.summary.subject ? (
-              <>
-                <Link
-                  href={`/agent/${state.summary.subject}`}
-                  className="font-mono text-[11px] tabular text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
-                >
-                  View agent profile →
-                </Link>
-                <a
-                  href={`${network.explorerUrl}/address/${state.summary.subject}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-[11px] tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-                >
-                  On PharosScan ↗
-                </a>
-              </>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-xs">
-            <span className={`font-mono tabular ${state.summary.live ? "text-sage" : "text-ink-quiet"}`}>
-              {state.summary.live ? "● live on-chain" : "○ simulated"}
-            </span>
-            {state.summary.gated !== undefined ? (
-              <span className="font-mono tabular text-ink-soft">
-                gated: {state.summary.gated ? "yes" : "no"}
-              </span>
-            ) : null}
-            {state.summary.rpcCalls !== undefined && state.summary.rpcCalls > 0 ? (
-              <span className="font-mono tabular text-ink-soft">
-                {state.summary.rpcCalls} RPC calls
-              </span>
-            ) : null}
-            {state.summary.tokenId ? (
-              <span className="font-mono tabular text-ink-soft">
-                token #{state.summary.tokenId}
-              </span>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
+      <StewardSummary
+        state={state}
+        running={running}
+        copied={copied}
+        onCopyProof={copyAsProof}
+      />
 
       {state.error ? (
         <section className="space-y-3">
@@ -654,78 +473,13 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
         </section>
       ) : null}
 
-      {/* Developer chrome — CLI commands + raw event stream, both
-          collapsed by default so the post-run page stays focused on
-          the summary and phase output above. */}
-      <section className="space-y-6 border-t border-rule pt-8">
-        <p className="eyebrow text-ink-quiet">for developers</p>
-
-        <div className="space-y-4">
-          <button
-            type="button"
-            onClick={() => setShowReal((v) => !v)}
-            className="eyebrow flex items-baseline gap-3 text-ink-soft transition-colors hover:text-ink"
-          >
-            <span>{showReal ? "▾" : "▸"}</span>
-            <span>Real CLI commands</span>
-          </button>
-          {showReal ? (
-            <div className="space-y-5">
-              <PhaseCommand
-                index={1}
-                label="boot"
-                command={`PRIVATE_KEY=0x... ligis issue --token-uri "ipfs://my-agent"`}
-                note="Mints a PharosAgentID to the signer's wallet. Returns tokenId."
-              />
-              <PhaseCommand
-                index={2}
-                label="reason"
-                command={`ligis agent run --goal "Operate as a Pharos agent…" --dry-run`}
-                note="Sends the goal to 0G Compute (TEE-verified LLM). Returns the required capability list."
-              />
-              <PhaseCommand
-                index={3}
-                label="gate"
-                command={`ligis verify --subject 0x... --capability "agent.commerce.escrow"`}
-                note="Reads isCapable from CredentialRegistry. Returns capable: true/false."
-              />
-              <PhaseCommand
-                index={4}
-                label="act"
-                command={`ligis sign --issuer-key 0x... --subject 0x... --capability "agent.commerce.escrow" --expires-in 15552000`}
-                note="Signs an EIP-712 credential off-chain, then submits it on-chain via cast send."
-              />
-              <PhaseCommand
-                index={5}
-                label="record"
-                command={`ligis agent run --goal "Operate as a Pharos agent…"`}
-                note="Full loop: boot → reason → gate → act → record. Requires PRIVATE_KEY + ZEROG_PRIVATE_KEY."
-              />
-            </div>
-          ) : null}
-        </div>
-
-        <div className="space-y-4">
-          <button
-            type="button"
-            onClick={() => setShowEvents((v) => !v)}
-            className="eyebrow flex items-baseline gap-3 text-ink-soft transition-colors hover:text-ink"
-          >
-            <span>{showEvents ? "▾" : "▸"}</span>
-            <span>Raw event stream</span>
-            {eventCount > 0 ? (
-              <span className="font-mono text-[10px] tabular text-ink-quiet">
-                {eventCount} events
-              </span>
-            ) : null}
-          </button>
-          {showEvents ? (
-            <pre className="max-h-72 overflow-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink">
-              {eventCount === 0 ? "// Run the loop to populate the stream." : jsonPanel}
-            </pre>
-          ) : null}
-        </div>
-      </section>
+      <StewardDeveloperChrome
+        state={state}
+        showReal={showReal}
+        showEvents={showEvents}
+        setShowReal={setShowReal}
+        setShowEvents={setShowEvents}
+      />
     </div>
   );
 }
@@ -757,6 +511,349 @@ function PhaseCommand({
       <p className="font-serif text-xs italic leading-relaxed text-ink-quiet">
         {note}
       </p>
+    </div>
+  );
+}
+
+function StewardSummary({
+  state,
+  running,
+  copied,
+  onCopyProof,
+}: {
+  state: State;
+  running: boolean;
+  copied: boolean;
+  onCopyProof: () => void;
+}) {
+  if (!state.summary?.ok) return null;
+
+  return (
+    <section className="space-y-5 border-l-2 border-sage pl-6">
+      <p className="eyebrow text-sage">what just happened</p>
+      <dl className="grid grid-cols-[6.5rem_1fr] gap-x-6 border-t border-rule divide-y divide-rule">
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">subject</dt>
+        <dd className="pt-3 font-mono tabular text-ink">
+          {state.summary.subject ? (
+            <Link href={`/agent/${state.summary.subject}`} className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 hover:decoration-terra">
+              {truncateAddress(state.summary.subject, 6, 4)}
+            </Link>
+          ) : (
+            "unknown"
+          )}
+        </dd>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">token</dt>
+        <dd className="pt-3 font-mono tabular text-ink">
+          #{state.summary.tokenId ?? "?"} · {state.summary.minted ? "minted" : "found"}
+        </dd>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">reasoning</dt>
+        <dd className="pt-3 font-mono tabular text-ink">
+          {state.summary.model ?? "—"} · {state.summary.source === "0g" ? "0G Compute · TEE-verified" : "local keyword match"}
+        </dd>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">capabilities</dt>
+        <dd className="pt-3 font-mono tabular text-ink">
+          {state.capabilities.length} required · {state.capabilities.filter((c) => c.capable).length} held · {state.txs.length} self-issued
+        </dd>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">gated</dt>
+        <dd className="pt-3 font-mono tabular text-ink">{state.summary.gated ? "yes" : "no"}</dd>
+        {state.manifest ? (
+          <>
+            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">evidence</dt>
+            <dd className="pt-3 font-mono tabular text-ink">
+              {state.manifest.storageType === "0g" ? "0G Storage" : "local hash"} · root {truncateHash(state.manifest.rootHash, 10, 6)}
+            </dd>
+          </>
+        ) : null}
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">txs</dt>
+        <dd className="pt-3 font-mono tabular text-ink">
+          {state.txs.length + (state.manifest?.storageTxHash ? 1 : 0) + 1} on-chain
+        </dd>
+      </dl>
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+        <button
+          type="button"
+          onClick={onCopyProof}
+          className="font-mono text-[11px] tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+        >
+          {copied ? "✓ copied to clipboard" : "copy as proof"}
+        </button>
+        {state.summary.live && state.summary.subject ? (
+          <>
+            <Link
+              href={`/agent/${state.summary.subject}`}
+              className="font-mono text-[11px] tabular text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+            >
+              View agent profile →
+            </Link>
+            <a
+              href={`${network.explorerUrl}/address/${state.summary.subject}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-[11px] tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+            >
+              On PharosScan ↗
+            </a>
+          </>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-xs">
+        <span className={`font-mono tabular ${state.summary.live ? "text-sage" : "text-ink-quiet"}`}>
+          {state.summary.live ? "● live on-chain" : "○ simulated"}
+        </span>
+        {state.summary.gated !== undefined ? (
+          <span className="font-mono tabular text-ink-soft">
+            gated: {state.summary.gated ? "yes" : "no"}
+          </span>
+        ) : null}
+        {state.summary.rpcCalls !== undefined && state.summary.rpcCalls > 0 ? (
+          <span className="font-mono tabular text-ink-soft">
+            {state.summary.rpcCalls} RPC calls
+          </span>
+        ) : null}
+        {state.summary.tokenId ? (
+          <span className="font-mono tabular text-ink-soft">
+            token #{state.summary.tokenId}
+          </span>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function StewardDeveloperChrome({
+  state,
+  showReal,
+  showEvents,
+  setShowReal,
+  setShowEvents,
+}: {
+  state: State;
+  showReal: boolean;
+  showEvents: boolean;
+  setShowReal: (updater: (v: boolean) => boolean) => void;
+  setShowEvents: (updater: (v: boolean) => boolean) => void;
+}) {
+  const eventCount = state.events.length;
+  const jsonPanel = useMemo(() => JSON.stringify(state.events, null, 2), [state.events]);
+
+  return (
+    <section className="space-y-6 border-t border-rule pt-8">
+      <p className="eyebrow text-ink-quiet">for developers</p>
+
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => setShowReal((v) => !v)}
+          className="eyebrow flex items-baseline gap-3 text-ink-soft transition-colors hover:text-ink"
+        >
+          <span>{showReal ? "▾" : "▸"}</span>
+          <span>Real CLI commands</span>
+        </button>
+        {showReal ? (
+          <div className="space-y-5">
+            <PhaseCommand
+              index={1}
+              label="boot"
+              command={`PRIVATE_KEY=0x... ligis issue --token-uri "ipfs://my-agent"`}
+              note="Mints a PharosAgentID to the signer's wallet. Returns tokenId."
+            />
+            <PhaseCommand
+              index={2}
+              label="reason"
+              command={`ligis agent run --goal "Operate as a Pharos agent…" --dry-run`}
+              note="Sends the goal to 0G Compute (TEE-verified LLM). Returns the required capability list."
+            />
+            <PhaseCommand
+              index={3}
+              label="gate"
+              command={`ligis verify --subject 0x... --capability "agent.commerce.escrow"`}
+              note="Reads isCapable from CredentialRegistry. Returns capable: true/false."
+            />
+            <PhaseCommand
+              index={4}
+              label="act"
+              command={`ligis sign --issuer-key 0x... --subject 0x... --capability "agent.commerce.escrow" --expires-in 15552000`}
+              note="Signs an EIP-712 credential off-chain, then submits it on-chain via cast send."
+            />
+            <PhaseCommand
+              index={5}
+              label="record"
+              command={`ligis agent run --goal "Operate as a Pharos agent…"`}
+              note="Full loop: boot → reason → gate → act → record. Requires PRIVATE_KEY + ZEROG_PRIVATE_KEY."
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => setShowEvents((v) => !v)}
+          className="eyebrow flex items-baseline gap-3 text-ink-soft transition-colors hover:text-ink"
+        >
+          <span>{showEvents ? "▾" : "▸"}</span>
+          <span>Raw event stream</span>
+          {eventCount > 0 ? (
+            <span className="font-mono text-[10px] tabular text-ink-quiet">
+              {eventCount} events
+            </span>
+          ) : null}
+        </button>
+        {showEvents ? (
+          <pre className="max-h-72 overflow-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink">
+            {eventCount === 0 ? "// Run the loop to populate the stream." : jsonPanel}
+          </pre>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function CapabilityLedger({
+  capabilities,
+  gateDone,
+  explorerUrl,
+}: {
+  capabilities: State["capabilities"];
+  gateDone: boolean;
+  explorerUrl: string;
+}) {
+  return (
+    <div className="space-y-0">
+      {capabilities.map((c) => (
+        <div key={c.name}>
+          <div className="grid grid-cols-[auto_1fr_auto_auto] items-baseline gap-x-4 py-3 text-sm">
+            <span className={`text-base ${c.capable ? "text-sage" : "text-ink-quiet"}`} aria-hidden>
+              {c.capable ? "✓" : "✕"}
+            </span>
+            <div className="space-y-0.5">
+              <span className="font-mono tabular text-ink">{c.name}</span>
+              {c.selfIssued ? (
+                <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.12em] text-terra">self-issued</span>
+              ) : null}
+            </div>
+            <span
+              className={`font-mono text-[11px] uppercase tracking-[0.16em] ${c.capable ? "text-sage" : "text-ink-quiet"}`}
+            >
+              {c.capable ? "held" : "not held"}
+            </span>
+            <span className="w-28 text-right font-mono text-[10px] tabular text-ink-soft">
+              {c.issueTxHash ? (
+                <a
+                  href={`${explorerUrl}/tx/${c.issueTxHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+                >
+                  {truncateHash(c.issueTxHash, 8, 6)}
+                </a>
+              ) : ""}
+            </span>
+          </div>
+          <Rule tone="soft" />
+        </div>
+      ))}
+      {gateDone ? (
+        <p className="pt-3 font-mono text-[11px] tabular text-ink-quiet">
+          {capabilities.filter((c) => c.capable).length} held · {capabilities.filter((c) => !c.capable).length} missing
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function TransactionLog({
+  txs,
+  explorerUrl,
+}: {
+  txs: State["txs"];
+  explorerUrl: string;
+}) {
+  return (
+    <div className="space-y-0">
+      {txs.map((t) => (
+        <div key={t.txHash}>
+          <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
+            <span className="font-mono tabular text-ink">
+              issued {t.name}
+            </span>
+            <a
+              href={`${explorerUrl}/tx/${t.txHash}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+            >
+              {truncateHash(t.txHash, 10, 6)}
+            </a>
+          </div>
+          <Rule tone="soft" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ManifestSummary({
+  manifest,
+  explorerUrl,
+}: {
+  manifest: State["manifest"];
+  explorerUrl: string;
+}) {
+  if (!manifest) return null;
+
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+        <span className="text-ink-quiet">manifest root</span>
+        <span className="font-mono tabular text-ink">
+          {truncateHash(manifest.rootHash, 10, 6)}
+        </span>
+      </div>
+      <details className="group">
+        <summary className="cursor-pointer list-none py-1 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet marker:hidden transition-colors hover:text-ink">
+          <span className="group-open:hidden">evidence details +</span>
+          <span className="hidden group-open:inline">evidence details −</span>
+        </summary>
+        <div className="mt-3 space-y-3">
+          {manifest.storageTxHash ? (
+            <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+              <span className="text-ink-quiet">0G upload</span>
+              <a
+                href={`${explorerUrl}/tx/${manifest.storageTxHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono tabular text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+              >
+                {truncateHash(manifest.storageTxHash, 10, 6)}
+              </a>
+            </div>
+          ) : null}
+          <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+            <span className="text-ink-quiet">anchor tx</span>
+            <a
+              href={`${explorerUrl}/tx/${manifest.anchorTx}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono tabular text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+            >
+              {truncateAddress(manifest.anchorTx, 10, 6)}
+            </a>
+          </div>
+          <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+            <span className="text-ink-quiet">token URI</span>
+            <span className="font-mono tabular text-ink-soft">
+              {manifest.tokenUri}
+            </span>
+          </div>
+          <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-6">
+            <span className="text-ink-quiet">storage</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft">
+              {manifest.storageType === "0g" ? "0G Storage" : "local hash"}
+            </span>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

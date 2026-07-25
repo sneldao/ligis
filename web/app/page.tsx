@@ -116,7 +116,7 @@ export default async function HomePage({
           </header>
 
           <section className="mt-14 sm:mt-16">
-            <h1 className="display max-w-3xl text-[2.8rem] text-ink sm:text-7xl">
+            <h1 className="display max-w-3xl text-[2.8rem] text-ink sm:text-6xl lg:text-7xl">
               Know who your agent is about to pay.
             </h1>
             <p className="mt-7 max-w-xl font-serif text-lg leading-relaxed text-ink-soft sm:mt-10 sm:text-xl">
@@ -125,14 +125,23 @@ export default async function HomePage({
             </p>
             <p className="mt-5 max-w-2xl font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
               {stats.ok ? (
-                <>
-                  <span className="tabular text-ink">
-                    {stats.supply.toLocaleString("en")}
-                  </span>{" "}verifiable {stats.supply === 1 ? "agent" : "agents"} · {chain.name} · block{" "}
-                  <span className="tabular text-ink">
-                    {Number(stats.block).toLocaleString("en")}
-                  </span>
-                </>
+                Number(stats.supply) > 3 ? (
+                  <>
+                    <span className="tabular text-ink">
+                      {stats.supply.toLocaleString("en")}
+                    </span>{" "}verifiable agents · {chain.name} · block{" "}
+                    <span className="tabular text-ink">
+                      {Number(stats.block).toLocaleString("en")}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-ink">{chain.name}</span> · live registry read · block{" "}
+                    <span className="tabular text-ink">
+                      {Number(stats.block).toLocaleString("en")}
+                    </span>
+                  </>
+                )
               ) : stats.preview ? (
                 <>
                   <span className="text-ink">{chain.name}</span> · live registry read
@@ -141,6 +150,27 @@ export default async function HomePage({
                 <>Live index temporarily unreachable.</>
               )}
             </p>
+          </section>
+
+          {/* Onboarding moment — plain-language problem framing for
+              first-time visitors who don't already know what on-chain
+              credentials are. Sits between the hero claim and the
+              live verify demo so the visitor understands the "why"
+              before the "how". */}
+          <section className="mt-12 max-w-2xl sm:mt-16">
+            <p className="font-serif text-base leading-relaxed text-ink-soft">
+              AI agents transact autonomously: sending payments, opening
+              escrows, buying data. But when your agent is about to pay a
+              stranger, how does it know that stranger is legitimate? Ligis
+              checks authorization in one blockchain read, before the
+              transaction fires. If the counterparty can&rsquo;t prove
+              it&rsquo;s authorized, the agent stops.
+            </p>
+            <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+              <Link href="/steward" className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra">For agent operators →</Link>
+              <Link href="/capabilities" className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra">For protocol builders →</Link>
+              <Link href="/issuers" className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra">For credential issuers →</Link>
+            </div>
           </section>
 
           <section id="verify" className="mt-16 scroll-mt-24 sm:mt-28">
@@ -184,7 +214,7 @@ export default async function HomePage({
       <section className="mx-auto max-w-5xl px-5 pt-20 pb-20 sm:px-8 sm:pt-32 sm:pb-32">
         <section id="croo" className="scroll-mt-24">
           <header className="flex items-baseline justify-between">
-            <p className="eyebrow">02 · Counterparty risk</p>
+            <p className="eyebrow">02 · Check the stranger before you pay</p>
             <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">CROO Agent Store · x402</p>
           </header>
           <Rule className="mt-4" />

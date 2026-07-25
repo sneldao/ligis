@@ -3,12 +3,12 @@
 import { getAddress, type Hex } from "viem";
 import { capabilities } from "@/lib/chain";
 import {
-  isCapable as routerIsCapable,
   isCapableMulti as routerIsCapableMulti,
   readCredential as routerReadCredential,
   isValidAddress,
   isCasperChain,
 } from "@/lib/chain-router";
+import { verifySubject } from "@/lib/verify";
 import { getChain, type ChainNetwork } from "@/lib/network";
 
 export type CapabilityResult = {
@@ -61,44 +61,8 @@ export async function verifyAction(
       error: `Subject must be a valid ${isCasperChain(chain) ? "Casper account hash (account-hash-...)" : "0x-prefixed 20-byte address"}.`,
     };
   }
-  const cap = capabilities.find((c) => c.id === capabilityId);
-  if (!cap) {
-    return { ok: false, error: "Unknown capability." };
-  }
 
-  const subject = isCasperChain(chain) ? subjectRaw : getAddress(subjectRaw);
-
-  try {
-    const capable = await routerIsCapable(chain, subject, cap.hash);
-    if (!capable) {
-      return {
-        ok: true,
-        capable: false,
-        subject,
-        capabilityId: cap.id,
-        capabilityHash: cap.hash,
-        issuer: null,
-        expiresAt: null,
-        revoked: false,
-      };
-    }
-    const view = await routerReadCredential(chain, subject, cap.hash);
-    return {
-      ok: true,
-      capable: true,
-      subject,
-      capabilityId: cap.id,
-      capabilityHash: cap.hash,
-      issuer: view.issuer,
-      expiresAt: view.expiresAt,
-      revoked: view.revoked,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      error: `Read failed against ${chain.name}. ${err instanceof Error ? err.message : String(err)}`,
-    };
-  }
+  return verifySubject(chain, subjectRaw, capabilityId);
 }
 
 export async function batchVerifyAction(

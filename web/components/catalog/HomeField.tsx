@@ -23,6 +23,7 @@ export function HomeField({ children }: { children: ReactNode }) {
   const [wideViewport, setWideViewport] = useState(false);
   const [inView, setInView] = useState(false);
   const [webglOk, setWebglOk] = useState(false);
+  const [idleReady, setIdleReady] = useState(false);
 
   useEffect(() => {
     const query = window.matchMedia("(min-width: 640px)");
@@ -30,6 +31,19 @@ export function HomeField({ children }: { children: ReactNode }) {
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
+  }, []);
+
+  // Defer the scene until the main thread is idle so the hero copy and
+  // verify demo always win the first seconds of attention.
+  useEffect(() => {
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(() => setIdleReady(true), {
+        timeout: 2500,
+      });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(() => setIdleReady(true), 1200);
+    return () => window.clearTimeout(id);
   }, []);
 
   useEffect(() => {
@@ -54,7 +68,7 @@ export function HomeField({ children }: { children: ReactNode }) {
     return () => observer.disconnect();
   }, []);
 
-  const showScene = wideViewport && !reducedMotion && inView && webglOk;
+  const showScene = wideViewport && !reducedMotion && inView && webglOk && idleReady;
 
   return (
     <section ref={regionRef} className="relative isolate">
@@ -65,14 +79,15 @@ export function HomeField({ children }: { children: ReactNode }) {
       </div>
       <div className="sticky top-0 hidden h-dvh overflow-hidden bg-paper sm:block">
         <div className="absolute inset-0">
-          {showScene ? (
+          <QuietField />
+        </div>
+        {showScene ? (
+          <div className="absolute inset-0 animate-fade-in">
             <SceneErrorBoundary>
               <CatalogScene />
             </SceneErrorBoundary>
-          ) : (
-            <QuietField />
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
       <div className="pointer-events-none relative z-10 sm:-mt-dvh">
         {children}

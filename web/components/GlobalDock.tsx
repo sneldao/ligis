@@ -10,7 +10,9 @@ import { EvmWalletChip } from "@/components/EvmWalletChip";
 
 const NAV = [
   { href: "/#how", label: "How it works" },
+  { href: "/steward", label: "Steward" },
   { href: "/capabilities", label: "Capabilities" },
+  { href: "/issuers", label: "Issuers" },
   { href: "/embed", label: "Embed" },
   { href: "/#croo", label: "CROO" },
 ];

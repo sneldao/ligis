@@ -8,7 +8,7 @@
   --color-ink-quiet: #6f6a62;
   --color-rule: #d9d3cb;
   --color-rule-soft: #e7e2d9;
-  --color-terra: #b85d3e;
+  --color-terra: #a85234;
   --color-terra-soft: #e8c9bd;
   --color-sage: #6f8267;
   --color-revoke: #a13a2a;
@@ -43,7 +43,7 @@ html {
 }
 
 :focus-visible {
-  outline: 1px solid var(--color-terra);
+  outline: 2px solid var(--color-terra);
   outline-offset: 3px;
   border-radius: 1px;
 }

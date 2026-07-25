@@ -35,7 +35,7 @@ export function WalletGate() {
 
   if (!isCasperPage) {
     return (
-      <div className="flex flex-col gap-3 border border-terra/30 bg-terra/5 px-5 py-4 sm:flex-row sm:items-center sm:gap-6 sm:justify-between">
+      <div className="flex flex-col gap-3 border-y border-rule py-5 sm:flex-row sm:items-center sm:gap-6 sm:justify-between">
         <div className="space-y-1">
           <p className="eyebrow text-terra">
             Casper Buildathon · wallet unlocks in Casper mode

@@ -43,14 +43,14 @@ export function VerifyDemo({
         <button
           type="button"
           onClick={() => setMode("single")}
-          className={`text-sm transition-colors ${mode === "single" ? "text-ink underline decoration-terra decoration-1 underline-offset-4" : "text-ink-quiet hover:text-ink"}`}
+          className={`py-1.5 text-sm transition-colors ${mode === "single" ? "text-ink underline decoration-terra decoration-1 underline-offset-4" : "text-ink-quiet hover:text-ink"}`}
         >
           single
         </button>
         <button
           type="button"
           onClick={() => setMode("batch")}
-          className={`text-sm transition-colors ${mode === "batch" ? "text-ink underline decoration-terra decoration-1 underline-offset-4" : "text-ink-quiet hover:text-ink"}`}
+          className={`py-1.5 text-sm transition-colors ${mode === "batch" ? "text-ink underline decoration-terra decoration-1 underline-offset-4" : "text-ink-quiet hover:text-ink"}`}
         >
           batch
         </button>
@@ -102,7 +102,8 @@ export function VerifyDemo({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-baseline text-sm text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra disabled:text-ink-quiet disabled:no-underline"
+            className="inline-flex items-center justify-center border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:opacity-50 disabled:hover:bg-paper disabled:hover:text-ink"
+            style={{ borderRadius: 0 }}
           >
             {singlePending ? "verifying…" : "verify →"}
           </button>
@@ -129,7 +130,8 @@ export function VerifyDemo({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-baseline text-sm text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra disabled:text-ink-quiet disabled:no-underline"
+            className="inline-flex items-center justify-center border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:opacity-50 disabled:hover:bg-paper disabled:hover:text-ink"
+            style={{ borderRadius: 0 }}
           >
             {batchPending ? "checking all…" : "check all →"}
           </button>
@@ -144,11 +146,21 @@ export function VerifyDemo({
           className="min-h-[5rem] animate-fade-in"
         >
           {singleState === null ? (
-            <p className="font-serif text-base italic text-ink-quiet">
-              The result of{" "}
-              <code className="font-mono not-italic">isCapable</code>{" "}
-              appears here. One on-chain read, no SDK.
-            </p>
+            <>
+              <p className="font-serif text-sm italic text-ink-quiet">
+                The address below is pre-filled as a sample. Click verify to
+                check if it holds the selected capability.
+              </p>
+              <p className="mt-3 font-serif text-sm italic text-ink-quiet">
+                <span className="text-sage">● is capable</span> means the agent
+                holds a valid credential. <span className="text-ink-quiet">● is not capable</span> means it doesn&rsquo;t.
+              </p>
+              <p className="mt-3 font-serif text-base italic text-ink-quiet">
+                The result of{" "}
+                <code className="font-mono not-italic">isCapable</code>{" "}
+                appears here. One on-chain read, no SDK.
+              </p>
+            </>
           ) : !singleState.ok ? (
             <ErrorRetry
               message={singleState.error}
@@ -248,7 +260,7 @@ function BatchResultPanel({
     <div className="space-y-6">
       <div className="flex items-baseline gap-3">
         <span
-          className="inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full bg-terra"
+          className={`inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full ${heldCount > 0 ? "bg-sage" : "bg-ink-quiet"}`}
           aria-hidden
         />
         <p className="font-serif text-lg leading-snug text-ink">
@@ -298,7 +310,7 @@ function ErrorRetry({
       <button
         type="button"
         onClick={() => formRef.current?.requestSubmit()}
-        className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+        className="inline-block py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
       >
         retry →
       </button>

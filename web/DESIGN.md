@@ -30,8 +30,18 @@ and reach for typography, whitespace, and hairlines instead.
   hashes and addresses use `tabular-nums` and the `··` mid-glyph for
   truncation, never `…`.
 - **Palette**: warm paper background, deep graphite ink, terracotta as the
-  single ceremonial accent (never used for chrome). Sage for valid, terra for
-  attention, ink-quiet for revoked / inactive. One dominant tone per surface.
+  single ceremonial accent (never used for chrome). One dominant tone per
+  surface. Colors carry fixed meanings — do not overload them:
+  - `sage` — good: valid, held, funded, ready
+  - `sky` — in progress: connected but not yet ready, awaiting funding
+  - `terra` — ceremony and action: the accent, CTAs, active nav
+  - `revoke` — loss and attention: revoked, errors, hard stops
+  - `ink-quiet` — inactive: not held, expired, secondary metadata
+  Terra is tuned to pass WCAG AA (≥4.5:1) on paper at body sizes; do not
+  lighten it without re-checking contrast.
+- **Corners**: surfaces are square. The single sanctioned exception is the
+  global dock (fully-rounded pill, rounded mobile drawer) — it is floating
+  chrome, not a content surface. No other component may round its corners.
 - **Motion**: at most one staggered reveal per page load. Hovers shift colour
   or underline, never scale or translate. All transitions honour
   `prefers-reduced-motion`.

@@ -120,10 +120,14 @@ export default function StyleguidePage() {
               { name: "paper-deep", hex: "#ECE7DF", bg: "bg-paper-deep" },
               { name: "ink", hex: "#1C1B1A", bg: "bg-ink" },
               { name: "ink-soft", hex: "#5C5852", bg: "bg-ink-soft" },
-              { name: "ink-quiet", hex: "#8A857D", bg: "bg-ink-quiet" },
+              { name: "ink-quiet", hex: "#6F6A62", bg: "bg-ink-quiet" },
               { name: "rule", hex: "#D9D3CB", bg: "bg-rule" },
-              { name: "terra", hex: "#B85D3E", bg: "bg-terra" },
+              { name: "rule-soft", hex: "#E7E2D9", bg: "bg-rule-soft" },
+              { name: "terra", hex: "#A85234", bg: "bg-terra" },
+              { name: "terra-soft", hex: "#E8C9BD", bg: "bg-terra-soft" },
               { name: "sage", hex: "#6F8267", bg: "bg-sage" },
+              { name: "revoke", hex: "#A13A2A", bg: "bg-revoke" },
+              { name: "sky", hex: "#3B6E8F", bg: "bg-sky" },
             ].map((t) => (
               <div key={t.name} className="space-y-2">
                 <div className={`h-20 w-full ${t.bg}`} aria-hidden />
