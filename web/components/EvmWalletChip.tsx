@@ -182,7 +182,7 @@ export function EvmWalletChip() {
             animate={{ opacity: 1, y: 0 }}
             exit={reducedMotion ? undefined : { opacity: 0, y: -4 }}
             transition={{ duration: 0.18 }}
-            className="fixed left-1/2 top-16 z-50 w-[min(92vw,28rem)] -translate-x-1/2 border border-rule bg-paper p-5 text-ink sm:left-auto sm:right-4 sm:translate-x-0"
+            className="fixed left-0 right-0 top-16 z-50 mx-auto w-[min(92vw,28rem)] border border-rule bg-paper p-5 text-ink sm:left-auto sm:right-4 sm:mx-0"
             role="dialog"
             aria-label="Pharos wallet"
           >
