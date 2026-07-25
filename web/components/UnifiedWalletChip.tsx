@@ -160,7 +160,7 @@ export function UnifiedWalletChip() {
     if (!open) return;
     const dismiss = (e: Event) => {
       const t = e.target as HTMLElement | null;
-      if (!t || !t.closest?.("[data-unified-wallet-root]")) setOpen(false);
+      if (!t || (!t.closest?.("[data-unified-wallet-root]") && !t.closest?.("[data-unified-wallet-panel]"))) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -288,6 +288,7 @@ export function UnifiedWalletChip() {
         ? createPortal(
             <AnimatePresence>
               <motion.div
+                data-unified-wallet-panel
                 key="wallet-panel"
                 initial={reducedMotion ? false : { opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
