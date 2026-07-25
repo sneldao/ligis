@@ -305,7 +305,7 @@ export async function* stewardLoop(
     }
   } else {
     await sleep(450);
-    tokenId = "2";
+    tokenId = "SIMULATED-2";
   }
 
   yield { type: "boot", phase: "BOOT", tokenId, minted, subject };
@@ -448,7 +448,7 @@ export async function* stewardLoop(
       }
     } else {
       await sleep(900);
-      const fakeHash = "0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
+      const fakeHash = "SIMULATED-0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
       finalCapable[i] = true;
       yield {
         type: "capability",
@@ -527,8 +527,8 @@ export async function* stewardLoop(
     }
   } else {
     await sleep(1400);
-    rootHash = "0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
-    anchorTx = "0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
+    rootHash = "SIMULATED-0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
+    anchorTx = "SIMULATED-0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
     tokenUri = `0g://${rootHash.slice(2, 34)}`;
   }
 

@@ -103,7 +103,7 @@ export async function* stewardLoopCasper(
     }
   } else {
     await sleep(450);
-    tokenId = String(Math.floor(Math.random() * 100) + 1);
+    tokenId = "SIMULATED-" + String(Math.floor(Math.random() * 100) + 1);
     minted = true;
   }
 
@@ -216,7 +216,7 @@ export async function* stewardLoopCasper(
       }
     } else {
       await sleep(300);
-      const fakeHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      const fakeHash = "SIMULATED-0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
       cap.selfIssued = true;
       cap.capable = true;
       cap.issueTxHash = fakeHash;
@@ -303,8 +303,8 @@ export async function* stewardLoopCasper(
     }
   } else {
     await sleep(500);
-    rootHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-    anchorTx = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+    rootHash = "SIMULATED-0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+    anchorTx = "SIMULATED-0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
     tokenUri = `0g://${rootHash}`;
   }
 

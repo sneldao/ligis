@@ -128,10 +128,49 @@ mod tests {
         assert_eq!(contract.token_uri_of(token_id), "0g://root2");
 
         env.set_caller(bob);
-        // Bob is not the controller, so this must panic/revert.
-        // (Odra reverts via unwrap_or_revert in the contract.)
-        // We do not call it here to keep the test simple; the controller check
-        // is exercised by the `rotate` test above.
+        // The non-controller sub-calls below are expected to revert; we
+        // wrap them in no-op `match` arms so the test still validates the
+        // happy path before the panic. Without the controller check below
+        // the assertion-confirmed fields would be corrupted by a panic.
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            contract.set_token_uri(token_id, "0g://pwned".to_string());
+        }));
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_token_uri_reverts_for_non_controller() {
+        // Standalone guard for the controller check, isolated from the
+        // happy-path assertions in `set_token_uri_only_by_controller`.
+        let env = odra_test::env();
+        let mut contract = AgentId::deploy(&env, NoArgs);
+
+        let alice = env.get_account(0);
+        let bob = env.get_account(1);
+
+        env.set_caller(alice);
+        let token_id = contract.mint_self("0g://root1".to_string());
+
+        env.set_caller(bob);
+        contract.set_token_uri(token_id, "0g://pwned".to_string());
+    }
+
+    #[test]
+    #[should_panic]
+    fn rotate_reverts_for_non_controller() {
+        // Standalone guard for the controller check on `rotate`.
+        let env = odra_test::env();
+        let mut contract = AgentId::deploy(&env, NoArgs);
+
+        let alice = env.get_account(0);
+        let bob = env.get_account(1);
+        let carol = env.get_account(2);
+
+        env.set_caller(alice);
+        let token_id = contract.mint_self("0g://root1".to_string());
+
+        env.set_caller(bob);
+        contract.rotate(token_id, carol);
     }
 
     #[test]

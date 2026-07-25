@@ -38,6 +38,35 @@ jobs:
       - name: Check formatting
         run: npx prettier --check 'packages/*/src/**/*.{ts,json,md}'
 
+  casper-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (nightly for Odra bulk-memory-disabled WASM)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2026-01-01
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/contracts-casper/target
+          key: ${{ runner.os }}-cargo-casper-${{ hashFiles('packages/contracts-casper/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-casper-
+
+      - name: Install cargo-odra
+        run: cargo install cargo-odra --locked
+
+      - name: Run Casper (Odra) unit tests
+        run: PATH="$HOME/.cargo/bin:$PATH" cargo odra test
+        working-directory: packages/contracts-casper
+
   cargo-audit:
     runs-on: ubuntu-latest
     steps:

@@ -25,7 +25,7 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { CasperAdapter } from "@ligis/adapter-casper";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 const PORT = Number(process.env.PORT ?? 4040);
 
@@ -382,9 +382,15 @@ async function settleLocally(
     // For the demo, we submit a transfer of the minimum amount (2.5 CSPR)
     // from the server account to itself as a settlement anchor.
     if (!CONFIG.keyPath) {
-      // No key path — return a simulated settlement
-      const simHash = cryptoRandomHash();
-      return { ok: true, txHash: simHash, mode: "local-simulated" };
+      // No key path — fail closed. The x402 promise is "real on-chain
+      // payment in exchange for the resource". A simulated settlement
+      // contradicts that promise and misleads consumers.
+      return {
+        ok: false,
+        error:
+          "settlement unavailable: LIGIS_CASPER_KEY_PATH not set. " +
+          "Configure a funded PEM key path, or set X402_SETTLEMENT_MODE=facilitator with CSPR_CLOUD_TOKEN.",
+      };
     }
 
     const payToRaw = CONFIG.payTo
@@ -397,19 +403,20 @@ async function settleLocally(
     // Minimum transfer on Casper testnet is 2.5 CSPR = 2,500,000,000 motes
     const minTransfer = "2500000000";
 
-    const cmd = [
-      "casper-client transfer",
-      `--node-address ${CONFIG.rpcUrl}`,
-      `--secret-key ${CONFIG.keyPath}`,
-      `--amount ${minTransfer}`,
-      `--target-account ${payTo}`,
-      `--transfer-id ${transferId}`,
-      `--chain-name casper-test`,
-      "--gas-price 1",
-      "--payment-amount 100000000",
-    ].join(" ");
+    // Build argv — no shell, so `payTo` (user-controlled) cannot inject.
+    const argv = [
+      "transfer",
+      "--node-address", CONFIG.rpcUrl,
+      "--secret-key", CONFIG.keyPath,
+      "--amount", minTransfer,
+      "--target-account", payTo,
+      "--transfer-id", String(transferId),
+      "--chain-name", "casper-test",
+      "--gas-price", "1",
+      "--payment-amount", "100000000",
+    ];
 
-    const output = execSync(cmd, { encoding: "utf-8", timeout: 30000 });
+    const output = execFileSync("casper-client", argv, { encoding: "utf-8", timeout: 30_000 });
     const hashMatch = output.match(/"deploy_hash":\s*"([a-f0-9]+)"/);
     const txHash = hashMatch ? hashMatch[1] : "";
 
@@ -422,11 +429,15 @@ async function settleLocally(
 
     return { ok: true, txHash, mode: "local-transfer" };
   } catch (err) {
-    // If on-chain settlement fails, fall back to simulated mode
+    // Fail closed. The previous behavior of returning a fake tx hash
+    // here turned a settlement failure into a 200 OK, which is exactly
+    // what the spec forbids.
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`  [x402] local settlement error: ${msg}`);
-    const simHash = cryptoRandomHash();
-    return { ok: true, txHash: simHash, mode: "local-simulated" };
+    return {
+      ok: false,
+      error: `settlement failed: ${msg}. Configure a working CASPR key path or set X402_SETTLEMENT_MODE=facilitator.`,
+    };
   }
 }
 
@@ -435,6 +446,9 @@ function cryptoRandomHash(): string {
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
+
+// Reference kept for the test suite only.
+void cryptoRandomHash;
 
 /**
  * Premium RWA oracle feed — real tokenized RWA token market data.

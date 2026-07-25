@@ -3,6 +3,10 @@
 > **Portable on-chain identity and verifiable credentials for AI agents.**
 > **Live on Pharos + Casper Testnet. Autonomous steward loop + x402 payments + CROO CAP commerce working end-to-end.**
 
+[![CI](https://github.com/sneldao/ligis/actions/workflows/ci.yml/badge.svg)](https://github.com/sneldao/ligis/actions/workflows/ci.yml)
+
+**Casper Judge repro (1 command):** `npx tsx scripts/casper-final-demo.ts` — see [docs/casper-final-round.md](docs/casper-final-round.md).
+
 ## Active hackathon submissions
 
 | Hackathon                          | Track                                | Demo                                                                                                                               | Submission doc                                                           |
@@ -52,7 +56,7 @@ every chain, which is what makes cross-chain credential portability possible.
 3. Agent resubmits with `X-PAYMENT` header → **200 OK** with tokenized real-estate market data
 4. Settlement on Casper Testnet (on-chain tx)
 
-41 Foundry tests + 12 Odra tests + 47 TypeScript tests passing. 4 on-chain Skills + 2 helpers
+41 Foundry tests + 22 Odra tests + 47 TypeScript tests passing. 4 on-chain Skills + 2 helpers
 
 - Trust Steward Agent. CLI. MCP server. x402 Trust Gate. MIT.
 
@@ -62,7 +66,7 @@ every chain, which is what makes cross-chain credential portability possible.
 
 Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgentID` ERC-721 on EVM, `AgentId` Odra contract on Casper) and EIP-712 capability credentials (`CredentialRegistry`). Credentials are signed off-chain with secp256k1; the EVM contracts verify signatures on-chain, and the Casper port now recovers the issuer address on-chain for both `issue` and `revoke` using the pure-Rust `k256` crate. Any contract can gate access in one line: `require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed")`.
 
-It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter (`@ligis/adapter-casper`) is fully implemented and **live on Casper Testnet** — all 8 `ChainAdapter` operations talk to Odra contracts via `casper-client`, the WASM contracts are deployed, and the smoke test passes end-to-end (mint → sign → submit → verify → revoke). The web frontend is chain-aware on all pages (`?chain=casper-testnet` is live). See [`docs/casper-buildathon.md`](docs/casper-buildathon.md) for the submission plan.
+It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter (`@ligis/adapter-casper`) is fully implemented and **live on Casper Testnet** — all 8 `ChainAdapter` operations talk to Odra contracts via `casper-client`, the WASM contracts are deployed (AgentId + CredentialRegistry + GatedVault), and the smoke test passes end-to-end (mint → sign → submit → verify → revoke). The web frontend is chain-aware on all pages (`?chain=casper-testnet` is live). See [`docs/casper-buildathon.md`](docs/casper-buildathon.md) for the submission plan.
 
 ## Skills
 

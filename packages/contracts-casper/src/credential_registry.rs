@@ -38,10 +38,14 @@ pub struct CredentialRegistry {
 /// Recover the 20-byte Ethereum-style issuer address from an EIP-712 digest
 /// and a 65-byte EVM-style signature.
 fn recover_issuer(digest: [u8; 32], signature: [u8; 65]) -> Option<[u8; 20]> {
-    // EVM v = 27/28 → recovery id 0/1.
+    // EVM v = 27/28 → recovery id 0/1. EIP-2098 compact signatures encode
+    // the recovery bit in the high bit of `s`, which produces `v` values
+    // 0/1 folded into our 64-byte signature. We fall back to deriving the
+    // recovery id from the high bit of `s` when v is 0/1.
     let recid_byte = match signature[64] {
         27 => 0u8,
         28 => 1u8,
+        0 | 1 => signature[64],
         _ => return None,
     };
     let recid = RecoveryId::try_from(recid_byte).ok()?;
@@ -61,6 +65,22 @@ fn recover_issuer(digest: [u8; 32], signature: [u8; 65]) -> Option<[u8; 20]> {
     let mut issuer = [0u8; 20];
     issuer.copy_from_slice(&hash[12..]);
     Some(issuer)
+}
+
+/// Keccak-256 of (subject || capability_hash || nonce_be) — the canonical
+/// digest the contract binds to a revoke signature. Mirrors the
+/// `make_revoke_digest` helper in `test_helpers` and the off-chain
+/// `buildRevokeDigest` in `packages/adapter-casper/src/eip712.ts`.
+fn keccak_revoke_digest(
+    subject: [u8; 32],
+    capability_hash: [u8; 32],
+    nonce: u64,
+) -> [u8; 32] {
+    let mut buf = [0u8; 72];
+    buf[..32].copy_from_slice(&subject);
+    buf[32..64].copy_from_slice(&capability_hash);
+    buf[64..72].copy_from_slice(&nonce.to_be_bytes());
+    Keccak256::digest(buf).into()
 }
 
 #[odra::module]
@@ -108,11 +128,13 @@ impl CredentialRegistry {
     /// Revoke a credential. Only the original issuer can revoke.
     /// Authorization comes from a valid secp256k1 signature over the supplied
     /// digest; the recovered signer must match the stored credential issuer.
+    /// The `_nonce` parameter is bound into the signed payload to make
+    /// signature replay across nonces impossible (matches the EVM contract).
     pub fn revoke(
         &mut self,
         subject: [u8; 32],
         capability_hash: [u8; 32],
-        _nonce: u64,
+        nonce: u64,
         digest: [u8; 32],
         signature: [u8; 65],
     ) {
@@ -120,6 +142,16 @@ impl CredentialRegistry {
             .latest
             .get(&(subject, capability_hash))
             .unwrap_or_revert(&self.env());
+
+        // Bind the nonce into the recovered-message check. The digest that
+        // the client signs must be the digest of (subject || cap_hash || nonce);
+        // a different nonce produces a different digest and the recovered
+        // signer will not match the stored issuer.
+        let typed_digest = keccak_revoke_digest(subject, capability_hash, nonce);
+        assert_eq!(
+            digest, typed_digest,
+            "CredentialRegistry::revoke: digest does not bind nonce"
+        );
 
         let recovered = recover_issuer(digest, signature)
             .unwrap_or_revert(&self.env());
@@ -145,6 +177,23 @@ impl CredentialRegistry {
         capability_hash: [u8; 32],
     ) -> Option<CredentialView> {
         self.latest.get(&(subject, capability_hash))
+    }
+
+    // ---------- helpers ----------
+
+    /// Compute the canonical revoke digest the contract binds to. The off-chain
+    /// signer must produce this exact digest (see `make_revoke_digest` in
+    /// `test_helpers` and the equivalent eip712.ts `buildRevokeDigest`).
+    ///
+    /// Exposed as an entry-point so off-chain tests can compare against the
+    /// on-chain binding without re-implementing the keccak helper.
+    pub fn compute_revoke_digest(
+        &self,
+        subject: [u8; 32],
+        capability_hash: [u8; 32],
+        nonce: u64,
+    ) -> [u8; 32] {
+        keccak_revoke_digest(subject, capability_hash, nonce)
     }
 
     pub fn is_capable(&self, subject: [u8; 32], capability_hash: [u8; 32]) -> bool {
@@ -205,7 +254,7 @@ mod test_helpers {
         capability_hash: [u8; 32],
         nonce: u64,
     ) -> [u8; 32] {
-        let mut buf = [0u8; 96];
+        let mut buf = [0u8; 72];
         buf[..32].copy_from_slice(&subject);
         buf[32..64].copy_from_slice(&capability_hash);
         buf[64..72].copy_from_slice(&nonce.to_be_bytes());
@@ -419,6 +468,68 @@ mod tests {
             .unwrap();
         assert!(latest.revoked);
         assert!(!latest.valid);
+    }
+
+    #[test]
+    #[should_panic]
+    fn revoke_rejects_wrong_nonce() {
+        let env = odra_test::env();
+        let mut contract = CredentialRegistry::deploy(&env, NoArgs);
+        let issuer = issuer_fixture();
+        let digest = make_digest(subject(), capability());
+        let sig = sign_digest(&issuer.key, digest);
+
+        contract.issue(
+            issuer.address,
+            subject(),
+            capability(),
+            0,
+            u64::MAX,
+            0,
+            digest,
+            sig,
+        );
+
+        // Sign a revoke digest for the *right* nonce, then submit with a
+        // *different* nonce — the contract must reject the digest mismatch.
+        let revoke_digest = make_revoke_digest(subject(), capability(), 0);
+        let revoke_sig = sign_digest(&issuer.key, revoke_digest);
+        contract.revoke(
+            subject(),
+            capability(),
+            7, // wrong nonce
+            revoke_digest,
+            revoke_sig,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn revoke_rejects_bad_digest() {
+        // A revoke whose digest does not match (subject || cap_hash || nonce)
+        // is rejected even if the signature would otherwise recover the issuer.
+        let env = odra_test::env();
+        let mut contract = CredentialRegistry::deploy(&env, NoArgs);
+        let issuer = issuer_fixture();
+        let issue_digest = make_digest(subject(), capability());
+        let issue_sig = sign_digest(&issuer.key, issue_digest);
+
+        contract.issue(
+            issuer.address,
+            subject(),
+            capability(),
+            0,
+            u64::MAX,
+            0,
+            issue_digest,
+            issue_sig,
+        );
+
+        // We sign "all zeros" with the issuer key — recovery matches, but
+        // the digest is not the canonical revoke digest → contract reverts.
+        let bogus = [0u8; 32];
+        let sig = sign_digest(&issuer.key, bogus);
+        contract.revoke(subject(), capability(), 0, bogus, sig);
     }
 
     #[test]

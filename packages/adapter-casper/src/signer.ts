@@ -6,6 +6,7 @@
  * recoverable per-call error rather than a startup failure.
  */
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import casperSdk from "casper-js-sdk";
 import type {
   RpcClient,
@@ -156,26 +157,24 @@ export async function callStoredContractViaCli(params: {
     ? normalizedHash
     : `hash-${normalizedHash}`;
 
-  // Build the command — use legacy put-deploy (TransactionV1 is_install_upgrade
-  // flag is not recognized by the testnet node for stored contract calls)
-  const cmd = [
-    "casper-client put-deploy",
-    `--node-address ${rpcUrl}`,
-    `--secret-key ${keyPath}`,
-    `--session-package-hash ${finalHash}`,
-    `--session-entry-point ${entryPoint}`,
-    `--chain-name ${chainName}`,
-    "--gas-price 1",
-    `--payment-amount ${paymentAmount}`,
-    ...sessionArgs.map((a) => `--session-arg ${JSON.stringify(a)}`),
-  ].join(" ");
+  // Build the command as an argv array — no shell, so user-controlled
+  // values inside `clValue` (e.g. token_uri, signature bytes) cannot
+  // break out of any quoting context.
+  const argv = [
+    "put-deploy",
+    "--node-address", rpcUrl,
+    "--secret-key", keyPath,
+    "--session-package-hash", finalHash,
+    "--session-entry-point", entryPoint,
+    "--chain-name", chainName,
+    "--gas-price", "1",
+    "--payment-amount", String(paymentAmount),
+    ...sessionArgs.map((a) => `--session-arg=${a}`),
+  ];
 
-  console.log(`  casper-client cmd: ${cmd}`);
-
-  const { execSync } = await import("node:child_process");
   let output: string;
   try {
-    output = execSync(cmd, { encoding: "utf-8", timeout: 30000 });
+    output = execFileSync("casper-client", argv, { encoding: "utf-8", timeout: 30_000 });
   } catch (e: any) {
     const stderr = e.stderr?.toString() ?? "";
     const stdout = e.stdout?.toString() ?? "";
@@ -388,6 +387,9 @@ export async function submitAndWait(
 /**
  * Poll for transaction confirmation using casper-client CLI.
  * Returns the block height as a string, or "0" if not found.
+ *
+ * Uses `execFileSync` so the tx hash is passed as argv, not interpolated
+ * into a shell string — eliminates any injection risk on the hash.
  */
 async function pollTransactionWithCli(
   txHash: string,
@@ -400,10 +402,10 @@ async function pollTransactionWithCli(
   for (let i = 0; i < maxAttempts; i++) {
     await sleep(5000);
     try {
-      const { execSync } = await import("node:child_process");
-      const output = execSync(
-        `casper-client get-deploy --node-address ${rpcUrl} ${txHash} 2>&1`,
-        { encoding: "utf-8", timeout: 15000 },
+      const output = execFileSync(
+        "casper-client",
+        ["get-deploy", "--node-address", rpcUrl, txHash],
+        { encoding: "utf-8", timeout: 15_000 },
       );
       const match = output.match(/"block_height":\s*(\d+)/);
       if (match) {

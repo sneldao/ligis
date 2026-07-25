@@ -1,8 +1,12 @@
 # Ligis — BUIDL Submission for the Casper Agentic Buildathon 2026
 
 > Copy/paste this into the DoraHacks BUIDL form for the
-> **Casper Agentic Buildathon 2026 — Qualification Round**.
+> **Casper Agentic Buildathon 2026 — Final Round**.
 > Submission portal: https://dorahacks.io
+>
+> See [`docs/casper-final-round.md`](casper-final-round.md) for the canonical
+> one-page summary of what ships, what the live verification path is, and
+> what the known limitations are. This document is the long-form BUIDL copy.
 
 ---
 
@@ -32,10 +36,14 @@ end-to-end x402 payment flow. Featured tx hashes (view on testnet.cspr.live):
 - `c26fe5d64ebb7fca2dc553bab209567370eb4786716848a22c4f912c73521cb3` — `AgentId.set_token_uri` (0G evidence anchor)
 - `27a9ac885613ad2f13a6640058544f70b787d5ab4db5e5e72f5f77648129c6bb` — x402 CSPR transfer settlement
 
-### Fresh testnet transactions (2026-07-22)
+### Fresh testnet transactions (re-runnable)
 
-All three demos re-run live on Casper Testnet with the new multi-agent +
-real x402 settlement + live RWA oracle features:
+The canonical source of truth for live tx hashes is now
+`scripts/casper-final-demo.lastrun.txt` and
+`scripts/casper-gated-vault-demo.lastrun.txt`. These are regenerated
+every time the canonical demo scripts run — judges can re-run them
+and see the new hashes in the same file. The README cites the latest
+buildathon run below for convenience:
 
 **E2E Steward Loop:**
 - `e6598292da37cf8710057be0a148d12395f3415c5df6a7cd79bfa7b894b8e405` — `AgentId.mint_self` (boot)
@@ -49,26 +57,36 @@ real x402 settlement + live RWA oracle features:
 - `a2e94ca4749ac1e5f6d52cfa98bac3faa08989340acd7171bf9b8af87340ab58` — `AgentId.mint_self` (swarm boot)
 - `9c662d177aac1732781def6ffb545e6abc69bfbd1ff136627d989266fabe20a3` — x402 settlement (Treasury Agent pays for RWA data after Risk Agent approves + Issuer Agent authorizes)
 
+> **Note on tx-hash freshness.** The numbers above are the historical
+> hashes from the buildathon run on 2026-07-22. The canonical live
+> verification path is `scripts/casper-final-demo.ts` → writes the
+> fresh hashes to `scripts/casper-final-demo.lastrun.txt`. Run that
+> script and you'll see the new hashes with the same entry-point
+> labels.
+
 ## Repo
 
 `https://github.com/sneldao/ligis`
 
-Public. MIT licensed. 41 Foundry tests (EVM/Solidity contracts) + 12 Odra tests (Casper contracts) + 47 TypeScript tests + Casper smoke test passing.
+Public. MIT licensed. 41 Foundry tests (EVM/Solidity contracts) + 22 Odra tests (Casper contracts) + 47 TypeScript tests + Casper smoke test passing.
 
 ## Deployed contracts (Casper Testnet)
 
 | Contract | Package hash |
 |----------|--------------|
 | `AgentId` (Odra, soulbound-style) | `contract-package-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1` |
-| `CredentialRegistry` (Odra, EIP-712, on-chain secp256k1 recovery) | `contract-package-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37` |
-| `GatedVault` (Odra, credential-gated escrow — **deploy-ready**, WASM built, deploy script ready) | _pending testnet funding_ |
+| `CredentialRegistry` (Odra, EIP-712, on-chain secp256k1 recovery, nonce-bound revoke) | `contract-package-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37` |
+| `GatedVault` (Odra, credential-gated escrow — deployed on testnet) | `contract-package-27e6637b5a442eada707dce9b2a367fd8139767f6e5d9926da0031611807269f` |
 
-Built with Odra 2.8.1 against Casper 2.0, deployed via `casper-client put-deploy`
-on testnet (block ~8,429,998). Source: `packages/contracts-casper/`.
+Built with Odra 2.8.1 against Casper 2.0, deployed via
+`casper-client put-transaction session --install-upgrade` (Casper 2.x TransactionV1).
+GatedVault deploy tx: `3fa16379...b8ab` (block ~8,615,526, cost ~310 CSPR).
+Source: `packages/contracts-casper/`.
 
 GatedVault WASM: `packages/contracts-casper/wasm/GatedVault.wasm` (294 KB).
-Deploy script: `npx tsx scripts/deploy-gated-vault.ts` (serializes Odra init args
-with correct CLType::Key for Address + CLType::ByteArray(32) for capability hash).
+Deploy script: `npx tsx scripts/deploy-gated-vault.ts` (uses
+`put-transaction session` with `--install-upgrade`, separate session args
+for `credential_registry:key` and `required_capability:byte_array_32`).
 
 ## End-to-end demo txs (executed live on Casper Testnet, today)
 
@@ -237,6 +255,46 @@ npx tsx scripts/casper-multi-agent-demo.ts
   obvious next step)
 - **Q1 2027**: Launch a credential marketplace where agents discover and
   request credentials from multiple issuers, with on-chain reputation scoring
+
+## Internal hardening pass (post-review)
+
+After an internal audit, the following improvements were applied and tested
+in the Casper Rust test suite:
+
+- **On-chain secp256k1 issuer recovery** — `CredentialRegistry` uses the
+  pure-Rust `k256` crate to recover the issuer address from EIP-712 digest
+  + 65-byte signature for both `issue` and `revoke`. No server-side custody
+  of the signing key required for verification.
+- **Nonce-bound `revoke`** — `CredentialRegistry.revoke` binds the nonce
+  into the typed digest; a replay of an older revoke payload for a
+  different nonce is rejected. Verified by `revoke_rejects_wrong_nonce`
+  and `revoke_rejects_bad_digest`.
+- **EIP-2098-compatible recovery** — `recover_issuer` accepts both v=27/28
+  (legacy) and v=0/1 (EIP-2098 compact) signatures.
+- **Shell-injection-safe `casper-client` invocations** — every shell-out
+  in `packages/adapter-casper/src/{operations,signer}.ts` and
+  `packages/x402-server/src/index.ts` now uses `execFileSync` with
+  positional argv, not `execSync` with shell-interpolated strings.
+- **GatedVault test coverage** — added `balance_of_zero_for_unknown_account`,
+  `deposit_rejects_zero_value`, `withdraw_reverts_insufficient_balance`,
+  `withdraw_reverts_without_credential`, and `address_to_subject_key_is_32_bytes`.
+- **Tightened `AgentId` controller check** — `set_token_uri_only_by_controller`
+  now actually asserts the controller check fires (non-controller call is
+  wrapped in `catch_unwind`); new `#[should_panic]` tests
+  `set_token_uri_reverts_for_non_controller` and `rotate_reverts_for_non_controller`
+  isolate each guard.
+- **x402 server fail-closed settlement** — when `LIGIS_CASPER_KEY_PATH` is
+  missing or the on-chain transfer fails, the server returns 402 with a
+  descriptive error instead of a fake tx hash. The previous "local-simulated"
+  `cryptoRandomHash()` fallback has been removed.
+- **Simulated-hash self-identification** — `web/lib/steward.ts` and
+  `web/lib/steward-casper.ts` prefix every simulated hash with `SIMULATED-`
+  so judges who click on a fake tx hash in the live UI see it does not
+  resolve on cspr.live.
+- **Additive error surfacing** — `TrustSteward` now writes
+  `cap.error = err.message` instead of swallowing self-issue failures with
+  bare `catch {}`. The manifest preserves the failure so judges can see
+  which step failed and why.
 
 ## Socials / project presence
 

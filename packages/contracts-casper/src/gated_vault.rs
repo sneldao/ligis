@@ -114,11 +114,26 @@ impl GatedVault {
 
 /// Convert an Odra Address (Casper account) to a 32-byte subject key
 /// for the CredentialRegistry's `is_capable` check.
+///
+/// Odra's `Address` enum serializes to:
+///   - 32 bytes for an `AccountHash` (legacy / inline form)
+///   - 33 bytes for a variant-tagged form (1 byte variant tag + 32 bytes hash)
+///   - 33 bytes for a `ContractHash` (1 byte variant tag + 32 bytes hash)
+///
+/// The CredentialRegistry uses a 32-byte EIP-712-style subject. To match
+/// the off-chain issuer (which strips the `account-hash-` prefix and uses
+/// the raw 32 bytes), we bind to the **trailing 32 bytes** of the
+/// serialized Address. This sidesteps the variant tag and produces the
+/// same 32 bytes the issuer signed for.
 fn address_to_subject_key(addr: &Address) -> [u8; 32] {
     let bytes = addr.to_bytes().unwrap_or_default();
     let mut key = [0u8; 32];
-    let len = bytes.len().min(32);
-    key[..len].copy_from_slice(&bytes[..len]);
+    if bytes.len() >= 32 {
+        let start = bytes.len() - 32;
+        key.copy_from_slice(&bytes[start..]);
+    } else {
+        key[..bytes.len()].copy_from_slice(&bytes);
+    }
     key
 }
 
@@ -143,5 +158,107 @@ mod tests {
         assert_eq!(vault.total_deposits(), U512::zero());
         assert_eq!(vault.required_capability(), [0u8; 32]);
         assert_eq!(vault.credential_registry(), dummy_addr);
+    }
+
+    #[test]
+    fn balance_of_zero_for_unknown_account() {
+        let env = odra_test::env();
+        let dummy_addr = env.get_account(0);
+        let vault = GatedVault::deploy(
+            &env,
+            GatedVaultInitArgs {
+                credential_registry: dummy_addr,
+                required_capability: [0u8; 32],
+            },
+        );
+
+        let alice = env.get_account(1);
+        assert_eq!(vault.balance_of(alice), U512::zero());
+        assert_eq!(vault.total_deposits(), U512::zero());
+    }
+
+    #[test]
+    fn address_to_subject_key_is_32_bytes() {
+        // The bounded subject key must always be exactly 32 bytes for the
+        // CredentialRegistry dictionary lookup. This guards against a
+        // shape change in Odra's Address serialization.
+        let env = odra_test::env();
+        let account = env.get_account(0);
+        let key = address_to_subject_key(&account);
+        assert_eq!(key.len(), 32);
+    }
+
+    #[test]
+    #[should_panic]
+    fn deposit_rejects_zero_value() {
+        let env = odra_test::env();
+        let dummy_addr = env.get_account(0);
+        let mut vault = GatedVault::deploy(
+            &env,
+            GatedVaultInitArgs {
+                credential_registry: dummy_addr,
+                required_capability: [0u8; 32],
+            },
+        );
+
+        let alice = env.get_account(1);
+        env.set_caller(alice);
+        // no attached value — must revert
+        vault.deposit();
+    }
+
+    #[test]
+    #[should_panic]
+    fn withdraw_reverts_insufficient_balance() {
+        let env = odra_test::env();
+        let dummy_addr = env.get_account(0);
+        let mut vault = GatedVault::deploy(
+            &env,
+            GatedVaultInitArgs {
+                credential_registry: dummy_addr,
+                required_capability: [0u8; 32],
+            },
+        );
+
+        let alice = env.get_account(1);
+        env.set_caller(alice);
+        // Withdrawing without a prior deposit must revert.
+        vault.withdraw(U512::from(1u64));
+    }
+
+    #[test]
+    #[should_panic]
+    fn withdraw_reverts_without_credential() {
+        // When the vault is pointed at a started-but-empty CredentialRegistry
+        // the cross-contract `is_capable` call returns `false` and the
+        // attempt to withdraw must revert with the credential error.
+        //
+        // We initialize a minimal CredentialRegistry across deploys so the
+        // cross-contract call resolves. The test for "withdraw succeeds"
+        // requires issuing a credential on-chain before withdrawal; that
+        // path is exercised by the end-to-end demo script on Casper
+        // Testnet (`scripts/casper-gated-vault-demo.ts`) — see docs/casper-buidl.md.
+        let env = odra_test::env();
+        let registry_owner = env.get_account(0);
+
+        use crate::credential_registry::CredentialRegistry;
+        // CredentialRegistry::init takes no arguments, so Odra's `NoArgs` is
+        // the implicit init type. Deploy from the registry owner.
+        env.set_caller(registry_owner);
+        let registry = CredentialRegistry::deploy(&env, odra::host::NoArgs);
+        let registry_addr = registry.address();
+
+        env.set_caller(registry_owner);
+        let mut vault = GatedVault::deploy(
+            &env,
+            GatedVaultInitArgs {
+                credential_registry: registry_addr,
+                required_capability: [0xab; 32],
+            },
+        );
+
+        let alice = env.get_account(1);
+        env.set_caller(alice);
+        vault.withdraw(U512::from(1u64));
     }
 }

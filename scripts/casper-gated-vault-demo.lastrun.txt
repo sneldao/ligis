@@ -1,0 +1,5 @@
+# Casper GatedVault demo 2026-07-25T02:12:20.768Z
+# ok: true
+# Capability required: rwa.accredited (0x3896aa823fd86757d5571381d3b312d999ef106a612f9407f5c3a4b235f35e3e)
+
+ISSUE:rwa.accredited	79538c0106b66b1c1f59ab2a8162d8ca4ad80cb72bf8f35d686eaf7606fd730d	https://testnet.cspr.live/transaction/79538c0106b66b1c1f59ab2a8162d8ca4ad80cb72bf8f35d686eaf7606fd730d

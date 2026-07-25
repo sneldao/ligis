@@ -1,0 +1,7 @@
+# Casper final demo 2026-07-25T02:13:05.078Z
+# ok: true
+# Capability required: rwa.accredited (0x3896aa823fd86757d5571381d3b312d999ef106a612f9407f5c3a4b235f35e3e)
+
+BOOT	4cbeacaa16105a21e47ed1336e435ed8f9ed1f87eaf690f8482ac98617423cf9	https://testnet.cspr.live/transaction/4cbeacaa16105a21e47ed1336e435ed8f9ed1f87eaf690f8482ac98617423cf9
+ACT:rwa.accredited	e01097c17e02e1e12c0298ef2706974a62b57996df52233e810f1d6e6e5d32dd	https://testnet.cspr.live/transaction/e01097c17e02e1e12c0298ef2706974a62b57996df52233e810f1d6e6e5d32dd
+RECORD:set_token_uri	e01097c17e02e1e12c0298ef2706974a62b57996df52233e810f1d6e6e5d32dd	https://testnet.cspr.live/transaction/e01097c17e02e1e12c0298ef2706974a62b57996df52233e810f1d6e6e5d32dd

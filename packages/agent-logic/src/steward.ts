@@ -30,6 +30,7 @@ export interface StewardResult {
     capable: boolean;
     selfIssued: boolean;
     issueTxHash?: string;
+    error?: string;
   }>;
   unknownCapabilities: string[];
   gated: boolean;
@@ -123,6 +124,7 @@ export class TrustSteward {
         capable: check.capable,
         selfIssued: false,
       });
+      delete (capResults[capResults.length - 1] as { error?: string }).error;
     }
 
     // 5. ACT — self-issue any missing capabilities

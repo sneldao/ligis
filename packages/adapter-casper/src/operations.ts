@@ -126,26 +126,31 @@ export async function getAgentId(
     const dictItemKey = Buffer.from(controllerBytes).toString("hex");
 
     const rpcUrl = ctx.config.network.rpcUrl;
-    const { execSync } = await import("node:child_process");
+    const { execFileSync } = await import("node:child_process");
     const contractHash = `hash-${stripPrefix(packageHash)}`;
 
     // Get state root hash
-    const stateRootOutput = execSync(
-      `casper-client get-state-root-hash --node-address ${rpcUrl} 2>&1`,
-      { encoding: "utf-8", timeout: 15000 },
+    const stateRootOutput = execFileSync(
+      "casper-client",
+      ["get-state-root-hash", "--node-address", rpcUrl],
+      { encoding: "utf-8", timeout: 15_000 },
     );
     const srMatch = stateRootOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/);
     if (!srMatch) return null;
     const stateRoot = srMatch[1];
 
-    // Query the dictionary
-    const output = execSync(
-      `casper-client get-dictionary-item --node-address ${rpcUrl} ` +
-        `--state-root-hash ${stateRoot} ` +
-        `--contract-hash ${contractHash} ` +
-        `--dictionary-name "wallet_of_agent" ` +
-        `--dictionary-item-key "${dictItemKey}" 2>&1`,
-      { encoding: "utf-8", timeout: 15000 },
+    // Query the dictionary — argv array, no shell interpolation
+    const output = execFileSync(
+      "casper-client",
+      [
+        "get-dictionary-item",
+        "--node-address", rpcUrl,
+        "--state-root-hash", stateRoot,
+        "--contract-hash", contractHash,
+        "--dictionary-name", "wallet_of_agent",
+        "--dictionary-item-key", dictItemKey,
+      ],
+      { encoding: "utf-8", timeout: 15_000 },
     );
 
     const parsedMatch = output.match(/"parsed":\s*"?(\d+)"?/);
@@ -155,8 +160,14 @@ export async function getAgentId(
       return tokenId;
     }
     return null;
-  } catch {
-    // Dictionary query failed — contract may not have the mapping yet
+  } catch (err) {
+    // Dictionary query failed — contract may not have the mapping yet.
+    // Surface the cause once for debugging, but always return null so
+    // the caller can treat "no record on chain" as a steady-state result.
+    if (process.env.LIGIS_CASPER_DEBUG) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ligis-casper] getAgentId lookup failed: ${msg}`);
+    }
     return null;
   }
 }
@@ -279,13 +290,14 @@ export async function verifyCapability(
   // - The dictionary URef is the contract's `state` URef
   try {
     const rpcUrl = ctx.config.network.rpcUrl;
-    const { execSync } = await import("node:child_process");
+    const { execFileSync } = await import("node:child_process");
     const pkgHash = `hash-${stripPrefix(packageHash)}`;
 
     // 1. Query the contract package to get the latest contract hash
-    const pkgOutput = execSync(
-      `casper-client query-global-state --node-address ${rpcUrl} --key ${pkgHash} 2>&1`,
-      { encoding: "utf-8", timeout: 15000 },
+    const pkgOutput = execFileSync(
+      "casper-client",
+      ["query-global-state", "--node-address", rpcUrl, "--key", pkgHash],
+      { encoding: "utf-8", timeout: 15_000 },
     );
     const pkgData =
       JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
@@ -296,10 +308,10 @@ export async function verifyCapability(
     const contractHash = `hash-${contractHashRaw.replace(/^contract-/, "")}`;
 
     // 2. Get the contract's named keys to find the `state` URef
-    const contractOutput = execSync(
-      `casper-client query-global-state --node-address ${rpcUrl} ` +
-        `--key ${contractHash} 2>&1`,
-      { encoding: "utf-8", timeout: 15000 },
+    const contractOutput = execFileSync(
+      "casper-client",
+      ["query-global-state", "--node-address", rpcUrl, "--key", contractHash],
+      { encoding: "utf-8", timeout: 15_000 },
     );
     const contractData =
       JSON.parse(contractOutput)?.result?.stored_value?.Contract;
@@ -322,21 +334,26 @@ export async function verifyCapability(
     );
 
     // 3. Get state root hash
-    const stateRootOutput = execSync(
-      `casper-client get-state-root-hash --node-address ${rpcUrl} 2>&1`,
-      { encoding: "utf-8", timeout: 15000 },
+    const stateRootOutput = execFileSync(
+      "casper-client",
+      ["get-state-root-hash", "--node-address", rpcUrl],
+      { encoding: "utf-8", timeout: 15_000 },
     );
     const srMatch = stateRootOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/);
     if (!srMatch) throw new Error("No state root hash");
     const stateRoot = srMatch[1];
 
-    // 4. Query the dictionary item
-    const output = execSync(
-      `casper-client get-dictionary-item --node-address ${rpcUrl} ` +
-        `--state-root-hash ${stateRoot} ` +
-        `--seed-uref "${stateUref}" ` +
-        `--dictionary-item-key "${dictItemKey}" 2>&1`,
-      { encoding: "utf-8", timeout: 15000 },
+    // 4. Query the dictionary item — argv array, no shell interpolation
+    const output = execFileSync(
+      "casper-client",
+      [
+        "get-dictionary-item",
+        "--node-address", rpcUrl,
+        "--state-root-hash", stateRoot,
+        "--seed-uref", stateUref,
+        "--dictionary-item-key", dictItemKey,
+      ],
+      { encoding: "utf-8", timeout: 15_000 },
     );
 
     // Parse the CLValue — Odra stores CredentialView as List<U8> (raw bytes)
@@ -356,8 +373,12 @@ export async function verifyCapability(
       capabilityHash: capHash,
       latest: view,
     };
-  } catch {
-    // Dictionary query failed — credential not found or query not supported
+  } catch (err) {
+    // Dictionary query failed — credential not found or query not supported.
+    if (process.env.LIGIS_CASPER_DEBUG) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ligis-casper] verifyCapability lookup failed: ${msg}`);
+    }
     return {
       capable: false,
       capabilityHash: capHash,
@@ -453,13 +474,14 @@ export async function signCredential(
     const packageHash = ctx.config.deployment.credentialRegistry;
     if (packageHash) {
       const rpcUrl = ctx.config.network.rpcUrl;
-      const { execSync } = await import("node:child_process");
+      const { execFileSync } = await import("node:child_process");
       const pkgHash = `hash-${stripPrefix(packageHash)}`;
 
       // Query the contract package to get the latest contract hash
-      const pkgOutput = execSync(
-        `casper-client query-global-state --node-address ${rpcUrl} --key ${pkgHash} 2>&1`,
-        { encoding: "utf-8", timeout: 15000 },
+      const pkgOutput = execFileSync(
+        "casper-client",
+        ["query-global-state", "--node-address", rpcUrl, "--key", pkgHash],
+        { encoding: "utf-8", timeout: 15_000 },
       );
       const pkgData =
         JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
@@ -473,9 +495,10 @@ export async function signCredential(
       const contractHash = `hash-${contractHashRaw.replace(/^contract-/, "")}`;
 
       // Get the contract's state URef
-      const contractOutput = execSync(
-        `casper-client query-global-state --node-address ${rpcUrl} --key ${contractHash} 2>&1`,
-        { encoding: "utf-8", timeout: 15000 },
+      const contractOutput = execFileSync(
+        "casper-client",
+        ["query-global-state", "--node-address", rpcUrl, "--key", contractHash],
+        { encoding: "utf-8", timeout: 15_000 },
       );
       const contractData =
         JSON.parse(contractOutput)?.result?.stored_value?.Contract;
@@ -493,19 +516,24 @@ export async function signCredential(
         ).toString("hex");
 
         // Get state root hash
-        const srOutput = execSync(
-          `casper-client get-state-root-hash --node-address ${rpcUrl} 2>&1`,
-          { encoding: "utf-8", timeout: 15000 },
+        const srOutput = execFileSync(
+          "casper-client",
+          ["get-state-root-hash", "--node-address", rpcUrl],
+          { encoding: "utf-8", timeout: 15_000 },
         );
         const srMatch = srOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/);
         if (srMatch) {
           const stateRoot = srMatch[1];
-          const dictOutput = execSync(
-            `casper-client get-dictionary-item --node-address ${rpcUrl} ` +
-              `--state-root-hash ${stateRoot} ` +
-              `--seed-uref "${stateUref}" ` +
-              `--dictionary-item-key "${dictItemKey}" 2>&1`,
-            { encoding: "utf-8", timeout: 15000 },
+          const dictOutput = execFileSync(
+            "casper-client",
+            [
+              "get-dictionary-item",
+              "--node-address", rpcUrl,
+              "--state-root-hash", stateRoot,
+              "--seed-uref", stateUref,
+              "--dictionary-item-key", dictItemKey,
+            ],
+            { encoding: "utf-8", timeout: 15_000 },
           );
           const clValue = JSON.parse(dictOutput)?.result?.stored_value?.CLValue;
           if (clValue?.bytes) {
@@ -516,8 +544,12 @@ export async function signCredential(
         }
       }
     }
-  } catch {
+  } catch (err) {
     // Contract not deployed or query failed — default nonce "0" is fine.
+    if (process.env.LIGIS_CASPER_DEBUG) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ligis-casper] nonce lookup failed: ${msg}`);
+    }
   }
 
   // Subject must be 32 bytes for EIP-712 bytes32. EVM addresses (20 bytes)

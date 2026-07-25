@@ -26,6 +26,7 @@
     "deploy:atlantic": "bash scripts/deploy.sh atlantic",
     "verify:atlantic": "bash scripts/verify.sh atlantic",
     "setup:casper": "tsx scripts/setup-casper-wallets.ts",
+    "derive-casper-wallets": "tsx scripts/derive-casper-wallet.ts",
     "smoke:casper": "tsx scripts/casper-smoke-test.ts",
     "demo:croo": "tsx scripts/croo-e2e-demo.ts",
     "demo:casper": "tsx scripts/casper-e2e-demo.ts",
@@ -47,6 +48,9 @@
     "web3"
   ],
   "devDependencies": {
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.7.0",
+    "casper-js-sdk": "^5.0.12",
     "playwright": "^1.45.0",
     "prettier": "^3.3.0",
     "tsx": "^4.19.0"

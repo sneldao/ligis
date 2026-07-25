@@ -16,6 +16,15 @@ importers:
 
   .:
     devDependencies:
+      '@noble/curves':
+        specifier: ^1.9.0
+        version: 1.9.7
+      '@noble/hashes':
+        specifier: ^1.7.0
+        version: 1.8.0
+      casper-js-sdk:
+        specifier: ^5.0.12
+        version: 5.0.12
       playwright:
         specifier: ^1.45.0
         version: 1.61.1
