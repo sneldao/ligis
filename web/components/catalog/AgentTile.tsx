@@ -48,7 +48,7 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
 
     const liftIn = (1 - reveal) * -1.6;
     const bob =
-      Math.sin(state.clock.elapsedTime * 0.55 + layout.bobPhase) * layout.bobAmp;
+      Math.sin(state.timer.elapsedTime * 0.55 + layout.bobPhase) * layout.bobAmp;
 
     easing.damp(group.current.position, "x", layout.pos[0], 0.28, delta);
     easing.damp(group.current.position, "y", layout.pos[1] + bob + liftIn, 0.22, delta);

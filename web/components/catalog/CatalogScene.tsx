@@ -9,11 +9,17 @@ import { CATALOG_CONFIG } from "./catalogState";
 export function CatalogScene() {
   return (
     <Canvas
-      shadows
+      shadows="basic"
       camera={{ position: [0, 0, CATALOG_CONFIG.zoomOut], fov: 38 }}
       dpr={[1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       style={{ background: "#F4F1EC", touchAction: "none" }}
+      onCreated={({ gl }) => {
+        gl.domElement.addEventListener("webglcontextlost", (e) => {
+          e.preventDefault();
+          console.warn("[CatalogScene] WebGL context lost, pausing scene");
+        });
+      }}
     >
       <fog attach="fog" args={["#F4F1EC", CATALOG_CONFIG.fogNear, CATALOG_CONFIG.fogFar]} />
 
