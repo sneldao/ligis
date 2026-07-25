@@ -18,7 +18,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useWallet, formatMotes } from "@/lib/casper-browser/store";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { CASPER_TESTNET } from "@/lib/network";
@@ -79,12 +79,16 @@ async function switchToPharos(provider: Eip1193): Promise<void> {
 
 export function UnifiedWalletChip() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const reducedMotion = useReducedMotion();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null);
 
   const isCasper = (searchParams.get("chain") ?? "pharos-atlantic") === CASPER_TESTNET.id;
+  const searchKey = searchParams.toString();
   const casperWallet = useWallet();
 
   // Pharos EVM state
@@ -159,8 +163,14 @@ export function UnifiedWalletChip() {
   useEffect(() => {
     if (!open) return;
     const dismiss = (e: Event) => {
-      const t = e.target as HTMLElement | null;
-      if (!t || (!t.closest?.("[data-unified-wallet-root]") && !t.closest?.("[data-unified-wallet-panel]"))) setOpen(false);
+      const target = e.target;
+      if (
+        target instanceof Node &&
+        (rootRef.current?.contains(target) || panelRef.current?.contains(target))
+      ) {
+        return;
+      }
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -173,10 +183,11 @@ export function UnifiedWalletChip() {
     };
   }, [open]);
 
-  // Close on route change
+  // Close only after an actual navigation, not after a re-render that returns
+  // a new ReadonlyURLSearchParams object.
   useEffect(() => {
     setOpen(false);
-  }, [searchParams]);
+  }, [pathname, searchKey]);
 
   // Pharos connect
   const pharosConnect = async () => {
@@ -265,7 +276,7 @@ export function UnifiedWalletChip() {
   }
 
   return (
-    <div data-unified-wallet-root className="relative flex items-center">
+    <div ref={rootRef} data-unified-wallet-root className="relative flex items-center">
       <button
         ref={buttonRef}
         type="button"
@@ -288,6 +299,7 @@ export function UnifiedWalletChip() {
         ? createPortal(
             <AnimatePresence>
               <motion.div
+                ref={panelRef}
                 data-unified-wallet-panel
                 key="wallet-panel"
                 initial={reducedMotion ? false : { opacity: 0, y: -4 }}
