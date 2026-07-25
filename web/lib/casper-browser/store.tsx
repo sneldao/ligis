@@ -39,8 +39,8 @@ import { getBalanceMotes } from "./rpc";
 const STORAGE_KEY = "ligis:casper:session-v1";
 
 /** THe wallet kind — `sandbox` for ephemeral in-browser generation,
- *  `paste` for an imported hex key. */
-export type WalletKind = "sandbox" | "paste";
+ *  `paste` for an imported hex key, `extension` for Casper Wallet browser extension. */
+export type WalletKind = "sandbox" | "paste" | "extension";
 
 export interface WalletState {
   kind: WalletKind | null;
@@ -128,6 +128,7 @@ function rehydrate(): { kind: WalletKind; pair: CasperKeyPair } | null {
 interface WalletApi extends WalletState {
   connectSandbox: () => void;
   connectPaste: (hex: string) => void;
+  connectExtension: () => Promise<void>;
   disconnect: () => void;
   refreshBalance: () => Promise<void>;
 }
@@ -202,6 +203,41 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const connectExtension = useCallback(async () => {
+    if (typeof window === "undefined" || !(window as any).CasperWalletProvider) {
+      setState({ ...stateInternal, error: "Casper Wallet extension not detected. Install from casperwallet.io" });
+      return;
+    }
+    try {
+      const provider = (window as any).CasperWalletProvider();
+      const connected = await provider.requestConnection();
+      if (!connected) {
+        setState({ ...stateInternal, error: "Connection rejected by user" });
+        return;
+      }
+      const publicKeyHex = await provider.getActivePublicKey();
+      // Extension doesn't expose private key — create a placeholder pair
+      // with publicKey only for reads/balance. Signing requires sandbox.
+      const pair = {
+        publicKeyHex,
+        privateKeyHex: "",
+        accountHash: "",
+      } as CasperKeyPair;
+      const next: WalletState = {
+        kind: "extension",
+        pair,
+        balanceMotes: null,
+        balanceStatus: "idle",
+        error: null,
+        hydrated: true,
+      };
+      // Don't persist extension connections — they're managed by the extension
+      setState(next);
+    } catch (err) {
+      setState({ ...stateInternal, error: err instanceof Error ? err.message : String(err) });
+    }
+  }, []);
+
   const disconnect = useCallback(() => {
     persist(null, null);
     setState({ ...INITIAL, hydrated: true });
@@ -229,8 +265,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const api = useMemo<WalletApi>(
-    () => ({ ...state, connectSandbox, connectPaste, disconnect, refreshBalance }),
-    [state, connectSandbox, connectPaste, disconnect, refreshBalance],
+    () => ({ ...state, connectSandbox, connectPaste, connectExtension, disconnect, refreshBalance }),
+    [state, connectSandbox, connectPaste, connectExtension, disconnect, refreshBalance],
   );
 
   return <WalletCtx.Provider value={api}>{children}</WalletCtx.Provider>;
@@ -249,6 +285,9 @@ export function useWallet(): WalletApi {
         throw new Error("WalletProvider missing");
       },
       connectPaste: () => {
+        throw new Error("WalletProvider missing");
+      },
+      connectExtension: async () => {
         throw new Error("WalletProvider missing");
       },
       disconnect: () => {

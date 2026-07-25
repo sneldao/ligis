@@ -120,6 +120,27 @@ function ConnectPanel() {
         </span>
       </button>
 
+      {/* Casper Wallet extension — for users who have the browser extension installed.
+          Extension connections are read-only (no private key access), so signing
+          operations still require sandbox mode. */}
+      <button
+        type="button"
+        onClick={() => {
+          wallet.connectExtension();
+          setPoll(true);
+        }}
+        className="w-full border border-rule bg-paper px-4 py-3 text-left transition-colors hover:bg-paper-deep"
+        style={{ borderRadius: 0 }}
+      >
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink">
+          ○ Connect Casper Wallet extension
+        </span>
+        <span className="block pt-1 font-serif text-xs leading-relaxed text-ink-soft">
+          Use your Casper Wallet browser extension for reads and balance checks.
+          Signing operations require sandbox mode.
+        </span>
+      </button>
+
       {/* Paste a hex key — collapsed disclosure. The prose weight is gone
           unless a developer explicitly opens it. */}
       <details className="border border-rule">
@@ -241,7 +262,9 @@ function ConnectedPanel({
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft">
             {wallet.kind === "sandbox"
               ? "ephemeral session key"
-              : "imported · 64-hex secp256k1"}
+              : wallet.kind === "paste"
+              ? "imported · 64-hex secp256k1"
+              : "Casper Wallet extension · read-only"}
           </p>
         </div>
       </details>
