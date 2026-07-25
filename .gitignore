@@ -83,6 +83,17 @@ web/package-lock.json
 /videos/*/node_modules/
 /videos/*/package-lock.json
 
+# all rendered video/audio output — never commit binaries
+*.mp4
+*.webm
+*.mov
+*.avi
+*.mkv
+*.mp3
+*.wav
+*.ogg
+*.flac
+
 # accidental build output of an earlier tsc run — not the real package
 # (real one is packages/adapter-casper/); keep ignored unless user confirms
 /CredentialRegistry/

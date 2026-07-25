@@ -111,12 +111,12 @@
       id="root"
       data-composition-id="ligis-buildathon-2026"
       data-start="0"
-      data-duration="56"
+      data-duration="65"
       data-width="1920"
       data-height="1080"
     >
       <!-- AUDIO -->
-      <audio id="voiceover" src="audio/mixed.mp3" preload="auto" data-start="0" data-duration="56"></audio>
+      <audio id="voiceover" src="audio/mixed.mp3" preload="auto" data-start="0" data-duration="65"></audio>
 
       <!-- SCENE 1 — HOOK (0s..5s) -->
       <div
@@ -299,17 +299,56 @@
         </div>
       </div>
 
-      <!-- SCENE 8 — x402 PAYOFF (44s..52s) -->
+      <!-- SCENE 8 — GATEDVAULT (44s..52s) -->
       <div
-        id="s8-x402"
+        id="s8-vault"
         class="scene dark clip"
         data-start="44"
         data-duration="8"
         data-track-index="0"
       >
+        <div class="content">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="eyebrow kicker-spike">04 · GATED VAULT</div>
+            <div class="chain-pill casper" style="background: var(--navy-soft);"><span class="dot"></span>casper-testnet</div>
+          </div>
+          <div class="display s8-vault-line" style="font-size: 52px; color: #ECE7DF; margin-top: 20px; max-width: 1300px;">
+            GatedVault holds CSPR escrow — only agents with the right credential can withdraw.
+          </div>
+          <div style="margin-top: 32px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; flex: 1; min-height: 0;">
+            <div class="frame s8-vault-img" style="min-height: 0;">
+              <img src="assets/images/12-gatedvault-deploy.png" alt="cspr.live GatedVault deploy tx" />
+              <div class="caption">cspr.live · GatedVault deploy (block 8615526)</div>
+            </div>
+            <div class="terminal s8-vault-code" style="min-height: 0; font-size: 14px;">
+<span class="dim">// gated_vault.rs</span>
+<span class="cyan">pub fn</span> <span class="bold">withdraw</span>(&mut self, amount: U512) {
+  <span class="cyan">let</span> registry = self.credential_registry.get();
+  <span class="cyan">let</span> cap = self.required_capability.get();
+
+  <span class="cyan">let</span> capable: bool = self.env()
+    .<span class="bold">call_contract</span>(registry, CallDef::new(
+      <span class="yellow">"is_capable"</span>, false, args));
+
+  <span class="cyan">assert!</span>(capable, <span class="red">"not authorized"</span>);
+  self.env().transfer_tokens(&caller, &amount);
+}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 9 — x402 PAYOFF (52s..60s) -->
+      <div
+        id="s9-x402"
+        class="scene dark clip"
+        data-start="52"
+        data-duration="8"
+        data-track-index="0"
+      >
         <div class="content" style="justify-content: center;">
-          <div class="eyebrow kicker-spike" style="margin-bottom: 24px;">04 · PAYOFF</div>
-          <div class="display s8-line" style="font-size: 56px; color: #ECE7DF; max-width: 1400px; margin-bottom: 48px;">
+          <div class="eyebrow kicker-spike" style="margin-bottom: 24px;">05 · PAYOFF</div>
+          <div class="display s9-line" style="font-size: 56px; color: #ECE7DF; max-width: 1400px; margin-bottom: 48px;">
             That credential unlocks a paid x402 endpoint — credential verified, payment settled on Casper.
           </div>
           <div style="display: flex; gap: 24px; align-items: center;">
@@ -322,18 +361,18 @@
         </div>
       </div>
 
-      <!-- SCENE 9 — CLOSE (52s..56s) -->
+      <!-- SCENE 10 — CLOSE (60s..65s) -->
       <div
-        id="s9-close"
+        id="s10-close"
         class="scene clip"
-        data-start="52"
-        data-duration="4"
+        data-start="60"
+        data-duration="5"
         data-track-index="0"
         style="background: var(--paper);"
       >
         <div class="content" style="justify-content: center;">
-          <div class="display s9-line1" style="font-size: 120px; color: var(--ink);">Ligis</div>
-          <div class="display s9-line2" style="font-size: 48px; color: var(--terra); margin-top: 16px; max-width: 1200px;">
+          <div class="display s10-line1" style="font-size: 120px; color: var(--ink);">Ligis</div>
+          <div class="display s10-line2" style="font-size: 48px; color: var(--terra); margin-top: 16px; max-width: 1200px;">
             Portable trust for the agent economy.
           </div>
           <div class="mono ink-quiet" style="margin-top: 48px; font-size: 16px;">
@@ -381,14 +420,19 @@
       tl.from("#s7-loop .s7-img2", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 36.2);
       tl.from("#s7-loop .s7-img3", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 36.5);
 
-      // SCENE 8 — x402
-      tl.from("#s8-x402 .s8-line", { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 44.2);
-      tl.from("#s8-x402 .pill", { y: 20, opacity: 0, duration: 0.5, stagger: 0.15, ease: "power3.out" }, 45.0);
+      // SCENE 8 — GatedVault
+      tl.from("#s8-vault .s8-vault-line", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" }, 44.2);
+      tl.from("#s8-vault .s8-vault-img", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 44.9);
+      tl.from("#s8-vault .s8-vault-code", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 45.2);
 
-      // SCENE 9 — Close
-      tl.from("#s9-close .s9-line1", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 52.2);
-      tl.from("#s9-close .s9-line2", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 52.7);
-      tl.from("#s9-close .mono", { opacity: 0, duration: 0.5, ease: "power3.out" }, 53.3);
+      // SCENE 9 — x402
+      tl.from("#s9-x402 .s9-line", { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 52.2);
+      tl.from("#s9-x402 .pill", { y: 20, opacity: 0, duration: 0.5, stagger: 0.15, ease: "power3.out" }, 53.0);
+
+      // SCENE 10 — Close
+      tl.from("#s10-close .s10-line1", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 60.2);
+      tl.from("#s10-close .s10-line2", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 60.7);
+      tl.from("#s10-close .mono", { opacity: 0, duration: 0.5, ease: "power3.out" }, 61.3);
 
       window.__timelines["ligis-buildathon-2026"] = tl;
     </script>

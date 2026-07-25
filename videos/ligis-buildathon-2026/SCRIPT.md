@@ -55,20 +55,27 @@
 
     The Steward runs the full autonomous loop: boot, reason, gate, act, record — all on Casper.
 
-## Line 8 — x402 Payoff (Frame 8)
+## Line 8 — GatedVault (Frame 8)
 
 **Time:** 41.0 – 49.0s
+**Delivery:** Build excitement; introduce the DeFi primitive.
+
+    Now the credential gates a DeFi primitive. GatedVault holds CSPR escrow — only agents with the right credential can withdraw.
+
+## Line 9 — x402 Payoff (Frame 9)
+
+**Time:** 49.0 – 57.0s
 **Delivery:** Build excitement; this is the payoff.
 
     That credential unlocks a paid x402 endpoint — credential verified, payment settled on Casper.
 
-## Line 9 — Close (Frame 9)
+## Line 10 — Close (Frame 10)
 
-**Time:** 49.0 – 55.0s
+**Time:** 57.0 – 63.0s
 **Delivery:** Confident close, slight slowdown.
 
     Ligis is live on Casper Testnet. Portable trust for the agent economy.
 
 ---
 
-Total spoken copy: ~55s. Buffer + BGM intro/outro brings the video to 60s.
+Total spoken copy: ~63s. Buffer + BGM intro/outro brings the video to 65s.

@@ -11,7 +11,7 @@
 
 | Hackathon                          | Track                                | Demo                                                                                                                               | Submission doc                                                           |
 | ---------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:35 Casper walkthrough](https://github.com/sneldao/ligis/releases/download/buildathon-2026/ligis-demo.mp4)                       | [`docs/casper-buidl.md`](docs/casper-buidl.md)                           |
+| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:05 Casper walkthrough](https://youtu.be/eoOQmAx7U7s)                                                                          | [`docs/casper-buidl.md`](docs/casper-buidl.md)                           |
 | **CROO Agent Hackathon 2026**      | Data & Verification + Open A2A       | [CROO demo](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4) _(upload before deadline)_ | [`docs/croo-hackathon-submission.md`](docs/croo-hackathon-submission.md) |
 | **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification   | _(in progress)_                                                                                                                    | [`docs/okx-ai.md`](docs/okx-ai.md)                                       |
 | **0G Bridge by AKINDO 2026**       | Trust & Safety / AI Agents           | _(in progress)_                                                                                                                    | [`docs/strategy.md`](docs/strategy.md)                                   |
@@ -22,7 +22,7 @@
 
 ### Casper Agentic Buildathon (on-chain identity + x402)
 
-[Watch the 1:35 walkthrough (MP4, 5.6 MB)](https://github.com/sneldao/ligis/releases/download/buildathon-2026/ligis-demo.mp4)
+[Watch the 1:05 walkthrough (YouTube)](https://youtu.be/eoOQmAx7U7s)
 — also viewable on the [release page](https://github.com/sneldao/ligis/releases/tag/buildathon-2026).
 
 ### CROO Agent Hackathon (CAP commerce + verification)
@@ -33,7 +33,7 @@
 The Casper video is composed in [`videos/ligis-buildathon-2026/`](videos/ligis-buildathon-2026/) using
 [HyperFrames](https://github.com/heygen-com/hyperframes) with live terminal
 captures of `casper-e2e-demo.ts` and `casper-x402-demo.ts`, real cspr.live
-transaction screenshots, and a 9-segment TTS voiceover.
+transaction screenshots, and a 10-segment TTS voiceover.
 
 A chain-agnostic agent identity runtime: one `ChainAdapter` interface, two
 implementations (EVM/Pharos live, Casper/Odra live), and a Trust
@@ -315,5 +315,3 @@ MIT — see [LICENSE](./LICENSE).
 
 - **Web app:** [ligis.vercel.app](https://ligis.vercel.app) (live, chain-aware)
 - **GitHub:** [github.com/sneldao/ligis](https://github.com/sneldao/ligis)
-- **Twitter / X:** [@ligis_protocol](https://twitter.com/ligis_protocol)
-- **Discord:** [discord.gg/ligis](https://discord.gg/ligis)

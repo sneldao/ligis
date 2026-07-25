@@ -16,8 +16,9 @@ const LINES = [
   { id: "s5", text: "On Casper Testnet, an agent mints its own identity." },
   { id: "s6", text: "The Trust Steward signs an EIP-712 credential, and the Casper contract recovers the issuer on-chain using secp256k1." },
   { id: "s7", text: "The Steward runs the full autonomous loop: boot, reason, gate, act, record — all on Casper." },
-  { id: "s8", text: "That credential unlocks a paid x402 endpoint — credential verified, payment settled on Casper." },
-  { id: "s9", text: "Ligis is live on Casper Testnet. Portable trust for the agent economy." },
+  { id: "s8", text: "Now the credential gates a DeFi primitive. GatedVault holds CSPR escrow — only agents with the right credential can withdraw." },
+  { id: "s9", text: "That credential unlocks a paid x402 endpoint — credential verified, payment settled on Casper." },
+  { id: "s10", text: "Ligis is live on Casper Testnet. Portable trust for the agent economy." },
 ];
 
 const OUT_DIR = "/Users/udingethe/Dev/ligis/videos/ligis-buildathon-2026/audio";

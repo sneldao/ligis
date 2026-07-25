@@ -25,11 +25,11 @@ Ligis gives every AI agent a portable, revocable Casper-native identity plus sig
 - [x] RWA (x402 Trust Gate delivers tokenized real-estate data, gated by Ligis credentials)
 - [x] DeFi (autonomous x402 micropayments settled on Casper via EIP-712 TransferWithAuthorization)
 
-## Demo video (public, 1:35)
+## Demo video (public, 1:05)
 
-**MP4 (5.6 MB):** https://github.com/sneldao/ligis/releases/download/buildathon-2026/ligis-demo.mp4
+**YouTube:** https://youtu.be/eoOQmAx7U7s
 
-The video shows three live on-chain transactions on Casper Testnet and the
+The video shows four live on-chain transactions on Casper Testnet and the
 end-to-end x402 payment flow. Featured tx hashes (view on testnet.cspr.live):
 
 - `7562e636a6512d6f426456dbaceef6cac62af3c6ec783d4444b9820210e5c5a7` — `AgentId.mint_self`
@@ -302,10 +302,8 @@ in the Casper Rust test suite:
 
 - Repo: github.com/sneldao/ligis (MIT)
 - Web: ligis.vercel.app (live, chain-aware)
-- Demo video: github.com/sneldao/ligis/releases/download/buildathon-2026/ligis-demo.mp4
+- Demo video: https://youtu.be/eoOQmAx7U7s
 - **CROO Hackathon** (parallel submission): same Casper contracts power CAP services on [agent.croo.network](https://agent.croo.network) — see [`docs/croo-hackathon-submission.md`](croo-hackathon-submission.md)
-- Twitter / X: [@ligis_protocol](https://twitter.com/ligis_protocol) (announcements + demo links)
-- Discord: [discord.gg/ligis](https://discord.gg/ligis) (community + builder support)
 
 ## Documentation
 
