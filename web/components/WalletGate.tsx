@@ -5,7 +5,7 @@
  *
  * Self-contained: carries the connect/fund/disconnect action inline so
  * the user never has to look up at the dock to proceed. The dock
- * WalletChip remains as a secondary status indicator for when you've
+ * UnifiedWalletChip remains as a secondary status indicator for when you've
  * scrolled past this gate.
  *
  *   Pharos mode  → "Switch to Casper" CTA (the action is the link).
