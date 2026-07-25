@@ -48,7 +48,7 @@
     "web3"
   ],
   "devDependencies": {
-    "@noble/curves": "^1.9.0",
+    "@noble/curves": "^2.2.0",
     "@noble/hashes": "^1.7.0",
     "casper-js-sdk": "^5.0.12",
     "playwright": "^1.45.0",
