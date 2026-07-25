@@ -36,6 +36,14 @@ function ConnectPanel() {
   const [pollPaused, setPollPaused] = useState(false);
   const stopPollRef = useRef<(() => void) | null>(null);
 
+  // Refs so the polling loop can read the latest values without
+  // depending on them in the effect deps (which would re-trigger
+  // the effect on every state change and cause an infinite loop).
+  const balanceStatusRef = useRef(wallet.balanceStatus);
+  balanceStatusRef.current = wallet.balanceStatus;
+  const pollPausedRef = useRef(pollPaused);
+  pollPausedRef.current = pollPaused;
+
   // Detect whether the Casper Wallet extension is installed.
   const [hasExtension, setHasExtension] = useState(false);
   useEffect(() => {
@@ -43,6 +51,10 @@ function ConnectPanel() {
   }, []);
 
   // Progressive backoff polling.
+  // Deps: [poll, pollPaused, refreshBalance] — refreshBalance is stable
+  // (module-scoped), pollPaused only changes on error/retry. We do NOT
+  // depend on wallet.balanceStatus because it changes on every tick,
+  // which would re-trigger the effect and cause an infinite loop.
   useEffect(() => {
     if (!poll || pollPaused) {
       stopPollRef.current?.();
@@ -60,34 +72,32 @@ function ConnectPanel() {
         setPoll(false);
         return;
       }
-      const prevStatus = wallet.balanceStatus;
+      const prevStatus = balanceStatusRef.current;
       await refreshBalance();
       if (cancelled) return;
-      // Check if the refresh resulted in an error
-      // (refreshBalance sets balanceStatus to "error" on failure)
-      if (wallet.balanceStatus === "error" && prevStatus !== "error") {
+      const nextStatus = balanceStatusRef.current;
+      if (nextStatus === "error" && prevStatus !== "error") {
         errorCount++;
         setConsecutiveErrors(errorCount);
         if (errorCount >= MAX_CONSECUTIVE_ERRORS) {
           setPollPaused(true);
           return;
         }
-      } else if (wallet.balanceStatus === "ok") {
+      } else if (nextStatus === "ok") {
         errorCount = 0;
         setConsecutiveErrors(0);
       }
     };
 
     void tick();
-    // Schedule with progressive backoff
     const scheduleNext = () => {
-      if (cancelled) return;
+      if (cancelled || pollPausedRef.current) return;
       const delay = POLL_INTERVALS[Math.min(attempt, POLL_INTERVALS.length - 1)];
       attempt++;
       const timeoutId = setTimeout(async () => {
-        if (cancelled) return;
+        if (cancelled || pollPausedRef.current) return;
         await tick();
-        if (!cancelled && !pollPaused) scheduleNext();
+        if (!cancelled && !pollPausedRef.current) scheduleNext();
       }, delay);
       stopPollRef.current = () => {
         cancelled = true;
@@ -100,7 +110,7 @@ function ConnectPanel() {
       cancelled = true;
       stopPollRef.current?.();
     };
-  }, [poll, pollPaused, refreshBalance, wallet.balanceStatus]);
+  }, [poll, pollPaused, refreshBalance]);
 
   // Stop polling once funded.
   useEffect(() => {
