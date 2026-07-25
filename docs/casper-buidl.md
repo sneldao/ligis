@@ -32,28 +32,31 @@ Ligis gives every AI agent a portable, revocable Casper-native identity plus sig
 The video shows three live on-chain transactions on Casper Testnet and the
 end-to-end x402 payment flow. Featured tx hashes (view on testnet.cspr.live):
 
-- `88110003c6b959e83684057489da66b502cc5c15d2bc774a910941383a4ed845` — `AgentId.mint_self`
-- `c26fe5d64ebb7fca2dc553bab209567370eb4786716848a22c4f912c73521cb3` — `AgentId.set_token_uri` (0G evidence anchor)
-- `27a9ac885613ad2f13a6640058544f70b787d5ab4db5e5e72f5f77648129c6bb` — x402 CSPR transfer settlement
+- `7562e636a6512d6f426456dbaceef6cac62af3c6ec783d4444b9820210e5c5a7` — `AgentId.mint_self`
+- `a47be6e2019c99e5bf321c03915e66125930594c240e2c8cc3c92602915a94a7` — `AgentId.set_token_uri` (0G evidence anchor)
+- `79538c0106b66b1c1f59ab2a8162d8ca4ad80cb72bf8f35d686eaf7606fd730d` — `CredentialRegistry.issue` (rwa.accredited, GatedVault gate)
 
 ### Fresh testnet transactions (re-runnable)
 
-The canonical source of truth for live tx hashes is now
+The canonical source of truth for live tx hashes is
 `scripts/casper-final-demo.lastrun.txt` and
 `scripts/casper-gated-vault-demo.lastrun.txt`. These are regenerated
 every time the canonical demo scripts run — judges can re-run them
-and see the new hashes in the same file. The README cites the latest
-buildathon run below for convenience:
+and see the new hashes in the same file.
 
-**E2E Steward Loop:**
-- `e6598292da37cf8710057be0a148d12395f3415c5df6a7cd79bfa7b894b8e405` — `AgentId.mint_self` (boot)
-- `cb432f29a54e4cb655f33b698cd1467ceb4b1e43fb8b8ec291434c6a681e7495` — `AgentId.set_token_uri` (0G evidence anchor)
-- 0G Storage root: `0x628db010e1fdb063571bb382633d47aa69ca285ad7fe182d3777e4416c91a92a`
+**Latest run (2026-07-25):**
 
-**x402 Payment Demo (local settlement, live CoinGecko RWA data):**
+**E2E Steward Loop (`scripts/casper-final-demo.lastrun.txt`):**
+- `7562e636a6512d6f426456dbaceef6cac62af3c6ec783d4444b9820210e5c5a7` — `AgentId.mint_self` (boot)
+- `a47be6e2019c99e5bf321c03915e66125930594c240e2c8cc3c92602915a94a7` — `AgentId.set_token_uri` (evidence anchor)
+
+**GatedVault credential issue (`scripts/casper-gated-vault-demo.lastrun.txt`):**
+- `79538c0106b66b1c1f59ab2a8162d8ca4ad80cb72bf8f35d686eaf7606fd730d` — `CredentialRegistry.issue(rwa.accredited)` (verified by `is_capable` cross-contract)
+
+**Historical x402 Payment Demo (local settlement, live CoinGecko RWA data):**
 - `f94490e65a53c1e4908cba34071ae4d2a563fa36b1228591a4c12cebdc8a04ee` — x402 CSPR transfer settlement (1 CSPR for premium RWA oracle feed)
 
-**Multi-Agent Coordination (Risk → Issuer → Treasury):**
+**Historical Multi-Agent Coordination (Risk → Issuer → Treasury):**
 - `a2e94ca4749ac1e5f6d52cfa98bac3faa08989340acd7171bf9b8af87340ab58` — `AgentId.mint_self` (swarm boot)
 - `9c662d177aac1732781def6ffb545e6abc69bfbd1ff136627d989266fabe20a3` — x402 settlement (Treasury Agent pays for RWA data after Risk Agent approves + Issuer Agent authorizes)
 
@@ -88,17 +91,16 @@ Deploy script: `npx tsx scripts/deploy-gated-vault.ts` (uses
 `put-transaction session` with `--install-upgrade`, separate session args
 for `credential_registry:key` and `required_capability:byte_array_32`).
 
-## End-to-end demo txs (executed live on Casper Testnet, today)
+## End-to-end demo txs (executed live on Casper Testnet, 2026-07-25)
 
 | # | Action | Tx hash | Result |
 |---|--------|---------|--------|
-| 1 | `AgentId.mint_self` | `88110003c6b959e8..83a4ed845` | agentId 1 minted |
-| 2 | Steward self-issues `data.premium` credential (EIP-712, `CredentialRegistry.issue`) | (batched into single loop) | `is_capable = true` |
-| 3 | Steward self-issues `agent.commerce.x402` + `rwa.accredited` (EIP-712) | (batched) | all 3 capabilities held |
-| 4 | `AgentId.set_token_uri` (0G Storage evidence anchor) | `c26fe5d64ebb7fca..73521cb3` | URI = `0g://0x09a344f4..3594b602df3` |
-| 5 | x402 — `GET /premium` without credential | n/a | 401 not authorized |
-| 6 | x402 — `GET /premium` with credential | n/a | 402 Payment Required (1 CSPR) |
-| 7 | x402 — sign EIP-712 `TransferWithAuthorization`, resubmit | `27a9ac885613ad2f..8129c6bb` | 200 OK + 4 tokenized RWA properties |
+| 1 | `AgentId.mint_self` | `7562e636a6512d6f..10e5c5a7` | agentId 1 minted |
+| 2 | Steward self-issues `rwa.accredited` credential (EIP-712, `CredentialRegistry.issue`) | `79538c0106b66b1c..06fd730d` | `is_capable = true` |
+| 3 | `AgentId.set_token_uri` (evidence anchor) | `a47be6e2019c99e5..915a94a7` | URI = `0g://0x0` (0G Storage unavailable; in-memory fallback) |
+| 4 | x402 — `GET /premium` without credential | n/a | 401 not authorized |
+| 5 | x402 — `GET /premium` with credential | n/a | 402 Payment Required (1 CSPR) |
+| 6 | x402 — sign EIP-712 `TransferWithAuthorization`, resubmit | `f94490e65a53c1e4..dc8a04ee` (historical) | 200 OK + 4 tokenized RWA properties |
 
 ## Category
 

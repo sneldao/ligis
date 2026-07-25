@@ -102,18 +102,34 @@ async function main() {
   });
 
   const txRecords: TxRecord[] = [];
-  for (const hash of result.action.txHashes) {
-    txRecords.push({
-      step: hash === result.action.txHashes[0] ? "BOOT" : `ACT:${CAP_REQUIRED}`,
-      hash,
-      explorerUrl: `${EXPLORER}/transaction/${hash}`,
-    });
+  // Label tx hashes in order: first is BOOT, next are ACT (credential issues),
+  // and the last one (if anchored) is RECORD (set_token_uri).
+  const actionHashes = result.action.txHashes;
+  const anchorHash = result.anchored?.txHash;
+
+  for (let i = 0; i < actionHashes.length; i++) {
+    const hash = actionHashes[i];
+    // If this hash is the anchor tx, label it as RECORD
+    if (hash === anchorHash) {
+      txRecords.push({
+        step: "RECORD:set_token_uri",
+        hash,
+        explorerUrl: `${EXPLORER}/transaction/${hash}`,
+      });
+    } else {
+      txRecords.push({
+        step: i === 0 ? "BOOT" : `ACT:${CAP_REQUIRED}`,
+        hash,
+        explorerUrl: `${EXPLORER}/transaction/${hash}`,
+      });
+    }
   }
-  if (result.anchored) {
+  // If anchor hash wasn't in the action txHashes array, add it separately
+  if (anchorHash && !actionHashes.includes(anchorHash)) {
     txRecords.push({
       step: "RECORD:set_token_uri",
-      hash: result.anchored.txHash,
-      explorerUrl: `${EXPLORER}/transaction/${result.anchored.txHash}`,
+      hash: anchorHash,
+      explorerUrl: `${EXPLORER}/transaction/${anchorHash}`,
     });
   }
 
