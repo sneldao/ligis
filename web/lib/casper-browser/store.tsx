@@ -3,16 +3,18 @@
  *
  * Holds the in-memory copy of the user's Casper secp256k1 keypair plus
  * derived public addresses, balance, and connect/disconnect state.
- * Cross-component sync is handled with a tiny module-scoped event bus —
- * each subscriber re-reads on every `WalletChanged` notification. We
- * deliberately keep this small and dependency-free (no Zustand, no Jotai)
- * because the surface is tiny and the store is short-lived.
+ * Cross-component sync is handled with a tiny module-scoped event bus.
+ *
+ * The context is split into two parts to minimize re-renders:
+ *   - WalletStateCtx: the reactive state (pair, balance, status, etc.)
+ *   - WalletActionsCtx: stable action functions (connect, disconnect,
+ *     refreshBalance) — these never change identity, so components that
+ *     only need actions don't re-render when state changes.
  *
  * Persistence:
  *   - The full keypair is stored in `sessionStorage` so the user does not
  *     have to re-paste a key on tab refresh within the same browsing
- *     session. Closing the tab purges the storage and the key is gone —
- *     that is intentional, it is an ephemeral session key.
+ *     session. Closing the tab purges the storage and the key is gone.
  *   - We DO NOT persist the key across browser sessions.
  *
  * Sensitive keys never touch localStorage, never travel over the network,
@@ -22,7 +24,6 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -32,6 +33,7 @@ import {
 import {
   generateKeyPair,
   keyPairFromHexPrivateKey,
+  accountHashFromPublicKeyHex,
   type CasperKeyPair,
 } from "./keypair";
 import { getBalanceMotes } from "./rpc";
@@ -53,6 +55,8 @@ export interface WalletState {
   error: string | null;
   /** True from createContext until we have rehydrated from sessionStorage. */
   hydrated: boolean;
+  /** Connection in flight — true while connectExtension is awaiting the extension popup. */
+  connecting: boolean;
 }
 
 const INITIAL: WalletState = {
@@ -62,6 +66,7 @@ const INITIAL: WalletState = {
   balanceStatus: "idle",
   error: null,
   hydrated: false,
+  connecting: false,
 };
 
 // ---------- module-scoped event bus ----------
@@ -79,11 +84,7 @@ function notify(): void {
   }
 }
 
-/**
- * Subscribe to wallet state changes. Returns a noop unsubscribe — React
- * callers should use the {@link useWallet} hook instead, which wraps
- * this with `useSyncExternalStore`.
- */
+/** Subscribe to wallet state changes. Returns an unsubscribe function. */
 export function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   return () => {
@@ -117,34 +118,160 @@ function rehydrate(): { kind: WalletKind; pair: CasperKeyPair } | null {
       return { kind: parsed.kind, pair };
     }
   } catch {
-    // Corrupt entry — purge.
     window.sessionStorage.removeItem(STORAGE_KEY);
   }
   return null;
 }
 
-// ---------- React context ----------
-
-interface WalletApi extends WalletState {
-  connectSandbox: () => void;
-  connectPaste: (hex: string) => void;
-  connectExtension: () => Promise<void>;
-  disconnect: () => void;
-  refreshBalance: () => Promise<void>;
-}
-
-const WalletCtx = createContext<WalletApi | null>(null);
+// ---------- module-scoped state + actions ----------
 
 let stateInternal: WalletState = INITIAL;
+let balanceInFlight = false;
+
 function setState(next: WalletState): void {
   stateInternal = next;
   notify();
 }
 
+const connectSandbox = (): void => {
+  const pair = generateKeyPair();
+  const next: WalletState = {
+    kind: "sandbox",
+    pair,
+    balanceMotes: null,
+    balanceStatus: "idle",
+    error: null,
+    hydrated: true,
+    connecting: false,
+  };
+  persist(pair, "sandbox");
+  setState(next);
+};
+
+const connectPaste = (hex: string): void => {
+  try {
+    const pair = keyPairFromHexPrivateKey(hex);
+    const next: WalletState = {
+      kind: "paste",
+      pair,
+      balanceMotes: null,
+      balanceStatus: "idle",
+      error: null,
+      hydrated: true,
+      connecting: false,
+    };
+    persist(pair, "paste");
+    setState(next);
+  } catch (err) {
+    setState({
+      ...stateInternal,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+};
+
+const connectExtension = async (): Promise<void> => {
+  if (typeof window === "undefined" || !(window as any).CasperWalletProvider) {
+    setState({ ...stateInternal, error: "Casper Wallet extension not detected. Install from casperwallet.io" });
+    return;
+  }
+  setState({ ...stateInternal, connecting: true, error: null });
+  try {
+    const provider = (window as any).CasperWalletProvider();
+    const connected = await provider.requestConnection();
+    if (!connected) {
+      setState({ ...stateInternal, connecting: false, error: "Connection rejected by user" });
+      return;
+    }
+    const publicKeyHex = await provider.getActivePublicKey();
+    // Derive the account hash from the public key — the extension
+    // doesn't expose the private key, but we can still compute the
+    // account hash for display and read operations.
+    let accountHash: string;
+    try {
+      accountHash = accountHashFromPublicKeyHex(publicKeyHex);
+    } catch {
+      accountHash = "";
+    }
+    const pair = {
+      publicKeyHex,
+      privateKeyHex: "",
+      accountHash,
+    } as CasperKeyPair;
+    setState({
+      kind: "extension",
+      pair,
+      balanceMotes: null,
+      balanceStatus: "idle",
+      error: null,
+      hydrated: true,
+      connecting: false,
+    });
+  } catch (err) {
+    setState({
+      ...stateInternal,
+      connecting: false,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+};
+
+const disconnect = (): void => {
+  persist(null, null);
+  setState({ ...INITIAL, hydrated: true });
+};
+
+const refreshBalance = async (): Promise<void> => {
+  const current = stateInternal;
+  if (!current.pair) return;
+  // Guard against concurrent refresh calls — if a balance check is
+  // already in flight, skip this one.
+  if (balanceInFlight) return;
+  balanceInFlight = true;
+  setState({ ...current, balanceStatus: "polling", error: null });
+  try {
+    const motes = await getBalanceMotes(current.pair.publicKeyHex);
+    setState({
+      ...stateInternal,
+      balanceMotes: motes,
+      balanceStatus: "ok",
+      error: null,
+    });
+  } catch (err) {
+    setState({
+      ...stateInternal,
+      balanceStatus: "error",
+      error: err instanceof Error ? err.message : String(err),
+    });
+  } finally {
+    balanceInFlight = false;
+  }
+};
+
+// ---------- React context (split: state vs actions) ----------
+
+interface WalletActions {
+  connectSandbox: typeof connectSandbox;
+  connectPaste: typeof connectPaste;
+  connectExtension: typeof connectExtension;
+  disconnect: typeof disconnect;
+  refreshBalance: typeof refreshBalance;
+}
+
+const WALLET_ACTIONS: WalletActions = {
+  connectSandbox,
+  connectPaste,
+  connectExtension,
+  disconnect,
+  refreshBalance,
+};
+
+const WalletStateCtx = createContext<WalletState>(INITIAL);
+const WalletActionsCtx = createContext<WalletActions>(WALLET_ACTIONS);
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [state, setLocal] = useState<WalletState>(INITIAL);
 
-  // Rehydrate from sessionStorage exactly once on mount.
   useEffect(() => {
     const rehydrated = rehydrate();
     if (rehydrated) {
@@ -155,6 +282,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         balanceStatus: "idle",
         error: null,
         hydrated: true,
+        connecting: false,
       };
       setState(next);
       setLocal(next);
@@ -163,142 +291,36 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setState(next);
       setLocal(next);
     }
-    const unsub = subscribe(() => setLocal({ ...stateInternal }));
+    const unsub = subscribe(() => setLocal(stateInternal));
     return unsub;
   }, []);
 
-  const connectSandbox = useCallback(() => {
-    const pair = generateKeyPair();
-    const next: WalletState = {
-      kind: "sandbox",
-      pair,
-      balanceMotes: null,
-      balanceStatus: "idle",
-      error: null,
-      hydrated: true,
-    };
-    persist(pair, "sandbox");
-    setState(next);
-  }, []);
+  const actions = useMemo(() => WALLET_ACTIONS, []);
 
-  const connectPaste = useCallback((hex: string) => {
-    try {
-      const pair = keyPairFromHexPrivateKey(hex);
-      const next: WalletState = {
-        kind: "paste",
-        pair,
-        balanceMotes: null,
-        balanceStatus: "idle",
-        error: null,
-        hydrated: true,
-      };
-      persist(pair, "paste");
-      setState(next);
-    } catch (err) {
-      const next: WalletState = {
-        ...stateInternal,
-        error: err instanceof Error ? err.message : String(err),
-      };
-      setState(next);
-    }
-  }, []);
-
-  const connectExtension = useCallback(async () => {
-    if (typeof window === "undefined" || !(window as any).CasperWalletProvider) {
-      setState({ ...stateInternal, error: "Casper Wallet extension not detected. Install from casperwallet.io" });
-      return;
-    }
-    try {
-      const provider = (window as any).CasperWalletProvider();
-      const connected = await provider.requestConnection();
-      if (!connected) {
-        setState({ ...stateInternal, error: "Connection rejected by user" });
-        return;
-      }
-      const publicKeyHex = await provider.getActivePublicKey();
-      // Extension doesn't expose private key — create a placeholder pair
-      // with publicKey only for reads/balance. Signing requires sandbox.
-      const pair = {
-        publicKeyHex,
-        privateKeyHex: "",
-        accountHash: "",
-      } as CasperKeyPair;
-      const next: WalletState = {
-        kind: "extension",
-        pair,
-        balanceMotes: null,
-        balanceStatus: "idle",
-        error: null,
-        hydrated: true,
-      };
-      // Don't persist extension connections — they're managed by the extension
-      setState(next);
-    } catch (err) {
-      setState({ ...stateInternal, error: err instanceof Error ? err.message : String(err) });
-    }
-  }, []);
-
-  const disconnect = useCallback(() => {
-    persist(null, null);
-    setState({ ...INITIAL, hydrated: true });
-  }, []);
-
-  const refreshBalance = useCallback(async () => {
-    const current = stateInternal;
-    if (!current.pair) return;
-    setState({ ...current, balanceStatus: "polling", error: null });
-    try {
-      const motes = await getBalanceMotes(current.pair.publicKeyHex);
-      setState({
-        ...stateInternal,
-        balanceMotes: motes,
-        balanceStatus: "ok",
-        error: null,
-      });
-    } catch (err) {
-      setState({
-        ...stateInternal,
-        balanceStatus: "error",
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }, []);
-
-  const api = useMemo<WalletApi>(
-    () => ({ ...state, connectSandbox, connectPaste, connectExtension, disconnect, refreshBalance }),
-    [state, connectSandbox, connectPaste, connectExtension, disconnect, refreshBalance],
+  return (
+    <WalletStateCtx.Provider value={state}>
+      <WalletActionsCtx.Provider value={actions}>
+        {children}
+      </WalletActionsCtx.Provider>
+    </WalletStateCtx.Provider>
   );
-
-  return <WalletCtx.Provider value={api}>{children}</WalletCtx.Provider>;
 }
 
-/** Hook for components that read wallet state and react to changes. */
-export function useWallet(): WalletApi {
-  const ctx = useContext(WalletCtx);
-  if (!ctx) {
-    // Outside the provider (e.g. server-side render). Return a "disconnected"
-    // shape so components remain render-safe.
-    return {
-      ...INITIAL,
-      hydrated: true,
-      connectSandbox: () => {
-        throw new Error("WalletProvider missing");
-      },
-      connectPaste: () => {
-        throw new Error("WalletProvider missing");
-      },
-      connectExtension: async () => {
-        throw new Error("WalletProvider missing");
-      },
-      disconnect: () => {
-        throw new Error("WalletProvider missing");
-      },
-      refreshBalance: async () => {
-        throw new Error("WalletProvider missing");
-      },
-    };
-  }
-  return ctx;
+/** Hook for components that need both state and actions. */
+export function useWallet(): WalletState & WalletActions {
+  const state = useContext(WalletStateCtx);
+  const actions = useContext(WalletActionsCtx);
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
+}
+
+/** Hook for components that only read wallet state (avoids action re-renders). */
+export function useWalletState(): WalletState {
+  return useContext(WalletStateCtx);
+}
+
+/** Hook for components that only need actions (stable, never re-renders). */
+export function useWalletActions(): WalletActions {
+  return useContext(WalletActionsCtx);
 }
 
 /** Format a motes balance as a CSPR string with 4 decimals. */

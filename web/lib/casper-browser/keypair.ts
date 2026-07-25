@@ -108,6 +108,16 @@ export function classifyAlgorithm(publicKeyHex: string): "ed25519" | "secp256k1"
   return "unknown";
 }
 
+/** Derive account hash from a public key hex (without needing the private key).
+ *
+ * Used for Casper Wallet extension connections, where only the public key
+ * is available. Throws if the hex is not a valid Casper public key.
+ */
+export function accountHashFromPublicKeyHex(publicKeyHex: string): string {
+  const pub = PublicKey.fromHex(publicKeyHex);
+  return `account-hash-${pub.accountHash().toHex()}`;
+}
+
 /** Validate that a hex string looks like a Casper public key. */
 export function isPublicKeyHex(hex: string): boolean {
   return /^0[1-3][a-fA-F0-9]{64}$/.test(hex) || /^0x0[1-3][a-fA-F0-9]{64}$/.test(hex);

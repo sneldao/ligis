@@ -8,21 +8,20 @@
  * casper-js-sdk + noble crypto deps from being evaluated when the user
  * is on a Pharos-chain page (where the wallet is never reachable).
  *
- * Composition (DESIGN.md compliant — no card/tile/panel chrome):
- *   - One full-width primary CTA: "Generate sandbox key". That's the
- *     path that unblocks a judge in 30 seconds.
- *   - Paste-a-hex-key sits inside a `<details>` disclosure so the prose
- *     weight is gone by default.
- *   - Once connected, two visible things: the pubkey (copy-able) and
- *     the balance + faucet CTA. Account hash + key kind hide behind a
- *     disclosure for the rare case anyone cares.
- *   - The secp256k1 rationale is gone from this surface; the
- *     /steward WalletGate companion carries it where prose belongs.
+ * Polling strategy:
+ *   Progressive backoff — 4s, 6s, 10s, 15s (capped) — with a 5-minute
+ *   session timeout. After 3 consecutive RPC errors, polling pauses
+ *   and surfaces a "connection issue" status. The user can manually
+ *   retry by clicking the refresh button.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useWallet, formatMotes } from "@/lib/casper-browser/store";
 import { CopyButton } from "@/components/CopyButton";
+
+const POLL_INTERVALS = [4_000, 6_000, 10_000, 15_000];
+const POLL_TIMEOUT_MS = 300_000; // 5 minutes
+const MAX_CONSECUTIVE_ERRORS = 3;
 
 export function ConnectWalletInner() {
   return <ConnectPanel />;
@@ -30,39 +29,95 @@ export function ConnectWalletInner() {
 
 function ConnectPanel() {
   const wallet = useWallet();
+  const { refreshBalance, connectExtension, connectSandbox, connectPaste, disconnect } = wallet;
   const [pasteValue, setPasteValue] = useState("");
   const [poll, setPoll] = useState(false);
+  const [consecutiveErrors, setConsecutiveErrors] = useState(0);
+  const [pollPaused, setPollPaused] = useState(false);
   const stopPollRef = useRef<(() => void) | null>(null);
 
+  // Detect whether the Casper Wallet extension is installed.
+  const [hasExtension, setHasExtension] = useState(false);
   useEffect(() => {
-    if (!poll) {
+    setHasExtension(typeof window !== "undefined" && Boolean((window as any).CasperWalletProvider));
+  }, []);
+
+  // Progressive backoff polling.
+  useEffect(() => {
+    if (!poll || pollPaused) {
       stopPollRef.current?.();
       stopPollRef.current = null;
       return;
     }
     let cancelled = false;
+    let attempt = 0;
+    let errorCount = 0;
+    const startTime = Date.now();
+
     const tick = async () => {
       if (cancelled) return;
-      await wallet.refreshBalance();
+      if (Date.now() - startTime > POLL_TIMEOUT_MS) {
+        setPoll(false);
+        return;
+      }
+      const prevStatus = wallet.balanceStatus;
+      await refreshBalance();
+      if (cancelled) return;
+      // Check if the refresh resulted in an error
+      // (refreshBalance sets balanceStatus to "error" on failure)
+      if (wallet.balanceStatus === "error" && prevStatus !== "error") {
+        errorCount++;
+        setConsecutiveErrors(errorCount);
+        if (errorCount >= MAX_CONSECUTIVE_ERRORS) {
+          setPollPaused(true);
+          return;
+        }
+      } else if (wallet.balanceStatus === "ok") {
+        errorCount = 0;
+        setConsecutiveErrors(0);
+      }
     };
+
     void tick();
-    const id = setInterval(tick, 6_000);
-    stopPollRef.current = () => {
-      cancelled = true;
-      clearInterval(id);
+    // Schedule with progressive backoff
+    const scheduleNext = () => {
+      if (cancelled) return;
+      const delay = POLL_INTERVALS[Math.min(attempt, POLL_INTERVALS.length - 1)];
+      attempt++;
+      const timeoutId = setTimeout(async () => {
+        if (cancelled) return;
+        await tick();
+        if (!cancelled && !pollPaused) scheduleNext();
+      }, delay);
+      stopPollRef.current = () => {
+        cancelled = true;
+        clearTimeout(timeoutId);
+      };
     };
+    scheduleNext();
+
     return () => {
       cancelled = true;
-      clearInterval(id);
+      stopPollRef.current?.();
     };
-  }, [poll, wallet]);
+  }, [poll, pollPaused, refreshBalance, wallet.balanceStatus]);
 
+  // Stop polling once funded.
   useEffect(() => {
     if (!poll) return;
     if (wallet.balanceMotes && wallet.balanceMotes !== "0") {
       setPoll(false);
+      setConsecutiveErrors(0);
+      setPollPaused(false);
     }
   }, [poll, wallet.balanceMotes]);
+
+  // Manual retry from error-paused state.
+  const handleManualRefresh = async () => {
+    setPollPaused(false);
+    setConsecutiveErrors(0);
+    await refreshBalance();
+  };
 
   if (!wallet.hydrated) {
     return (
@@ -79,7 +134,10 @@ function ConnectPanel() {
     return (
       <ConnectedPanel
         wallet={wallet}
-        onDisconnect={wallet.disconnect}
+        onDisconnect={disconnect}
+        onManualRefresh={handleManualRefresh}
+        pollPaused={pollPaused}
+        consecutiveErrors={consecutiveErrors}
       />
     );
   }
@@ -99,14 +157,14 @@ function ConnectPanel() {
       </header>
 
       {/* Primary CTA — the sandbox key is the path that unblocks a
-          judge in under 30 seconds. Full-width, terra edge, sits above
-          everything else. Hover applies a terra tint (not a full bg
-          flip) so the title + description stay readable as-is. */}
+          judge in under 30 seconds. */}
       <button
         type="button"
         onClick={() => {
-          wallet.connectSandbox();
+          connectSandbox();
           setPoll(true);
+          setConsecutiveErrors(0);
+          setPollPaused(false);
         }}
         className="w-full border border-terra bg-paper px-4 py-3 text-left transition-colors hover:bg-terra/10"
         style={{ borderRadius: 0 }}
@@ -120,29 +178,28 @@ function ConnectPanel() {
         </span>
       </button>
 
-      {/* Casper Wallet extension — for users who have the browser extension installed.
-          Extension connections are read-only (no private key access), so signing
-          operations still require sandbox mode. */}
+      {/* Casper Wallet extension — disabled when not installed, shows
+          loading state while the extension popup is open. */}
       <button
         type="button"
+        disabled={!hasExtension || wallet.connecting}
         onClick={() => {
-          wallet.connectExtension();
-          setPoll(true);
+          void connectExtension().then(() => setPoll(true));
         }}
-        className="w-full border border-rule bg-paper px-4 py-3 text-left transition-colors hover:bg-paper-deep"
+        className="w-full border border-rule bg-paper px-4 py-3 text-left transition-colors hover:bg-paper-deep disabled:opacity-50 disabled:cursor-not-allowed"
         style={{ borderRadius: 0 }}
       >
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink">
-          ○ Connect Casper Wallet extension
+          {wallet.connecting ? "○ Connecting…" : "○ Connect Casper Wallet extension"}
         </span>
         <span className="block pt-1 font-serif text-xs leading-relaxed text-ink-soft">
-          Use your Casper Wallet browser extension for reads and balance checks.
-          Signing operations require sandbox mode.
+          {!hasExtension
+            ? "Casper Wallet extension not detected. Install from casperwallet.io."
+            : "Use your Casper Wallet browser extension for reads and balance checks. Signing operations require sandbox mode."}
         </span>
       </button>
 
-      {/* Paste a hex key — collapsed disclosure. The prose weight is gone
-          unless a developer explicitly opens it. */}
+      {/* Paste a hex key — collapsed disclosure. */}
       <details className="border border-rule">
         <summary className="cursor-pointer list-none px-4 py-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft transition-colors hover:text-ink">
           ○ Paste a hex key
@@ -172,9 +229,11 @@ function ConnectPanel() {
               type="button"
               disabled={pasteValue.trim().length === 0}
               onClick={() => {
-                wallet.connectPaste(pasteValue.trim());
+                connectPaste(pasteValue.trim());
                 setPasteValue("");
                 setPoll(true);
+                setConsecutiveErrors(0);
+                setPollPaused(false);
               }}
               className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors disabled:text-ink-quiet hover:decoration-terra"
             >
@@ -197,9 +256,15 @@ function ConnectPanel() {
 function ConnectedPanel({
   wallet,
   onDisconnect,
+  onManualRefresh,
+  pollPaused,
+  consecutiveErrors,
 }: {
   wallet: ReturnType<typeof useWallet>;
   onDisconnect: () => void;
+  onManualRefresh: () => Promise<void>;
+  pollPaused: boolean;
+  consecutiveErrors: number;
 }) {
   const pair = wallet.pair;
   const funded = wallet.balanceMotes !== null && wallet.balanceMotes !== "0";
@@ -222,9 +287,6 @@ function ConnectedPanel({
         </button>
       </header>
 
-      {/* Two-line primary surface: pubkey (copy) + balance. Everything
-          else hides behind one disclosure so the visual footprint is
-          one row, not four. */}
       <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-4 border-t border-rule pt-3">
         <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
           public key
@@ -241,13 +303,11 @@ function ConnectedPanel({
         pair={pair}
         balanceMotes={wallet.balanceMotes}
         balanceStatus={wallet.balanceStatus}
-        onPoll={async () => {
-          await wallet.refreshBalance();
-        }}
+        pollPaused={pollPaused}
+        consecutiveErrors={consecutiveErrors}
+        onPoll={onManualRefresh}
       />
 
-      {/* Rare-need disclosure: account hash + key kind. Most judges will
-          never open this. */}
       <details className="border-t border-rule pt-3">
         <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet transition-colors hover:text-ink">
           account hash + key kind
@@ -276,11 +336,15 @@ function FaucetPanel({
   pair,
   balanceMotes,
   balanceStatus,
+  pollPaused,
+  consecutiveErrors,
   onPoll,
 }: {
   pair: { publicKeyHex: string };
   balanceMotes: string | null;
   balanceStatus: "idle" | "polling" | "ok" | "error";
+  pollPaused: boolean;
+  consecutiveErrors: number;
   onPoll: () => Promise<void>;
 }) {
   const funded = balanceMotes !== null && balanceMotes !== "0";
@@ -289,19 +353,23 @@ function FaucetPanel({
   return (
     <div
       className={`space-y-3 border px-4 py-3 ${
-        funded ? "border-sage bg-sage/5" : "border-terra bg-terra/5"
+        funded
+          ? "border-sage bg-sage/5"
+          : pollPaused
+            ? "border-revoke bg-revoke/5"
+            : "border-terra bg-terra/5"
       }`}
       style={{ borderRadius: 0 }}
-      data-state={funded ? "funded" : "awaiting-funding"}
+      data-state={funded ? "funded" : pollPaused ? "error" : "awaiting-funding"}
     >
       <header className="flex items-baseline justify-between">
         <span className="eyebrow">
-          {funded ? "✓ funded" : "awaiting funding"}
+          {funded ? "✓ funded" : pollPaused ? "⚠ connection issue" : "awaiting funding"}
         </span>
         <span className="font-mono tabular text-ink">
           {balanceLabel}
           {funded ? " cspr" : ""}
-          {balanceStatus === "polling" ? (
+          {balanceStatus === "polling" && !pollPaused ? (
             <span className="ml-2 flex items-center gap-1 text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-terra" />
               polling
@@ -312,10 +380,17 @@ function FaucetPanel({
 
       {!funded ? (
         <div className="space-y-2">
-          <p className="font-serif text-sm leading-relaxed text-ink-soft">
-            Copy the public key, paste it into the Casper Testnet Faucet,
-            and click refresh once CSPR lands. Usually under 30 seconds.
-          </p>
+          {pollPaused ? (
+            <p className="font-serif text-sm leading-relaxed text-revoke">
+              Balance check failed {consecutiveErrors} times. The RPC
+              endpoint may be temporarily unavailable.
+            </p>
+          ) : (
+            <p className="font-serif text-sm leading-relaxed text-ink-soft">
+              Copy the public key, paste it into the Casper Testnet Faucet,
+              and click refresh once CSPR lands. Usually under 30 seconds.
+            </p>
+          )}
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <a
               href="https://testnet.cspr.live/tools/faucet"
@@ -331,7 +406,7 @@ function FaucetPanel({
               onClick={() => void onPoll()}
               className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
             >
-              refresh
+              {pollPaused ? "retry →" : "refresh"}
             </button>
           </div>
         </div>
