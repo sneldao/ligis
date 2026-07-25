@@ -31,7 +31,7 @@ export function WalletGate() {
   const [open, setOpen] = useState(false);
 
   const isCasperPage =
-    (searchParams.get("chain") ?? "pharos-atlantic") === CASPER_TESTNET.id;
+    (searchParams.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
 
   if (!isCasperPage) {
     return (

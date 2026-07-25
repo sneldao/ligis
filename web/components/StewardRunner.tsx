@@ -93,7 +93,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   const searchParams = useSearchParams();
   const wallet = useWallet();
   const isCasperChain =
-    (searchParams.get("chain") ?? "pharos-atlantic") === CASPER_TESTNET.id;
+    (searchParams.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
   const walletReadyForLive = isCasperChain && live && !!wallet.pair;
 
   const GOAL_PRESETS = [
@@ -130,7 +130,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     setRunning(true);
 
     // Resolve chain from URL query param
-    const chainParam = searchParams.get("chain") ?? "pharos-atlantic";
+    const chainParam = searchParams.get("chain") ?? "casper-testnet";
     const activeChain = CHAINS.find((c) => c.id === chainParam) ?? CHAINS[0]!;
 
     // Browser-side Casper path: user-connected wallet signs + submits

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
   const goal = (body.goal ?? "").trim() || "Operate as a Pharos agent.";
   const live = body.live === true;
-  const chain = body.chain ?? "pharos-atlantic";
+  const chain = body.chain ?? "casper-testnet";
   const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
   const isCasper = chain === "casper-testnet";

@@ -38,10 +38,10 @@ export const CASPER_TESTNET: ChainNetwork = {
 export const CHAINS: ChainNetwork[] = [PHAROS_ATLANTIC, CASPER_TESTNET];
 
 /** Default chain when no `?chain=` query param is present. */
-export const DEFAULT_CHAIN: ChainNetwork = PHAROS_ATLANTIC;
+export const DEFAULT_CHAIN: ChainNetwork = CASPER_TESTNET;
 
 /** Legacy export — kept so existing components don't break. */
-export const network = PHAROS_ATLANTIC;
+export const network = CASPER_TESTNET;
 
 /**
  * Resolve the chain from a Next.js `searchParams` object (or any `{ chain?: string }` shape).

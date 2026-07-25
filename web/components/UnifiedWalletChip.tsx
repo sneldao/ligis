@@ -87,7 +87,7 @@ export function UnifiedWalletChip() {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null);
 
-  const isCasper = (searchParams.get("chain") ?? "pharos-atlantic") === CASPER_TESTNET.id;
+  const isCasper = (searchParams.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
   const searchKey = searchParams.toString();
   const casperWallet = useWallet();
 

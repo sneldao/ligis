@@ -17,7 +17,7 @@ export async function GET(
   { params }: { params: Promise<{ address: string }> }
 ) {
   const { address: raw } = await params;
-  const chainParam = req.nextUrl.searchParams.get("chain") ?? "pharos-atlantic";
+  const chainParam = req.nextUrl.searchParams.get("chain") ?? "casper-testnet";
   const chain = getChain({ chain: chainParam });
 
   if (!isValidAddress(chain, raw)) {

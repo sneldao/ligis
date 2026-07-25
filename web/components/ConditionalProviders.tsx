@@ -35,7 +35,7 @@ const WalletTree = dynamic(
 export function ConditionalProviders({ children }: { children: ReactNode }) {
   const params = useSearchParams();
   const isCasper =
-    (params.get("chain") ?? "pharos-atlantic") === CASPER_TESTNET.id;
+    (params.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
 
   if (!isCasper) return <>{children}</>;
   return <WalletTree>{children}</WalletTree>;
