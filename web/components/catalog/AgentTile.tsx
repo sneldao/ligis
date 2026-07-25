@@ -32,6 +32,7 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
   const group = useRef<Group>(null);
   const baseMesh = useRef<Mesh>(null);
   const startTime = useRef(performance.now());
+  const lastOpacity = useRef(-1);
 
   const params = useMemo(() => portraitParams(agent.address), [agent.address]);
   const id = agent.address;
@@ -67,19 +68,26 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
     const opacity = Math.max(0, Math.min(1, fade)) * reveal;
     group.current.visible = opacity > 0.02;
 
-    group.current.traverse((obj) => {
-      const mat = (obj as Mesh).material as Material | Material[] | undefined;
-      if (!mat) return;
-      const apply = (m: Material) => {
-        if ("opacity" in m) {
-          m.transparent = true;
-          (m as Material & { opacity: number }).opacity =
-            (m.userData?.baseOpacity ?? 1) * opacity;
-        }
-      };
-      if (Array.isArray(mat)) mat.forEach(apply);
-      else apply(mat);
-    });
+    // Skip the traverse when opacity hasn't changed (rounded to 2 decimals)
+    // — this avoids walking 900+ material objects per frame when tiles
+    // are at a stable distance from the camera.
+    const opacityKey = Math.round(opacity * 100);
+    if (opacityKey !== lastOpacity.current) {
+      lastOpacity.current = opacityKey;
+      group.current.traverse((obj) => {
+        const mat = (obj as Mesh).material as Material | Material[] | undefined;
+        if (!mat) return;
+        const apply = (m: Material) => {
+          if ("opacity" in m) {
+            m.transparent = true;
+            (m as Material & { opacity: number }).opacity =
+              (m.userData?.baseOpacity ?? 1) * opacity;
+          }
+        };
+        if (Array.isArray(mat)) mat.forEach(apply);
+        else apply(mat);
+      });
+    }
   });
 
   const px = (params.primary.cx - 0.5) * PORTRAIT_W;

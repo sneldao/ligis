@@ -11,7 +11,7 @@ export function CatalogScene() {
     <Canvas
       shadows="basic"
       camera={{ position: [0, 0, CATALOG_CONFIG.zoomOut], fov: 38 }}
-      dpr={[1, 2]}
+      dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       style={{ background: "#F4F1EC", touchAction: "none" }}
       onCreated={({ gl }) => {

@@ -4,7 +4,7 @@ import type { CatalogPosition } from "./positions";
 
 export const CHUNK_SIZE = 16;
 export const AGENTS_PER_CHUNK = 6;
-export const RENDER_RADIUS = 2;
+export const RENDER_RADIUS = 1;
 
 const PINNED_REAL: Address = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
 
