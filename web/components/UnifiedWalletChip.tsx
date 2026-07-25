@@ -135,11 +135,11 @@ export function UnifiedWalletChip() {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
     const panelWidth = Math.min(window.innerWidth * 0.92, 480);
-    const halfPanel = panelWidth / 2;
     const buttonCenter = rect.left + rect.width / 2;
+    // Left edge of panel, clamped to stay within viewport margins.
     const left = Math.max(
-      halfPanel + 12,
-      Math.min(buttonCenter, window.innerWidth - halfPanel - 12),
+      12,
+      Math.min(buttonCenter - panelWidth / 2, window.innerWidth - panelWidth - 12),
     );
     setAnchor({ left, top: rect.bottom + 8 });
   }, []);
@@ -298,7 +298,6 @@ export function UnifiedWalletChip() {
                   left: anchor.left,
                   top: anchor.top,
                   width: "min(92vw, 30rem)",
-                  transform: "translateX(-50%)",
                 }}
               >
                 {isCasper ? (
