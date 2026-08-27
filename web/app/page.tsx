@@ -111,17 +111,19 @@ export default async function HomePage({
           className="pointer-events-auto mx-auto max-w-5xl scroll-mt-24 px-5 pt-24 pb-12 sm:px-8 sm:pt-36 sm:pb-24"
         >
           <header className="flex items-baseline justify-between text-xs">
-            <p className="eyebrow">Ligis · trust layer for autonomous agents</p>
+            <p className="eyebrow">Ligis · the trust gate for autonomous payments</p>
             <ChainBadge chain={chain} />
           </header>
 
           <section className="mt-14 sm:mt-16">
             <h1 className="display max-w-3xl text-[2.8rem] text-ink sm:text-6xl lg:text-7xl">
-              Know who your agent is about to pay.
+              Before your agent pays a stranger, gate the payment.
             </h1>
             <p className="mt-7 max-w-xl font-serif text-lg leading-relaxed text-ink-soft sm:mt-10 sm:text-xl">
-              Verify an agent&rsquo;s authorization on-chain before money moves.
-              One read; no API, no intermediary.
+              Ligis is the one on-chain read that turns &ldquo;trust this
+              wallet&rdquo; into <span className="text-sage">GO</span> or{" "}
+              <span className="text-revoke">STOP</span> &mdash; before money
+              moves. No API, no intermediary, no trust required.
             </p>
             <p className="mt-5 max-w-2xl font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
               {stats.ok ? (
@@ -159,12 +161,14 @@ export default async function HomePage({
               before the "how". */}
           <section className="mt-12 max-w-2xl sm:mt-16">
             <p className="font-serif text-base leading-relaxed text-ink-soft">
-              AI agents transact autonomously: sending payments, opening
-              escrows, buying data. But when your agent is about to pay a
-              stranger, how does it know that stranger is legitimate? Ligis
-              checks authorization in one blockchain read, before the
-              transaction fires. If the counterparty can&rsquo;t prove
-              it&rsquo;s authorized, the agent stops.
+              Agents transact autonomously &mdash; sending payments, opening
+              escrows, buying data. The dangerous moment is the one before
+              money moves to a wallet your agent has never met. Ligis makes
+              that moment a decision: one blockchain read returns{" "}
+              <span className="text-sage">GO</span> or{" "}
+              <span className="text-revoke">STOP</span>. If the counterparty
+              can&rsquo;t prove it&rsquo;s authorized, the agent halts before
+              the transaction fires.
             </p>
             <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
               <Link href="/steward" className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra">For agent operators →</Link>
@@ -175,7 +179,7 @@ export default async function HomePage({
 
           <section id="verify" className="mt-16 scroll-mt-24 sm:mt-28">
             <header className="flex items-baseline justify-between">
-              <p className="eyebrow">01 · Is this agent authorized?</p>
+              <p className="eyebrow">01 · The gate</p>
               <p className="font-mono text-[11px] tabular text-ink-quiet">
                 live · {chain.name.toLowerCase()}
               </p>
@@ -184,14 +188,15 @@ export default async function HomePage({
             <div className="mt-8 grid grid-cols-1 gap-x-16 gap-y-8 sm:mt-10 sm:gap-y-12 lg:grid-cols-[18rem_1fr]">
               <div>
                 <h2 className="display text-3xl text-ink">
-                  Check before it acts.
+                  Gate it before it pays.
                 </h2>
                 <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft sm:mt-6">
-                  Choose a wallet and a capability. The answer comes from chain
-                  state, signed by the issuer.
+                  Choose a counterparty wallet and a capability. The verdict
+                  comes from chain state, signed by the issuer &mdash; the same
+                  read an agent makes the instant before sending a transaction.
                 </p>
                 <p className="mt-3 font-serif text-sm italic leading-relaxed text-ink-quiet">
-                  This is the read an agent makes before sending a transaction.
+                  This is the wedge: one <code className="font-mono not-italic">isCapable</code> call, returned as GO or STOP.
                 </p>
               </div>
               <VerifyDemo
@@ -212,9 +217,58 @@ export default async function HomePage({
       </HomeField>
 
       <section className="mx-auto max-w-5xl px-5 pt-20 pb-20 sm:px-8 sm:pt-32 sm:pb-32">
-        <section id="croo" className="scroll-mt-24">
+        {/* 02 — Why it compounds. The moat, told editorially: the gate is a
+            thin wedge, but every payment gated gives issuers more reason to
+            mint credentials, which makes the next gate more trustworthy.
+            That feedback loop is the creative monopoly — the gate becomes
+            the default the moment money moves between agents. */}
+        <section id="compound" className="scroll-mt-24">
           <header className="flex items-baseline justify-between">
-            <p className="eyebrow">02 · Check the stranger before you pay</p>
+            <p className="eyebrow">02 · Why it compounds</p>
+            <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
+              network effect · the moat
+            </p>
+          </header>
+          <Rule className="mt-4" />
+          <div className="mt-8 max-w-2xl sm:mt-10">
+            <h2 className="display text-3xl text-ink">
+              A thin wedge that grows into the default.
+            </h2>
+            <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft">
+              The gate is a single read &mdash; easy to adopt, easy to copy.
+              What isn&rsquo;t easy to copy is the loop it starts. Every
+              payment an agent gates is a reason for someone to issue a
+              credential; every credential issued is a reason for the next
+              agent to trust the gate. Issuers, agents, and payments pull
+              one another toward a single standard.
+            </p>
+            <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft">
+              That is the design intent: own the instant before money moves,
+              and the rest of agent identity &mdash; minting, rotation,
+              revocation, cross-chain portability &mdash; becomes the
+              infrastructure that feeds the gate rather than a product that
+              competes on its own.
+            </p>
+            <ol className="mt-8 space-y-3 font-serif text-base leading-relaxed text-ink-soft">
+              <li className="flex gap-4">
+                <span className="font-mono text-[11px] tabular text-terra pt-1.5">01</span>
+                <span>An agent calls the gate before paying a stranger. The read is free and stateless &mdash; no Ligis server in the path.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="font-mono text-[11px] tabular text-terra pt-1.5">02</span>
+                <span>Merchants and protocols require a credential to pass the gate, so they issue one. The capability set grows with the economy, not with Ligis&rsquo;s roadmap.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="font-mono text-[11px] tabular text-terra pt-1.5">03</span>
+                <span>More credentials mean a stranger is more likely to already be verifiable, so more agents gate by default. The loop closes &mdash; the gate becomes the standard the moment money moves.</span>
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        <section id="croo" className="mt-24 scroll-mt-24 sm:mt-36">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">03 · Check the stranger before you pay</p>
             <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">CROO Agent Store · x402</p>
           </header>
           <Rule className="mt-4" />
@@ -246,7 +300,7 @@ export default async function HomePage({
             contracts or agents. */}
         <section id="compose" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
-            <p className="eyebrow">03 · Build the check in</p>
+            <p className="eyebrow">04 · Build the check in</p>
             <p className="font-mono text-[11px] tabular text-ink-quiet">
               viem · ethers · cast · any caller
             </p>
@@ -267,7 +321,7 @@ export default async function HomePage({
             not for buyers who want to solve a problem. */}
         <section id="system" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
-            <p className="eyebrow">04 · The infrastructure</p>
+            <p className="eyebrow">05 · The infrastructure</p>
             <p className="font-mono text-[11px] tabular text-ink-quiet">
               no admin · no upgrade key · no off-chain dependency
             </p>
@@ -344,7 +398,7 @@ export default async function HomePage({
             Demoted to the last section. */}
         <section id="issue" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
-            <p className="eyebrow">05 · Issue credentials</p>
+            <p className="eyebrow">06 · Issue credentials</p>
             <p className="font-mono text-[11px] tabular text-ink-quiet">
               for issuers · cli · private key required
             </p>

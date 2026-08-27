@@ -9,7 +9,7 @@ const EXAMPLE_CAP = capabilities[0]?.id ?? "kyc.basic";
 
 export const metadata = {
   title: "Embed — Ligis",
-  description: "Drop a Ligis verification badge into any page.",
+  description: "Drop the Ligis gate — a live GO/STOP badge — into any page. No client SDK, no tracking, no database between the visitor and chain state.",
 };
 
 export default function EmbedPage() {
@@ -39,13 +39,15 @@ export default function EmbedPage() {
 
       <section className="mt-14 max-w-3xl sm:mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
-          Drop a verification
+          Drop the gate
           <br />
           into any page.
         </h1>
         <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
-          A live, server-rendered verification badge for any page. No client
-          SDK, no tracking, and no database between the visitor and chain state.
+          A live, server-rendered GO/STOP badge for any page. No client
+          SDK, no tracking, and no database between the visitor and chain
+          state &mdash; the verdict reads straight from the chain, the way
+          an agent would.
         </p>
       </section>
 

@@ -7,6 +7,7 @@ import {
   type VerifyResult,
   type BatchVerifyResult,
 } from "@/app/actions";
+import { GateVerdict } from "./GateVerdict";
 import { Rule } from "./Rule";
 import { truncateAddress } from "@/lib/format";
 
@@ -148,17 +149,19 @@ export function VerifyDemo({
           {singleState === null ? (
             <>
               <p className="font-serif text-sm italic text-ink-quiet">
-                The address below is pre-filled as a sample. Click verify to
-                check if it holds the selected capability.
+                The address below is pre-filled as a sample. Run the gate to see
+                whether your agent may proceed with this counterparty.
               </p>
               <p className="mt-3 font-serif text-sm italic text-ink-quiet">
-                <span className="text-sage">● is capable</span> means the agent
-                holds a valid credential. <span className="text-ink-quiet">● is not capable</span> means it doesn&rsquo;t.
+                <span className="text-sage">✓ GO</span> means the agent holds a
+                valid credential — proceed.{" "}
+                <span className="text-revoke">✗ STOP</span> means it
+                doesn&rsquo;t — your agent should not pay.
               </p>
               <p className="mt-3 font-serif text-base italic text-ink-quiet">
-                The result of{" "}
-                <code className="font-mono not-italic">isCapable</code>{" "}
-                appears here. One on-chain read, no SDK.
+                The verdict of{" "}
+                <code className="font-mono not-italic">isCapable</code> appears
+                here. One on-chain read, no SDK.
               </p>
             </>
           ) : !singleState.ok ? (
@@ -167,7 +170,7 @@ export function VerifyDemo({
               formRef={singleFormRef}
             />
           ) : (
-            <ResultPanel result={singleState} explorerUrl={explorerUrl} />
+            <SingleGate result={singleState} explorerUrl={explorerUrl} />
           )}
         </div>
       ) : (
@@ -187,7 +190,7 @@ export function VerifyDemo({
               formRef={batchFormRef}
             />
           ) : (
-            <BatchResultPanel result={batchState} explorerUrl={explorerUrl} />
+            <BatchGate result={batchState} explorerUrl={explorerUrl} />
           )}
         </div>
       )}
@@ -195,60 +198,29 @@ export function VerifyDemo({
   );
 }
 
-function ResultPanel({
+function SingleGate({
   result,
   explorerUrl,
 }: {
   result: Extract<VerifyResult, { ok: true }>;
   explorerUrl: string;
 }) {
-  const dotColor = result.capable ? "bg-sage" : "bg-ink-quiet";
-  const verb = result.capable ? "is capable" : "is not capable";
   return (
-    <div className="space-y-4">
-      <div className="flex items-baseline gap-3">
-        <span
-          className={`inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full ${dotColor}`}
-          aria-hidden
-        />
-        <p className="font-serif text-lg leading-snug text-ink">
-          <a
-            href={`${explorerUrl}/address/${result.subject}`}
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-base tabular text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-          >
-            {truncateAddress(result.subject, 6, 4)}
-          </a>{" "}
-          {verb} of{" "}
-          <span className="font-mono text-base tabular text-ink">
-            {result.capabilityId}
-          </span>
-          .
-        </p>
-      </div>
-      {result.capable && result.issuer ? (
-        <p className="pl-[1.5rem] font-serif text-sm italic text-ink-soft">
-          Issued by{" "}
-          <a
-            href={`${explorerUrl}/address/${result.issuer}`}
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono not-italic text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-          >
-            {truncateAddress(result.issuer, 6, 4)}
-          </a>
-          {result.expiresAt && result.expiresAt > 0n
-            ? `, expires ${new Date(Number(result.expiresAt) * 1000).toLocaleDateString("en", { month: "short", year: "numeric" }).toLowerCase()}`
-            : ", no expiry"}
-          .
-        </p>
-      ) : null}
-    </div>
+    <GateVerdict
+      verdict={{
+        capable: result.capable,
+        subject: result.subject,
+        capabilityId: result.capabilityId,
+        issuer: result.issuer,
+        expiresAt: result.expiresAt,
+        revoked: result.revoked,
+      }}
+      explorerUrl={explorerUrl}
+    />
   );
 }
 
-function BatchResultPanel({
+function BatchGate({
   result,
   explorerUrl,
 }: {
@@ -260,7 +232,7 @@ function BatchResultPanel({
     <div className="space-y-6">
       <div className="flex items-baseline gap-3">
         <span
-          className={`inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full ${heldCount > 0 ? "bg-sage" : "bg-ink-quiet"}`}
+          className={`inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full ${heldCount > 0 ? "bg-sage" : "bg-revoke"}`}
           aria-hidden
         />
         <p className="font-serif text-lg leading-snug text-ink">
@@ -272,7 +244,7 @@ function BatchResultPanel({
           >
             {truncateAddress(result.subject, 6, 4)}
           </a>{" "}
-          holds {heldCount} of {result.results.length} capabilities.
+          — {heldCount} of {result.results.length} capabilities pass the gate.
         </p>
       </div>
       <p className="pl-[1.5rem] font-mono text-[11px] text-ink-quiet">
@@ -284,9 +256,9 @@ function BatchResultPanel({
             <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
               <span className="font-mono tabular text-ink">{r.id}</span>
               <span
-                className={`font-mono text-[11px] uppercase tracking-[0.16em] ${r.capable ? "text-sage" : "text-ink-quiet"}`}
+                className={`font-mono text-[11px] uppercase tracking-[0.16em] ${r.capable ? "text-sage" : "text-revoke"}`}
               >
-                {r.capable ? "held" : "not held"}
+                {r.capable ? "GO" : "STOP"}
               </span>
             </div>
             <Rule tone="soft" />

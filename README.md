@@ -1,6 +1,6 @@
 # Ligis
 
-> **Portable on-chain identity and verifiable credentials for AI agents.**
+> **The trust gate for autonomous payments — one on-chain read that says GO or STOP before your agent pays a stranger.**
 > **Live on Pharos + Casper Testnet. Autonomous steward loop + x402 payments + CROO CAP commerce working end-to-end.**
 
 [![CI](https://github.com/sneldao/ligis/actions/workflows/ci.yml/badge.svg)](https://github.com/sneldao/ligis/actions/workflows/ci.yml)

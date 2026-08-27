@@ -88,6 +88,24 @@ and reach for typography, whitespace, and hairlines instead.
   force horizontal scrolling for core credential, issuer, or history data.
 - Architecture diagrams are hand-typeset SVG with proper labels, never the
   output of an auto-layout tool.
+- **The wedge and its verb**: the product's differentiated wedge is *the gate*
+  — the single on-chain read an autonomous payment calls the instant before
+  money moves to a stranger. The product owns one verb, "gate the payment,"
+  not a category ("verifiable credentials"). Identity, credentials, the
+  Steward loop, cross-chain portability, and CROO are the *moat* that feeds
+  the gate, not competing products. Surfaces frame themselves around the
+  decision moment, never around the architecture. Concretely: the gate is
+  served at `/gate` (the verb in the URL); the moat surfaces — `/steward`,
+  `/capabilities`, `/issuers`, `/embed`, the CROO risk check, the agent
+  dossiers — exist to feed the gate, and must never be promoted as
+  competing products in nav, hero, or section headers.
+- **Verdict vocabulary**: a verification result is a transaction decision,
+  rendered as `✓ GO` (sage) or `✗ STOP` (revoke) — never as
+  "capable / not capable" (that is capability status, not a decision). The
+  stop case carries a plain-language reason ("No verifiable authorization
+  found — your agent should not proceed"). Every surface that shows a
+  verdict uses the same `GateVerdict` primitive so the product reads as one
+  thing everywhere it appears.
 
 ## Composition primitives
 
@@ -98,6 +116,7 @@ Only these compose surfaces:
 | `Rule`                                                            | hairline (0.5px) or edge (1px), tone default or soft   |
 | `AddressDisplay`                                                  | mono address, optional link to explorer, optional copy |
 | `CopyButton`                                                      | quiet tracked-uppercase action, no border              |
+| `GateVerdict`                                                     | the GO/STOP pre-payment decision — left rule in tone, display verdict, plain-language reason, provenance line |
 | typography classes (`display`, `eyebrow`, `font-mono`, `tabular`) | hierarchy                                              |
 
 New compositions extend these. If a new feature truly needs a new primitive,

@@ -85,7 +85,7 @@ export function FocusPanel() {
                     ? "animate-pulse bg-ink-quiet"
                     : isCapable
                       ? "bg-sage"
-                      : "bg-ink-quiet"
+                      : "bg-revoke"
               }`}
               aria-hidden
             />
@@ -96,14 +96,13 @@ export function FocusPanel() {
                 <span className="italic text-ink-soft">Asking the registry…</span>
               ) : (
                 <>
+                  <span className={`font-mono text-base tabular ${isCapable ? "text-sage" : "text-revoke"}`}>
+                    {isCapable ? "✓ GO" : "✗ STOP"}
+                  </span>{" "}
                   <span className="font-mono text-base tabular text-ink">
                     {truncateAddress(active, 6, 4)}
                   </span>{" "}
-                  is{" "}
-                  <span className={isCapable ? "text-sage" : "text-ink-quiet"}>
-                    {isCapable ? "capable" : "not capable"}
-                  </span>{" "}
-                  of{" "}
+                  for{" "}
                   <span className="font-mono text-base tabular text-ink">
                     {verifiedCap}
                   </span>
