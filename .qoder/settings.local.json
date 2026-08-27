@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/udingethe/Dev/ligis && git --no-pager diff web/components/WalletChip.tsx)"
+    ]
+  }
+}
