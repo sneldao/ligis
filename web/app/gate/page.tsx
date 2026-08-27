@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
 
 export const metadata = {
-  title: "The Gate · Ligis",
+  title: "The Gate",
   description:
     "The one decision your agent calls before it pays a stranger. Paste a wallet, pick a capability, get GO or STOP — from chain state, not a Ligis server.",
   robots: { index: true, follow: true },
@@ -161,13 +161,14 @@ export default async function VerifyPage({
             agent, paste it in an audit trail, or drop it where a payment is
             about to happen.
           </p>
-          <div className="mt-5 flex items-baseline gap-4">
-            <code className="block flex-1 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+          <div className="mt-5 flex flex-wrap items-baseline gap-4">
+            <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
               {`${SITE_URL}/gate?chain=${chain.id}&subject=${rawSubject}&capability=${rawCap}`}
             </code>
             <CopyButton
               value={`${SITE_URL}/gate?chain=${chain.id}&subject=${rawSubject}&capability=${rawCap}`}
               label="copy"
+              className="shrink-0"
             />
           </div>
         </section>

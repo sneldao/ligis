@@ -16,7 +16,7 @@ Deployed on Casper Testnet (block ~8,429,998):
 
 22 Odra tests pass (the `pnpm test:all` headline number is 13; the corrected total after tightening the controller check + the nonce-binding + the GatedVault coverage is 22). 41 Foundry + 47 TypeScript tests pass.
 
-Verification on-the-fly: visit **`https://ligis.vercel.app/verify-casper`** — queries the live chain, no Ligis server-mediated trust.
+Verification on-the-fly: visit **`https://ligis.vercel.app/gate?chain=casper-testnet`** — queries the live chain, no Ligis server-mediated trust.
 
 ---
 
@@ -49,7 +49,7 @@ npx tsx scripts/casper-final-demo.ts
 
 This runs the full `boot → reason → gate → act → record` loop on Casper Testnet and writes the on-chain tx hashes to `scripts/casper-final-demo.lastrun.txt`. The BUIDL's tx-hash table is regenerated from this file. Exit 0 means success.
 
-Live verification: open **`https://ligis.vercel.app/verify-casper?subject=account-hash-...&capability=kyc.basic`** — server-side reads of Casper Testnet global state, no Ligis-side trust.
+Live verification: open **`https://ligis.vercel.app/gate?chain=casper-testnet&subject=account-hash-...&capability=kyc.basic`** — server-side reads of Casper Testnet global state, no Ligis-side trust.
 
 ---
 
