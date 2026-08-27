@@ -23,6 +23,25 @@ jobs:
         with:
           version: 10
 
+      - name: Setup Rust (nightly for Odra bulk-memory-disabled WASM)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2026-06-15
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/contracts-casper/target
+          key: ${{ runner.os }}-cargo-casper-${{ hashFiles('packages/contracts-casper/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-casper-
+
+      - name: Install cargo-odra
+        run: cargo install cargo-odra --locked
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
