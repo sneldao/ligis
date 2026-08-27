@@ -232,7 +232,7 @@ function BatchGate({
     <div className="space-y-6">
       <div className="flex items-baseline gap-3">
         <span
-          className={`inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full ${heldCount > 0 ? "bg-sage" : "bg-ink-quiet"}`}
+          className={`inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full ${heldCount > 0 ? "bg-sage" : "bg-revoke"}`}
           aria-hidden
         />
         <p className="font-serif text-lg leading-snug text-ink">
@@ -244,7 +244,7 @@ function BatchGate({
           >
             {truncateAddress(result.subject, 6, 4)}
           </a>{" "}
-          holds {heldCount} of {result.results.length} capabilities.
+          — {heldCount} of {result.results.length} capabilities pass the gate.
         </p>
       </div>
       <p className="pl-[1.5rem] font-mono text-[11px] text-ink-quiet">
@@ -256,9 +256,9 @@ function BatchGate({
             <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
               <span className="font-mono tabular text-ink">{r.id}</span>
               <span
-                className={`font-mono text-[11px] uppercase tracking-[0.16em] ${r.capable ? "text-sage" : "text-ink-quiet"}`}
+                className={`font-mono text-[11px] uppercase tracking-[0.16em] ${r.capable ? "text-sage" : "text-revoke"}`}
               >
-                {r.capable ? "held" : "not held"}
+                {r.capable ? "GO" : "STOP"}
               </span>
             </div>
             <Rule tone="soft" />

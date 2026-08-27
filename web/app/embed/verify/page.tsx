@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
 
 export const metadata = {
-  title: "Gate · Ligis",
+  title: "Gate",
   robots: { index: false, follow: false },
 };
 
@@ -76,7 +76,7 @@ function Frame(props: {
   const dotClass = props.capable ? "bg-sage" : "bg-revoke";
   const verdict = props.capable ? "GO" : "STOP";
   const ariaLabel = [
-    `Ligis gate: ${truncateAddress(props.subject!, 6, 4)} ${verdict} for ${props.capabilityId}`,
+    `Ligis gate: ${truncateAddress(props.subject!, 6, 4)}, verdict ${verdict}, for ${props.capabilityId}`,
     props.capable && props.issuer
       ? `, issued by ${truncateAddress(props.issuer, 5, 3)}${
           props.expiresAt && props.expiresAt > 0n

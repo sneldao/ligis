@@ -6,7 +6,7 @@ import { truncateAddress } from "@/lib/format";
  * Ligis is not "identity for agents." Its differentiated wedge is the single
  * binary decision an autonomous payment calls in the instant before money
  * moves to a stranger: GO or STOP. This component renders that decision the
- * same way everywhere it appears — the home check, /verify, and embeds — so
+ * same way everywhere it appears — the home check, /gate, and embeds — so
  * the product owns one verb ("gate the payment") instead of competing on a
  * category ("verifiable credentials").
  *

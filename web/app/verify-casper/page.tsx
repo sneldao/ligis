@@ -11,5 +11,5 @@ export default async function VerifyCasperRedirect({
   const params = new URLSearchParams({ chain: "casper-testnet" });
   if (subject) params.set("subject", subject);
   if (capability) params.set("capability", capability);
-  permanentRedirect(`/verify?${params.toString()}`);
+  permanentRedirect(`/gate?${params.toString()}`);
 }

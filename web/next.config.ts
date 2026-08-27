@@ -3,17 +3,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd(), ".."),
-  // `/gate` owns the product's verb in the URL. It is a transparent alias of
-  // `/verify` — the rewrite serves the same gate page while keeping `/gate`
-  // in the browser bar, so every shared gate link carries the verb.
-  async rewrites() {
-    return [
-      {
-        source: "/gate",
-        destination: "/verify",
-      },
-    ];
-  },
   // Security + caching headers
   async headers() {
     return [

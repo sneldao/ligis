@@ -94,7 +94,11 @@ and reach for typography, whitespace, and hairlines instead.
   not a category ("verifiable credentials"). Identity, credentials, the
   Steward loop, cross-chain portability, and CROO are the *moat* that feeds
   the gate, not competing products. Surfaces frame themselves around the
-  decision moment, never around the architecture.
+  decision moment, never around the architecture. Concretely: the gate is
+  served at `/gate` (the verb in the URL); the moat surfaces — `/steward`,
+  `/capabilities`, `/issuers`, `/embed`, the CROO risk check, the agent
+  dossiers — exist to feed the gate, and must never be promoted as
+  competing products in nav, hero, or section headers.
 - **Verdict vocabulary**: a verification result is a transaction decision,
   rendered as `✓ GO` (sage) or `✗ STOP` (revoke) — never as
   "capable / not capable" (that is capability status, not a decision). The

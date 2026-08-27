@@ -46,7 +46,7 @@ export function subjectFormatError(chain: ChainNetwork): string {
 }
 
 /**
- * The one verification path every surface shares — home demo, /verify,
+ * The one verification path every surface shares — home demo, /gate,
  * and the embed badge. Validates the subject for the active chain,
  * resolves the capability, runs isCapable, and reads the credential
  * details only when held.
