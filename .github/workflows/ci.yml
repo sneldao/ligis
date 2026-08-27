@@ -52,7 +52,7 @@ jobs:
         run: pnpm run audit:deps
 
       - name: Build workspace
-        run: pnpm -r --filter '!@ligis/contracts-casper' run build
+        run: pnpm build
 
       - name: Run TypeScript tests
         run: pnpm test:ts

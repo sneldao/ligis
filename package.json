@@ -7,7 +7,7 @@
   "private": true,
   "packageManager": "pnpm@10.33.2",
   "scripts": {
-    "build": "pnpm -r run build",
+    "build": "pnpm -r --filter '!@ligis/contracts-casper' run build",
     "dev": "pnpm -r run dev",
     "start": "node --enable-source-maps packages/cli/dist/index.js",
     "mcp": "node --enable-source-maps packages/mcp-server/dist/index.js",
