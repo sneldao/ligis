@@ -41,7 +41,8 @@ function isIssueRequirements(req: unknown): req is IssueRequirements {
     r !== null &&
     typeof r.subject === "string" &&
     typeof r.capability === "string" &&
-    (r.expiresInSeconds === undefined || typeof r.expiresInSeconds === "number") &&
+    (r.expiresInSeconds === undefined ||
+      typeof r.expiresInSeconds === "number") &&
     (r.externalAttestation === undefined ||
       isExternalAttestationRequirement(r.externalAttestation))
   );
@@ -141,7 +142,9 @@ export async function handleIssue(
 }
 
 async function verifyExternalAttestation(
-  req: IssueRequirements & { externalAttestation: ExternalAttestationRequirement },
+  req: IssueRequirements & {
+    externalAttestation: ExternalAttestationRequirement;
+  },
   deps: IssueDeps,
 ) {
   const verifier =
@@ -158,12 +161,14 @@ async function verifyExternalAttestation(
       schema: req.externalAttestation.schema,
     },
   });
-  const decision = evaluateAttestationPolicy(attestation, policy, now.getTime());
+  const decision = evaluateAttestationPolicy(
+    attestation,
+    policy,
+    now.getTime(),
+  );
 
   if (!decision.accepted || decision.capability !== req.capability) {
-    throw new Error(
-      `External attestation rejected: ${decision.reason}`,
-    );
+    throw new Error(`External attestation rejected: ${decision.reason}`);
   }
 
   return {
@@ -187,10 +192,14 @@ function loadEasTrustPolicyFromEnv(): AttestationTrustPolicy {
   const maxAgeSeconds = Number(process.env.LIGIS_EAS_MAX_AGE_SECONDS ?? 300);
 
   if (trustedAttesters.length === 0) {
-    throw new Error("LIGIS_EAS_TRUSTED_ATTESTERS is required for EAS-backed issuance");
+    throw new Error(
+      "LIGIS_EAS_TRUSTED_ATTESTERS is required for EAS-backed issuance",
+    );
   }
   if (Object.keys(capabilityMappings).length === 0) {
-    throw new Error("LIGIS_EAS_SCHEMA_CAPABILITIES is required for EAS-backed issuance");
+    throw new Error(
+      "LIGIS_EAS_SCHEMA_CAPABILITIES is required for EAS-backed issuance",
+    );
   }
 
   return {

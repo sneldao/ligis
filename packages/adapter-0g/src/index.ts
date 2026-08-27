@@ -6,7 +6,11 @@
  * 0G networks defined in assets/networks.json and re-exports the EVM operations
  * so callers can use 0G-specific types when needed.
  */
-export { ZeroGAdapter, createZeroGAdapter, type ZeroGAdapterOptions } from "./adapter.js";
+export {
+  ZeroGAdapter,
+  createZeroGAdapter,
+  type ZeroGAdapterOptions,
+} from "./adapter.js";
 export { ZeroGAdapter as default } from "./adapter.js";
 
 // Re-export EVM operations and helpers so consumers don't need to depend on

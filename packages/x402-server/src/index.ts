@@ -89,7 +89,10 @@ app.get("/health", (c) =>
 app.get("/supported", async (c) => {
   if (!CONFIG.facilitatorToken) {
     return c.json(
-      { ok: false, error: "CSPR_CLOUD_TOKEN not set — facilitator unavailable" },
+      {
+        ok: false,
+        error: "CSPR_CLOUD_TOKEN not set — facilitator unavailable",
+      },
       503,
     );
   }
@@ -406,17 +409,28 @@ async function settleLocally(
     // Build argv — no shell, so `payTo` (user-controlled) cannot inject.
     const argv = [
       "transfer",
-      "--node-address", CONFIG.rpcUrl,
-      "--secret-key", CONFIG.keyPath,
-      "--amount", minTransfer,
-      "--target-account", payTo,
-      "--transfer-id", String(transferId),
-      "--chain-name", "casper-test",
-      "--gas-price", "1",
-      "--payment-amount", "100000000",
+      "--node-address",
+      CONFIG.rpcUrl,
+      "--secret-key",
+      CONFIG.keyPath,
+      "--amount",
+      minTransfer,
+      "--target-account",
+      payTo,
+      "--transfer-id",
+      String(transferId),
+      "--chain-name",
+      "casper-test",
+      "--gas-price",
+      "1",
+      "--payment-amount",
+      "100000000",
     ];
 
-    const output = execFileSync("casper-client", argv, { encoding: "utf-8", timeout: 30_000 });
+    const output = execFileSync("casper-client", argv, {
+      encoding: "utf-8",
+      timeout: 30_000,
+    });
     const hashMatch = output.match(/"deploy_hash":\s*"([a-f0-9]+)"/);
     const txHash = hashMatch ? hashMatch[1] : "";
 
@@ -477,11 +491,41 @@ async function premiumPayload() {
 
   // CoinGecko coin IDs for major RWA tokens
   const rwaTokens = [
-    { coinId: "ondo-finance", symbol: "ONDO", name: "Ondo Finance", category: "Tokenized Treasuries", platform: "Ethereum" },
-    { coinId: "centrifuge", symbol: "CFG", name: "Centrifuge", category: "Tokenized RWA Credit", platform: "Ethereum" },
-    { coinId: "pendle", symbol: "PENDLE", name: "Pendle", category: "Yield Tokenization", platform: "Ethereum" },
-    { coinId: "maple", symbol: "MPL", name: "Maple Finance", category: "Tokenized Credit", platform: "Ethereum" },
-    { coinId: "polymesh", symbol: "POLYX", name: "Polymesh", category: "RWA Infrastructure", platform: "Polymesh" },
+    {
+      coinId: "ondo-finance",
+      symbol: "ONDO",
+      name: "Ondo Finance",
+      category: "Tokenized Treasuries",
+      platform: "Ethereum",
+    },
+    {
+      coinId: "centrifuge",
+      symbol: "CFG",
+      name: "Centrifuge",
+      category: "Tokenized RWA Credit",
+      platform: "Ethereum",
+    },
+    {
+      coinId: "pendle",
+      symbol: "PENDLE",
+      name: "Pendle",
+      category: "Yield Tokenization",
+      platform: "Ethereum",
+    },
+    {
+      coinId: "maple",
+      symbol: "MPL",
+      name: "Maple Finance",
+      category: "Tokenized Credit",
+      platform: "Ethereum",
+    },
+    {
+      coinId: "polymesh",
+      symbol: "POLYX",
+      name: "Polymesh",
+      category: "RWA Infrastructure",
+      platform: "Polymesh",
+    },
   ];
 
   const coinIds = rwaTokens.map((t) => t.coinId).join(",");
@@ -531,9 +575,14 @@ async function premiumPayload() {
   });
 
   const totalMarketCap = assets.reduce((s, a) => s + a.marketCapUsd, 0);
-  const avgChange = assets.length > 0
-    ? Number((assets.reduce((s, a) => s + a.change24h, 0) / assets.length).toFixed(2))
-    : 0;
+  const avgChange =
+    assets.length > 0
+      ? Number(
+          (assets.reduce((s, a) => s + a.change24h, 0) / assets.length).toFixed(
+            2,
+          ),
+        )
+      : 0;
 
   const payload = {
     type: "rwa_oracle_feed",
@@ -552,7 +601,8 @@ async function premiumPayload() {
     summary: {
       totalMarketCapUsd: totalMarketCap,
       avgChange24h: avgChange,
-      overallTrend: avgChange > 1 ? "bullish" : avgChange < -1 ? "bearish" : "neutral",
+      overallTrend:
+        avgChange > 1 ? "bullish" : avgChange < -1 ? "bearish" : "neutral",
       riskLevel: avgChange > 5 || avgChange < -5 ? "elevated" : "moderate",
       assetCount: assets.length,
     },

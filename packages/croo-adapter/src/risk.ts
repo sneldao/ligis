@@ -1,8 +1,5 @@
 import { loadLigisAdapter } from "./config.js";
-import {
-  capabilityCriticality,
-  capabilityWeight,
-} from "./capability-meta.js";
+import { capabilityCriticality, capabilityWeight } from "./capability-meta.js";
 import {
   type ServiceRequest,
   type ServiceResult,
@@ -174,16 +171,28 @@ function computeSubScore(
   let ttlPoints: number;
   if (ttlRatio >= 3) {
     ttlPoints = 30;
-    signals.push({ code: "ttl-comfortable", detail: `TTL is ${ttlRatio.toFixed(1)}× the requested minimum.` });
+    signals.push({
+      code: "ttl-comfortable",
+      detail: `TTL is ${ttlRatio.toFixed(1)}× the requested minimum.`,
+    });
   } else if (ttlRatio >= 1) {
     ttlPoints = 15 + (ttlRatio - 1) * 7.5;
-    signals.push({ code: "ttl-adequate", detail: `TTL meets the minimum but only ${ttlRatio.toFixed(1)}× buffer.` });
+    signals.push({
+      code: "ttl-adequate",
+      detail: `TTL meets the minimum but only ${ttlRatio.toFixed(1)}× buffer.`,
+    });
   } else if (ttlSeconds > 0) {
     ttlPoints = ttlRatio * 15;
-    signals.push({ code: "ttl-below-minimum", detail: `TTL is below the requested minimum (${ttlSeconds}s < ${minTtl}s).` });
+    signals.push({
+      code: "ttl-below-minimum",
+      detail: `TTL is below the requested minimum (${ttlSeconds}s < ${minTtl}s).`,
+    });
   } else {
     ttlPoints = 0;
-    signals.push({ code: "ttl-expired-or-none", detail: "Credential has no remaining TTL." });
+    signals.push({
+      code: "ttl-expired-or-none",
+      detail: "Credential has no remaining TTL.",
+    });
   }
 
   // Tenure maturity: 0 to 20 based on credential age.
@@ -194,7 +203,10 @@ function computeSubScore(
     tenurePoints = 0;
   } else if (ageSeconds >= MATURITY_THRESHOLD_SECONDS) {
     tenurePoints = 20;
-    signals.push({ code: "tenure-mature", detail: "Credential held for over 7 days." });
+    signals.push({
+      code: "tenure-mature",
+      detail: "Credential held for over 7 days.",
+    });
   } else {
     tenurePoints = (ageSeconds / MATURITY_THRESHOLD_SECONDS) * 20;
     signals.push({
@@ -241,16 +253,16 @@ function computeOverallScore(
   const totalWeight = checks.reduce((sum, c) => sum + c.weight, 0);
   if (totalWeight === 0) return 0;
 
-  const weightedSum = checks.reduce(
-    (sum, c) => sum + c.subScore * c.weight,
-    0,
-  );
+  const weightedSum = checks.reduce((sum, c) => sum + c.subScore * c.weight, 0);
   const capabilityScore = weightedSum / totalWeight;
 
   // Issuer diversity discount: 100 = no discount, 50 = 5% discount, 0 = 10% discount
   const diversityDiscount = ((100 - issuerDiversity) / 100) * 10;
 
-  return Math.min(100, Math.max(0, Math.round(capabilityScore - diversityDiscount)));
+  return Math.min(
+    100,
+    Math.max(0, Math.round(capabilityScore - diversityDiscount)),
+  );
 }
 
 /**
@@ -301,13 +313,7 @@ export async function handleRisk(
     const ttlRatio = minTtl > 0 && ttl > 0 ? ttl / minTtl : 0;
 
     const signals: RiskSignal[] = [];
-    const subScore = computeSubScore(
-      result.capable,
-      ttl,
-      minTtl,
-      age,
-      signals,
-    );
+    const subScore = computeSubScore(result.capable, ttl, minTtl, age, signals);
 
     // Verdict: fail if not capable, warn if TTL below minimum or immature,
     // pass otherwise. Critical capabilities get a stricter threshold —
@@ -390,7 +396,8 @@ export async function handleRisk(
     summary = `Counterparty holds all credentials but ${warnCount} have warnings (TTL or maturity). Proceed with caution.`;
   } else {
     overallVerdict = "pass";
-    summary = "Counterparty holds all required credentials with healthy TTL and maturity.";
+    summary =
+      "Counterparty holds all required credentials with healthy TTL and maturity.";
   }
 
   // --- Issuer diversity ---
@@ -399,7 +406,8 @@ export async function handleRisk(
   if (issuerDiversity <= 50 && checks.length > 1) {
     overallSignals.push({
       code: "single-issuer-concentration",
-      detail: "All credentials issued by the same issuer. Concentration risk if that issuer is compromised.",
+      detail:
+        "All credentials issued by the same issuer. Concentration risk if that issuer is compromised.",
     });
   }
 
@@ -416,7 +424,10 @@ export async function handleRisk(
   const tenureMaturity = Math.round(
     checks.reduce((sum, c) => {
       if (!c.capable || c.credentialAgeSeconds < 0) return sum + 0;
-      const ratio = Math.min(1, c.credentialAgeSeconds / MATURITY_THRESHOLD_SECONDS);
+      const ratio = Math.min(
+        1,
+        c.credentialAgeSeconds / MATURITY_THRESHOLD_SECONDS,
+      );
       return sum + ratio * 100;
     }, 0) / checks.length,
   );
@@ -463,7 +474,9 @@ export async function handleRisk(
     breakdown: JSON.stringify(report.breakdown),
   };
 
-  console.log(`[ligis-croo] risk report: verdict=${overallVerdict} score=${riskScore} checks=${checks.length}`);
+  console.log(
+    `[ligis-croo] risk report: verdict=${overallVerdict} score=${riskScore} checks=${checks.length}`,
+  );
 
   return {
     deliverableType: "text",

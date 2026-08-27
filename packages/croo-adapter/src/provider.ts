@@ -187,11 +187,21 @@ interface IdempotencyStore {
 
 class MemoryIdempotencyStore implements IdempotencyStore {
   private set = new Set<string>();
-  has(id: string) { return this.set.has(id); }
-  add(id: string) { this.set.add(id); }
-  delete(id: string) { this.set.delete(id); }
-  prune(): number { return 0; }
-  close() { this.set.clear(); }
+  has(id: string) {
+    return this.set.has(id);
+  }
+  add(id: string) {
+    this.set.add(id);
+  }
+  delete(id: string) {
+    this.set.delete(id);
+  }
+  prune(): number {
+    return 0;
+  }
+  close() {
+    this.set.clear();
+  }
 }
 
 class SqliteIdempotencyStore implements IdempotencyStore {
@@ -204,17 +214,24 @@ class SqliteIdempotencyStore implements IdempotencyStore {
   constructor(path: string) {
     // Ensure the parent directory exists — SQLite won't create it.
     mkdirSync(dirname(path), { recursive: true });
-    const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
+    const { DatabaseSync } =
+      require("node:sqlite") as typeof import("node:sqlite");
     this.db = new DatabaseSync(path);
     this.db.exec(
       "CREATE TABLE IF NOT EXISTS fulfilled_orders (order_id TEXT PRIMARY KEY, fulfilled_at INTEGER NOT NULL)",
     );
-    this.stmtHas = this.db.prepare("SELECT 1 FROM fulfilled_orders WHERE order_id = ?");
+    this.stmtHas = this.db.prepare(
+      "SELECT 1 FROM fulfilled_orders WHERE order_id = ?",
+    );
     this.stmtAdd = this.db.prepare(
       "INSERT OR IGNORE INTO fulfilled_orders (order_id, fulfilled_at) VALUES (?, ?)",
     );
-    this.stmtDel = this.db.prepare("DELETE FROM fulfilled_orders WHERE order_id = ?");
-    this.stmtPrune = this.db.prepare("DELETE FROM fulfilled_orders WHERE fulfilled_at < ?");
+    this.stmtDel = this.db.prepare(
+      "DELETE FROM fulfilled_orders WHERE order_id = ?",
+    );
+    this.stmtPrune = this.db.prepare(
+      "DELETE FROM fulfilled_orders WHERE fulfilled_at < ?",
+    );
   }
 
   has(id: string): boolean {
@@ -242,7 +259,10 @@ export class LigisCrooProvider {
   private serviceAliases: Map<string, string>;
   private fulfilledOrders: IdempotencyStore;
   /** Cache of negotiationId -> { serviceId, requirements } for order fulfillment. */
-  private negotiationCache: Map<string, { serviceId: string; requirements: string }> = new Map();
+  private negotiationCache: Map<
+    string,
+    { serviceId: string; requirements: string }
+  > = new Map();
   /** Orders currently being fulfilled (prevents duplicate concurrent processing). */
   private inFlight: Set<string> = new Set();
   /** Timestamp of last successful delivery, for health monitoring. */
@@ -334,14 +354,21 @@ export class LigisCrooProvider {
         rawServiceId = neg.serviceId;
         requirements = neg.requirements;
       } catch (err) {
-        console.error(`[ligis-croo] failed to fetch negotiation ${negotiationId}:`, err);
+        console.error(
+          `[ligis-croo] failed to fetch negotiation ${negotiationId}:`,
+          err,
+        );
       }
     }
 
-    const serviceId = rawServiceId ? this.resolveServiceId(rawServiceId) : undefined;
+    const serviceId = rawServiceId
+      ? this.resolveServiceId(rawServiceId)
+      : undefined;
 
     if (!serviceId || !this.serviceMap.has(serviceId)) {
-      console.log(`[ligis-croo] rejecting: unsupported service ${rawServiceId}`);
+      console.log(
+        `[ligis-croo] rejecting: unsupported service ${rawServiceId}`,
+      );
       await this.client.rejectNegotiation(
         negotiationId,
         `Unsupported service: ${rawServiceId ?? "unknown"}`,
@@ -357,7 +384,9 @@ export class LigisCrooProvider {
 
     try {
       await this.client.acceptNegotiation(negotiationId);
-      console.log(`[ligis-croo] accepted negotiation ${negotiationId} (service: ${serviceId})`);
+      console.log(
+        `[ligis-croo] accepted negotiation ${negotiationId} (service: ${serviceId})`,
+      );
     } catch (err) {
       console.error(`[ligis-croo] accept failed:`, err);
     }
@@ -374,7 +403,8 @@ export class LigisCrooProvider {
   ): Promise<ServiceResult> {
     return new Promise<ServiceResult>((resolve, reject) => {
       const timer = setTimeout(
-        () => reject(new Error(`Handler timed out after ${HANDLER_TIMEOUT_MS}ms`)),
+        () =>
+          reject(new Error(`Handler timed out after ${HANDLER_TIMEOUT_MS}ms`)),
         HANDLER_TIMEOUT_MS,
       );
       handler(request)
@@ -430,12 +460,17 @@ export class LigisCrooProvider {
           rawServiceId = neg.serviceId;
           requirements = neg.requirements;
         } catch (err) {
-          console.error(`[ligis-croo] failed to fetch negotiation ${negotiationId}:`, err);
+          console.error(
+            `[ligis-croo] failed to fetch negotiation ${negotiationId}:`,
+            err,
+          );
         }
       }
     }
 
-    const serviceId = rawServiceId ? this.resolveServiceId(rawServiceId) : undefined;
+    const serviceId = rawServiceId
+      ? this.resolveServiceId(rawServiceId)
+      : undefined;
     const service = serviceId ? this.serviceMap.get(serviceId) : undefined;
     if (!service || !requirements) {
       console.error(
@@ -451,9 +486,10 @@ export class LigisCrooProvider {
       const result = await this.runHandlerWithTimeout(service.handler, request);
 
       // Log the deliverable payload for debugging (truncated for readability).
-      const preview = result.deliverableText.length > 200
-        ? result.deliverableText.slice(0, 200) + "…"
-        : result.deliverableText;
+      const preview =
+        result.deliverableText.length > 200
+          ? result.deliverableText.slice(0, 200) + "…"
+          : result.deliverableText;
       console.log(`[ligis-croo] handler result for ${orderId}: ${preview}`);
 
       // Retry delivery with exponential backoff. Only mark as fulfilled

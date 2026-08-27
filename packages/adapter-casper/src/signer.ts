@@ -162,19 +162,29 @@ export async function callStoredContractViaCli(params: {
   // break out of any quoting context.
   const argv = [
     "put-deploy",
-    "--node-address", rpcUrl,
-    "--secret-key", keyPath,
-    "--session-package-hash", finalHash,
-    "--session-entry-point", entryPoint,
-    "--chain-name", chainName,
-    "--gas-price", "1",
-    "--payment-amount", String(paymentAmount),
+    "--node-address",
+    rpcUrl,
+    "--secret-key",
+    keyPath,
+    "--session-package-hash",
+    finalHash,
+    "--session-entry-point",
+    entryPoint,
+    "--chain-name",
+    chainName,
+    "--gas-price",
+    "1",
+    "--payment-amount",
+    String(paymentAmount),
     ...sessionArgs.map((a) => `--session-arg=${a}`),
   ];
 
   let output: string;
   try {
-    output = execFileSync("casper-client", argv, { encoding: "utf-8", timeout: 30_000 });
+    output = execFileSync("casper-client", argv, {
+      encoding: "utf-8",
+      timeout: 30_000,
+    });
   } catch (e: any) {
     const stderr = e.stderr?.toString() ?? "";
     const stdout = e.stdout?.toString() ?? "";
@@ -234,7 +244,11 @@ export async function callStoredContractViaSdk(params: {
   const storedTarget = new StoredTarget();
   (storedTarget as any).byPackageHash = byPackageHash;
 
-  const target = new TransactionTarget(undefined, storedTarget as any, undefined);
+  const target = new TransactionTarget(
+    undefined,
+    storedTarget as any,
+    undefined,
+  );
 
   // Build args
   const argsObj = new Args(args);
@@ -242,7 +256,9 @@ export async function callStoredContractViaSdk(params: {
   const initiatorAddr = new InitiatorAddr(signer.publicKey);
   const ttl = new Duration(ttlMs);
   const timestamp = new Timestamp(new Date());
-  const txnEntryPoint = new TransactionEntryPoint(TransactionEntryPointEnum.Call);
+  const txnEntryPoint = new TransactionEntryPoint(
+    TransactionEntryPointEnum.Call,
+  );
 
   const pricingMode = new PricingMode();
   pricingMode.paymentLimited = new PaymentLimitedMode();

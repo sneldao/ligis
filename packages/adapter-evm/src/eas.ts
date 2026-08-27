@@ -110,7 +110,9 @@ export function normalizeEasAttestation(
   const checkedAt = options.checkedAt ?? new Date();
   const nowSeconds = BigInt(Math.floor(checkedAt.getTime() / 1000));
   const status =
-    record.uid === EAS_ZERO_UID || record.time === 0n || record.attester === zeroAddress
+    record.uid === EAS_ZERO_UID ||
+    record.time === 0n ||
+    record.attester === zeroAddress
       ? "invalid"
       : record.revocationTime > 0n
         ? "revoked"
@@ -133,7 +135,9 @@ export function normalizeEasAttestation(
     status,
     issuedAt: record.time > 0n ? secondsToIso(record.time) : undefined,
     expiresAt:
-      record.expirationTime > 0n ? secondsToIso(record.expirationTime) : undefined,
+      record.expirationTime > 0n
+        ? secondsToIso(record.expirationTime)
+        : undefined,
     claims: options.decodeClaims?.(record) ?? {},
     checkedAt: checkedAt.toISOString(),
   };
@@ -144,9 +148,16 @@ export class EasAttestationVerifier implements AttestationVerifier {
 
   constructor(private readonly options: EasAttestationVerifierOptions) {}
 
-  async verify(request: AttestationVerificationRequest): Promise<ExternalAttestation> {
-    if (request.source !== this.source || request.reference.source !== this.source) {
-      throw new Error("EasAttestationVerifier only accepts EAS verification requests");
+  async verify(
+    request: AttestationVerificationRequest,
+  ): Promise<ExternalAttestation> {
+    if (
+      request.source !== this.source ||
+      request.reference.source !== this.source
+    ) {
+      throw new Error(
+        "EasAttestationVerifier only accepts EAS verification requests",
+      );
     }
     if (!isBytes32Hex(request.reference.uid)) {
       throw new Error("EAS attestation UID must be a bytes32 hex string");

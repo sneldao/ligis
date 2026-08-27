@@ -144,11 +144,16 @@ export async function getAgentId(
       "casper-client",
       [
         "get-dictionary-item",
-        "--node-address", rpcUrl,
-        "--state-root-hash", stateRoot,
-        "--contract-hash", contractHash,
-        "--dictionary-name", "wallet_of_agent",
-        "--dictionary-item-key", dictItemKey,
+        "--node-address",
+        rpcUrl,
+        "--state-root-hash",
+        stateRoot,
+        "--contract-hash",
+        contractHash,
+        "--dictionary-name",
+        "wallet_of_agent",
+        "--dictionary-item-key",
+        dictItemKey,
       ],
       { encoding: "utf-8", timeout: 15_000 },
     );
@@ -274,9 +279,8 @@ export async function verifyCapability(
   // Pad subject to 32 bytes — EVM addresses (20 bytes) must be left-padded
   // to match the 32-byte key used by the on-chain CredentialRegistry.
   const subjectRaw = stripAccountHashPrefix(opts.subject);
-  const subjectPadded = subjectRaw.length === 64
-    ? subjectRaw
-    : subjectRaw.padStart(64, "0");
+  const subjectPadded =
+    subjectRaw.length === 64 ? subjectRaw : subjectRaw.padStart(64, "0");
   const subjectBytes = hexToBytes(subjectPadded);
   const capHashBytes = hexToBytes(capHash);
 
@@ -348,10 +352,14 @@ export async function verifyCapability(
       "casper-client",
       [
         "get-dictionary-item",
-        "--node-address", rpcUrl,
-        "--state-root-hash", stateRoot,
-        "--seed-uref", stateUref,
-        "--dictionary-item-key", dictItemKey,
+        "--node-address",
+        rpcUrl,
+        "--state-root-hash",
+        stateRoot,
+        "--seed-uref",
+        stateUref,
+        "--dictionary-item-key",
+        dictItemKey,
       ],
       { encoding: "utf-8", timeout: 15_000 },
     );
@@ -528,10 +536,14 @@ export async function signCredential(
             "casper-client",
             [
               "get-dictionary-item",
-              "--node-address", rpcUrl,
-              "--state-root-hash", stateRoot,
-              "--seed-uref", stateUref,
-              "--dictionary-item-key", dictItemKey,
+              "--node-address",
+              rpcUrl,
+              "--state-root-hash",
+              stateRoot,
+              "--seed-uref",
+              stateUref,
+              "--dictionary-item-key",
+              dictItemKey,
             ],
             { encoding: "utf-8", timeout: 15_000 },
           );
@@ -555,9 +567,8 @@ export async function signCredential(
   // Subject must be 32 bytes for EIP-712 bytes32. EVM addresses (20 bytes)
   // are left-padded to 32 bytes. Casper account hashes are already 32 bytes.
   const subjectHex = stripAccountHashPrefix(opts.subject);
-  const subjectPadded = subjectHex.length === 64
-    ? subjectHex
-    : subjectHex.padStart(64, "0");
+  const subjectPadded =
+    subjectHex.length === 64 ? subjectHex : subjectHex.padStart(64, "0");
 
   const message: CredentialMessage = {
     issuer,
@@ -615,9 +626,8 @@ export async function submitCredential(
   const issuerBytes = hexToBytes(signed.issuer);
   // Pad subject to 32 bytes for the on-chain contract (same as signCredential).
   const subjectRaw = stripAccountHashPrefix(signed.subject);
-  const subjectPadded = subjectRaw.length === 64
-    ? subjectRaw
-    : subjectRaw.padStart(64, "0");
+  const subjectPadded =
+    subjectRaw.length === 64 ? subjectRaw : subjectRaw.padStart(64, "0");
   const subjectBytes = hexToBytes(subjectPadded);
   const capHashBytes = hexToBytes(signed.capabilityHash);
   const digestBytes = hexToBytes(signed.digest);
@@ -660,7 +670,7 @@ export async function submitCredential(
       } catch (cliErr) {
         throw new Error(
           `SDK submission failed: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}\n` +
-          `CLI fallback also failed: ${cliErr instanceof Error ? cliErr.message : cliErr}`,
+            `CLI fallback also failed: ${cliErr instanceof Error ? cliErr.message : cliErr}`,
         );
       }
     }
@@ -693,9 +703,8 @@ export async function revokeCredential(
   const capHash = parseCapability(opts.capability) as `0x${string}`;
   // Pad subject to 32 bytes for consistency with issue/verify.
   const subjectRaw = stripAccountHashPrefix(opts.subject);
-  const subjectPadded = subjectRaw.length === 64
-    ? subjectRaw
-    : subjectRaw.padStart(64, "0");
+  const subjectPadded =
+    subjectRaw.length === 64 ? subjectRaw : subjectRaw.padStart(64, "0");
   const subjectBytes = hexToBytes(subjectPadded);
   const capHashBytes = hexToBytes(capHash);
 
@@ -745,7 +754,7 @@ export async function revokeCredential(
       } catch (cliErr) {
         throw new Error(
           `SDK submission failed: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}\n` +
-          `CLI fallback also failed: ${cliErr instanceof Error ? cliErr.message : cliErr}`,
+            `CLI fallback also failed: ${cliErr instanceof Error ? cliErr.message : cliErr}`,
         );
       }
     }

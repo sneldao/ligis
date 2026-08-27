@@ -53,7 +53,9 @@ function startHealthServer(provider: LigisCrooProvider): Server {
     }
   });
   server.listen(port, "127.0.0.1", () => {
-    console.log(`[ligis-croo] Health endpoint: http://127.0.0.1:${port}/health`);
+    console.log(
+      `[ligis-croo] Health endpoint: http://127.0.0.1:${port}/health`,
+    );
   });
   return server;
 }
@@ -70,7 +72,8 @@ async function main() {
 
   // Persistent idempotency: survive restarts without double-delivering.
   // Default location is ~/.ligis/croo-idempotency.db, overridable via env.
-  const dbPath = process.env.LIGIS_CROO_IDEMPOTENCY_DB ??
+  const dbPath =
+    process.env.LIGIS_CROO_IDEMPOTENCY_DB ??
     join(homedir(), ".ligis", "croo-idempotency.db");
 
   const serviceAliases = loadServiceAliases();
@@ -84,7 +87,9 @@ async function main() {
   const stream = await provider.start();
   const healthServer = startHealthServer(provider);
 
-  console.log("[ligis-croo] Provider started. Waiting for CROO negotiations...");
+  console.log(
+    "[ligis-croo] Provider started. Waiting for CROO negotiations...",
+  );
   console.log(
     `[ligis-croo] Services: ${defaultServices.map((s) => s.id).join(", ")}`,
   );
@@ -93,7 +98,9 @@ async function main() {
       console.log(`[ligis-croo] Service alias: ${uuid} -> ${name}`);
     }
   } else {
-    console.log("[ligis-croo] No service aliases configured (set CROO_SERVICE_ID_* env vars)");
+    console.log(
+      "[ligis-croo] No service aliases configured (set CROO_SERVICE_ID_* env vars)",
+    );
   }
   console.log(`[ligis-croo] Idempotency DB: ${dbPath}`);
   console.log(`[ligis-croo] Chain: ${config.ligisChain}`);

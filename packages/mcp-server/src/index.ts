@@ -64,7 +64,7 @@ function ok(data: unknown) {
 const chainProperty = {
   type: "string",
   description:
-    "Target chain: 'evm' (default, Pharos + EVM), 'casper' (Casper Testnet), or '0g' (0G Chain)."
+    "Target chain: 'evm' (default, Pharos + EVM), 'casper' (Casper Testnet), or '0g' (0G Chain).",
 };
 
 // ---------- MCP server ----------

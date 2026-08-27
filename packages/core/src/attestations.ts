@@ -100,13 +100,22 @@ export function evaluateAttestationPolicy(
   });
 
   if (!policy.acceptedSources.includes(attestation.evidence.source)) {
-    return fail("Attestation source is not accepted by policy", "source-untrusted");
+    return fail(
+      "Attestation source is not accepted by policy",
+      "source-untrusted",
+    );
   }
   if (policy.maxAgeSeconds <= 0 || !Number.isFinite(policy.maxAgeSeconds)) {
-    return fail("Attestation policy max age is invalid", "policy-max-age-invalid");
+    return fail(
+      "Attestation policy max age is invalid",
+      "policy-max-age-invalid",
+    );
   }
   if (attestation.status !== "valid") {
-    return fail(`Attestation is ${attestation.status}`, `source-${attestation.status}`);
+    return fail(
+      `Attestation is ${attestation.status}`,
+      `source-${attestation.status}`,
+    );
   }
 
   const trusted = policy.trustedAttesters?.[attestation.evidence.source];
@@ -116,12 +125,19 @@ export function evaluateAttestationPolicy(
 
   const checkedAt = Date.parse(attestation.checkedAt);
   const ageMs = now - checkedAt;
-  if (!Number.isFinite(checkedAt) || ageMs < 0 || ageMs > policy.maxAgeSeconds * 1000) {
+  if (
+    !Number.isFinite(checkedAt) ||
+    ageMs < 0 ||
+    ageMs > policy.maxAgeSeconds * 1000
+  ) {
     return fail("Attestation status is stale", "source-stale");
   }
 
   if (policy.requireFreshStatus && !attestation.expiresAt) {
-    return fail("Attestation has no expiry or freshness boundary", "expiry-missing");
+    return fail(
+      "Attestation has no expiry or freshness boundary",
+      "expiry-missing",
+    );
   }
 
   if (attestation.expiresAt) {
@@ -146,9 +162,13 @@ export function evaluateAttestationPolicy(
     : undefined;
   const capability =
     (schemaKey && policy.capabilityMappings[schemaKey]) ||
-    (attestation.evidence.schema && policy.capabilityMappings[attestation.evidence.schema]);
+    (attestation.evidence.schema &&
+      policy.capabilityMappings[attestation.evidence.schema]);
   if (!capability) {
-    return fail("Attestation schema is not mapped to a capability", "schema-unmapped");
+    return fail(
+      "Attestation schema is not mapped to a capability",
+      "schema-unmapped",
+    );
   }
 
   return {
