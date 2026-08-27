@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
 
 export const metadata = {
-  title: "Verify · Ligis",
+  title: "Gate · Ligis",
   robots: { index: false, follow: false },
 };
 
@@ -73,10 +73,10 @@ function Frame(props: {
     );
   }
 
-  const dotClass = props.capable ? "bg-sage" : "bg-ink-quiet";
-  const verb = props.capable ? "is capable" : "is not capable";
+  const dotClass = props.capable ? "bg-sage" : "bg-revoke";
+  const verdict = props.capable ? "GO" : "STOP";
   const ariaLabel = [
-    `Ligis verification: ${truncateAddress(props.subject!, 6, 4)} ${verb} of ${props.capabilityId}`,
+    `Ligis gate: ${truncateAddress(props.subject!, 6, 4)} ${verdict} for ${props.capabilityId}`,
     props.capable && props.issuer
       ? `, issued by ${truncateAddress(props.issuer, 5, 3)}${
           props.expiresAt && props.expiresAt > 0n
@@ -95,7 +95,7 @@ function Frame(props: {
       className="block bg-paper px-5 py-4 no-underline"
     >
       <div className="flex items-baseline justify-between gap-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-        <span>Ligis · verify</span>
+        <span>Ligis · gate</span>
         <span className="font-mono tabular">{props.chain.name.toLowerCase()}</span>
       </div>
       <div className="mt-3 flex items-baseline gap-3">
@@ -104,10 +104,13 @@ function Frame(props: {
           aria-hidden
         />
         <p className="font-serif text-base leading-snug text-ink">
+          <span className={`font-mono text-sm tabular ${props.capable ? "text-sage" : "text-revoke"}`}>
+            {props.capable ? "✓ GO" : "✗ STOP"}
+          </span>{" "}
           <span className="font-mono text-sm tabular">
             {truncateAddress(props.subject!, 6, 4)}
           </span>{" "}
-          {verb} of{" "}
+          for{" "}
           <span className="font-mono text-sm tabular">
             {props.capabilityId}
           </span>

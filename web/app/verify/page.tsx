@@ -1,18 +1,20 @@
-import type { Address } from "viem";
 import { CHAINS, getChain, type ChainNetwork } from "@/lib/network";
 import { isCasperChain } from "@/lib/chain-router";
 import { verifySubject } from "@/lib/verify";
-import { monthYear, truncateAddress } from "@/lib/format";
+import { truncateAddress } from "@/lib/format";
+import { GateVerdict } from "@/components/GateVerdict";
+import { CopyButton } from "@/components/CopyButton";
 import { Rule } from "@/components/Rule";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
 
 export const metadata = {
-  title: "Verify · Ligis",
+  title: "The Gate · Ligis",
   description:
-    "Self-host verification for any agent wallet. One URL, one hash, one decision.",
+    "The one decision your agent calls before it pays a stranger. Paste a wallet, pick a capability, get GO or STOP — from chain state, not a Ligis server.",
   robots: { index: true, follow: true },
 };
 
@@ -38,7 +40,7 @@ const DEMO_SUBJECTS: Record<string, { label: string; value: string }[]> = {
 const DEMO_CAPABILITIES = ["kyc.basic", "rwa.accredited", "data.premium", "agent.commerce.x402"];
 
 function verifyHref(chain: ChainNetwork, subject: string, capability: string): string {
-  return `/verify?chain=${chain.id}&subject=${subject}&capability=${capability}`;
+  return `/gate?chain=${chain.id}&subject=${subject}&capability=${capability}`;
 }
 
 export default async function VerifyPage({
@@ -64,11 +66,12 @@ export default async function VerifyPage({
 
       <section className="mt-12 sm:mt-16">
         <h1 className="display text-4xl text-ink sm:text-5xl">
-          Verify any agent wallet.
+          The gate before the payment.
         </h1>
         <p className="mt-6 max-w-2xl font-serif text-lg leading-relaxed text-ink-soft">
           One URL. One keccak256 capability hash. One on-chain read.
-          The answer comes from {chain.name} state, not from a Ligis server.
+          The answer comes from {chain.name} state, not from a Ligis server —
+          so your agent can trust it the instant before money moves.
         </p>
         <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           {CHAINS.map((c, i) => (
@@ -78,7 +81,7 @@ export default async function VerifyPage({
                 <span className="text-ink">{c.name.toLowerCase()}</span>
               ) : (
                 <a
-                  href={`/verify?chain=${c.id}`}
+                  href={`/gate?chain=${c.id}`}
                   className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
                 >
                   {c.name.toLowerCase()}
@@ -134,28 +137,51 @@ export default async function VerifyPage({
 
       {rawSubject && rawCap ? (
         <section className="mt-16">
-          <h2 className="eyebrow">Result</h2>
+          <h2 className="eyebrow">Verdict</h2>
           <div className="mt-6">
             <Result chain={chain} subject={rawSubject} capability={rawCap} />
           </div>
         </section>
       ) : (
         <section className="mt-16">
-          <h2 className="eyebrow">Result</h2>
+          <h2 className="eyebrow">Verdict</h2>
           <p className="mt-4 font-serif text-base italic text-ink-quiet">
-            Click a subject and capability above to run the check.
+            Pick a counterparty and a capability above to run the gate.
           </p>
         </section>
       )}
+
+      {rawSubject && rawCap ? (
+        <section className="mt-12">
+          <h2 className="eyebrow">Share this gate</h2>
+          <p className="mt-4 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">
+            A gate link is a self-verifying URL &mdash; anyone who opens it
+            re-runs the same on-chain read and sees the same decision. No
+            account, no token, no Ligis server in the path. Hand it to an
+            agent, paste it in an audit trail, or drop it where a payment is
+            about to happen.
+          </p>
+          <div className="mt-5 flex items-baseline gap-4">
+            <code className="block flex-1 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+              {`${SITE_URL}/gate?chain=${chain.id}&subject=${rawSubject}&capability=${rawCap}`}
+            </code>
+            <CopyButton
+              value={`${SITE_URL}/gate?chain=${chain.id}&subject=${rawSubject}&capability=${rawCap}`}
+              label="copy"
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-16">
         <h2 className="eyebrow">API</h2>
         <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
           The same path works as a shareable, self-verifying URL for
-          programmatic checks and audit trails.
+          programmatic checks and audit trails. The <code className="font-mono">/gate</code> verb
+          aliases <code className="font-mono">/verify</code> &mdash; use either.
         </p>
         <pre className="mt-4 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
-{`GET /verify?chain=${chain.id}&subject=${casper ? "account-hash-..." : "0x..."}&capability=kyc.basic`}
+{`GET /gate?chain=${chain.id}&subject=${casper ? "account-hash-..." : "0x..."}&capability=kyc.basic`}
         </pre>
       </section>
 
@@ -185,32 +211,17 @@ async function Result({
   }
 
   return (
-    <div className={`border-l-2 pl-6 ${outcome.capable ? "border-sage" : "border-revoke"}`}>
-      <p className="font-mono text-sm tabular text-ink-soft">
-        subject: {truncateAddress(outcome.subject as Address, 8, 8)}
-      </p>
-      <p className="mt-1 font-mono text-sm tabular text-ink-soft">
-        capability: {outcome.capabilityId}
-      </p>
-      <p className="mt-4 display text-3xl">
-        {outcome.capable ? (
-          <span className="text-sage">✓ Capable</span>
-        ) : (
-          <span className="text-revoke">✗ Not capable</span>
-        )}
-      </p>
-      {outcome.issuer ? (
-        <p className="mt-3 font-serif text-base leading-relaxed text-ink-soft">
-          Issued by <code className="font-mono text-ink">{truncateAddress(outcome.issuer, 6, 4)}</code>
-          {outcome.expiresAt && outcome.expiresAt > 0n
-            ? `, expires ${monthYear(outcome.expiresAt)}`
-            : ", no expiry"}
-          .
-        </p>
-      ) : null}
-      <p className="mt-6 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-        Source: {chain.name} state, read on request. On-chain. Not a Ligis server.
-      </p>
-    </div>
+    <GateVerdict
+      verdict={{
+        capable: outcome.capable,
+        subject: outcome.subject,
+        capabilityId: outcome.capabilityId,
+        issuer: outcome.issuer,
+        expiresAt: outcome.expiresAt,
+        revoked: outcome.revoked,
+      }}
+      explorerUrl={chain.explorerUrl}
+      source={`${chain.name} state`}
+    />
   );
 }

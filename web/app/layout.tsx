@@ -40,9 +40,9 @@ const jetbrains = localFont({
   display: "swap",
 });
 
-const TITLE = "Ligis — know who you're paying before you pay";
+const TITLE = "Ligis — gate the payment before your agent makes it";
 const DESCRIPTION =
-  "Your agent is about to pay a stranger. Ligis tells you if that stranger is trustworthy — in one on-chain read, before the transaction leaves your wallet. Portable identity and verifiable credentials for autonomous agents.";
+  "When your agent is about to pay a stranger, Ligis is the one on-chain read that says GO or STOP — before money moves. Portable identity and verifiable credentials for autonomous agents, made into a single trust gate.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

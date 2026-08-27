@@ -117,3 +117,5 @@ web/package-lock.json
 /web/lib/**/*.js
 /web/lib/**/*.js.map
 /web/lib/**/*.d.ts
+
+.pnpm-store/

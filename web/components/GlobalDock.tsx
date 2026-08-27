@@ -8,6 +8,7 @@ import { ChainSelector } from "@/components/ChainSelector";
 import { UnifiedWalletChip } from "@/components/UnifiedWalletChip";
 
 const NAV = [
+  { href: "/gate", label: "Gate" },
   { href: "/#how", label: "How it works" },
   { href: "/steward", label: "Steward" },
   { href: "/capabilities", label: "Capabilities" },
