@@ -14,6 +14,7 @@ export interface EvidenceManifest {
   chainId: string;
   chainName: string;
   goal: string;
+  counterparty?: string;
   reasoning: {
     text: string;
     verified: boolean;
@@ -27,6 +28,18 @@ export interface EvidenceManifest {
     selfIssued: boolean;
     issueTxHash?: string;
   }>;
+  risk?: {
+    ok: boolean;
+    counterparty?: string;
+    provider?: string;
+    endpoint?: string;
+    runId?: string;
+    costUsd?: number;
+    score?: number;
+    level?: string;
+    error?: string;
+    raw?: unknown;
+  } | null;
   action: { type: string; gated: boolean; txHashes: string[] };
   anchoredTokenUri: string;
   recordedAt: number;

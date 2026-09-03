@@ -17,6 +17,7 @@ import type {
   StorageResult,
 } from "@ligis/core";
 import { buildReasoningPrompt, parseReasoning } from "./policy.js";
+import { CounterpartyRiskResolver } from "./monid.js";
 
 // ---------- Result types ----------
 
@@ -38,6 +39,8 @@ export interface StewardResult {
   storage: { rootHash: string; txHash: string } | null;
   anchored: { agentId: string; tokenUri: string; txHash: string } | null;
   manifest: EvidenceManifest;
+  counterparty?: string;
+  risk?: EvidenceManifest["risk"];
   error?: string;
 }
 
@@ -45,6 +48,10 @@ export interface StewardResult {
 
 export interface StewardRunOpts {
   dryRun?: boolean;
+  /** Optional counterparty to run a Monid risk check against before gating. */
+  counterparty?: string;
+  /** Risk score threshold (0-100). Exceeding this blocks the gate. */
+  riskThreshold?: number;
   /**
    * Optional issuer key for self-issuing credentials. Defaults to
    * `process.env.PRIVATE_KEY`. Pulled here (not from the adapter) so that
@@ -60,10 +67,12 @@ export class TrustSteward {
     private adapter: ChainAdapter,
     private reasoner: Reasoner,
     private store: EvidenceStore,
+    private riskResolver?: CounterpartyRiskResolver,
   ) {}
 
   async run(goal: string, opts: StewardRunOpts = {}): Promise<StewardResult> {
     const dryRun = opts.dryRun ?? false;
+    const counterparty = opts.counterparty;
     const controller = this.adapter.walletAddress();
     if (!controller) {
       throw new Error(
@@ -111,7 +120,32 @@ export class TrustSteward {
     // 3. PARSE — extract + validate against known capabilities
     const parsed = parseReasoning(reasoning.text);
 
-    // 4. GATE — check capability for each required cap
+    // 4. RISK — discover and run a Monid counterparty check before gating
+    let riskResult: EvidenceManifest["risk"] = null;
+    if (this.riskResolver && counterparty) {
+      try {
+        const resolved = await this.riskResolver.resolve(counterparty, {
+          query: `counterparty risk for ${counterparty}`,
+        });
+        riskResult = {
+          ok: resolved.ok,
+          counterparty: resolved.counterparty,
+          provider: resolved.provider,
+          endpoint: resolved.endpoint,
+          runId: resolved.runId,
+          costUsd: resolved.costUsd,
+          score: resolved.score,
+          level: resolved.level,
+          error: resolved.error,
+          raw: resolved.raw,
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        riskResult = { ok: false, counterparty, error: message };
+      }
+    }
+
+    // 5. GATE — check capability for each required cap
     const capResults: StewardResult["capabilities"] = [];
     for (const cap of parsed.capabilities) {
       const check = await this.adapter.verifyCapability({
@@ -127,7 +161,7 @@ export class TrustSteward {
       delete (capResults[capResults.length - 1] as { error?: string }).error;
     }
 
-    // 5. ACT — self-issue any missing capabilities
+    // 6. ACT — self-issue any missing capabilities
     if (!dryRun) {
       const issuerKey = opts.issuerKey ?? process.env.PRIVATE_KEY;
       if (!issuerKey) {
@@ -159,21 +193,30 @@ export class TrustSteward {
       }
     }
 
-    // 6. RE-GATE — verify all required capabilities are now held
-    let gated = true;
+    // 7. RE-GATE — combine capabilities + Monid risk for the final GO/STOP
+    let capabilityGated = true;
     for (const cap of capResults) {
       if (dryRun) {
-        if (!cap.capable) gated = false;
+        if (!cap.capable) capabilityGated = false;
       } else {
         const recheck = await this.adapter.verifyCapability({
           subject: controller,
           capability: cap.name,
         });
-        if (!recheck.capable) gated = false;
+        if (!recheck.capable) capabilityGated = false;
       }
     }
 
-    // 7. RECORD — build manifest, persist, anchor on-chain
+    const threshold = opts.riskThreshold ?? 75;
+    const riskyLevels = new Set(["high", "severe"]);
+    const riskGated =
+      !riskResult ||
+      (riskResult.ok &&
+        !riskyLevels.has(riskResult.level ?? "") &&
+        (riskResult.score ?? 0) < threshold);
+    const gated = capabilityGated && riskGated;
+
+    // 8. RECORD — build manifest, persist, anchor on-chain
     let storage: StorageResult | null = null;
     let anchored: StewardResult["anchored"] = null;
     let anchoredTokenUri = "";
@@ -184,8 +227,10 @@ export class TrustSteward {
         did,
         controller,
         goal,
+        counterparty,
         reasoning,
         capResults,
+        riskResult,
         gated,
         txHashes,
         "",
@@ -213,8 +258,10 @@ export class TrustSteward {
       did,
       controller,
       goal,
+      counterparty,
       reasoning,
       capResults,
+      riskResult,
       gated,
       txHashes,
       anchoredTokenUri,
@@ -231,6 +278,8 @@ export class TrustSteward {
       storage,
       anchored,
       manifest: finalManifest,
+      counterparty,
+      risk: riskResult,
     };
   }
 
@@ -239,8 +288,10 @@ export class TrustSteward {
     did: string,
     controller: string,
     goal: string,
+    counterparty: string | undefined,
     reasoning: ReasoningResult,
     capabilities: StewardResult["capabilities"],
+    risk: EvidenceManifest["risk"],
     gated: boolean,
     txHashes: string[],
     anchoredTokenUri: string,
@@ -253,6 +304,7 @@ export class TrustSteward {
       chainId: this.adapter.chainId,
       chainName: this.adapter.chainName,
       goal,
+      counterparty,
       reasoning: {
         text: reasoning.text,
         verified: reasoning.verified,
@@ -260,6 +312,7 @@ export class TrustSteward {
         provider: reasoning.provider,
       },
       capabilities,
+      risk,
       action: { type: ACTION_TYPE, gated, txHashes },
       anchoredTokenUri,
       recordedAt: Math.floor(Date.now() / 1000),
@@ -286,8 +339,10 @@ export class TrustSteward {
       did,
       controller,
       goal,
+      undefined,
       empty,
       [],
+      null,
       false,
       txHashes,
       "",

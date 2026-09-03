@@ -30,6 +30,7 @@
     "smoke:casper": "tsx scripts/casper-smoke-test.ts",
     "demo:croo": "tsx scripts/croo-e2e-demo.ts",
     "demo:casper": "tsx scripts/casper-e2e-demo.ts",
+    "demo:monid": "pnpm start -- agent run --goal 'pay a counterparty for premium RWA data' --counterparty '${MONID_COUNTERPARTY:-0x0000000000000000000000000000000000000000}'",
     "deploy:casper": "pnpm --filter @ligis/adapter-casper deploy",
     "demo": "bash scripts/demo.sh",
     "format": "bash scripts/forge.sh fmt && prettier --write 'packages/*/src/**/*.{ts,json,md}'",

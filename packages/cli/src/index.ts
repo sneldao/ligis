@@ -23,7 +23,13 @@ import { capabilityHash, loadConfig, type ChainAdapter } from "@ligis/core";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
 import { ZeroGAdapter } from "@ligis/adapter-0g";
-import { TrustSteward, LocalReasoner } from "@ligis/agent-logic";
+import {
+  TrustSteward,
+  LocalReasoner,
+  CounterpartyRiskResolver,
+  loadMonidConfig,
+  MonidClient,
+} from "@ligis/agent-logic";
 import {
   ZeroGCompute,
   ZeroGStorage,
@@ -72,10 +78,18 @@ Usage:
   ligis rotate --token-id <id> --new-controller <addr>
   ligis sign --issuer-key <key> --subject <addr> --capability <name|hash> [--expires-in <seconds>]
   ligis balance [--public-key <hex>]    query CSPR balance (Casper only)
-  ligis agent run --goal <text> [--dry-run]
+  ligis agent run --goal <text> [--dry-run] [--counterparty <addr>] [--risk-threshold <n>]
 
 Global flags:
   --chain <evm|casper|0g>  chain to target (default: evm)
+
+Monid environment:
+  MONID_API_KEY         API key for counterparty risk discovery/run
+  MONID_BASE_URL        optional Monid API base URL
+  MONID_RISK_QUERY      optional override for the monid discover query
+  MONID_RISK_PROVIDER   skip discovery and use this provider
+  MONID_RISK_ENDPOINT   skip discovery and use this endpoint
+  MONID_RISK_INPUT_FIELD  input field name for the counterparty address
 
 Environment:
   PRIVATE_KEY           wallet private key (for write operations)
@@ -216,6 +230,10 @@ async function cmdAgentRun() {
   const goal = arg("goal");
   if (!goal) throw new Error("--goal required");
   const dryRun = process.argv.includes("--dry-run");
+  const counterparty = arg("counterparty");
+  const riskThreshold = arg("risk-threshold")
+    ? Number(arg("risk-threshold"))
+    : undefined;
   const adapter = getAdapter();
   const store = new ZeroGStorage(loadZeroGStorageConfig());
 
@@ -239,8 +257,19 @@ async function cmdAgentRun() {
     reasoner = new LocalReasoner();
   }
 
-  const steward = new TrustSteward(adapter, reasoner, store);
-  const result = await steward.run(goal, { dryRun });
+  const monidConfig = loadMonidConfig();
+  let riskResolver;
+  if (monidConfig) {
+    const client = new MonidClient(monidConfig);
+    riskResolver = new CounterpartyRiskResolver(client);
+  }
+
+  const steward = new TrustSteward(adapter, reasoner, store, riskResolver);
+  const result = await steward.run(goal, {
+    dryRun,
+    counterparty,
+    riskThreshold,
+  });
   emit(result);
 }
 
