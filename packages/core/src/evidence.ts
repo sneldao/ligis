@@ -6,6 +6,8 @@
  * and is intentionally chain-neutral so the same manifest format works across
  * adapters.
  */
+import type { TrustDecisionSummary, TrustSignal } from "./trust.js";
+
 export interface EvidenceManifest {
   version: 1;
   agentId: string;
@@ -28,18 +30,10 @@ export interface EvidenceManifest {
     selfIssued: boolean;
     issueTxHash?: string;
   }>;
-  risk?: {
-    ok: boolean;
-    counterparty?: string;
-    provider?: string;
-    endpoint?: string;
-    runId?: string;
-    costUsd?: number;
-    score?: number;
-    level?: string;
-    error?: string;
-    raw?: unknown;
-  } | null;
+  /** Provider-agnostic signal ledger behind the decision (risk, capability, identity, policy). */
+  signals?: TrustSignal[];
+  /** Summary of the trust decision this manifest is the receipt for. */
+  decision?: TrustDecisionSummary | null;
   action: { type: string; gated: boolean; txHashes: string[] };
   anchoredTokenUri: string;
   recordedAt: number;

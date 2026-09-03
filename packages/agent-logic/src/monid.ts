@@ -1,10 +1,12 @@
 /**
- * Monid client for the Trust Steward.
+ * Monid client + risk provider for the Trust Steward.
  *
  * Wraps the Monid HTTP API (discover / inspect / run) and turns it into a
- * pay-per-call counterparty-risk resolver that the Steward can call before
- * releasing a payment to a stranger.
+ * pay-per-call counterparty risk provider. The Steward calls it before
+ * releasing a payment to a stranger; Monid meters the per-call cost that the
+ * trust receipt reports.
  */
+import type { RiskProvider, RiskProviderInput, TrustSignal } from "@ligis/core";
 
 export interface MonidConfig {
   apiKey: string;
@@ -46,35 +48,6 @@ export interface MonidRun {
   cost?: { amount: number; currency: string };
   createdAt?: string;
   completedAt?: string;
-}
-
-export interface CounterpartyRiskResult {
-  ok: boolean;
-  counterparty: string;
-  query: string;
-  provider?: string;
-  endpoint?: string;
-  runId?: string;
-  costUsd?: number;
-  score?: number;
-  level?: string;
-  raw?: unknown;
-  error?: string;
-}
-
-export interface CounterpartyRiskOpts {
-  /** Natural-language query passed to `monid discover`. */
-  query?: string;
-  /** Pre-selected provider (skips discovery ranking). */
-  provider?: string;
-  /** Pre-selected endpoint. */
-  endpoint?: string;
-  /** Input field name to send the counterparty address in. */
-  inputField?: string;
-  /** Max time to wait for a run to finish, in milliseconds. */
-  maxWaitMs?: number;
-  /** Polling interval, in milliseconds. */
-  pollMs?: number;
 }
 
 const DEFAULT_BASE_URL = "https://api.monid.ai";
@@ -271,109 +244,197 @@ function extractRisk(result: unknown): { score?: number; level?: string } {
   return { score, level };
 }
 
-export class CounterpartyRiskResolver {
-  private client: MonidClient;
+export interface MonidRiskOpts {
+  /** Risk score threshold (0-100); a score at or above it stops the gate. */
+  threshold?: number;
+  /** Natural-language query passed to `monid discover`. */
+  query?: string;
+  /** Pre-selected provider (skips discovery ranking). */
+  provider?: string;
+  /** Pre-selected endpoint. */
+  endpoint?: string;
+  /** Input field name to send the counterparty address in. */
+  inputField?: string;
+  /** Max time to wait for a run to finish, in milliseconds. */
+  maxWaitMs?: number;
+  /** Polling interval, in milliseconds. */
+  pollMs?: number;
+}
 
-  constructor(client: MonidClient) {
-    this.client = client;
-  }
+const DEFAULT_THRESHOLD = 75;
+const RISKY_LEVELS = new Set(["high", "severe"]);
 
-  async resolve(
-    counterparty: string,
-    opts: CounterpartyRiskOpts = {},
-  ): Promise<CounterpartyRiskResult> {
+/**
+ * Monid-backed {@link RiskProvider}: discover → inspect → run → poll, one
+ * measured call per counterparty check. Never throws for a failed check —
+ * a Monid outage or failed run is reported as a `stop` signal so the gate
+ * blocks the payment instead of silently passing it.
+ */
+export class MonidRiskProvider implements RiskProvider {
+  readonly name = "monid";
+
+  constructor(
+    private client: MonidClient,
+    private opts: MonidRiskOpts = {},
+  ) {}
+
+  async resolve(input: RiskProviderInput): Promise<TrustSignal> {
     const query =
-      opts.query ??
+      this.opts.query ??
       process.env.MONID_RISK_QUERY ??
-      `crypto counterparty risk for ${counterparty}`;
+      `crypto counterparty risk for ${input.counterparty}`;
 
-    let provider = opts.provider ?? process.env.MONID_RISK_PROVIDER;
-    let endpoint = opts.endpoint ?? process.env.MONID_RISK_ENDPOINT;
-    let discovered: MonidEndpoint[] = [];
+    let provider = this.opts.provider ?? process.env.MONID_RISK_PROVIDER;
+    let endpoint = this.opts.endpoint ?? process.env.MONID_RISK_ENDPOINT;
 
     try {
       const discoverRes = await this.client.discover(query);
-      discovered = discoverRes.results;
-
       if (!provider || !endpoint) {
         const pick = discoverRes.results[0];
         if (!pick) {
-          return {
-            ok: false,
-            counterparty,
-            query,
+          return this.failure(input, query, {
+            provider,
+            endpoint,
             error: `No Monid endpoints discovered for "${query}"`,
-          };
+          });
         }
         provider = pick.provider;
         endpoint = pick.endpoint;
       }
     } catch (e) {
-      return {
-        ok: false,
-        counterparty,
-        query,
+      return this.failure(input, query, {
+        provider,
+        endpoint,
         error: e instanceof Error ? e.message : String(e),
-      };
+      });
     }
 
     try {
       const detail = await this.client.inspect(provider, endpoint);
       const inputField = inferInputField(
         detail.inputSchema,
-        opts.inputField ?? process.env.MONID_RISK_INPUT_FIELD,
+        this.opts.inputField ?? process.env.MONID_RISK_INPUT_FIELD,
       );
-      const input: Record<string, string> = { [inputField]: counterparty };
+      const payload: Record<string, string> = {
+        [inputField]: input.counterparty,
+      };
 
       // Some risk endpoints need a chain identifier alongside the address.
       if (
         detail.inputSchema?.properties &&
         "chain" in detail.inputSchema.properties &&
-        !input.chain
+        !payload.chain
       ) {
-        input.chain = "ethereum";
+        payload.chain = "ethereum";
       }
       if (
         detail.inputSchema?.properties &&
         "blockchain" in detail.inputSchema.properties &&
-        !input.blockchain
+        !payload.blockchain
       ) {
-        input.blockchain = "ethereum";
+        payload.blockchain = "ethereum";
       }
 
       const run = await this.client.runAndWait(
         provider,
         endpoint,
-        input,
-        opts.pollMs,
-        opts.maxWaitMs ?? DEFAULT_MAX_WAIT_MS,
+        payload,
+        this.opts.pollMs,
+        this.opts.maxWaitMs ?? DEFAULT_MAX_WAIT_MS,
       );
-
-      const { score, level } = extractRisk(run.result);
-      const ok = run.status === "completed" && !run.error;
-
-      return {
-        ok,
-        counterparty,
-        query,
-        provider,
-        endpoint,
-        runId: run.id,
-        costUsd: run.cost?.amount,
-        score,
-        level,
-        raw: run.result,
-        error: run.error,
-      };
+      return this.signalFromRun(input, query, provider, endpoint, run);
     } catch (e) {
-      return {
-        ok: false,
-        counterparty,
-        query,
+      return this.failure(input, query, {
         provider,
         endpoint,
         error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  private signalFromRun(
+    input: RiskProviderInput,
+    query: string,
+    provider: string,
+    endpoint: string,
+    run: MonidRun,
+  ): TrustSignal {
+    const { score, level } = extractRisk(run.result);
+    const metadata: Record<string, unknown> = {
+      counterparty: input.counterparty,
+      query,
+      provider,
+      endpoint,
+      runId: run.id,
+      score,
+      level,
+      raw: run.result,
+    };
+    if (run.error) metadata.error = run.error;
+    const cost = run.cost
+      ? { amount: run.cost.amount, currency: run.cost.currency }
+      : undefined;
+
+    const ok = run.status === "completed" && !run.error;
+    if (!ok) {
+      return {
+        kind: "risk",
+        source: this.name,
+        verdict: "stop",
+        confidence: 0,
+        cost,
+        metadata,
       };
     }
+    if (score === undefined && level === undefined) {
+      // Ran clean but produced no readable risk score — the provider cannot judge.
+      return {
+        kind: "risk",
+        source: this.name,
+        verdict: "unknown",
+        confidence: 30,
+        cost,
+        metadata,
+      };
+    }
+
+    const threshold = this.opts.threshold ?? DEFAULT_THRESHOLD;
+    const stop =
+      RISKY_LEVELS.has(level ?? "") ||
+      (score !== undefined && score >= threshold);
+    const confidence =
+      score !== undefined && level !== undefined
+        ? 90
+        : score !== undefined || level !== undefined
+          ? 60
+          : 30;
+    return {
+      kind: "risk",
+      source: this.name,
+      verdict: stop ? "stop" : "go",
+      confidence,
+      cost,
+      metadata,
+    };
+  }
+
+  private failure(
+    input: RiskProviderInput,
+    query: string,
+    info: { provider?: string; endpoint?: string; error: string },
+  ): TrustSignal {
+    return {
+      kind: "risk",
+      source: this.name,
+      verdict: "stop",
+      confidence: 0,
+      metadata: {
+        counterparty: input.counterparty,
+        query,
+        provider: info.provider,
+        endpoint: info.endpoint,
+        error: info.error,
+      },
+    };
   }
 }

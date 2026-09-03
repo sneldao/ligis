@@ -13,22 +13,33 @@
  *   ligis revoke --subject <addr> --capability <name|hash> --nonce <n> [--issuer-key <key>]
  *   ligis rotate --token-id <id> --new-controller <addr>
  *   ligis sign --issuer-key <key> --subject <addr> --capability <name|hash> [--expires-in <seconds>]
- *   ligis agent run --goal <text> [--dry-run]
+ *   ligis trust check --counterparty <addr> --intent <text> [--amount <amt>] [--capability <cap>]
+ *                     [--risk-provider monid|none] [--risk-threshold <n>] [--dry-run] [--json]
+ *   ligis agent run --goal <text> [--dry-run] [--counterparty <addr>] [--risk-threshold <n>]
  *
  * Global flags:
  *   --chain <evm|casper>   chain to target (default: evm)
  */
 
-import { capabilityHash, loadConfig, type ChainAdapter } from "@ligis/core";
+import {
+  buildTrustReceipt,
+  capabilityHash,
+  loadConfig,
+  type ChainAdapter,
+  type Reasoner,
+  type RiskProvider,
+  type TrustReceipt,
+} from "@ligis/core";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
 import { ZeroGAdapter } from "@ligis/adapter-0g";
 import {
   TrustSteward,
   LocalReasoner,
-  CounterpartyRiskResolver,
+  MonidRiskProvider,
   loadMonidConfig,
   MonidClient,
+  type StewardResult,
 } from "@ligis/agent-logic";
 import {
   ZeroGCompute,
@@ -36,6 +47,7 @@ import {
   loadZeroGConfig,
   loadZeroGStorageConfig,
 } from "@ligis/zerog";
+import { renderTrustReceipt } from "./receipt.js";
 
 /** Read a --flag <value> or --flag=value argument. */
 function arg(name: string, aliases: string[] = []): string | undefined {
@@ -78,7 +90,11 @@ Usage:
   ligis rotate --token-id <id> --new-controller <addr>
   ligis sign --issuer-key <key> --subject <addr> --capability <name|hash> [--expires-in <seconds>]
   ligis balance [--public-key <hex>]    query CSPR balance (Casper only)
+  ligis trust check --counterparty <addr> --intent <text> [--amount <amt>]
+                     [--capability <cap>] [--risk-provider monid|none]
+                     [--risk-threshold <n>] [--dry-run] [--json]
   ligis agent run --goal <text> [--dry-run] [--counterparty <addr>] [--risk-threshold <n>]
+                  (with --counterparty, an alias for ligis trust check)
 
 Global flags:
   --chain <evm|casper|0g>  chain to target (default: evm)
@@ -226,21 +242,22 @@ async function cmdSign() {
   emit({ ok: true, action: "sign", ...result });
 }
 
-async function cmdAgentRun() {
-  const goal = arg("goal");
-  if (!goal) throw new Error("--goal required");
-  const dryRun = process.argv.includes("--dry-run");
-  const counterparty = arg("counterparty");
-  const riskThreshold = arg("risk-threshold")
-    ? Number(arg("risk-threshold"))
-    : undefined;
-  const adapter = getAdapter();
-  const store = new ZeroGStorage(loadZeroGStorageConfig());
+// ---------- Trust flow (shared by `trust check` and `agent run`) ----------
 
-  // Try 0G Compute first; fall back to local keyword matching if unavailable
-  let reasoner;
+interface TrustFlowOpts {
+  dryRun?: boolean;
+  counterparty?: string;
+  amount?: string;
+  capability?: string;
+  /** Comma-separated provider names ("none" disables off-chain risk checks). */
+  riskProvider?: string;
+  riskThreshold?: number;
+}
+
+/** 0G Compute reasoner with the local keyword fallback. */
+async function getReasoner(): Promise<Reasoner> {
   try {
-    reasoner = new ZeroGCompute(loadZeroGConfig());
+    const reasoner = new ZeroGCompute(loadZeroGConfig());
     // Test connectivity by attempting a simple reason call
     const test = await Promise.race([
       reasoner.reason('Reply with: {"capabilities":[],"reasoning":"ok"}'),
@@ -249,28 +266,133 @@ async function cmdAgentRun() {
       ),
     ]);
     void test; // connectivity confirmed
+    return reasoner;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(
       `  [steward] 0G Compute unavailable (${msg}), using local keyword reasoner.`,
     );
-    reasoner = new LocalReasoner();
+    return new LocalReasoner();
   }
+}
 
-  const monidConfig = loadMonidConfig();
-  let riskResolver;
-  if (monidConfig) {
-    const client = new MonidClient(monidConfig);
-    riskResolver = new CounterpartyRiskResolver(client);
+/**
+ * Build the risk providers for a run. `monid` is used by default whenever
+ * MONID_API_KEY is configured; requesting it explicitly without a key is an
+ * error rather than a silent skip.
+ */
+function getRiskProviders(opts: TrustFlowOpts): RiskProvider[] {
+  const requested = (opts.riskProvider ?? "monid")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 0 && s !== "none");
+  const providers: RiskProvider[] = [];
+  for (const name of requested) {
+    if (name !== "monid") {
+      throw new Error(
+        `Unknown --risk-provider '${name}' (supported: monid, none)`,
+      );
+    }
+    const config = loadMonidConfig();
+    if (!config) {
+      if (opts.riskProvider) {
+        throw new Error(
+          `--risk-provider ${name} requires MONID_API_KEY to be set`,
+        );
+      }
+      continue; // default run without Monid configured — no off-chain risk signals
+    }
+    providers.push(
+      new MonidRiskProvider(new MonidClient(config), {
+        threshold: opts.riskThreshold,
+      }),
+    );
   }
+  return providers;
+}
 
-  const steward = new TrustSteward(adapter, reasoner, store, riskResolver);
-  const result = await steward.run(goal, {
-    dryRun,
-    counterparty,
-    riskThreshold,
+/**
+ * Run the trust flow: boot → reason → risk (providers in parallel) → gate →
+ * act → record. Returns both the full steward result and the receipt.
+ */
+async function runTrustFlow(
+  intent: string,
+  opts: TrustFlowOpts,
+): Promise<{ result: StewardResult; receipt: TrustReceipt }> {
+  const adapter = getAdapter();
+  const store = new ZeroGStorage(loadZeroGStorageConfig());
+  const reasoner = await getReasoner();
+  const riskProviders = getRiskProviders(opts);
+  const steward = new TrustSteward(adapter, reasoner, store, riskProviders);
+  const result = await steward.run(intent, {
+    dryRun: opts.dryRun,
+    counterparty: opts.counterparty,
+    amount: opts.amount,
+    capability: opts.capability,
+  });
+  const receipt = buildTrustReceipt(result.decision, {
+    storage: result.storage,
+    anchoredTokenUri: result.anchored?.tokenUri ?? null,
+  });
+  return { result, receipt };
+}
+
+async function cmdAgentRun() {
+  const goal = arg("goal");
+  if (!goal) throw new Error("--goal required");
+  // With --counterparty this is an alias for `ligis trust check` with the
+  // goal as the pre-filled intent; output stays JSON for backward compat.
+  const { result } = await runTrustFlow(goal, {
+    dryRun: process.argv.includes("--dry-run"),
+    counterparty: arg("counterparty"),
+    amount: arg("amount"),
+    capability: arg("capability"),
+    riskThreshold: arg("risk-threshold")
+      ? Number(arg("risk-threshold"))
+      : undefined,
   });
   emit(result);
+}
+
+async function cmdTrustCheck() {
+  const counterparty = arg("counterparty");
+  const intent = arg("intent");
+  if (!counterparty) throw new Error("--counterparty required");
+  if (!intent) throw new Error("--intent required");
+  const riskThreshold = arg("risk-threshold")
+    ? Number(arg("risk-threshold"))
+    : undefined;
+  const json = process.argv.includes("--json");
+
+  // The 0G Storage SDK logs progress to stdout, which would corrupt piped
+  // JSON — silence console.log for the duration of the flow (stderr stays).
+  const originalLog = console.log;
+  if (json) console.log = () => {};
+  let result: Awaited<ReturnType<typeof runTrustFlow>>["result"];
+  let receipt: TrustReceipt;
+  try {
+    ({ result, receipt } = await runTrustFlow(intent, {
+      dryRun: process.argv.includes("--dry-run"),
+      counterparty,
+      amount: arg("amount"),
+      capability: arg("capability"),
+      riskProvider: arg("risk-provider"),
+      riskThreshold,
+    }));
+  } finally {
+    console.log = originalLog;
+  }
+
+  if (!result.ok) {
+    console.error(`error: ${result.error ?? "trust check failed"}`);
+  }
+  if (json) {
+    emit(receipt);
+  } else {
+    console.log(renderTrustReceipt(receipt));
+  }
+  // The exit code is the verdict, so pipes can branch on GO/STOP.
+  process.exitCode = receipt.verdict === "go" ? 0 : 1;
 }
 
 async function cmdBalance() {
@@ -314,6 +436,14 @@ async function main() {
       if (process.argv[3] === "run") return cmdAgentRun();
       console.error(`Unknown agent subcommand: ${process.argv[3] ?? "(none)"}`);
       console.error("Usage: ligis agent run --goal <text> [--dry-run]");
+      process.exit(1);
+      return;
+    case "trust":
+      if (process.argv[3] === "check") return cmdTrustCheck();
+      console.error(`Unknown trust subcommand: ${process.argv[3] ?? "(none)"}`);
+      console.error(
+        "Usage: ligis trust check --counterparty <addr> --intent <text>",
+      );
       process.exit(1);
       return;
     default:

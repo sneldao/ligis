@@ -112,11 +112,13 @@ and reach for typography, whitespace, and hairlines instead.
 Only these compose surfaces:
 
 | Primitive                                                         | What it is                                             |
-| ----------------------------------------------------------------- | ------------------------------------------------------ |
+| ---------------------------------------------------------------- | ------------------------------------------------------ |
 | `Rule`                                                            | hairline (0.5px) or edge (1px), tone default or soft   |
 | `AddressDisplay`                                                  | mono address, optional link to explorer, optional copy |
 | `CopyButton`                                                      | quiet tracked-uppercase action, no border              |
 | `GateVerdict`                                                     | the GO/STOP pre-payment decision — left rule in tone, display verdict, plain-language reason, provenance line |
+| `SignalStack`                                                     | the trust signal ledger — Rule-delimited rows of risk/capability/identity/policy signals with verdict, confidence, and measured cost |
+| `TrustReceipt`                                                    | the final trust ledger — decision, signal stack, incumbent-vs-measured cost comparison, anchored manifest hash |
 | typography classes (`display`, `eyebrow`, `font-mono`, `tabular`) | hierarchy                                              |
 
 New compositions extend these. If a new feature truly needs a new primitive,
