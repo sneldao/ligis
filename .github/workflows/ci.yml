@@ -48,6 +48,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check formatting (fail fast, before the long build)
+        run: pnpm exec prettier --check 'packages/*/src/**/*.{ts,json,md}'
+
       - name: Audit dependencies
         run: pnpm run audit:deps
 
@@ -56,9 +59,6 @@ jobs:
 
       - name: Run TypeScript tests
         run: pnpm test:ts
-
-      - name: Check formatting
-        run: npx prettier --check 'packages/*/src/**/*.{ts,json,md}'
 
   casper-contracts:
     runs-on: ubuntu-latest
