@@ -103,10 +103,19 @@ export function VerifyDemo({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-center justify-center border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:opacity-50 disabled:hover:bg-paper disabled:hover:text-ink"
+            className="inline-flex items-center gap-2 justify-center border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:opacity-50 disabled:hover:bg-paper disabled:hover:text-ink"
             style={{ borderRadius: 0 }}
           >
-            {singlePending ? "verifying…" : "verify →"}
+            {singlePending ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="spinner">
+                  <path d="M6 1.5 A4.5 4.5 0 0 1 10.5 6" />
+                </svg>
+                verifying…
+              </>
+            ) : (
+              "verify →"
+            )}
           </button>
         </form>
       ) : (
@@ -131,10 +140,19 @@ export function VerifyDemo({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-center justify-center border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:opacity-50 disabled:hover:bg-paper disabled:hover:text-ink"
+            className="inline-flex items-center gap-2 justify-center border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:opacity-50 disabled:hover:bg-paper disabled:hover:text-ink"
             style={{ borderRadius: 0 }}
           >
-            {batchPending ? "checking all…" : "check all →"}
+            {batchPending ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="spinner">
+                  <path d="M6 1.5 A4.5 4.5 0 0 1 10.5 6" />
+                </svg>
+                checking all…
+              </>
+            ) : (
+              "check all →"
+            )}
           </button>
         </form>
       )}
@@ -146,7 +164,9 @@ export function VerifyDemo({
           key={singleState ? JSON.stringify(singleState) : "idle"}
           className="min-h-[5rem] animate-fade-in"
         >
-          {singleState === null ? (
+          {singlePending ? (
+            <PendingState label="reading from chain…" />
+          ) : singleState === null ? (
             <>
               <p className="font-serif text-sm italic text-ink-quiet">
                 The address below is pre-filled as a sample. Run the gate to see
@@ -178,7 +198,9 @@ export function VerifyDemo({
           key={batchState ? JSON.stringify(batchState) : "idle-batch"}
           className="min-h-[5rem] animate-fade-in"
         >
-          {batchState === null ? (
+          {batchPending ? (
+            <PendingState label="reading all capabilities…" />
+          ) : batchState === null ? (
             <p className="font-serif text-base italic text-ink-quiet">
               The result of{" "}
               <code className="font-mono not-italic">isCapableMulti</code>{" "}
@@ -289,3 +311,25 @@ function ErrorRetry({
     </div>
   );
 }
+
+function PendingState({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 12 12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        aria-hidden
+        className="spinner text-terra"
+      >
+        <path d="M6 1.5 A4.5 4.5 0 0 1 10.5 6" />
+      </svg>
+      <span className="font-serif text-sm italic text-ink-soft">{label}</span>
+    </div>
+  );
+}
+

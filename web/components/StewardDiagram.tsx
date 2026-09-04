@@ -42,9 +42,6 @@ export function StewardDiagram({
   const isIdle = (phase: string): boolean =>
     !phaseStatus[phase] || phaseStatus[phase] === "idle";
 
-  const showStreamAnimation =
-    running || Object.values(phaseStatus).some((s) => s === "done" || s === "running");
-
   const doneCount = NODES.filter((n) => isDone(n.phase)).length;
   const runningCount = NODES.filter((n) => isActive(n.phase)).length;
   const progress = (doneCount + (runningCount > 0 ? 0.5 : 0)) / NODES.length;
@@ -94,23 +91,6 @@ export function StewardDiagram({
             );
           })}
 
-          {showStreamAnimation && (
-            <style>
-              {`
-                @keyframes stream-dash {{
-                  to { stroke-dashoffset: -24; }
-                }}
-                @keyframes node-ping {{
-                  0% {{ transform: scale(1); opacity: 0.4; }}
-                  100% {{ transform: scale(2.4); opacity: 0; }}
-                }}
-                @media (prefers-reduced-motion: reduce) {{
-                  [data-anim="stream"] {{ animation: none !important; }}
-                  [data-anim="ping"] {{ animation: none !important; }}
-                }}
-              `}
-            </style>
-          )}
         </defs>
 
         {NODES.map((n, i) => {

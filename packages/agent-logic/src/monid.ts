@@ -116,7 +116,9 @@ export class MonidClient {
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(`Monid ${method} ${path} failed: ${res.status} ${res.statusText}${text ? ` — ${text}` : ""}`);
+      throw new Error(
+        `Monid ${method} ${path} failed: ${res.status} ${res.statusText}${text ? ` — ${text}` : ""}`,
+      );
     }
 
     return (await res.json()) as T;
@@ -129,15 +131,29 @@ export class MonidClient {
     });
   }
 
-  async inspect(provider: string, endpoint: string): Promise<MonidEndpointDetail> {
+  async inspect(
+    provider: string,
+    endpoint: string,
+  ): Promise<MonidEndpointDetail> {
     return this.request<MonidEndpointDetail>("POST", "/v1/inspect", {
       provider,
       endpoint,
     });
   }
 
-  async run(provider: string, endpoint: string, input: unknown): Promise<MonidRun> {
-    const body = await this.request<{ id?: string; runId?: string; status?: string; result?: unknown; error?: string; cost?: MonidRun["cost"] }>("POST", "/v1/run", {
+  async run(
+    provider: string,
+    endpoint: string,
+    input: unknown,
+  ): Promise<MonidRun> {
+    const body = await this.request<{
+      id?: string;
+      runId?: string;
+      status?: string;
+      result?: unknown;
+      error?: string;
+      cost?: MonidRun["cost"];
+    }>("POST", "/v1/run", {
       provider,
       endpoint,
       input,
@@ -165,7 +181,11 @@ export class MonidClient {
     maxWaitMs = DEFAULT_MAX_WAIT_MS,
   ): Promise<MonidRun> {
     const run = await this.run(provider, endpoint, input);
-    if (run.status === "completed" || run.status === "failed" || run.status === "timeout") {
+    if (
+      run.status === "completed" ||
+      run.status === "failed" ||
+      run.status === "timeout"
+    ) {
       return run;
     }
 
@@ -174,18 +194,37 @@ export class MonidClient {
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, pollMs));
       last = await this.getRun(run.id);
-      if (last.status === "completed" || last.status === "failed" || last.status === "timeout") {
+      if (
+        last.status === "completed" ||
+        last.status === "failed" ||
+        last.status === "timeout"
+      ) {
         return last;
       }
     }
 
-    return { ...last, status: "timeout", error: "Timed out waiting for Monid run to complete" };
+    return {
+      ...last,
+      status: "timeout",
+      error: "Timed out waiting for Monid run to complete",
+    };
   }
 }
 
-function inferInputField(schema: MonidEndpointDetail["inputSchema"], preferred?: string): string {
+function inferInputField(
+  schema: MonidEndpointDetail["inputSchema"],
+  preferred?: string,
+): string {
   if (preferred) return preferred;
-  const candidates = ["address", "target", "wallet", "query", "id", "coin", "blockchain"];
+  const candidates = [
+    "address",
+    "target",
+    "wallet",
+    "query",
+    "id",
+    "coin",
+    "blockchain",
+  ];
   const props = schema?.properties;
   if (props && typeof props === "object") {
     for (const c of candidates) {
@@ -280,14 +319,25 @@ export class CounterpartyRiskResolver {
 
     try {
       const detail = await this.client.inspect(provider, endpoint);
-      const inputField = inferInputField(detail.inputSchema, opts.inputField ?? process.env.MONID_RISK_INPUT_FIELD);
+      const inputField = inferInputField(
+        detail.inputSchema,
+        opts.inputField ?? process.env.MONID_RISK_INPUT_FIELD,
+      );
       const input: Record<string, string> = { [inputField]: counterparty };
 
       // Some risk endpoints need a chain identifier alongside the address.
-      if (detail.inputSchema?.properties && "chain" in detail.inputSchema.properties && !input.chain) {
+      if (
+        detail.inputSchema?.properties &&
+        "chain" in detail.inputSchema.properties &&
+        !input.chain
+      ) {
         input.chain = "ethereum";
       }
-      if (detail.inputSchema?.properties && "blockchain" in detail.inputSchema.properties && !input.blockchain) {
+      if (
+        detail.inputSchema?.properties &&
+        "blockchain" in detail.inputSchema.properties &&
+        !input.blockchain
+      ) {
         input.blockchain = "ethereum";
       }
 

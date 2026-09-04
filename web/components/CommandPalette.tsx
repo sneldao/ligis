@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAddress } from "viem";
 import credentialsRef from "../../assets/credentials.example.json";
-import { isAddressLike, truncateAddress } from "@/lib/format";
+import { isAddressLike, toChecksumAddress, truncateAddress } from "@/lib/format";
 import { readRecents, type RecentAgent } from "@/lib/recent-agents";
 
 type Command = {
@@ -76,7 +75,13 @@ export function CommandPalette() {
       setCursor(0);
       setRecents(readRecents());
       const id = setTimeout(() => inputRef.current?.focus(), 20);
-      return () => clearTimeout(id);
+      // Lock body scroll while the palette is open
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        clearTimeout(id);
+        document.body.style.overflow = prev;
+      };
     }
   }, [open]);
 
@@ -89,7 +94,7 @@ export function CommandPalette() {
 
     if (isAddressLike(q)) {
       try {
-        const checksum = getAddress(q);
+        const checksum = toChecksumAddress(q);
         return [
           {
             id: "agent-jump",

@@ -13,7 +13,7 @@ export default function AgentLoading() {
       <section className="mt-16 grid grid-cols-1 gap-x-12 gap-y-12 sm:grid-cols-[14rem_1fr]">
         <div className="order-2 sm:order-1">
           <div
-            className="aspect-[4/5] w-full max-w-[14rem] bg-paper-deep"
+            className="skeleton aspect-[4/5] w-full max-w-[14rem]"
             aria-hidden
           />
           <p className="mt-3 font-mono text-[11px] tabular text-ink-quiet">
@@ -22,13 +22,13 @@ export default function AgentLoading() {
         </div>
         <div className="order-1 sm:order-2 sm:pt-2">
           <div
-            className="display h-[64px] w-[18rem] bg-paper-deep sm:h-[80px] sm:w-[22rem]"
+            className="skeleton display h-[64px] w-[18rem] sm:h-[80px] sm:w-[22rem]"
             aria-hidden
           />
           <div className="mt-6 space-y-3">
-            <div className="h-3 w-full max-w-md bg-paper-deep" aria-hidden />
-            <div className="h-3 w-full max-w-sm bg-paper-deep" aria-hidden />
-            <div className="h-3 w-3/4 max-w-sm bg-paper-deep" aria-hidden />
+            <div className="skeleton h-3 w-full max-w-md" aria-hidden />
+            <div className="skeleton h-3 w-full max-w-sm" aria-hidden />
+            <div className="skeleton h-3 w-3/4 max-w-sm" aria-hidden />
           </div>
         </div>
       </section>
@@ -39,7 +39,7 @@ export default function AgentLoading() {
             <div key={l} className="space-y-2">
               <p className="eyebrow">{l}</p>
               <Rule tone="soft" />
-              <div className="h-3 w-12 bg-paper-deep" aria-hidden />
+              <div className="skeleton h-3 w-12" aria-hidden />
             </div>
           ))}
         </div>
@@ -57,12 +57,12 @@ export default function AgentLoading() {
           {[0, 1, 2].map((i) => (
             <div key={i}>
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 py-5 sm:grid-cols-[1fr_auto_auto] sm:gap-x-8">
-                <div className="h-3 w-48 bg-paper-deep" aria-hidden />
+                <div className="skeleton h-3 w-48" aria-hidden />
                 <div
-                  className="col-span-2 h-3 w-20 bg-paper-deep sm:col-span-1"
+                  className="skeleton col-span-2 h-3 w-20 sm:col-span-1"
                   aria-hidden
                 />
-                <div className="h-3 w-16 bg-paper-deep" aria-hidden />
+                <div className="skeleton h-3 w-16" aria-hidden />
               </div>
               <Rule tone="soft" />
             </div>

@@ -35,6 +35,14 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Offset anchor jumps so headings don't hide behind the fixed dock. */
+  scroll-padding-top: 6rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 ::selection {
@@ -52,6 +60,15 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: none;
+}
+
+/* Ensure <summary> toggles (used extensively for collapsible sections)
+   show a visible focus ring for keyboard users. The default UA style
+   is removed by list-none but no replacement is provided. The slightly
+   larger offset accounts for the summary's inline padding. */
+summary:focus-visible {
+  outline: 2px solid var(--color-terra);
+  outline-offset: 4px;
 }
 
 .font-serif {
@@ -90,6 +107,11 @@ select:focus-visible {
   width: 100%;
   margin-inline: auto;
   padding: 6rem 1.25rem 5rem;
+  /* Skip rendering work for off-screen route content until it scrolls
+     near the viewport. The browser skips layout/paint for hidden
+     route shells, improving scroll performance on long pages. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1200px;
 }
 
 .route-header {
@@ -141,6 +163,61 @@ select:focus-visible {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Shimmer for skeleton loading states. The gradient sweeps left-to-right
+   across the paper-deep block, giving a sense of active loading rather
+   than a static broken block. Honours reduced-motion (see bottom of file). */
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-paper-deep) 0%,
+    var(--color-rule-soft) 40%,
+    var(--color-paper-deep) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Inline spinner for button loading states. A simple CSS-only rotation
+   that honours reduced-motion (animation is killed globally by the
+   reduced-motion block at the bottom of this file). */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 0.7s linear infinite;
+}
+
+/* StewardDiagram SVG animations — moved here from an inline <style> tag
+   that was re-created on every render. Defined once globally. */
+@keyframes stream-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@keyframes node-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
   }
 }
 
@@ -217,5 +294,21 @@ select:focus-visible {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+
+  /* StewardDiagram SVG animations — disable the stream + ping loops. */
+  [data-anim="stream"] {
+    animation: none !important;
+  }
+  [data-anim="ping"] {
+    animation: none !important;
+  }
+
+  /* Skeletons should not shimmer under reduced motion — show a static
+     paper-deep block instead, which is still distinguishable from
+     content by its muted tone. */
+  .skeleton {
+    animation: none !important;
+    background: var(--color-paper-deep) !important;
   }
 }

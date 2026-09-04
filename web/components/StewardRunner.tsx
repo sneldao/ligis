@@ -363,7 +363,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
               </span>
             ) : null}
           </div>
-          <div className="flex items-baseline gap-6">
+          <div className="flex items-center gap-6">
             {running ? (
               <button
                 type="button"
@@ -377,9 +377,19 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
               type="button"
               onClick={run}
               disabled={running}
-              className="text-sm text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra disabled:text-ink-quiet disabled:no-underline"
+              className="inline-flex items-center gap-2 border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:border-rule disabled:bg-paper disabled:text-ink-quiet disabled:no-underline"
+              style={{ borderRadius: 0 }}
             >
-              {running ? "running…" : "run the loop →"}
+              {running ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="spinner">
+                    <path d="M6 1.5 A4.5 4.5 0 0 1 10.5 6" />
+                  </svg>
+                  running…
+                </>
+              ) : (
+                "run the loop →"
+              )}
             </button>
           </div>
         </div>

@@ -54,10 +54,12 @@ export function GateVerdict({
 
   // Plain-language reason — the "why" behind the binary, so a human curating
   // the collection understands the decision without reading a capability spec.
+  // Three distinct STOP reasons so the user knows whether to re-check, wait,
+  // or walk away — not just "something is wrong."
   const reason = go
     ? "Authorized on-chain. Your agent may proceed with this counterparty."
     : verdict.revoked
-      ? "Authorization was revoked by its issuer. Your agent must not proceed."
+      ? "Authorization was revoked by its issuer. Do not proceed — the credential is explicitly invalidated."
       : "No verifiable authorization found on-chain. Your agent should not proceed.";
 
   return (
@@ -66,6 +68,11 @@ export function GateVerdict({
 
       <p className="mt-3 display text-3xl sm:text-4xl">
         <span className={verdictColor}>{go ? "✓ GO" : "✗ STOP"}</span>
+        {!go && verdict.revoked ? (
+          <span className="ml-3 align-middle font-mono text-[11px] uppercase tracking-[0.16em] text-revoke/80 border border-revoke/30 px-2 py-0.5">
+            revoked
+          </span>
+        ) : null}
       </p>
 
       <p className="mt-4 font-serif text-lg leading-relaxed text-ink">

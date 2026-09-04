@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChainSelector } from "@/components/ChainSelector";
 import { UnifiedWalletChip } from "@/components/UnifiedWalletChip";
 
@@ -17,23 +17,66 @@ const NAV = [
   { href: "/#croo", label: "CROO" },
 ];
 
+/** Inline hamburger/close icon — no icon-font dependency, crisp at any DPR. */
+function MenuIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      {open ? (
+        <>
+          <line x1="3.5" y1="3.5" x2="12.5" y2="12.5" />
+          <line x1="12.5" y1="3.5" x2="3.5" y2="12.5" />
+        </>
+      ) : (
+        <>
+          <line x1="2" y1="4" x2="14" y2="4" />
+          <line x1="2" y1="8" x2="14" y2="8" />
+          <line x1="2" y1="12" x2="14" y2="12" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export function GlobalDock() {
   const pathname = usePathname() ?? "/";
   const [navOpen, setNavOpen] = useState(false);
   const reducedMotion = useReducedMotion();
 
+  const closeDrawer = useCallback(() => setNavOpen(false), []);
+
+  // Close mobile drawer on route change
   useEffect(() => {
-    setNavOpen(false);
-  }, [pathname]);
+    closeDrawer();
+  }, [pathname, closeDrawer]);
 
   // Close mobile drawer on Escape
   useEffect(() => {
     if (!navOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setNavOpen(false);
+      if (e.key === "Escape") closeDrawer();
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
+  }, [navOpen, closeDrawer]);
+
+  // Lock body scroll while the mobile drawer is open so the page
+  // doesn't scroll behind the overlay.
+  useEffect(() => {
+    if (!navOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [navOpen]);
 
   // An embed is a borrowed surface. The host owns its navigation and the
@@ -109,13 +152,28 @@ export function GlobalDock() {
         <button
           type="button"
           onClick={() => setNavOpen((v) => !v)}
-          aria-label="Open menu"
+          aria-label={navOpen ? "Close menu" : "Open menu"}
           aria-expanded={navOpen}
-          className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/80 hover:text-paper lg:hidden"
+          className="flex items-center justify-center text-paper-deep/80 transition-colors hover:text-paper lg:hidden"
         >
-          {navOpen ? "close" : "menu"}
+          <MenuIcon open={navOpen} />
         </button>
       </motion.div>
+
+      {/* Backdrop — dims the page behind the drawer and closes on click. */}
+      <AnimatePresence>
+        {navOpen ? (
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reducedMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            className="pointer-events-auto fixed inset-0 top-0 z-30 bg-ink/30 lg:hidden"
+            onClick={closeDrawer}
+            aria-hidden
+          />
+        ) : null}
+      </AnimatePresence>
 
       {/* Mobile dropdown — chain + nav + chip */}
       <AnimatePresence>
@@ -125,23 +183,32 @@ export function GlobalDock() {
             animate={{ opacity: 1, y: 0 }}
             exit={reducedMotion ? undefined : { opacity: 0, y: -6 }}
             transition={{ duration: 0.16 }}
-            className="pointer-events-auto absolute left-3 right-3 top-14 bg-ink/92 px-5 py-4 text-paper backdrop-blur-md lg:hidden"
+            className="pointer-events-auto absolute left-3 right-3 top-14 z-40 bg-ink/92 px-5 py-4 text-paper backdrop-blur-md lg:hidden"
             style={{ borderRadius: 16 }}
           >
             <div className="mb-4">
               <ChainSelector />
             </div>
             <ul className="flex flex-col gap-y-3">
-              {NAV.map((n) => (
-                <li key={n.href}>
-                  <Link
-                    href={n.href}
-                    className="block font-mono text-xs uppercase tracking-[0.18em] text-paper-deep hover:text-paper"
-                  >
-                    {n.label}
-                  </Link>
-                </li>
-              ))}
+              {NAV.map((n) => {
+                const isActive =
+                  n.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(n.href);
+                return (
+                  <li key={n.href}>
+                    <Link
+                      href={n.href}
+                      className={`block font-mono text-xs uppercase tracking-[0.18em] transition-colors ${isActive
+                        ? "text-terra"
+                        : "text-paper-deep hover:text-paper"
+                      }`}
+                    >
+                      {n.label}
+                    </Link>
+                  </li>
+                );
+              })}
               <li>
                 <UnifiedWalletChip />
               </li>
