@@ -46,7 +46,7 @@ jobs:
         run: rustup target add wasm32-unknown-unknown --toolchain nightly-2026-06-15
 
       - name: Check formatting (fail fast, before the long build)
-        run: npx prettier --check 'packages/*/src/**/*.{ts,json,md}'
+        run: pnpm exec prettier --check 'packages/*/src/**/*.{ts,json,md}'
 
       - name: Audit dependencies
         run: pnpm run audit:deps
