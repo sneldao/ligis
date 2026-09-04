@@ -3,8 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import credentialsRef from "../../assets/credentials.example.json";
-import { isAddressLike, toChecksumAddress, truncateAddress } from "@/lib/format";
+import {
+  isAddressLike,
+  toChecksumAddress,
+  truncateAddress,
+} from "@/lib/format";
 import { readRecents, type RecentAgent } from "@/lib/recent-agents";
+import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 
 type Command = {
   id: string;
@@ -25,12 +30,22 @@ const REFERENCE_CAPS = credentialsRef.capabilities.map((c) => ({
 const STATIC: Command[] = [
   { id: "gate", label: "Gate", hint: "/gate", href: "/gate" },
   { id: "index", label: "Index", hint: "/", href: "/" },
-  { id: "capabilities", label: "Capabilities", hint: "/capabilities", href: "/capabilities" },
+  {
+    id: "capabilities",
+    label: "Capabilities",
+    hint: "/capabilities",
+    href: "/capabilities",
+  },
   { id: "issuers", label: "Issuers", hint: "/issuers", href: "/issuers" },
   { id: "steward", label: "Steward", hint: "/steward", href: "/steward" },
   { id: "embed", label: "Embed", hint: "/embed", href: "/embed" },
   { id: "croo", label: "CROO Agent Store", hint: "/#croo", href: "/#croo" },
-  { id: "design", label: "Design system", hint: "/styleguide", href: "/styleguide" },
+  {
+    id: "design",
+    label: "Design system",
+    hint: "/styleguide",
+    href: "/styleguide",
+  },
 ];
 
 export function CommandPalette() {
@@ -75,21 +90,19 @@ export function CommandPalette() {
       setCursor(0);
       setRecents(readRecents());
       const id = setTimeout(() => inputRef.current?.focus(), 20);
-      // Lock body scroll while the palette is open
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        clearTimeout(id);
-        document.body.style.overflow = prev;
-      };
+      return () => clearTimeout(id);
     }
   }, [open]);
+
+  // Lock body scroll while the palette is open
+  useBodyScrollLock(open);
 
   const options = useMemo<Command[]>(() => {
     const q = query.trim();
     const lower = q.toLowerCase();
     const navMatches: Command[] = STATIC.filter(
-      (c) => !q || c.label.toLowerCase().includes(lower) || c.hint.includes(lower)
+      (c) =>
+        !q || c.label.toLowerCase().includes(lower) || c.hint.includes(lower),
     ).map((c) => ({ ...c, group: "nav" }));
 
     if (isAddressLike(q)) {
@@ -212,7 +225,9 @@ export function CommandPalette() {
                   onMouseEnter={() => setCursor(i)}
                   onClick={() => commit(c)}
                   className={`flex w-full items-baseline justify-between px-6 py-3 text-left transition-colors ${
-                    i === cursor ? "bg-paper-deep text-ink" : "text-ink-soft hover:text-ink"
+                    i === cursor
+                      ? "bg-paper-deep text-ink"
+                      : "text-ink-soft hover:text-ink"
                   }`}
                 >
                   <span className="text-sm">{c.label}</span>

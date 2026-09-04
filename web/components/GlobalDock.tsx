@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { ChainSelector } from "@/components/ChainSelector";
 import { UnifiedWalletChip } from "@/components/UnifiedWalletChip";
+import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 
 const NAV = [
   { href: "/gate", label: "Gate" },
@@ -70,14 +71,7 @@ export function GlobalDock() {
 
   // Lock body scroll while the mobile drawer is open so the page
   // doesn't scroll behind the overlay.
-  useEffect(() => {
-    if (!navOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [navOpen]);
+  useBodyScrollLock(navOpen);
 
   // An embed is a borrowed surface. The host owns its navigation and the
   // verification document must contain only the compact result.
@@ -111,9 +105,7 @@ export function GlobalDock() {
         <nav className="hidden items-center gap-x-3 lg:flex">
           {NAV.map((n) => {
             const isActive =
-              n.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(n.href);
+              n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
             return (
               <Link
                 key={n.href}
@@ -199,9 +191,10 @@ export function GlobalDock() {
                   <li key={n.href}>
                     <Link
                       href={n.href}
-                      className={`block font-mono text-xs uppercase tracking-[0.18em] transition-colors ${isActive
-                        ? "text-terra"
-                        : "text-paper-deep hover:text-paper"
+                      className={`block font-mono text-xs uppercase tracking-[0.18em] transition-colors ${
+                        isActive
+                          ? "text-terra"
+                          : "text-paper-deep hover:text-paper"
                       }`}
                     >
                       {n.label}
