@@ -13,3 +13,4 @@ export * from "./adapter.js";
 export * from "./reasoner.js";
 export * from "./evidence.js";
 export * from "./attestations.js";
+export * from "./trust.js";

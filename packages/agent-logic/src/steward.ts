@@ -1,12 +1,17 @@
 /**
  * Trust Steward — the autonomous agent loop.
  *
- *   boot → reason → gate → act → record
+ *   boot → reason → risk → gate → act → record
  *
- * Chain-agnostic. The Steward depends only on three interfaces from
- * @ligis/core: {@link ChainAdapter}, {@link Reasoner}, {@link EvidenceStore}.
- * Swap any of them for a mock to test offline; swap the adapter for a
- * different chain to run the same loop on Casper, EVM, etc.
+ * Chain-agnostic. The Steward depends only on interfaces from @ligis/core:
+ * {@link ChainAdapter}, {@link Reasoner}, {@link EvidenceStore}, and any
+ * number of {@link RiskProvider}s. Swap any of them for a mock to test
+ * offline; swap the adapter for a different chain to run the same loop on
+ * Casper, EVM, etc.
+ *
+ * The run produces a {@link TrustDecision}: a provider-agnostic signal ledger
+ * (identity, risk, capability) folded into one GO/STOP verdict with the
+ * evidence manifest as its receipt.
  */
 import type {
   ChainAdapter,
@@ -14,10 +19,19 @@ import type {
   EvidenceStore,
   Reasoner,
   ReasoningResult,
+  RiskProvider,
+  RiskProviderInput,
   StorageResult,
+  TrustDecision,
+  TrustDecisionSummary,
+  TrustSignal,
 } from "@ligis/core";
-import { buildReasoningPrompt, parseReasoning } from "./policy.js";
-import { CounterpartyRiskResolver } from "./monid.js";
+import { TRUST_DECISION_TTL_SECONDS } from "@ligis/core";
+import {
+  buildReasoningPrompt,
+  findCapability,
+  parseReasoning,
+} from "./policy.js";
 
 // ---------- Result types ----------
 
@@ -40,7 +54,10 @@ export interface StewardResult {
   anchored: { agentId: string; tokenUri: string; txHash: string } | null;
   manifest: EvidenceManifest;
   counterparty?: string;
-  risk?: EvidenceManifest["risk"];
+  /** Signal ledger behind the decision (identity, risk, capability). */
+  signals: TrustSignal[];
+  /** The GO/STOP trust decision; `receipt` is the manifest above. */
+  decision: TrustDecision;
   error?: string;
 }
 
@@ -48,10 +65,12 @@ export interface StewardResult {
 
 export interface StewardRunOpts {
   dryRun?: boolean;
-  /** Optional counterparty to run a Monid risk check against before gating. */
+  /** Optional counterparty to run risk providers against before gating. */
   counterparty?: string;
-  /** Risk score threshold (0-100). Exceeding this blocks the gate. */
-  riskThreshold?: number;
+  /** Optional payment amount, recorded on the decision and passed to providers. */
+  amount?: string;
+  /** Explicit capability to gate on, in addition to any reasoned capabilities. */
+  capability?: string;
   /**
    * Optional issuer key for self-issuing credentials. Defaults to
    * `process.env.PRIVATE_KEY`. Pulled here (not from the adapter) so that
@@ -67,7 +86,7 @@ export class TrustSteward {
     private adapter: ChainAdapter,
     private reasoner: Reasoner,
     private store: EvidenceStore,
-    private riskResolver?: CounterpartyRiskResolver,
+    private riskProviders: RiskProvider[] = [],
   ) {}
 
   async run(goal: string, opts: StewardRunOpts = {}): Promise<StewardResult> {
@@ -100,6 +119,14 @@ export class TrustSteward {
     }
     const did = `did:ligis:${this.adapter.chainId}:${agentId}`;
 
+    const identitySignal: TrustSignal = {
+      kind: "identity",
+      source: this.adapter.chainId,
+      verdict: "go",
+      confidence: 100,
+      metadata: { agentId, did, minted },
+    };
+
     // 2. REASON — map the natural-language goal to required capabilities
     let reasoning: ReasoningResult;
     try {
@@ -113,41 +140,61 @@ export class TrustSteward {
         did,
         minted,
         txHashes,
+        [identitySignal],
+        counterparty,
         `reasoning failed: ${message}`,
       );
     }
 
-    // 3. PARSE — extract + validate against known capabilities
+    // 3. PARSE — extract + validate against known capabilities, then merge
+    // any capability the caller gated on explicitly.
     const parsed = parseReasoning(reasoning.text);
-
-    // 4. RISK — discover and run a Monid counterparty check before gating
-    let riskResult: EvidenceManifest["risk"] = null;
-    if (this.riskResolver && counterparty) {
-      try {
-        const resolved = await this.riskResolver.resolve(counterparty, {
-          query: `counterparty risk for ${counterparty}`,
-        });
-        riskResult = {
-          ok: resolved.ok,
-          counterparty: resolved.counterparty,
-          provider: resolved.provider,
-          endpoint: resolved.endpoint,
-          runId: resolved.runId,
-          costUsd: resolved.costUsd,
-          score: resolved.score,
-          level: resolved.level,
-          error: resolved.error,
-          raw: resolved.raw,
-        };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        riskResult = { ok: false, counterparty, error: message };
+    const requiredCaps = [...parsed.capabilities];
+    const unknownCapabilities = [...parsed.unknown];
+    if (opts.capability) {
+      const spec = findCapability(opts.capability);
+      if (spec && !requiredCaps.some((c) => c.name === spec.name)) {
+        requiredCaps.push(spec);
+      } else if (!spec) {
+        unknownCapabilities.push(opts.capability);
       }
+    }
+
+    // 4. RISK — run every provider in parallel against the counterparty.
+    // A provider that throws becomes a stop signal: a failed risk check
+    // blocks the payment rather than silently passing it.
+    const riskSignals: TrustSignal[] = [];
+    if (counterparty && this.riskProviders.length > 0) {
+      const input: RiskProviderInput = {
+        counterparty,
+        intent: goal,
+        ...(opts.amount !== undefined ? { amount: opts.amount } : {}),
+        ...(opts.capability !== undefined
+          ? { capability: opts.capability }
+          : {}),
+      };
+      const signals = await Promise.all(
+        this.riskProviders.map(async (provider): Promise<TrustSignal> => {
+          try {
+            return await provider.resolve(input);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              kind: "risk",
+              source: provider.name,
+              verdict: "stop",
+              confidence: 0,
+              metadata: { providerFailed: true, error: message },
+            };
+          }
+        }),
+      );
+      riskSignals.push(...signals);
     }
 
     // 5. GATE — check capability for each required cap
     const capResults: StewardResult["capabilities"] = [];
-    for (const cap of parsed.capabilities) {
+    for (const cap of requiredCaps) {
       const check = await this.adapter.verifyCapability({
         subject: controller,
         capability: cap.name,
@@ -158,7 +205,6 @@ export class TrustSteward {
         capable: check.capable,
         selfIssued: false,
       });
-      delete (capResults[capResults.length - 1] as { error?: string }).error;
     }
 
     // 6. ACT — self-issue any missing capabilities
@@ -172,6 +218,8 @@ export class TrustSteward {
           did,
           minted,
           txHashes,
+          [identitySignal, ...riskSignals],
+          counterparty,
           "PRIVATE_KEY not set — cannot self-issue credentials.",
         );
       }
@@ -193,48 +241,73 @@ export class TrustSteward {
       }
     }
 
-    // 7. RE-GATE — combine capabilities + Monid risk for the final GO/STOP
+    // 7. RE-GATE — combine capabilities + risk signals for the final GO/STOP
+    const finalCapable: boolean[] = [];
     let capabilityGated = true;
     for (const cap of capResults) {
-      if (dryRun) {
-        if (!cap.capable) capabilityGated = false;
-      } else {
-        const recheck = await this.adapter.verifyCapability({
-          subject: controller,
-          capability: cap.name,
-        });
-        if (!recheck.capable) capabilityGated = false;
-      }
+      const capableNow = dryRun
+        ? cap.capable
+        : (
+            await this.adapter.verifyCapability({
+              subject: controller,
+              capability: cap.name,
+            })
+          ).capable;
+      finalCapable.push(capableNow);
+      if (!capableNow) capabilityGated = false;
     }
+    const capabilitySignals: TrustSignal[] = capResults.map((cap, i) => ({
+      kind: "capability",
+      source: this.adapter.chainId,
+      verdict: finalCapable[i] ? "go" : "stop",
+      confidence: 100,
+      metadata: {
+        capability: cap.name,
+        hash: cap.hash,
+        selfIssued: cap.selfIssued,
+        ...(cap.issueTxHash ? { issueTxHash: cap.issueTxHash } : {}),
+      },
+    }));
 
-    const threshold = opts.riskThreshold ?? 75;
-    const riskyLevels = new Set(["high", "severe"]);
-    const riskGated =
-      !riskResult ||
-      (riskResult.ok &&
-        !riskyLevels.has(riskResult.level ?? "") &&
-        (riskResult.score ?? 0) < threshold);
+    const riskGated = riskSignals.every((s) => s.verdict !== "stop");
     const gated = capabilityGated && riskGated;
+
+    const signals: TrustSignal[] = [
+      identitySignal,
+      ...riskSignals,
+      ...capabilitySignals,
+    ];
+    const expiresAt =
+      Math.floor(Date.now() / 1000) + TRUST_DECISION_TTL_SECONDS;
+    const decisionSummary: TrustDecisionSummary = {
+      verdict: gated ? "go" : "stop",
+      intent: goal,
+      ...(opts.amount !== undefined ? { amount: opts.amount } : {}),
+      expiresAt,
+    };
 
     // 8. RECORD — build manifest, persist, anchor on-chain
     let storage: StorageResult | null = null;
     let anchored: StewardResult["anchored"] = null;
     let anchoredTokenUri = "";
 
+    const manifestArgs = {
+      agentId,
+      did,
+      controller,
+      goal,
+      ...(counterparty !== undefined ? { counterparty } : {}),
+      reasoning,
+      capabilities: capResults,
+      signals,
+      decision: decisionSummary,
+      gated,
+      txHashes,
+      anchoredTokenUri,
+    };
+
     if (!dryRun) {
-      const manifest = this.buildManifest(
-        agentId,
-        did,
-        controller,
-        goal,
-        counterparty,
-        reasoning,
-        capResults,
-        riskResult,
-        gated,
-        txHashes,
-        "",
-      );
+      const manifest = this.buildManifest(manifestArgs);
       try {
         storage = await this.store.store(manifest);
         anchoredTokenUri = `0g://${storage.rootHash}`;
@@ -253,68 +326,75 @@ export class TrustSteward {
       }
     }
 
-    const finalManifest = this.buildManifest(
-      agentId,
-      did,
-      controller,
-      goal,
-      counterparty,
-      reasoning,
-      capResults,
-      riskResult,
-      gated,
+    const finalManifest = this.buildManifest({
+      ...manifestArgs,
       txHashes,
       anchoredTokenUri,
-    );
+    });
+
+    const decision: TrustDecision = {
+      counterparty: counterparty ?? "",
+      intent: goal,
+      ...(opts.amount !== undefined ? { amount: opts.amount } : {}),
+      signals,
+      verdict: gated ? "go" : "stop",
+      receipt: finalManifest,
+      expiresAt,
+    };
 
     return {
       ok: true,
       booted: { agentId, did, minted },
       reasoning,
       capabilities: capResults,
-      unknownCapabilities: parsed.unknown,
+      unknownCapabilities,
       gated,
       action: { type: ACTION_TYPE, txHashes },
       storage,
       anchored,
       manifest: finalManifest,
       counterparty,
-      risk: riskResult,
+      signals,
+      decision,
     };
   }
 
-  private buildManifest(
-    agentId: string,
-    did: string,
-    controller: string,
-    goal: string,
-    counterparty: string | undefined,
-    reasoning: ReasoningResult,
-    capabilities: StewardResult["capabilities"],
-    risk: EvidenceManifest["risk"],
-    gated: boolean,
-    txHashes: string[],
-    anchoredTokenUri: string,
-  ): EvidenceManifest {
+  private buildManifest(args: {
+    agentId: string;
+    did: string;
+    controller: string;
+    goal: string;
+    counterparty?: string;
+    reasoning: ReasoningResult;
+    capabilities: StewardResult["capabilities"];
+    signals: TrustSignal[];
+    decision: TrustDecisionSummary;
+    gated: boolean;
+    txHashes: string[];
+    anchoredTokenUri: string;
+  }): EvidenceManifest {
     return {
       version: 1,
-      agentId,
-      did,
-      controller,
+      agentId: args.agentId,
+      did: args.did,
+      controller: args.controller,
       chainId: this.adapter.chainId,
       chainName: this.adapter.chainName,
-      goal,
-      counterparty,
+      goal: args.goal,
+      ...(args.counterparty !== undefined
+        ? { counterparty: args.counterparty }
+        : {}),
       reasoning: {
-        text: reasoning.text,
-        verified: reasoning.verified,
-        model: reasoning.model,
-        provider: reasoning.provider,
+        text: args.reasoning.text,
+        verified: args.reasoning.verified,
+        model: args.reasoning.model,
+        provider: args.reasoning.provider,
       },
-      capabilities,
-      risk,
-      action: { type: ACTION_TYPE, gated, txHashes },
-      anchoredTokenUri,
+      capabilities: args.capabilities,
+      signals: args.signals,
+      decision: args.decision,
+      action: { type: ACTION_TYPE, gated: args.gated, txHashes: args.txHashes },
+      anchoredTokenUri: args.anchoredTokenUri,
       recordedAt: Math.floor(Date.now() / 1000),
     };
   }
@@ -326,6 +406,8 @@ export class TrustSteward {
     did: string,
     minted: boolean,
     txHashes: string[],
+    signals: TrustSignal[],
+    counterparty: string | undefined,
     error: string,
   ): StewardResult {
     const empty: ReasoningResult = {
@@ -334,19 +416,35 @@ export class TrustSteward {
       model: "",
       provider: "",
     };
-    const manifest = this.buildManifest(
+    const expiresAt =
+      Math.floor(Date.now() / 1000) + TRUST_DECISION_TTL_SECONDS;
+    const decisionSummary: TrustDecisionSummary = {
+      verdict: "stop",
+      intent: goal,
+      expiresAt,
+    };
+    const manifest = this.buildManifest({
       agentId,
       did,
       controller,
       goal,
-      undefined,
-      empty,
-      [],
-      null,
-      false,
+      ...(counterparty !== undefined ? { counterparty } : {}),
+      reasoning: empty,
+      capabilities: [],
+      signals,
+      decision: decisionSummary,
+      gated: false,
       txHashes,
-      "",
-    );
+      anchoredTokenUri: "",
+    });
+    const decision: TrustDecision = {
+      counterparty: counterparty ?? "",
+      intent: goal,
+      signals,
+      verdict: "stop",
+      receipt: manifest,
+      expiresAt,
+    };
     return {
       ok: false,
       booted: { agentId, did, minted },
@@ -358,6 +456,8 @@ export class TrustSteward {
       storage: null,
       anchored: null,
       manifest,
+      signals,
+      decision,
       error,
     };
   }

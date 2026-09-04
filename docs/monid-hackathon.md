@@ -144,12 +144,14 @@ The receipt is a side-by-side of Persona $1.50/verification vs. the actual Monid
 
 Shipped in this branch:
 
-- `packages/agent-logic/src/monid.ts` — `MonidClient` and `CounterpartyRiskResolver` wrapping `discover`, `inspect`, `run`, and `GET /v1/runs/:runId` polling.
-- `packages/agent-logic/src/steward.ts` — `TrustSteward` now runs a `RISK` step between `REASON` and `GATE` when `--counterparty` is provided. Final `gated` is `capabilities_ok && risk_ok`.
-- `packages/core/src/evidence.ts` — `EvidenceManifest` stores `counterparty` and the `risk` signal.
-- `packages/cli/src/index.ts` — `ligis agent run` supports `--counterparty <addr>` and `--risk-threshold <n>`, auto-loading `MONID_API_KEY`.
-- `package.json` — `pnpm demo:monid` script and `.env.d/monid.env.example` template.
-- `pnpm build` passes for the full workspace.
+- `packages/core/src/trust.ts` — the unified trust model: `TrustSignal` (risk / capability / identity / policy), `TrustDecision`, the `RiskProvider` interface, the Persona cost comparison, and `buildTrustReceipt` with a keccak256 manifest hash.
+- `packages/agent-logic/src/monid.ts` — `MonidClient` plus `MonidRiskProvider`, the first `RiskProvider` implementation, wrapping `discover`, `inspect`, `run`, and `GET /v1/runs/:runId` polling. Failed runs and outages return `stop` signals so a missing risk signal blocks the payment instead of passing it.
+- `packages/agent-logic/src/steward.ts` — `TrustSteward` takes `riskProviders: RiskProvider[]`, runs them in parallel in a `RISK` step between `REASON` and `GATE`, and returns a `TrustDecision`. Final verdict is `go` only when every capability check passes and every risk signal is `go` or `unknown`.
+- `packages/core/src/evidence.ts` — `EvidenceManifest` now carries the `signals` ledger and the `decision` summary.
+- `packages/cli/src/index.ts` — canonical `ligis trust check --counterparty --intent [--amount] [--capability] [--risk-provider] [--risk-threshold] [--dry-run] [--json]` with a human receipt or JSON; `ligis agent run --counterparty` is an alias for the same flow. Exit code is the verdict (0 = GO, 1 = STOP).
+- `scripts/monid-kill-demo.ts` — the richer terminal demo (what died, Monid discovery, the decision, the receipt).
+- `package.json` — `pnpm demo:monid` runs `ligis trust check`; `.env.d/monid.env.example` template.
+- Unit tests for the trust model, `MonidRiskProvider` (mock client), and the steward trust flow; `pnpm build` passes for the full workspace.
 
 ## Holistic trust roadmap (post-hackathon)
 

@@ -79,7 +79,8 @@ It ships **live on Pharos** — the identity layer the Pharos agent economy comp
 | `ligis-rotate`    | Move Agent ID to a new controller key (recovery)                             |
 | `ligis-hash`      | Helper: keccak256 a capability name                                          |
 | `ligis-sign`      | Helper: build + sign an EIP-712 credential off-chain                         |
-| `ligis agent run` | Trust Steward: boot → reason (0G Compute) → gate → act → record (0G Storage) |
+| `ligis trust check` | GO/STOP pre-payment decision for a counterparty: Monid risk + on-chain capability gate, with a cost receipt |
+| `ligis agent run` | Trust Steward: boot → reason (0G Compute) → risk → gate → act → record (0G Storage) |
 
 ## Deployed contracts
 
@@ -154,6 +155,11 @@ pnpm start -- verify --subject 0x... --capability "agent.commerce.escrow"
 # Run the Trust Steward Agent
 PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
   pnpm start -- agent run --goal "open an escrow with counterparty X"
+
+# Trust check a stranger before paying them (Monid risk + on-chain gate)
+MONID_API_KEY=monid_... PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
+  pnpm start -- trust check --counterparty 0x... --intent "pay for premium RWA data" \
+    --amount "10 USD" --capability data.premium
 
 # Casper (contracts deployed on Testnet — see docs/setup.md)
 pnpm setup:casper                    # generate 3 testnet wallets
