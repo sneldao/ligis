@@ -21,6 +21,14 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "ALLOWALL" },
         ],
       },
+      {
+        // Static assets are immutable — they're content-hashed.
+        // Long cache reduces repeat-visit load time.
+        source: "/_next/static/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
     ];
   },
   // Compress responses

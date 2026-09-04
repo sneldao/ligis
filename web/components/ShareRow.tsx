@@ -41,11 +41,18 @@ export function ShareRow({
           const ok = await copyToClipboard(url);
           if (ok) setCopied(true);
         }}
-        className={`underline decoration-rule decoration-1 underline-offset-4 transition-colors ${
-          copied ? "text-sage decoration-sage" : "text-ink hover:decoration-terra"
-        }`}
+        className={`inline-flex items-center gap-1 underline decoration-rule decoration-1 underline-offset-4 transition-colors ${copied ? "text-sage decoration-sage" : "text-ink hover:decoration-terra"}`}
       >
-        {copied ? "url copied" : "copy url"}
+        {copied ? (
+          <>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <polyline points="2,6.5 5,9 10,3" />
+            </svg>
+            url copied
+          </>
+        ) : (
+          "copy url"
+        )}
       </button>
       <a
         href={tweetHref}

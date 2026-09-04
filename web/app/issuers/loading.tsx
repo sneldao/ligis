@@ -12,12 +12,12 @@ export default function IssuersLoading() {
 
       <section className="mt-20">
         <div
-          className="display h-[72px] w-[14rem] bg-paper-deep sm:h-[88px] sm:w-[16rem]"
+          className="skeleton display h-[72px] w-[14rem] sm:h-[88px] sm:w-[16rem]"
           aria-hidden
         />
         <div className="mt-10 space-y-3">
-          <div className="h-3 w-full max-w-prose bg-paper-deep" aria-hidden />
-          <div className="h-3 w-4/5 max-w-prose bg-paper-deep" aria-hidden />
+          <div className="skeleton h-3 w-full max-w-prose" aria-hidden />
+          <div className="skeleton h-3 w-4/5 max-w-prose" aria-hidden />
         </div>
       </section>
 
@@ -26,11 +26,11 @@ export default function IssuersLoading() {
         {[0, 1, 2, 3, 4].map((i) => (
           <div key={i}>
             <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-baseline gap-x-4 py-4 sm:grid-cols-[2rem_1fr_auto_auto] sm:gap-x-8">
-              <div className="h-3 w-6 bg-paper-deep" aria-hidden />
-              <div className="h-3 w-48 bg-paper-deep" aria-hidden />
-              <div className="h-3 w-10 bg-paper-deep" aria-hidden />
+              <div className="skeleton h-3 w-6" aria-hidden />
+              <div className="skeleton h-3 w-48" aria-hidden />
+              <div className="skeleton h-3 w-10" aria-hidden />
               <div
-                className="hidden h-3 w-16 bg-paper-deep sm:block"
+                className="skeleton hidden h-3 w-16 sm:block"
                 aria-hidden
               />
             </div>

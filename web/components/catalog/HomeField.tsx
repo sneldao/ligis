@@ -10,6 +10,22 @@ const CatalogScene = dynamic(
   { ssr: false },
 );
 
+// Cache the WebGL support check across mounts — creating a canvas and
+// probing for a GL context is not free, and HomeField can mount/unmount
+// on navigation. The result doesn't change within a page session.
+let webglSupported: boolean | null = null;
+function checkWebGL(): boolean {
+  if (webglSupported !== null) return webglSupported;
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+    webglSupported = !!gl;
+  } catch {
+    webglSupported = false;
+  }
+  return webglSupported;
+}
+
 /**
  * The home route's single immersive field. It is deliberately not part of
  * the root layout: reference pages and operational flows need a quiet,
@@ -46,15 +62,10 @@ export function HomeField({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(id);
   }, []);
 
+  // Pre-check WebGL before attempting to render the scene.
+  // Uses the cached checkWebGL() so we don't create a canvas every mount.
   useEffect(() => {
-    // Pre-check WebGL before attempting to render the scene
-    try {
-      const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
-      setWebglOk(!!gl);
-    } catch {
-      setWebglOk(false);
-    }
+    setWebglOk(checkWebGL());
   }, []);
 
   useEffect(() => {

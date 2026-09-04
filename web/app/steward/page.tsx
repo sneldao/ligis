@@ -142,12 +142,12 @@ export default async function StewardPage({
           <div className="space-y-8">
             <div className="h-[3px] w-full bg-rule" />
             <div className="space-y-3">
-              <div className="h-4 w-24 bg-rule-soft" />
-              <div className="h-6 w-full max-w-md bg-rule-soft" />
+              <div className="skeleton h-4 w-24" />
+              <div className="skeleton h-6 w-full max-w-md" />
             </div>
             <div className="space-y-3">
-              <div className="h-4 w-16 bg-rule-soft" />
-              <div className="h-24 w-full bg-rule-soft" />
+              <div className="skeleton h-4 w-16" />
+              <div className="skeleton h-24 w-full" />
             </div>
           </div>
         }>
