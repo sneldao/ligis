@@ -1,7 +1,7 @@
 {
   "name": "ligis",
   "version": "0.1.0",
-  "description": "Ligis \u2014 Chain-agnostic Identity & Verifiable Credentials Skill for AI agents. Portable agent IDs, signed capability credentials, key rotation, and revocation. Pluggable chain adapters (EVM/Pharos today; Casper next), with 0G Compute for reasoning and 0G Storage for verifiable evidence.",
+  "description": "Ligis — Chain-agnostic Identity & Verifiable Credentials Skill for AI agents. Portable agent IDs, signed capability credentials, key rotation, and revocation. Pluggable chain adapters (EVM/Pharos today; Casper next), with 0G Compute for reasoning and 0G Storage for verifiable evidence.",
   "license": "MIT",
   "type": "module",
   "private": true,
@@ -34,7 +34,12 @@
     "deploy:casper": "pnpm --filter @ligis/adapter-casper deploy",
     "demo": "bash scripts/demo.sh",
     "format": "bash scripts/forge.sh fmt && prettier --write 'packages/*/src/**/*.{ts,json,md}'",
-    "clean": "pnpm -r run clean && rm -rf out cache broadcast"
+    "clean": "pnpm -r run clean && rm -rf out cache broadcast",
+    "prepare": "husky",
+    "format:web": "prettier --write 'web/**/*.{ts,tsx,css}'"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,yml,yaml,css}": "prettier --write"
   },
   "keywords": [
     "pharos",
@@ -52,6 +57,8 @@
     "@noble/curves": "^1.9.0",
     "@noble/hashes": "^1.7.0",
     "casper-js-sdk": "^5.0.12",
+    "husky": "9.1.7",
+    "lint-staged": "17.4.1",
     "playwright": "^1.45.0",
     "prettier": "^3.3.0",
     "tsx": "^4.19.0"
