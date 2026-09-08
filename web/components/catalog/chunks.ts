@@ -30,11 +30,12 @@ function placeInChunk(
   cx: number,
   cy: number,
   b: number[],
-  index: number
+  index: number,
 ): CatalogPosition {
   const baseX = cx * CHUNK_SIZE;
   const baseY = cy * CHUNK_SIZE;
-  const cellAngle = (index / AGENTS_PER_CHUNK) * Math.PI * 2 + ((b[0]! - 128) / 255) * 0.5;
+  const cellAngle =
+    (index / AGENTS_PER_CHUNK) * Math.PI * 2 + ((b[0]! - 128) / 255) * 0.5;
   const cellRadius = (b[1]! / 255) * (CHUNK_SIZE / 2 - 1.5);
   const x = baseX + Math.cos(cellAngle) * cellRadius;
   const y = baseY + Math.sin(cellAngle) * cellRadius;
@@ -78,10 +79,20 @@ export function chunkContents(cx: number, cy: number): ChunkAgent[] {
   return out;
 }
 
-export function visibleChunks(centerCx: number, centerCy: number): Array<{ cx: number; cy: number }> {
+export function radiusForZoom(cameraZ: number): number {
+  if (cameraZ < 20) return RENDER_RADIUS;
+  if (cameraZ < 32) return 2;
+  return 3;
+}
+
+export function visibleChunks(
+  centerCx: number,
+  centerCy: number,
+  radius = RENDER_RADIUS,
+): Array<{ cx: number; cy: number }> {
   const out: Array<{ cx: number; cy: number }> = [];
-  for (let dx = -RENDER_RADIUS; dx <= RENDER_RADIUS; dx++) {
-    for (let dy = -RENDER_RADIUS; dy <= RENDER_RADIUS; dy++) {
+  for (let dx = -radius; dx <= radius; dx++) {
+    for (let dy = -radius; dy <= radius; dy++) {
       out.push({ cx: centerCx + dx, cy: centerCy + dy });
     }
   }

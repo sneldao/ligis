@@ -10,9 +10,10 @@ export function CatalogScene() {
   return (
     <Canvas
       shadows="basic"
-      camera={{ position: [0, 0, CATALOG_CONFIG.zoomOut], fov: 38 }}
+      camera={{ position: [0, 0, CATALOG_CONFIG.zoomDefault], fov: 38 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
+      className="h-full w-full"
       style={{ background: "#F4F1EC", touchAction: "none" }}
       onCreated={({ gl }) => {
         gl.domElement.addEventListener("webglcontextlost", (e) => {
@@ -21,7 +22,10 @@ export function CatalogScene() {
         });
       }}
     >
-      <fog attach="fog" args={["#F4F1EC", CATALOG_CONFIG.fogNear, CATALOG_CONFIG.fogFar]} />
+      <fog
+        attach="fog"
+        args={["#F4F1EC", CATALOG_CONFIG.fogNear, CATALOG_CONFIG.fogFar]}
+      />
 
       <ambientLight intensity={0.7} />
       <directionalLight
@@ -36,14 +40,20 @@ export function CatalogScene() {
         shadow-camera-top={30}
         shadow-camera-bottom={-30}
       />
-      <directionalLight position={[-6, -4, 6]} intensity={0.3} color="#d6e0d2" />
+      <directionalLight
+        position={[-6, -4, 6]}
+        intensity={0.3}
+        color="#d6e0d2"
+      />
 
-      <Suspense fallback={
-        <group>
-          {/* Minimal in-scene fallback — the fog + background make this
+      <Suspense
+        fallback={
+          <group>
+            {/* Minimal in-scene fallback — the fog + background make this
               nearly invisible, just prevents a blank flash */}
-        </group>
-      }>
+          </group>
+        }
+      >
         <ChunkedField />
       </Suspense>
 

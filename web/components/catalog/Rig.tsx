@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Vector3 } from "three";
+import { Fog, Vector3 } from "three";
 import { easing } from "maath";
 import { CATALOG_CONFIG, rigState } from "./catalogState";
 
@@ -20,8 +20,19 @@ const KEY_DOWN = ["q", "Q"];
 const KEY_PAN_SPEED = 16;
 const KEY_Z_SPEED = 12;
 
+function clampZoom(z: number) {
+  return Math.max(CATALOG_CONFIG.zoomIn, Math.min(CATALOG_CONFIG.zoomOut, z));
+}
+
+function pinchDistance(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 export function Rig() {
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const prevPos = useRef(new Vector3());
   const lastInteract = useRef(performance.now());
   const idleAnchor = useRef<{ x: number; y: number } | null>(null);
@@ -48,6 +59,9 @@ export function Rig() {
     let initialX = 0;
     let initialY = 0;
     let maxDist = 0;
+    const pointers = new Map<number, { x: number; y: number }>();
+    let pinchStartDist = 0;
+    let pinchStartZoom: number = CATALOG_CONFIG.zoomDefault;
 
     const cam = camera as { fov: number; aspect: number; position: Vector3 };
 
@@ -57,6 +71,16 @@ export function Rig() {
     };
 
     const onDown = (e: PointerEvent) => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        pinchStartDist = pinchDistance(a!, b!);
+        pinchStartZoom = rigState.zoom;
+        isDown = false;
+        rigState.isDragging = false;
+        markActive();
+        return;
+      }
       isDown = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -74,6 +98,22 @@ export function Rig() {
       pointer.current.x = nx;
       pointer.current.y = ny;
 
+      if (pointers.has(e.pointerId)) {
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      }
+
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        const dist = pinchDistance(a!, b!);
+        if (pinchStartDist > 0) {
+          // Pinch out = zoom in (smaller camera Z).
+          const ratio = pinchStartDist / dist;
+          rigState.zoom = clampZoom(pinchStartZoom * ratio);
+          markActive();
+        }
+        return;
+      }
+
       if (!isDown) return;
       markActive();
       const dx = e.clientX - startX;
@@ -84,13 +124,18 @@ export function Rig() {
       }
       const vFov = (cam.fov * Math.PI) / 180;
       const visibleHeight = 2 * Math.tan(vFov / 2) * cam.position.z;
-      const sensitivity = (visibleHeight / window.innerHeight) * CATALOG_CONFIG.dragSpeed;
+      const sensitivity =
+        (visibleHeight / window.innerHeight) * CATALOG_CONFIG.dragSpeed;
       const tx = initialX + dx * sensitivity;
       const ty = initialY - dy * sensitivity;
       rigState.target.set(tx, ty, 0);
     };
 
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) {
+        pinchStartDist = 0;
+      }
       if (!isDown) return;
       isDown = false;
       rigState.isDragging = false;
@@ -100,10 +145,7 @@ export function Rig() {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       markActive();
-      rigState.zoom = Math.max(
-        CATALOG_CONFIG.zoomIn,
-        Math.min(CATALOG_CONFIG.zoomOut + 14, rigState.zoom + e.deltaY * 0.02)
-      );
+      rigState.zoom = clampZoom(rigState.zoom + e.deltaY * 0.02);
     };
 
     const onKey = (down: boolean) => (e: KeyboardEvent) => {
@@ -168,10 +210,7 @@ export function Rig() {
       rigState.target.y += dy * KEY_PAN_SPEED * delta;
     }
     if (dz) {
-      rigState.zoom = Math.max(
-        CATALOG_CONFIG.zoomIn,
-        Math.min(CATALOG_CONFIG.zoomOut + 14, rigState.zoom + dz * KEY_Z_SPEED * delta)
-      );
+      rigState.zoom = clampZoom(rigState.zoom + dz * KEY_Z_SPEED * delta);
     }
 
     const idleFor = (performance.now() - lastInteract.current) / 1000;
@@ -185,21 +224,36 @@ export function Rig() {
         idlePhase.current = Math.random() * Math.PI * 2;
       }
       idlePhase.current += delta * IDLE_SPEED;
-      const driftX = idleAnchor.current.x + Math.cos(idlePhase.current) * IDLE_RADIUS;
+      const driftX =
+        idleAnchor.current.x + Math.cos(idlePhase.current) * IDLE_RADIUS;
       const driftY =
-        idleAnchor.current.y + Math.sin(idlePhase.current * 0.73) * IDLE_RADIUS * 0.6;
+        idleAnchor.current.y +
+        Math.sin(idlePhase.current * 0.73) * IDLE_RADIUS * 0.6;
       easing.damp(rigState.target, "x", driftX, 0.6, delta);
       easing.damp(rigState.target, "y", driftY, 0.6, delta);
     }
 
-    easing.damp3(rigState.current, rigState.target, CATALOG_CONFIG.dampFactor, delta);
-    easing.damp(camera.position, "z", rigState.zoom, CATALOG_CONFIG.zoomDamp, delta);
+    easing.damp3(
+      rigState.current,
+      rigState.target,
+      CATALOG_CONFIG.dampFactor,
+      delta,
+    );
+    easing.damp(
+      camera.position,
+      "z",
+      rigState.zoom,
+      CATALOG_CONFIG.zoomDamp,
+      delta,
+    );
     rigState.velocity.copy(rigState.current).sub(prevPos.current);
     prevPos.current.copy(rigState.current);
 
     const zoomFactor = Math.min(1, CATALOG_CONFIG.zoomIn / rigState.zoom);
-    const dragTiltX = rigState.velocity.y * CATALOG_CONFIG.tiltFactor * zoomFactor;
-    const dragTiltY = -rigState.velocity.x * CATALOG_CONFIG.tiltFactor * zoomFactor;
+    const dragTiltX =
+      rigState.velocity.y * CATALOG_CONFIG.tiltFactor * zoomFactor;
+    const dragTiltY =
+      -rigState.velocity.x * CATALOG_CONFIG.tiltFactor * zoomFactor;
     const parallaxX = pointer.current.y * 0.04;
     const parallaxY = -pointer.current.x * 0.06;
 
@@ -208,6 +262,12 @@ export function Rig() {
 
     camera.position.x = rigState.current.x;
     camera.position.y = rigState.current.y;
+
+    const fog = scene.fog;
+    if (fog instanceof Fog) {
+      fog.near = camera.position.z * 0.85;
+      fog.far = camera.position.z * 3.6;
+    }
   });
 
   return null;

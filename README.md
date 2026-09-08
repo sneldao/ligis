@@ -11,8 +11,9 @@
 
 | Hackathon                          | Track                                | Demo                                                                                                                               | Submission doc                                                           |
 | ---------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure  | _(Monad deploy not started — web field/landing split in progress)_                                                                 | [`docs/metropolis-hackathon.md`](docs/metropolis-hackathon.md)           |
 | **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement        | _(in progress)_                                                                                                                    | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)                     |
-| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:05 Casper walkthrough](https://youtu.be/eoOQmAx7U7s)                                                                          | [`docs/casper-buidl.md`](docs/casper-buidl.md)                           |
+| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:05 Casper walkthrough](https://youtu.be/eoOQmAx7U7s)                                                                            | [`docs/casper-buidl.md`](docs/casper-buidl.md)                           |
 | **CROO Agent Hackathon 2026**      | Data & Verification + Open A2A       | [CROO demo](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4) _(upload before deadline)_ | [`docs/croo-hackathon-submission.md`](docs/croo-hackathon-submission.md) |
 | **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification   | _(in progress)_                                                                                                                    | [`docs/okx-ai.md`](docs/okx-ai.md)                                       |
 | **0G Bridge by AKINDO 2026**       | Trust & Safety / AI Agents           | _(in progress)_                                                                                                                    | [`docs/strategy.md`](docs/strategy.md)                                   |
@@ -71,16 +72,16 @@ It ships **live on Pharos** — the identity layer the Pharos agent economy comp
 
 ## Skills
 
-| Skill             | What it does                                                                 |
-| ----------------- | ---------------------------------------------------------------------------- |
-| `ligis-issue`     | Mint an Agent ID NFT; issue an EIP-712 capability credential                 |
-| `ligis-verify`    | Read-only: does a subject hold a valid credential?                           |
-| `ligis-revoke`    | Issuer revokes a credential (permanent)                                      |
-| `ligis-rotate`    | Move Agent ID to a new controller key (recovery)                             |
-| `ligis-hash`      | Helper: keccak256 a capability name                                          |
-| `ligis-sign`      | Helper: build + sign an EIP-712 credential off-chain                         |
+| Skill               | What it does                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `ligis-issue`       | Mint an Agent ID NFT; issue an EIP-712 capability credential                                                |
+| `ligis-verify`      | Read-only: does a subject hold a valid credential?                                                          |
+| `ligis-revoke`      | Issuer revokes a credential (permanent)                                                                     |
+| `ligis-rotate`      | Move Agent ID to a new controller key (recovery)                                                            |
+| `ligis-hash`        | Helper: keccak256 a capability name                                                                         |
+| `ligis-sign`        | Helper: build + sign an EIP-712 credential off-chain                                                        |
 | `ligis trust check` | GO/STOP pre-payment decision for a counterparty: Monid risk + on-chain capability gate, with a cost receipt |
-| `ligis agent run` | Trust Steward: boot → reason (0G Compute) → risk → gate → act → record (0G Storage) |
+| `ligis agent run`   | Trust Steward: boot → reason (0G Compute) → risk → gate → act → record (0G Storage)                         |
 
 ## Deployed contracts
 
@@ -201,6 +202,7 @@ The steward loop produces 3-4 on-chain transactions on Casper Testnet:
 - `set_token_uri` — Anchors evidence manifest to 0G Storage
 
 The x402 flow produces 1 additional on-chain transaction. Two settlement modes:
+
 - **Facilitator** (`X402_SETTLEMENT_MODE=facilitator`): Real CEP-18
   `transfer_with_authorization` via the CSPR.cloud x402 facilitator
   (`/verify` → `/settle`). Requires `CSPR_CLOUD_TOKEN` and a CEP-18 token.

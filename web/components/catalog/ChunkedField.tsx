@@ -3,11 +3,16 @@
 import { useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { AgentTile } from "./AgentTile";
-import { CHUNK_SIZE, chunkContents, visibleChunks } from "./chunks";
+import {
+  CHUNK_SIZE,
+  chunkContents,
+  radiusForZoom,
+  visibleChunks,
+} from "./chunks";
 
 export function ChunkedField() {
   const { camera } = useThree();
-  const [center, setCenter] = useState({ cx: 0, cy: 0 });
+  const [center, setCenter] = useState({ cx: 0, cy: 0, radius: 1 });
   const lastCheck = useRef(0);
 
   useFrame(() => {
@@ -16,23 +21,37 @@ export function ChunkedField() {
     lastCheck.current = now;
     const cx = Math.round(camera.position.x / CHUNK_SIZE);
     const cy = Math.round(camera.position.y / CHUNK_SIZE);
-    if (cx !== center.cx || cy !== center.cy) {
-      setCenter({ cx, cy });
+    const radius = radiusForZoom(camera.position.z);
+    if (cx !== center.cx || cy !== center.cy || radius !== center.radius) {
+      setCenter({ cx, cy, radius });
     }
   });
 
-  const chunks = useMemo(() => visibleChunks(center.cx, center.cy), [center]);
+  const chunks = useMemo(
+    () => visibleChunks(center.cx, center.cy, center.radius),
+    [center],
+  );
+
+  const far = center.radius > 1;
 
   return (
     <>
       {chunks.map((c) => (
-        <Chunk key={`${c.cx},${c.cy}`} cx={c.cx} cy={c.cy} />
+        <Chunk key={`${c.cx},${c.cy}`} cx={c.cx} cy={c.cy} stagger={!far} />
       ))}
     </>
   );
 }
 
-function Chunk({ cx, cy }: { cx: number; cy: number }) {
+function Chunk({
+  cx,
+  cy,
+  stagger,
+}: {
+  cx: number;
+  cy: number;
+  stagger: boolean;
+}) {
   const items = useMemo(() => chunkContents(cx, cy), [cx, cy]);
   return (
     <>
@@ -41,7 +60,7 @@ function Chunk({ cx, cy }: { cx: number; cy: number }) {
           key={agent.address}
           agent={agent}
           layout={layout}
-          enterDelay={i * 32 + (Math.abs(cx) + Math.abs(cy)) * 50}
+          enterDelay={stagger ? i * 32 + (Math.abs(cx) + Math.abs(cy)) * 50 : 0}
         />
       ))}
     </>

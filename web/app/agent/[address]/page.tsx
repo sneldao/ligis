@@ -1,4 +1,5 @@
 import { getAddress, type Address } from "viem";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddressDisplay } from "@/components/AddressDisplay";
 import { AgentHero } from "@/components/catalog/AgentHero";
@@ -83,6 +84,12 @@ export default async function AgentPage({
             {snap.exists ? "Agent · in the index" : "Agent · not in the index"}
           </p>
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 sm:gap-x-6">
+            <Link
+              href={`/field?chain=${chain.id}`}
+              className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              ← Field
+            </Link>
             <ChainBadge chain={chain} />
             <span className="hidden font-mono tabular sm:inline">
               {chain.name.toLowerCase()} · chain {chain.chainId}
@@ -154,7 +161,8 @@ export default async function AgentPage({
                 </p>
                 {snap.exists ? (
                   <pre className="mt-4 inline-block overflow-x-auto bg-paper-deep px-4 py-3 font-mono text-[12px] leading-relaxed tabular text-ink-soft">
-                    ligis sign --subject {truncateAddress(address, 6, 4)}·· --capability "kyc.basic"
+                    ligis sign --subject {truncateAddress(address, 6, 4)}··
+                    --capability "kyc.basic"
                   </pre>
                 ) : null}
               </div>
@@ -385,8 +393,13 @@ function ShareSection({
           <span className="font-mono text-ink">{firstCapability}</span>.
         </p>
         <details className="group mt-6 border-y border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Show embed code +</span><span className="hidden group-open:inline">Hide embed code −</span></summary>
-          <div className="border-t border-rule-soft py-5"><Snippet code={iframeCode} lang="html" /></div>
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            <span className="group-open:hidden">Show embed code +</span>
+            <span className="hidden group-open:inline">Hide embed code −</span>
+          </summary>
+          <div className="border-t border-rule-soft py-5">
+            <Snippet code={iframeCode} lang="html" />
+          </div>
         </details>
       </section>
     </>

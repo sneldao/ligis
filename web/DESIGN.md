@@ -37,8 +37,8 @@ and reach for typography, whitespace, and hairlines instead.
   - `terra` — ceremony and action: the accent, CTAs, active nav
   - `revoke` — loss and attention: revoked, errors, hard stops
   - `ink-quiet` — inactive: not held, expired, secondary metadata
-  Terra is tuned to pass WCAG AA (≥4.5:1) on paper at body sizes; do not
-  lighten it without re-checking contrast.
+    Terra is tuned to pass WCAG AA (≥4.5:1) on paper at body sizes; do not
+    lighten it without re-checking contrast.
 - **Corners**: surfaces are square. The single sanctioned exception is the
   global dock (fully-rounded pill, rounded mobile drawer) — it is floating
   chrome, not a content surface. No other component may round its corners.
@@ -57,10 +57,28 @@ and reach for typography, whitespace, and hairlines instead.
   check. Risk, integration, contracts, and issuance are secondary paths:
   reveal code samples, price lists, addresses, and CLI walkthroughs only when
   a visitor explicitly opens their detail. The home page is not a README.
-- **Mobile home**: content begins immediately beneath the dock. The home field
-  becomes a quiet static specimen texture; it must not reserve a viewport or
-  show desktop-only navigation hints. Audience routing is three compact action
+- **Three modes, never one scrolling page**: Ligis is landing, field, and app.
+  They do not share a surface or an input model.
+  - **Landing (`/`)**: editorial paper. Trust decision first. A framed
+    specimen texture invites _Enter the field_ — it is not a live WebGL
+    world, and the wheel never zooms a camera.
+  - **Field (`/field`)**: the immersive registry. Full-bleed canvas, no
+    competing page scroll. Esc and the Ligis mark leave to `/`. Wheel and
+    pinch zoom the camera; they never scroll the document.
+  - **App** (`/gate` and the moat routes): quiet paper, shared route shell.
+    The dock names only the verb and the field; everything else is ⌘K.
+- **Dock inventory**: persistent items are `Ligis` (home / leave field),
+  `Gate`, and `Field`, plus chain and wallet. Steward, capabilities, issuers,
+  embed, CROO, and “how it works” must not appear in the dock — they are
+  command-palette destinations and in-page links. Promoting the moat as peer
+  products is a design error.
+- **Mobile home**: content begins immediately beneath the dock. The landing
+  invite is a static specimen texture; it must not reserve a viewport of live
+  WebGL or show desktop-only camera hints. Audience routing is compact action
   rows, with explanatory copy deferred to wider screens or the destination.
+  `/field` is an explicit opt-in: on that route, capable devices may load
+  WebGL even below the desktop breakpoint. Reduced-motion still gets the
+  static field.
 - **Reference and operational routes**: begin below the fixed dock using the
   shared route shell; never make a route header compete with global chrome on a
   phone. Keep a reading-width introduction, but let ledgers, diagrams, and
@@ -72,14 +90,20 @@ and reach for typography, whitespace, and hairlines instead.
   injected EVM wallet and validates the active network; on Casper it opens the
   local secp256k1 wallet flow. A route may repeat the action only when setup
   context is essential (the Steward loop), never as competing global chrome.
-- **Agent field**: the interactive agent field is a route-scoped home-page
-  environment. It may span the home proposition, verification, and catalog
-  sequence, but it must end before operational or integration content. It is
-  never global page chrome and never appears behind ledger, reference, embed,
-  or Steward surfaces.
-- **Progressive enhancement**: the agent field loads only on capable desktop
-  clients. Small screens and reduced-motion users receive its static specimen
-  field; WebGL errors must leave all content usable.
+- **Agent field**: `/field` is a dedicated map of the registry, not a
+  home-page background and not global chrome. It never appears behind ledger,
+  reference, embed, or Steward surfaces. Landing may _picture_ the field;
+  only `/field` _is_ the field.
+- **Semantic zoom**: zooming out is a map, never an erasure. Close in, agents
+  are specimen documents. Pulled back, they persist as markers — the field
+  answers “how big is this trust layer?” Fade and fog are LOD transitions
+  onto that map, not culling to empty paper. Distance fade is planar (XY),
+  not camera-Z; camera-Z selects the LOD. Chunk radius expands as the camera
+  recedes so the frustum stays populated.
+- **Progressive enhancement**: the live field loads only on capable clients
+  that have not requested reduced motion. WebGL errors must leave landing and
+  app routes fully usable; `/field` falls back to the static specimen field
+  with a way back to `/`.
 - Agent pages are full-bleed identity documents, not cards in a feed.
 - Credential lists are ledger rows: columnar layout with hairlines between
   rows. No pills, no chips, no rounded containers.
@@ -88,17 +112,19 @@ and reach for typography, whitespace, and hairlines instead.
   force horizontal scrolling for core credential, issuer, or history data.
 - Architecture diagrams are hand-typeset SVG with proper labels, never the
   output of an auto-layout tool.
-- **The wedge and its verb**: the product's differentiated wedge is *the gate*
+- **The wedge and its verb**: the product's differentiated wedge is _the gate_
   — the single on-chain read an autonomous payment calls the instant before
   money moves to a stranger. The product owns one verb, "gate the payment,"
   not a category ("verifiable credentials"). Identity, credentials, the
-  Steward loop, cross-chain portability, and CROO are the *moat* that feeds
+  Steward loop, cross-chain portability, and CROO are the _moat_ that feeds
   the gate, not competing products. Surfaces frame themselves around the
   decision moment, never around the architecture. Concretely: the gate is
   served at `/gate` (the verb in the URL); the moat surfaces — `/steward`,
   `/capabilities`, `/issuers`, `/embed`, the CROO risk check, the agent
   dossiers — exist to feed the gate, and must never be promoted as
-  competing products in nav, hero, or section headers.
+  competing products in nav, hero, or section headers. The field is a
+  demonstration of the live registry — a proof of the primitive — not a
+  competing product and not the wedge.
 - **Verdict vocabulary**: a verification result is a transaction decision,
   rendered as `✓ GO` (sage) or `✗ STOP` (revoke) — never as
   "capable / not capable" (that is capability status, not a decision). The
@@ -111,15 +137,15 @@ and reach for typography, whitespace, and hairlines instead.
 
 Only these compose surfaces:
 
-| Primitive                                                         | What it is                                             |
-| ---------------------------------------------------------------- | ------------------------------------------------------ |
-| `Rule`                                                            | hairline (0.5px) or edge (1px), tone default or soft   |
-| `AddressDisplay`                                                  | mono address, optional link to explorer, optional copy |
-| `CopyButton`                                                      | quiet tracked-uppercase action, no border              |
-| `GateVerdict`                                                     | the GO/STOP pre-payment decision — left rule in tone, display verdict, plain-language reason, provenance line |
+| Primitive                                                         | What it is                                                                                                                           |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `Rule`                                                            | hairline (0.5px) or edge (1px), tone default or soft                                                                                 |
+| `AddressDisplay`                                                  | mono address, optional link to explorer, optional copy                                                                               |
+| `CopyButton`                                                      | quiet tracked-uppercase action, no border                                                                                            |
+| `GateVerdict`                                                     | the GO/STOP pre-payment decision — left rule in tone, display verdict, plain-language reason, provenance line                        |
 | `SignalStack`                                                     | the trust signal ledger — Rule-delimited rows of risk/capability/identity/policy signals with verdict, confidence, and measured cost |
-| `TrustReceipt`                                                    | the final trust ledger — decision, signal stack, incumbent-vs-measured cost comparison, anchored manifest hash |
-| typography classes (`display`, `eyebrow`, `font-mono`, `tabular`) | hierarchy                                              |
+| `TrustReceipt`                                                    | the final trust ledger — decision, signal stack, incumbent-vs-measured cost comparison, anchored manifest hash                       |
+| typography classes (`display`, `eyebrow`, `font-mono`, `tabular`) | hierarchy                                                                                                                            |
 
 New compositions extend these. If a new feature truly needs a new primitive,
 it gets added here first, with a rule for when to use it.

@@ -43,6 +43,7 @@ cp target/wasm32-unknown-unknown/release/ligis_contracts_casper_build_contract.w
 ```
 
 Key points:
+
 - `ODRA_MODULE` must be the CamelCase struct name (e.g., `CredentialRegistry`, not `credential_registry`)
 - `-C target-feature=-bulk-memory,-bulk-memory-opt` is required — Casper's WASM runtime doesn't support bulk memory operations
 - `-C linker=/usr/local/bin/wasm-ld` is needed because the nightly toolchain doesn't include `rust-lld` for wasm32
@@ -59,10 +60,12 @@ npx tsx src/deploy.ts CredentialRegistry  # deploy only CredentialRegistry
 ```
 
 **GatedVault** (has init args — uses dedicated deploy script):
+
 ```bash
 set -a && source .env.d/casper.env && set +a
 npx tsx scripts/deploy-gated-vault.ts
 ```
+
 The deploy script serializes Odra init args (credential_registry: Address as
 CLType::Key, required_capability: [u8;32] as CLType::ByteArray(32)) into
 Casper RuntimeArgs format and passes them as the `args:byte_array_N` session arg.
@@ -173,7 +176,12 @@ via the `?chain=` query parameter. All pages are chain-aware:
 - `web/lib/chain-casper.ts` — Casper read layer (CasperAdapter + block scanning)
 - `web/lib/chain-router.ts` — unified dispatch, branches on `chain.kind`
 
+Information architecture (see `web/DESIGN.md`): `/` is editorial landing,
+`/field` is the immersive registry (semantic zoom, Esc to leave), `/gate` is
+the verb. The dock names only Gate and Field; moat routes live in ⌘K.
+
 Key points:
+
 - Casper addresses use `account-hash-...` format (not `0x...`)
 - Casper has no EVM-style event logs; issuer activity and capability history
   are reconstructed by scanning recent blocks for `issue`/`revoke` transactions
@@ -190,12 +198,14 @@ Required Vercel env vars for Casper reads:
 The CROO provider runs on the Vultr server (`nuncio-vultr`) under PM2.
 
 **Layout:**
+
 - `/opt/ligis-croo/current` → symlink to `releases/<timestamp>/`
 - `/opt/ligis-croo/.env` — all secrets (CROO_SDK_KEY, Casper keys, service UUIDs)
 - `/opt/ligis-croo/ecosystem.config.js` — PM2 config
 - `/opt/ligis-croo/logs/` — stdout + stderr logs
 
 **Deploy:**
+
 ```bash
 ssh nuncio-vultr
 cd /opt/ligis-croo/releases
@@ -210,12 +220,14 @@ cd /opt/ligis-croo && pm2 restart ecosystem.config.js --update-env
 ```
 
 **Health check:**
+
 ```bash
 curl http://127.0.0.1:9430/health
 # Returns: { uptime, delivered, errors, lastDeliveryAt, wsConnected, inFlight }
 ```
 
 **Required env vars in `/opt/ligis-croo/.env`:**
+
 - `CROO_SDK_KEY` — from CROO Dashboard
 - `CROO_SERVICE_ID_LIGIS_RISK` — listing UUID from CROO Dashboard
 - `CROO_SERVICE_ID_LIGIS_VERIFY` — listing UUID from CROO Dashboard
@@ -228,6 +240,7 @@ curl http://127.0.0.1:9430/health
 **casper-client CLI (required for ligis.issue on Casper):**
 The `submitCredential` function uses `casper-client` to submit signed
 transactions to the Casper network. Install it on the server:
+
 ```bash
 curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source $HOME/.cargo/env
@@ -239,6 +252,7 @@ sudo ln -sf $HOME/.cargo/bin/casper-client /usr/local/bin/casper-client
 **PEM file generation (required for ligis.issue on Casper):**
 The `casper-client` CLI requires a PEM key file. Generate it from the
 deployer's hex private key:
+
 ```bash
 node -e "
 const fs = require('fs');
@@ -249,6 +263,7 @@ fs.writeFileSync('.env.d/casper-deployer.pem', pk.exportPrivateKeyInPem());
 ```
 
 **Key implementation notes:**
+
 - CROO sends listing UUIDs as `service_id` in WebSocket events, not service
   names. The provider maps UUIDs via `CROO_SERVICE_ID_*` env vars.
 - The `order_paid` WebSocket event is sparse (only `order_id` + `negotiation_id`).

@@ -40,6 +40,7 @@ user funds their own gas from the Casper Testnet faucet.
 ```
 
 **Why this works:**
+
 - `@noble/curves/secp256k1.sign(digest, scalar)` produces the **same `r,s,v`**
   as `ethers.Wallet.signingKey.sign`, so the browser-signed EIP-712
   credential digest recovers on chain (via Casper's native `k256` recovery) to
@@ -54,6 +55,7 @@ user funds their own gas from the Casper Testnet faucet.
   this is needed at all — the public Casper RPC returns 403 on preflight.
 
 **Files in `web/lib/casper-browser/`:**
+
 - `keypair.ts` — secp256k1 keygen/derive, `secp256k1.utils.randomSecretKey()` → `PrivateKey.fromHex(scalar)` (the SDK doesn't expose the secret scalar)
 - `eip712.ts` — EIP-712 typed-data digest construction (same library the server uses, so digests are byte-identical)
 - `operations.ts` — SDK-typed mirror of `@ligis/adapter-casper` operations; builds TransactionV1 + StoredTarget + invokes `account_put_transaction`
@@ -167,6 +169,9 @@ web/
       ConnectWallet[Inner].tsx  secp256k1 keypair gen + paste import UI
       WalletGate.tsx             wallet entry point on /steward (five visual states)
       StewardRunner.tsx         unified flow for both chains
+      GlobalDock.tsx            persistent chrome: Ligis, Gate, Field
+      catalog/FieldExperience   immersive registry at /field
+      catalog/FieldInvite       landing framed invite into /field
   scripts/
     smoke-wallet-crypto.ts      byte-equality between @noble/curves and ethers
     smoke-wallet-tx.ts          TransactionV1 encoding check (no submit)

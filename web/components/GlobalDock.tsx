@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
@@ -10,13 +10,18 @@ import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 
 const NAV = [
   { href: "/gate", label: "Gate" },
-  { href: "/#how", label: "How it works" },
-  { href: "/steward", label: "Steward" },
-  { href: "/capabilities", label: "Capabilities" },
-  { href: "/issuers", label: "Issuers" },
-  { href: "/embed", label: "Embed" },
-  { href: "/#croo", label: "CROO" },
+  { href: "/field", label: "Field" },
 ];
+
+function withChain(path: string, chain: string | null) {
+  if (!chain) return path;
+  const join = path.includes("?") ? "&" : "?";
+  return `${path}${join}chain=${encodeURIComponent(chain)}`;
+}
+
+function navActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 /** Inline hamburger/close icon — no icon-font dependency, crisp at any DPR. */
 function MenuIcon({ open }: { open: boolean }) {
@@ -49,8 +54,11 @@ function MenuIcon({ open }: { open: boolean }) {
 
 export function GlobalDock() {
   const pathname = usePathname() ?? "/";
+  const searchParams = useSearchParams();
+  const chain = searchParams.get("chain");
   const [navOpen, setNavOpen] = useState(false);
   const reducedMotion = useReducedMotion();
+  const onField = pathname.startsWith("/field");
 
   const closeDrawer = useCallback(() => setNavOpen(false), []);
 
@@ -87,8 +95,8 @@ export function GlobalDock() {
       >
         {/* Brand zone */}
         <Link
-          href="/"
-          aria-label="Ligis · home"
+          href={withChain("/", chain)}
+          aria-label={onField ? "Ligis · leave the field" : "Ligis · home"}
           className="flex items-center gap-x-2 font-mono text-[11px] uppercase tracking-[0.18em] text-paper hover:text-terra"
         >
           <span aria-hidden>🪪</span>
@@ -104,12 +112,11 @@ export function GlobalDock() {
         {/* Nav links — lg+ only. The mobile drawer carries them below. */}
         <nav className="hidden items-center gap-x-3 lg:flex">
           {NAV.map((n) => {
-            const isActive =
-              n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
+            const isActive = navActive(pathname, n.href);
             return (
               <Link
                 key={n.href}
-                href={n.href}
+                href={withChain(n.href, chain)}
                 className={`font-mono text-[11px] uppercase tracking-[0.18em] transition-colors relative ${
                   isActive
                     ? "text-terra"
@@ -183,14 +190,11 @@ export function GlobalDock() {
             </div>
             <ul className="flex flex-col gap-y-3">
               {NAV.map((n) => {
-                const isActive =
-                  n.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(n.href);
+                const isActive = navActive(pathname, n.href);
                 return (
                   <li key={n.href}>
                     <Link
-                      href={n.href}
+                      href={withChain(n.href, chain)}
                       className={`block font-mono text-xs uppercase tracking-[0.18em] transition-colors ${
                         isActive
                           ? "text-terra"

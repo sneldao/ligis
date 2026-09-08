@@ -18,7 +18,7 @@ export const rigState: CatalogState = {
   target: new Vector3(0, 0, 0),
   current: new Vector3(0, 0, 0),
   velocity: new Vector3(0, 0, 0),
-  zoom: 28,
+  zoom: 16,
   isDragging: false,
   activeId: null,
 };
@@ -28,6 +28,13 @@ export const ui = {
   hoveredId: null as string | null,
   filter: "all" as "all" | "real",
 };
+
+/** Chain id for field → agent navigation. Set by FieldExperience. */
+export let fieldChainId: string | null = null;
+
+export function setFieldChainId(id: string | null) {
+  fieldChainId = id;
+}
 
 function notify() {
   listeners.forEach((l) => l());
@@ -72,8 +79,17 @@ export const CATALOG_CONFIG = {
   clickThreshold: 6,
   dragResistance: 0.22,
   zoomIn: 10,
-  zoomOut: 28,
+  zoomDefault: 16,
+  zoomOut: 48,
   zoomDamp: 0.22,
+  /** Camera Z below this: full specimens. */
+  lodSpecimen: 20,
+  /** Camera Z above this: markers only. Between the two, they crossfade. */
+  lodMarker: 32,
+  /** Planar (XY) distance where a specimen begins fading to a marker. */
+  planarFadeStart: 16,
+  /** Planar distance where the specimen is gone and only the marker remains. */
+  planarFadeEnd: 30,
   focusScale: 1.45,
   dimScale: 0.78,
   dimOpacity: 0.35,
@@ -81,3 +97,14 @@ export const CATALOG_CONFIG = {
   fogNear: 14,
   fogFar: 60,
 } as const;
+
+export function resetRig() {
+  rigState.target.set(0, 0, 0);
+  rigState.current.set(0, 0, 0);
+  rigState.velocity.set(0, 0, 0);
+  rigState.zoom = CATALOG_CONFIG.zoomDefault;
+  rigState.isDragging = false;
+  rigState.activeId = null;
+  ui.activeId = null;
+  ui.hoveredId = null;
+}

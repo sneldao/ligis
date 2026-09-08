@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { CatalogHero } from "@/components/catalog/CatalogHero";
-import { HomeField } from "@/components/catalog/HomeField";
+import { FieldInvite } from "@/components/catalog/FieldInvite";
 import { ChainBadge } from "@/components/ChainBadge";
 import { Diagram } from "@/components/Diagram";
 import { Rule } from "@/components/Rule";
@@ -104,125 +103,142 @@ export default async function HomePage({
         }}
       />
       {/* The home route earns attention with a live check first. The rest of
-          the protocol is available on intent, rather than competing with it. */}
-      <HomeField>
-        <main
-          id="how"
-          className="pointer-events-auto mx-auto max-w-5xl scroll-mt-24 px-5 pt-24 pb-12 sm:px-8 sm:pt-36 sm:pb-24"
-        >
-          <header className="flex items-baseline justify-between text-xs">
-            <p className="eyebrow">Ligis · the trust gate for autonomous payments</p>
-            <ChainBadge chain={chain} />
-          </header>
+          the protocol is available on intent, rather than competing with it.
+          The identity field is a separate room — invited here, entered at /field. */}
+      <main
+        id="how"
+        className="mx-auto max-w-5xl scroll-mt-24 px-5 pt-24 pb-12 sm:px-8 sm:pt-36 sm:pb-24"
+      >
+        <header className="flex items-baseline justify-between text-xs">
+          <p className="eyebrow">
+            Ligis · the trust gate for autonomous payments
+          </p>
+          <ChainBadge chain={chain} />
+        </header>
 
-          <section className="mt-14 sm:mt-16">
-            <h1 className="display max-w-3xl text-[2.8rem] text-ink sm:text-6xl lg:text-7xl">
-              Before your agent pays a stranger, gate the payment.
-            </h1>
-            <p className="mt-7 max-w-xl font-serif text-lg leading-relaxed text-ink-soft sm:mt-10 sm:text-xl">
-              Ligis is the one on-chain read that turns &ldquo;trust this
-              wallet&rdquo; into <span className="text-sage">GO</span> or{" "}
-              <span className="text-revoke">STOP</span> &mdash; before money
-              moves. No API, no intermediary, no trust required.
-            </p>
-            <p className="mt-5 max-w-2xl font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
-              {stats.ok ? (
-                Number(stats.supply) > 3 ? (
-                  <>
-                    <span className="tabular text-ink">
-                      {stats.supply.toLocaleString("en")}
-                    </span>{" "}verifiable agents · {chain.name} · block{" "}
-                    <span className="tabular text-ink">
-                      {Number(stats.block).toLocaleString("en")}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-ink">{chain.name}</span> · live registry read · block{" "}
-                    <span className="tabular text-ink">
-                      {Number(stats.block).toLocaleString("en")}
-                    </span>
-                  </>
-                )
-              ) : stats.preview ? (
+        <section className="mt-14 sm:mt-16">
+          <h1 className="display max-w-3xl text-[2.8rem] text-ink sm:text-6xl lg:text-7xl">
+            Before your agent pays a stranger, gate the payment.
+          </h1>
+          <p className="mt-7 max-w-xl font-serif text-lg leading-relaxed text-ink-soft sm:mt-10 sm:text-xl">
+            Ligis is the one on-chain read that turns &ldquo;trust this
+            wallet&rdquo; into <span className="text-sage">GO</span> or{" "}
+            <span className="text-revoke">STOP</span> &mdash; before money
+            moves. No API, no intermediary, no trust required.
+          </p>
+          <p className="mt-5 max-w-2xl font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
+            {stats.ok ? (
+              Number(stats.supply) > 3 ? (
                 <>
-                  <span className="text-ink">{chain.name}</span> · live registry read
+                  <span className="tabular text-ink">
+                    {stats.supply.toLocaleString("en")}
+                  </span>{" "}
+                  verifiable agents · {chain.name} · block{" "}
+                  <span className="tabular text-ink">
+                    {Number(stats.block).toLocaleString("en")}
+                  </span>
                 </>
               ) : (
-                <>Live index temporarily unreachable.</>
-              )}
-            </p>
-          </section>
+                <>
+                  <span className="text-ink">{chain.name}</span> · live registry
+                  read · block{" "}
+                  <span className="tabular text-ink">
+                    {Number(stats.block).toLocaleString("en")}
+                  </span>
+                </>
+              )
+            ) : stats.preview ? (
+              <>
+                <span className="text-ink">{chain.name}</span> · live registry
+                read
+              </>
+            ) : (
+              <>Live index temporarily unreachable.</>
+            )}
+          </p>
+        </section>
 
-          {/* Onboarding moment — plain-language problem framing for
+        {/* Onboarding moment — plain-language problem framing for
               first-time visitors who don't already know what on-chain
               credentials are. Sits between the hero claim and the
               live verify demo so the visitor understands the "why"
               before the "how". */}
-          <section className="mt-12 max-w-2xl sm:mt-16">
-            <p className="font-serif text-base leading-relaxed text-ink-soft">
-              Agents transact autonomously &mdash; sending payments, opening
-              escrows, buying data. The dangerous moment is the one before
-              money moves to a wallet your agent has never met. Ligis makes
-              that moment a decision: one blockchain read returns{" "}
-              <span className="text-sage">GO</span> or{" "}
-              <span className="text-revoke">STOP</span>. If the counterparty
-              can&rsquo;t prove it&rsquo;s authorized, the agent halts before
-              the transaction fires.
-            </p>
-            <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
-              <Link href="/steward" className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra">For agent operators →</Link>
-              <Link href="/capabilities" className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra">For protocol builders →</Link>
-              <Link href="/issuers" className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra">For credential issuers →</Link>
-            </div>
-          </section>
-
-          <section id="verify" className="mt-16 scroll-mt-24 sm:mt-28">
-            <header className="flex items-baseline justify-between">
-              <p className="eyebrow">01 · The gate</p>
-              <p className="font-mono text-[11px] tabular text-ink-quiet">
-                live · {chain.name.toLowerCase()}
-              </p>
-            </header>
-            <Rule className="mt-4" />
-            <div className="mt-8 grid grid-cols-1 gap-x-16 gap-y-8 sm:mt-10 sm:gap-y-12 lg:grid-cols-[18rem_1fr]">
-              <div>
-                <h2 className="display text-3xl text-ink">
-                  Gate it before it pays.
-                </h2>
-                <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft sm:mt-6">
-                  Choose a counterparty wallet and a capability. The verdict
-                  comes from chain state, signed by the issuer &mdash; the same
-                  read an agent makes the instant before sending a transaction.
-                </p>
-                <p className="mt-3 font-serif text-sm italic leading-relaxed text-ink-quiet">
-                  This is the wedge: one <code className="font-mono not-italic">isCapable</code> call, returned as GO or STOP.
-                </p>
-              </div>
-              <VerifyDemo
-                capabilities={capOptions}
-                defaultSubject={sampleSubject}
-                explorerUrl={chain.explorerUrl}
-                chainId={chain.id}
-              />
-            </div>
-          </section>
-        </main>
-
-        {/* The catalog — 3D agent scene. A visual breather between the
-          interactive verify demo and the distribution story. */}
-        <section id="catalog" className="scroll-mt-24">
-          <CatalogHero chain={chain} />
+        <section className="mt-12 max-w-2xl sm:mt-16">
+          <p className="font-serif text-base leading-relaxed text-ink-soft">
+            Agents transact autonomously &mdash; sending payments, opening
+            escrows, buying data. The dangerous moment is the one before money
+            moves to a wallet your agent has never met. Ligis makes that moment
+            a decision: one blockchain read returns{" "}
+            <span className="text-sage">GO</span> or{" "}
+            <span className="text-revoke">STOP</span>. If the counterparty
+            can&rsquo;t prove it&rsquo;s authorized, the agent halts before the
+            transaction fires.
+          </p>
+          <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+            <Link
+              href="/steward"
+              className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+            >
+              For agent operators →
+            </Link>
+            <Link
+              href="/capabilities"
+              className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+            >
+              For protocol builders →
+            </Link>
+            <Link
+              href="/issuers"
+              className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+            >
+              For credential issuers →
+            </Link>
+          </div>
         </section>
-      </HomeField>
 
-      <section className="mx-auto max-w-5xl px-5 pt-20 pb-20 sm:px-8 sm:pt-32 sm:pb-32">
+        <section id="verify" className="mt-16 scroll-mt-24 sm:mt-28">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">01 · The gate</p>
+            <p className="font-mono text-[11px] tabular text-ink-quiet">
+              live · {chain.name.toLowerCase()}
+            </p>
+          </header>
+          <Rule className="mt-4" />
+          <div className="mt-8 grid grid-cols-1 gap-x-16 gap-y-8 sm:mt-10 sm:gap-y-12 lg:grid-cols-[18rem_1fr]">
+            <div>
+              <h2 className="display text-3xl text-ink">
+                Gate it before it pays.
+              </h2>
+              <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft sm:mt-6">
+                Choose a counterparty wallet and a capability. The verdict comes
+                from chain state, signed by the issuer &mdash; the same read an
+                agent makes the instant before sending a transaction.
+              </p>
+              <p className="mt-3 font-serif text-sm italic leading-relaxed text-ink-quiet">
+                This is the wedge: one{" "}
+                <code className="font-mono not-italic">isCapable</code> call,
+                returned as GO or STOP.
+              </p>
+            </div>
+            <VerifyDemo
+              capabilities={capOptions}
+              defaultSubject={sampleSubject}
+              explorerUrl={chain.explorerUrl}
+              chainId={chain.id}
+            />
+          </div>
+        </section>
+      </main>
+
+      <section className="mx-auto max-w-5xl px-5 pt-8 pb-20 sm:px-8 sm:pt-16 sm:pb-32">
+        <FieldInvite chainId={chain.id} />
+
         {/* 02 — Why it compounds. The moat, told editorially: the gate is a
             thin wedge, but every payment gated gives issuers more reason to
             mint credentials, which makes the next gate more trustworthy.
             That feedback loop is the creative monopoly — the gate becomes
             the default the moment money moves between agents. */}
-        <section id="compound" className="scroll-mt-24">
+        <section id="compound" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">02 · Why it compounds</p>
             <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
@@ -236,31 +252,47 @@ export default async function HomePage({
             </h2>
             <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft">
               The gate is a single read &mdash; easy to adopt, easy to copy.
-              What isn&rsquo;t easy to copy is the loop it starts. Every
-              payment an agent gates is a reason for someone to issue a
-              credential; every credential issued is a reason for the next
-              agent to trust the gate. Issuers, agents, and payments pull
-              one another toward a single standard.
+              What isn&rsquo;t easy to copy is the loop it starts. Every payment
+              an agent gates is a reason for someone to issue a credential;
+              every credential issued is a reason for the next agent to trust
+              the gate. Issuers, agents, and payments pull one another toward a
+              single standard.
             </p>
             <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft">
-              That is the design intent: own the instant before money moves,
-              and the rest of agent identity &mdash; minting, rotation,
-              revocation, cross-chain portability &mdash; becomes the
-              infrastructure that feeds the gate rather than a product that
-              competes on its own.
+              That is the design intent: own the instant before money moves, and
+              the rest of agent identity &mdash; minting, rotation, revocation,
+              cross-chain portability &mdash; becomes the infrastructure that
+              feeds the gate rather than a product that competes on its own.
             </p>
             <ol className="mt-8 space-y-3 font-serif text-base leading-relaxed text-ink-soft">
               <li className="flex gap-4">
-                <span className="font-mono text-[11px] tabular text-terra pt-1.5">01</span>
-                <span>An agent calls the gate before paying a stranger. The read is free and stateless &mdash; no Ligis server in the path.</span>
+                <span className="font-mono text-[11px] tabular text-terra pt-1.5">
+                  01
+                </span>
+                <span>
+                  An agent calls the gate before paying a stranger. The read is
+                  free and stateless &mdash; no Ligis server in the path.
+                </span>
               </li>
               <li className="flex gap-4">
-                <span className="font-mono text-[11px] tabular text-terra pt-1.5">02</span>
-                <span>Merchants and protocols require a credential to pass the gate, so they issue one. The capability set grows with the economy, not with Ligis&rsquo;s roadmap.</span>
+                <span className="font-mono text-[11px] tabular text-terra pt-1.5">
+                  02
+                </span>
+                <span>
+                  Merchants and protocols require a credential to pass the gate,
+                  so they issue one. The capability set grows with the economy,
+                  not with Ligis&rsquo;s roadmap.
+                </span>
               </li>
               <li className="flex gap-4">
-                <span className="font-mono text-[11px] tabular text-terra pt-1.5">03</span>
-                <span>More credentials mean a stranger is more likely to already be verifiable, so more agents gate by default. The loop closes &mdash; the gate becomes the standard the moment money moves.</span>
+                <span className="font-mono text-[11px] tabular text-terra pt-1.5">
+                  03
+                </span>
+                <span>
+                  More credentials mean a stranger is more likely to already be
+                  verifiable, so more agents gate by default. The loop closes
+                  &mdash; the gate becomes the standard the moment money moves.
+                </span>
               </li>
             </ol>
           </div>
@@ -269,27 +301,57 @@ export default async function HomePage({
         <section id="croo" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">03 · Check the stranger before you pay</p>
-            <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">CROO Agent Store · x402</p>
+            <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
+              CROO Agent Store · x402
+            </p>
           </header>
           <Rule className="mt-4" />
           <div className="mt-8 sm:mt-10">
-            <h2 className="display max-w-xl text-3xl text-ink">Spend cents before you send thousands.</h2>
+            <h2 className="display max-w-xl text-3xl text-ink">
+              Spend cents before you send thousands.
+            </h2>
             <div className="mt-8 grid gap-4 border-y border-rule py-5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet sm:grid-cols-3 sm:gap-8">
-              <span><b className="mr-2 font-mono font-normal text-terra">01</b>find a counterparty</span>
-              <span><b className="mr-2 font-mono font-normal text-terra">02</b>check its credentials</span>
-              <span><b className="mr-2 font-mono font-normal text-terra">03</b>pay or stop</span>
+              <span>
+                <b className="mr-2 font-mono font-normal text-terra">01</b>find
+                a counterparty
+              </span>
+              <span>
+                <b className="mr-2 font-mono font-normal text-terra">02</b>check
+                its credentials
+              </span>
+              <span>
+                <b className="mr-2 font-mono font-normal text-terra">03</b>pay
+                or stop
+              </span>
             </div>
             <p className="mt-6 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">
-              Ask Ligis for a counterparty risk report before your agent pays. It returns a score, verdict, and the reasons behind it.
+              Ask Ligis for a counterparty risk report before your agent pays.
+              It returns a score, verdict, and the reasons behind it.
             </p>
             <details className="group mt-6 border-t border-rule">
               <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
-                <span className="group-open:hidden">See CROO services, pricing &amp; integration +</span><span className="hidden group-open:inline">Close integration details −</span>
+                <span className="group-open:hidden">
+                  See CROO services, pricing &amp; integration +
+                </span>
+                <span className="hidden group-open:inline">
+                  Close integration details −
+                </span>
               </summary>
               <div className="border-t border-rule-soft pb-6 pt-5">
-                <p className="font-serif text-sm leading-relaxed text-ink-soft"><code className="font-mono text-ink">ligis.risk</code> $0.75 · <code className="font-mono text-ink">ligis.verify</code> $0.50 · <code className="font-mono text-ink">ligis.issue</code> $1.00</p>
-                <div className="mt-6"><Snippet code={CROO_SNIPPET} lang="ts" /></div>
-                <p className="mt-5 max-w-2xl font-serif text-sm italic leading-relaxed text-ink-quiet">Critical capabilities count more heavily; short-lived or newly issued credentials lower confidence. A critical credential below the required TTL is a hard stop.</p>
+                <p className="font-serif text-sm leading-relaxed text-ink-soft">
+                  <code className="font-mono text-ink">ligis.risk</code> $0.75 ·{" "}
+                  <code className="font-mono text-ink">ligis.verify</code> $0.50
+                  · <code className="font-mono text-ink">ligis.issue</code>{" "}
+                  $1.00
+                </p>
+                <div className="mt-6">
+                  <Snippet code={CROO_SNIPPET} lang="ts" />
+                </div>
+                <p className="mt-5 max-w-2xl font-serif text-sm italic leading-relaxed text-ink-quiet">
+                  Critical capabilities count more heavily; short-lived or newly
+                  issued credentials lower confidence. A critical credential
+                  below the required TTL is a hard stop.
+                </p>
               </div>
             </details>
           </div>
@@ -308,10 +370,22 @@ export default async function HomePage({
           <Rule className="mt-4" />
           <div className="mt-8 max-w-2xl sm:mt-10">
             <h2 className="display text-3xl text-ink">One read. Anywhere.</h2>
-            <p className="mt-5 font-serif text-base leading-relaxed text-ink">Call <code className="font-mono">isCapable</code> from any contract, agent, or script. No Ligis account, SDK, or API key.</p>
+            <p className="mt-5 font-serif text-base leading-relaxed text-ink">
+              Call <code className="font-mono">isCapable</code> from any
+              contract, agent, or script. No Ligis account, SDK, or API key.
+            </p>
             <details className="group mt-6 border-y border-rule">
-              <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Show the viem example +</span><span className="hidden group-open:inline">Hide the viem example −</span></summary>
-              <div className="border-t border-rule-soft py-5"><Snippet code={SNIPPET} /></div>
+              <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+                <span className="group-open:hidden">
+                  Show the viem example +
+                </span>
+                <span className="hidden group-open:inline">
+                  Hide the viem example −
+                </span>
+              </summary>
+              <div className="border-t border-rule-soft py-5">
+                <Snippet code={SNIPPET} />
+              </div>
             </details>
           </div>
         </section>
@@ -327,69 +401,79 @@ export default async function HomePage({
             </p>
           </header>
           <Rule className="mt-4" />
-          <p className="mt-8 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">Identity and credentials are separate contracts. Neither needs Ligis online to answer a verification call.</p>
+          <p className="mt-8 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">
+            Identity and credentials are separate contracts. Neither needs Ligis
+            online to answer a verification call.
+          </p>
           <div className="mt-8">
             <Diagram className="h-auto w-full" />
           </div>
           <details className="group mt-6 border-t border-rule">
-            <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Inspect deployed contracts +</span><span className="hidden group-open:inline">Close contract addresses −</span></summary>
+            <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+              <span className="group-open:hidden">
+                Inspect deployed contracts +
+              </span>
+              <span className="hidden group-open:inline">
+                Close contract addresses −
+              </span>
+            </summary>
             <div className="grid grid-cols-1 gap-8 border-t border-rule-soft py-5 sm:grid-cols-2">
-            {isCasper ? (
-              <>
-                <a
-                  href={`${chain.explorerUrl}/contract/${process.env.LIGIS_CASPER_AGENT_ID ?? ""}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group block space-y-2 py-2"
-                >
-                  <p className="eyebrow">AgentId (Casper)</p>
-                  <Rule tone="soft" />
-                  <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
-                    {process.env.LIGIS_CASPER_AGENT_ID ?? "not configured"}
-                  </p>
-                </a>
-                <a
-                  href={`${chain.explorerUrl}/contract/${process.env.LIGIS_CASPER_CREDENTIAL_REGISTRY ?? ""}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group block space-y-2 py-2"
-                >
-                  <p className="eyebrow">CredentialRegistry (Casper)</p>
-                  <Rule tone="soft" />
-                  <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
-                    {process.env.LIGIS_CASPER_CREDENTIAL_REGISTRY ??
-                      "not configured"}
-                  </p>
-                </a>
-              </>
-            ) : (
-              <>
-                <a
-                  href={`${chain.explorerUrl}/address/${addresses.pharosAgentId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group block space-y-2 py-2"
-                >
-                  <p className="eyebrow">PharosAgentID</p>
-                  <Rule tone="soft" />
-                  <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
-                    {addresses.pharosAgentId}
-                  </p>
-                </a>
-                <a
-                  href={`${chain.explorerUrl}/address/${addresses.credentialRegistry}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group block space-y-2 py-2"
-                >
-                  <p className="eyebrow">CredentialRegistry</p>
-                  <Rule tone="soft" />
-                  <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
-                    {addresses.credentialRegistry}
-                  </p>
-                </a>
-              </>
-            )}
+              {isCasper ? (
+                <>
+                  <a
+                    href={`${chain.explorerUrl}/contract/${process.env.LIGIS_CASPER_AGENT_ID ?? ""}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group block space-y-2 py-2"
+                  >
+                    <p className="eyebrow">AgentId (Casper)</p>
+                    <Rule tone="soft" />
+                    <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
+                      {process.env.LIGIS_CASPER_AGENT_ID ?? "not configured"}
+                    </p>
+                  </a>
+                  <a
+                    href={`${chain.explorerUrl}/contract/${process.env.LIGIS_CASPER_CREDENTIAL_REGISTRY ?? ""}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group block space-y-2 py-2"
+                  >
+                    <p className="eyebrow">CredentialRegistry (Casper)</p>
+                    <Rule tone="soft" />
+                    <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
+                      {process.env.LIGIS_CASPER_CREDENTIAL_REGISTRY ??
+                        "not configured"}
+                    </p>
+                  </a>
+                </>
+              ) : (
+                <>
+                  <a
+                    href={`${chain.explorerUrl}/address/${addresses.pharosAgentId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group block space-y-2 py-2"
+                  >
+                    <p className="eyebrow">PharosAgentID</p>
+                    <Rule tone="soft" />
+                    <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
+                      {addresses.pharosAgentId}
+                    </p>
+                  </a>
+                  <a
+                    href={`${chain.explorerUrl}/address/${addresses.credentialRegistry}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group block space-y-2 py-2"
+                  >
+                    <p className="eyebrow">CredentialRegistry</p>
+                    <Rule tone="soft" />
+                    <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
+                      {addresses.credentialRegistry}
+                    </p>
+                  </a>
+                </>
+              )}
             </div>
           </details>
         </section>
@@ -413,12 +497,26 @@ export default async function HomePage({
                 Grant a credential that any agent can verify. Issuance stays in
                 the CLI because only a controller or authorized issuer can sign.
               </p>
-              <Link href="/issuers" className="mt-5 inline-block font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline decoration-rule underline-offset-4 hover:decoration-terra">Open issuer guide →</Link>
+              <Link
+                href="/issuers"
+                className="mt-5 inline-block font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline decoration-rule underline-offset-4 hover:decoration-terra"
+              >
+                Open issuer guide →
+              </Link>
             </div>
             <details className="group border-y border-rule">
-              <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Show CLI quickstart +</span><span className="hidden group-open:inline">Hide CLI quickstart −</span></summary>
+              <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+                <span className="group-open:hidden">Show CLI quickstart +</span>
+                <span className="hidden group-open:inline">
+                  Hide CLI quickstart −
+                </span>
+              </summary>
               <div className="space-y-6 border-t border-rule-soft py-5">
-                <pre className="overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[13px] leading-relaxed tabular text-ink">{"bash <(curl -sL https://raw.githubusercontent.com/sneldao/ligis/main/install.sh)"}</pre>
+                <pre className="overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[13px] leading-relaxed tabular text-ink">
+                  {
+                    "bash <(curl -sL https://raw.githubusercontent.com/sneldao/ligis/main/install.sh)"
+                  }
+                </pre>
                 <pre className="overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[13px] leading-relaxed tabular text-ink">{`PRIVATE_KEY=0x... ligis issue --token-uri "ipfs://my-agent"
 
 # sign is off-chain — only the issuer key, no PRIVATE_KEY needed
@@ -426,21 +524,34 @@ ligis sign \\
   --issuer-key 0x... \\
   --subject 0x... \\
   --capability "agent.commerce.escrow"`}</pre>
-                <p className="font-serif text-xs italic leading-relaxed text-ink-quiet">See the <a href="https://github.com/sneldao/ligis?tab=readme-ov-file#quickstart" target="_blank" rel="noreferrer" className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra">README</a> for the full walkthrough.</p>
+                <p className="font-serif text-xs italic leading-relaxed text-ink-quiet">
+                  See the{" "}
+                  <a
+                    href="https://github.com/sneldao/ligis?tab=readme-ov-file#quickstart"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+                  >
+                    README
+                  </a>{" "}
+                  for the full walkthrough.
+                </p>
               </div>
             </details>
           </div>
         </section>
 
         <footer className="mt-24 flex flex-col gap-4 border-t border-rule pt-5 text-xs text-ink-quiet sm:mt-32 sm:flex-row sm:items-baseline sm:justify-between">
-          <span>MIT licensed. Read{" "}
+          <span>
+            MIT licensed. Read{" "}
             <Link
               href="/styleguide"
               className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
               the design system
             </Link>
-            .</span>
+            .
+          </span>
           <span className="font-mono tabular">
             chain {chain.chainId ?? chain.chainName}
           </span>
