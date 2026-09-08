@@ -28,7 +28,13 @@ function checkWebGL(): boolean {
   return webglSupported;
 }
 
-export function FieldExperience({ chainId }: { chainId: string }) {
+export function FieldExperience({
+  chainId,
+  fresh,
+}: {
+  chainId: string;
+  fresh: boolean;
+}) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const [webglOk, setWebglOk] = useState(false);
@@ -39,9 +45,9 @@ export function FieldExperience({ chainId }: { chainId: string }) {
 
   useEffect(() => {
     setFieldChainId(chainId);
-    resetRig();
+    if (fresh) resetRig();
     return () => setFieldChainId(null);
-  }, [chainId]);
+  }, [chainId, fresh]);
 
   useEffect(() => {
     setWebglOk(checkWebGL());
@@ -86,7 +92,7 @@ export function FieldExperience({ chainId }: { chainId: string }) {
           </p>
         </div>
       )}
-      <FieldChrome leaveHref={leaveHref} />
+      <FieldChrome />
     </div>
   );
 }

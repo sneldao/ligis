@@ -9,7 +9,11 @@ import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
+type SearchParams = Promise<{
+  subject?: string;
+  capability?: string;
+  chain?: string;
+}>;
 
 export const metadata = {
   title: "The Gate",
@@ -22,11 +26,13 @@ const DEMO_SUBJECTS: Record<string, { label: string; value: string }[]> = {
   "casper-testnet": [
     {
       label: "deployer account",
-      value: "account-hash-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1",
+      value:
+        "account-hash-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1",
     },
     {
       label: "issuer account",
-      value: "account-hash-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37",
+      value:
+        "account-hash-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37",
     },
   ],
   "pharos-atlantic": [
@@ -37,9 +43,18 @@ const DEMO_SUBJECTS: Record<string, { label: string; value: string }[]> = {
   ],
 };
 
-const DEMO_CAPABILITIES = ["kyc.basic", "rwa.accredited", "data.premium", "agent.commerce.x402"];
+const DEMO_CAPABILITIES = [
+  "kyc.basic",
+  "rwa.accredited",
+  "data.premium",
+  "agent.commerce.x402",
+];
 
-function verifyHref(chain: ChainNetwork, subject: string, capability: string): string {
+function verifyHref(
+  chain: ChainNetwork,
+  subject: string,
+  capability: string,
+): string {
   return `/gate?chain=${chain.id}&subject=${subject}&capability=${capability}`;
 }
 
@@ -51,13 +66,14 @@ export default async function VerifyPage({
   const params = await searchParams;
   const { subject: rawSubject, capability: rawCap } = params;
   const chain = getChain(params);
-  const demoSubjects = DEMO_SUBJECTS[chain.id] ?? DEMO_SUBJECTS["pharos-atlantic"];
+  const demoSubjects =
+    DEMO_SUBJECTS[chain.id] ?? DEMO_SUBJECTS["pharos-atlantic"];
   const casper = isCasperChain(chain);
 
   return (
     <main className="route-shell max-w-3xl">
       <header className="route-header text-xs text-ink-quiet">
-        <p className="eyebrow">Ligis · verify</p>
+        <p className="eyebrow">Ligis · Gate</p>
         <span className="font-mono tabular text-ink-quiet">
           {chain.name.toLowerCase()}
           {chain.chainId ? ` · chain ${chain.chainId}` : ""}
@@ -69,9 +85,9 @@ export default async function VerifyPage({
           The gate before the payment.
         </h1>
         <p className="mt-6 max-w-2xl font-serif text-lg leading-relaxed text-ink-soft">
-          One URL. One keccak256 capability hash. One on-chain read.
-          The answer comes from {chain.name} state, not from a Ligis server —
-          so your agent can trust it the instant before money moves.
+          One URL. One keccak256 capability hash. One on-chain read. The answer
+          comes from {chain.name} state, not from a Ligis server — so your agent
+          can trust it the instant before money moves.
         </p>
         <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           {CHAINS.map((c, i) => (
@@ -111,7 +127,9 @@ export default async function VerifyPage({
                   >
                     {s.label}
                   </a>
-                  <p className="mt-1 pl-2 text-[11px] text-ink-quiet">{truncateAddress(s.value, 12, 6)}</p>
+                  <p className="mt-1 pl-2 text-[11px] text-ink-quiet">
+                    {truncateAddress(s.value, 12, 6)}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -124,7 +142,11 @@ export default async function VerifyPage({
                 <li key={c}>
                   <a
                     className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-                    href={verifyHref(chain, rawSubject ?? demoSubjects[0].value, c)}
+                    href={verifyHref(
+                      chain,
+                      rawSubject ?? demoSubjects[0].value,
+                      c,
+                    )}
                   >
                     {c}
                   </a>
@@ -157,9 +179,9 @@ export default async function VerifyPage({
           <p className="mt-4 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">
             A gate link is a self-verifying URL &mdash; anyone who opens it
             re-runs the same on-chain read and sees the same decision. No
-            account, no token, no Ligis server in the path. Hand it to an
-            agent, paste it in an audit trail, or drop it where a payment is
-            about to happen.
+            account, no token, no Ligis server in the path. Hand it to an agent,
+            paste it in an audit trail, or drop it where a payment is about to
+            happen.
           </p>
           <div className="mt-5 flex flex-wrap items-baseline gap-4">
             <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
@@ -178,17 +200,28 @@ export default async function VerifyPage({
         <h2 className="eyebrow">API</h2>
         <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
           The same path works as a shareable, self-verifying URL for
-          programmatic checks and audit trails. The <code className="font-mono">/gate</code> verb
-          aliases <code className="font-mono">/verify</code> &mdash; use either.
+          programmatic checks and audit trails. The{" "}
+          <code className="font-mono">/gate</code> verb aliases{" "}
+          <code className="font-mono">/verify</code> &mdash; use either.
         </p>
         <pre className="mt-4 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
-{`GET /gate?chain=${chain.id}&subject=${casper ? "account-hash-..." : "0x..."}&capability=kyc.basic`}
+          {`GET /gate?chain=${chain.id}&subject=${casper ? "account-hash-..." : "0x..."}&capability=kyc.basic`}
         </pre>
       </section>
 
       <footer className="route-footer mt-16 text-xs text-ink-quiet">
-        <a href="/" className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra">← Index</a>
-        <a href={chain.explorerUrl} target="_blank" rel="noreferrer" className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra">
+        <a
+          href="/"
+          className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+        >
+          ← Home
+        </a>
+        <a
+          href={chain.explorerUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+        >
           {casper ? "cspr.live" : "pharosscan"} ↗
         </a>
       </footer>

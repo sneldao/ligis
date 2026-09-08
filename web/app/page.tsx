@@ -174,26 +174,14 @@ export default async function HomePage({
             can&rsquo;t prove it&rsquo;s authorized, the agent halts before the
             transaction fires.
           </p>
-          <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+          <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
             <Link
-              href="/steward"
+              href={`/field?chain=${chain.id}&enter=1`}
               className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
             >
-              For agent operators →
+              The field — live registry →
             </Link>
-            <Link
-              href="/capabilities"
-              className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-            >
-              For protocol builders →
-            </Link>
-            <Link
-              href="/issuers"
-              className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-            >
-              For credential issuers →
-            </Link>
-          </div>
+          </p>
         </section>
 
         <section id="verify" className="mt-16 scroll-mt-24 sm:mt-28">
@@ -542,15 +530,37 @@ ligis sign \\
         </section>
 
         <footer className="mt-24 flex flex-col gap-4 border-t border-rule pt-5 text-xs text-ink-quiet sm:mt-32 sm:flex-row sm:items-baseline sm:justify-between">
-          <span>
-            MIT licensed. Read{" "}
+          <span className="flex flex-wrap items-baseline gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em]">
+            <Link
+              href="/steward"
+              className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              Steward
+            </Link>
+            <Link
+              href="/capabilities"
+              className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              Capabilities
+            </Link>
+            <Link
+              href="/issuers"
+              className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              Issuers
+            </Link>
+            <Link
+              href="/embed"
+              className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              Embed
+            </Link>
             <Link
               href="/styleguide"
-              className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+              className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
-              the design system
+              Design
             </Link>
-            .
           </span>
           <span className="font-mono tabular">
             chain {chain.chainId ?? chain.chainName}

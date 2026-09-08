@@ -14,6 +14,9 @@ export default async function FieldPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const chain = getChain(await searchParams);
-  return <FieldExperience chainId={chain.id} />;
+  const params = await searchParams;
+  const chain = getChain(params);
+  const enterRaw = params.enter;
+  const enter = Array.isArray(enterRaw) ? enterRaw[0] : enterRaw;
+  return <FieldExperience chainId={chain.id} fresh={enter === "1"} />;
 }

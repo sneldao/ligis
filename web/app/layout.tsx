@@ -111,17 +111,6 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-function PaletteHint() {
-  return (
-    <p
-      aria-hidden
-      className="pointer-events-none fixed bottom-4 right-4 hidden font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet sm:block"
-    >
-      ⌘K · /
-    </p>
-  );
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -144,7 +133,6 @@ export default function RootLayout({
             <div id="main-content">{children}</div>
             <GlobalDock />
             <CommandPalette />
-            <PaletteHint />
           </ConditionalProviders>
         </Suspense>
       </body>

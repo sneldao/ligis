@@ -4,12 +4,15 @@ export default function CapabilitiesLoading() {
   return (
     <main className="route-shell max-w-5xl">
       <header className="route-header text-xs">
-        <p className="eyebrow">Ligis · what an agent can prove</p>
+        <p className="eyebrow">Ligis · Capabilities</p>
         <div className="skeleton h-3 w-20" aria-hidden />
       </header>
 
       <section className="mt-14 max-w-3xl sm:mt-20">
-        <div className="skeleton display h-[56px] w-full max-w-md sm:h-[72px]" aria-hidden />
+        <div
+          className="skeleton display h-[56px] w-full max-w-md sm:h-[72px]"
+          aria-hidden
+        />
         <div className="mt-7 space-y-3">
           <div className="skeleton h-5 w-full max-w-prose" aria-hidden />
           <div className="skeleton h-5 w-4/5 max-w-prose" aria-hidden />

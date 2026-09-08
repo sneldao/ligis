@@ -9,8 +9,8 @@ import { UnifiedWalletChip } from "@/components/UnifiedWalletChip";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 
 const NAV = [
-  { href: "/gate", label: "Gate" },
-  { href: "/field", label: "Field" },
+  { href: "/gate", label: "Gate", description: "Gate a payment" },
+  { href: "/field", label: "Field", description: "Field · live registry" },
 ];
 
 function withChain(path: string, chain: string | null) {
@@ -109,14 +109,18 @@ export function GlobalDock() {
           aria-hidden
         />
 
-        {/* Nav links — lg+ only. The mobile drawer carries them below. */}
+        {/* Nav links — lg+ only. The mobile drawer carries them below.
+            On the field, Gate is omitted so Ligis (leave) and Field
+            (you-are-here) are the only destinations. */}
         <nav className="hidden items-center gap-x-3 lg:flex">
-          {NAV.map((n) => {
+          {(onField ? NAV.filter((n) => n.href === "/field") : NAV).map((n) => {
             const isActive = navActive(pathname, n.href);
             return (
               <Link
                 key={n.href}
                 href={withChain(n.href, chain)}
+                title={n.description}
+                aria-label={n.description}
                 className={`font-mono text-[11px] uppercase tracking-[0.18em] transition-colors relative ${
                   isActive
                     ? "text-terra"
@@ -189,23 +193,27 @@ export function GlobalDock() {
               <ChainSelector />
             </div>
             <ul className="flex flex-col gap-y-3">
-              {NAV.map((n) => {
-                const isActive = navActive(pathname, n.href);
-                return (
-                  <li key={n.href}>
-                    <Link
-                      href={withChain(n.href, chain)}
-                      className={`block font-mono text-xs uppercase tracking-[0.18em] transition-colors ${
-                        isActive
-                          ? "text-terra"
-                          : "text-paper-deep hover:text-paper"
-                      }`}
-                    >
-                      {n.label}
-                    </Link>
-                  </li>
-                );
-              })}
+              {(onField ? NAV.filter((n) => n.href === "/field") : NAV).map(
+                (n) => {
+                  const isActive = navActive(pathname, n.href);
+                  return (
+                    <li key={n.href}>
+                      <Link
+                        href={withChain(n.href, chain)}
+                        title={n.description}
+                        aria-label={n.description}
+                        className={`block font-mono text-xs uppercase tracking-[0.18em] transition-colors ${
+                          isActive
+                            ? "text-terra"
+                            : "text-paper-deep hover:text-paper"
+                        }`}
+                      >
+                        {n.label}
+                      </Link>
+                    </li>
+                  );
+                },
+              )}
               <li>
                 <UnifiedWalletChip />
               </li>
@@ -213,6 +221,15 @@ export function GlobalDock() {
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      {onField ? null : (
+        <p
+          aria-hidden
+          className="pointer-events-none fixed bottom-4 right-4 hidden font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet sm:block"
+        >
+          ⌘K · /
+        </p>
+      )}
     </div>
   );
 }

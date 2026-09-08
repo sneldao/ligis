@@ -9,7 +9,8 @@ const EXAMPLE_CAP = capabilities[0]?.id ?? "kyc.basic";
 
 export const metadata = {
   title: "Embed — Ligis",
-  description: "Drop the Ligis gate — a live GO/STOP badge — into any page. No client SDK, no tracking, no database between the visitor and chain state.",
+  description:
+    "Drop the Ligis gate — a live GO/STOP badge — into any page. No client SDK, no tracking, no database between the visitor and chain state.",
 };
 
 export default function EmbedPage() {
@@ -26,13 +27,13 @@ export default function EmbedPage() {
   return (
     <main className="route-shell max-w-5xl">
       <header className="route-header text-xs">
-        <p className="eyebrow">Ligis · embed 00</p>
+        <p className="eyebrow">Ligis · Embed</p>
         <div className="flex items-baseline gap-6">
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
-            ← Index
+            ← Home
           </Link>
         </div>
       </header>
@@ -44,61 +45,102 @@ export default function EmbedPage() {
           into any page.
         </h1>
         <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
-          A live, server-rendered GO/STOP badge for any page. No client
-          SDK, no tracking, and no database between the visitor and chain
-          state &mdash; the verdict reads straight from the chain, the way
-          an agent would.
+          A live, server-rendered GO/STOP badge for any page. No client SDK, no
+          tracking, and no database between the visitor and chain state &mdash;
+          the verdict reads straight from the chain, the way an agent would.
         </p>
       </section>
 
       <section className="mt-16 max-w-5xl sm:mt-20">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Live preview</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">{network.name.toLowerCase()}</p>
+          <p className="font-mono text-[11px] tabular text-ink-quiet">
+            {network.name.toLowerCase()}
+          </p>
         </header>
         <Rule className="mt-4" />
         <div className="mt-6 overflow-hidden border-y border-rule-soft py-3 sm:max-w-[520px]">
-          <iframe className="h-[120px] w-full max-w-[520px]" src={`/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}`} width="520" height="120" style={{ border: 0, background: "transparent" }} loading="lazy" title="Ligis verification badge preview" />
+          <iframe
+            className="h-[120px] w-full max-w-[520px]"
+            src={`/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}`}
+            width="520"
+            height="120"
+            style={{ border: 0, background: "transparent" }}
+            loading="lazy"
+            title="Ligis verification badge preview"
+          />
         </div>
-        <p className="mt-4 max-w-prose font-serif text-sm italic leading-relaxed text-ink-quiet">Live for {EXAMPLE_SUBJECT.slice(0, 8)}··{EXAMPLE_SUBJECT.slice(-4)} · {EXAMPLE_CAP}</p>
+        <p className="mt-4 max-w-prose font-serif text-sm italic leading-relaxed text-ink-quiet">
+          Live for {EXAMPLE_SUBJECT.slice(0, 8)}··{EXAMPLE_SUBJECT.slice(-4)} ·{" "}
+          {EXAMPLE_CAP}
+        </p>
       </section>
 
       <section className="mt-12 max-w-3xl sm:mt-16">
         <details className="group border-y border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Get the iframe code +</span><span className="hidden group-open:inline">Hide iframe code −</span></summary>
-          <div className="border-t border-rule-soft py-5"><p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">Recommended size is 520 × 120. Its transparent background works on any page.</p><Snippet code={iframeCode} lang="html" /></div>
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            <span className="group-open:hidden">Get the iframe code +</span>
+            <span className="hidden group-open:inline">Hide iframe code −</span>
+          </summary>
+          <div className="border-t border-rule-soft py-5">
+            <p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">
+              Recommended size is 520 × 120. Its transparent background works on
+              any page.
+            </p>
+            <Snippet code={iframeCode} lang="html" />
+          </div>
         </details>
         <details className="group border-b border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Use the verification URL directly +</span><span className="hidden group-open:inline">Hide URL format −</span></summary>
-          <div className="border-t border-rule-soft py-5"><p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">Pass a subject and capability. The capability can be a human-readable id or 32-byte hash. Append <span className="font-mono not-italic text-ink">&chain=casper-testnet</span> for Casper.</p><Snippet code={directLink} lang="url" /></div>
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            <span className="group-open:hidden">
+              Use the verification URL directly +
+            </span>
+            <span className="hidden group-open:inline">Hide URL format −</span>
+          </summary>
+          <div className="border-t border-rule-soft py-5">
+            <p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">
+              Pass a subject and capability. The capability can be a
+              human-readable id or 32-byte hash. Append{" "}
+              <span className="font-mono not-italic text-ink">
+                &chain=casper-testnet
+              </span>{" "}
+              for Casper.
+            </p>
+            <Snippet code={directLink} lang="url" />
+          </div>
         </details>
       </section>
 
       <section className="mt-12 max-w-3xl sm:mt-16">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Available capabilities</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">{capabilities.length} total</p>
+          <p className="font-mono text-[11px] tabular text-ink-quiet">
+            {capabilities.length} total
+          </p>
         </header>
         <Rule className="mt-4" />
         <div className="mt-4 flex flex-wrap gap-2">
           {capabilities.map((cap) => (
-            <code key={cap.id} className="font-mono text-[11px] tabular text-ink-soft bg-paper-deep px-2 py-1">
+            <code
+              key={cap.id}
+              className="font-mono text-[11px] tabular text-ink-soft bg-paper-deep px-2 py-1"
+            >
               {cap.id}
             </code>
           ))}
         </div>
       </section>
       <footer className="route-footer mt-20 text-xs text-ink-quiet sm:mt-32">
-          <Link
-            href="/"
-            className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-          >
-            ← Return to the index
-          </Link>
-          <span className="font-mono tabular">
-            {network.name.toLowerCase()} · chain {network.chainId}
-          </span>
-        </footer>
+        <Link
+          href="/"
+          className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+        >
+          ← Return to the index
+        </Link>
+        <span className="font-mono tabular">
+          {network.name.toLowerCase()} · chain {network.chainId}
+        </span>
+      </footer>
     </main>
   );
 }

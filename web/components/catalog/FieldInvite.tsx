@@ -3,14 +3,14 @@ import { Rule } from "@/components/Rule";
 import { QuietField } from "./QuietField";
 
 export function FieldInvite({ chainId }: { chainId: string }) {
-  const href = `/field?chain=${encodeURIComponent(chainId)}`;
+  const href = `/field?chain=${encodeURIComponent(chainId)}&enter=1`;
 
   return (
     <section id="field" className="scroll-mt-24">
       <header className="flex items-baseline justify-between">
-        <p className="eyebrow">The registry</p>
+        <p className="eyebrow">Field</p>
         <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
-          a map, not a gallery
+          live registry
         </p>
       </header>
       <Rule className="mt-4" />
@@ -29,7 +29,7 @@ export function FieldInvite({ chainId }: { chainId: string }) {
         <div className="pointer-events-none absolute inset-0 bg-paper/25" />
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 py-5 sm:px-8 sm:py-6">
           <p className="hidden max-w-sm font-serif text-sm italic leading-relaxed text-ink-soft sm:block">
-            Drag, scroll, or pinch once you&rsquo;re in. Esc leaves.
+            Drag, scroll, or pinch. Esc or Ligis leaves.
           </p>
           <Link
             href={href}

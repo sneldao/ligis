@@ -24,14 +24,54 @@ function humanExpiry(seconds: number): string {
 }
 
 const REFERENCE = [
-  { id: "kyc.basic", typicalExpiry: 15_552_000, weight: 4, criticality: "critical" },
-  { id: "rwa.accredited", typicalExpiry: 31_536_000, weight: 4, criticality: "critical" },
-  { id: "agent.commerce.escrow", typicalExpiry: 15_552_000, weight: 3, criticality: "high" },
-  { id: "agent.commerce.swap", typicalExpiry: 7_776_000, weight: 3, criticality: "high" },
-  { id: "agent.commerce.bridge", typicalExpiry: 7_776_000, weight: 3, criticality: "high" },
-  { id: "agent.commerce.recurring", typicalExpiry: 7_776_000, weight: 2, criticality: "medium" },
-  { id: "agent.commerce.x402", typicalExpiry: 7_776_000, weight: 2, criticality: "medium" },
-  { id: "trade.cex-retail", typicalExpiry: 7_776_000, weight: 2, criticality: "medium" },
+  {
+    id: "kyc.basic",
+    typicalExpiry: 15_552_000,
+    weight: 4,
+    criticality: "critical",
+  },
+  {
+    id: "rwa.accredited",
+    typicalExpiry: 31_536_000,
+    weight: 4,
+    criticality: "critical",
+  },
+  {
+    id: "agent.commerce.escrow",
+    typicalExpiry: 15_552_000,
+    weight: 3,
+    criticality: "high",
+  },
+  {
+    id: "agent.commerce.swap",
+    typicalExpiry: 7_776_000,
+    weight: 3,
+    criticality: "high",
+  },
+  {
+    id: "agent.commerce.bridge",
+    typicalExpiry: 7_776_000,
+    weight: 3,
+    criticality: "high",
+  },
+  {
+    id: "agent.commerce.recurring",
+    typicalExpiry: 7_776_000,
+    weight: 2,
+    criticality: "medium",
+  },
+  {
+    id: "agent.commerce.x402",
+    typicalExpiry: 7_776_000,
+    weight: 2,
+    criticality: "medium",
+  },
+  {
+    id: "trade.cex-retail",
+    typicalExpiry: 7_776_000,
+    weight: 2,
+    criticality: "medium",
+  },
   { id: "data.premium", typicalExpiry: 86_400, weight: 1, criticality: "low" },
 ] as const;
 
@@ -41,12 +81,14 @@ const REFERENCE = [
 const CATEGORIES = [
   {
     name: "IDENTITY",
-    gloss: "Who the agent claims to be. Lose these and the transaction should stop.",
+    gloss:
+      "Who the agent claims to be. Lose these and the transaction should stop.",
     ids: ["kyc.basic", "rwa.accredited"],
   },
   {
     name: "MONEY",
-    gloss: "What the agent is allowed to do with funds. Direct exposure if it goes wrong.",
+    gloss:
+      "What the agent is allowed to do with funds. Direct exposure if it goes wrong.",
     ids: [
       "agent.commerce.escrow",
       "agent.commerce.swap",
@@ -83,13 +125,13 @@ export default function CapabilitiesPage() {
   return (
     <main className="route-shell max-w-5xl">
       <header className="route-header text-xs">
-        <p className="eyebrow">Ligis · what an agent can prove</p>
+        <p className="eyebrow">Ligis · Capabilities</p>
         <div className="flex items-baseline gap-6">
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
-            &larr; Index
+            ← Home
           </Link>
         </div>
       </header>
@@ -117,67 +159,77 @@ export default function CapabilitiesPage() {
             .map((id) => capabilities.find((c) => c.id === id))
             .filter((c): c is (typeof capabilities)[number] => c !== undefined);
           return (
-            <section key={cat.name} aria-labelledby={`cat-${cat.name.toLowerCase()}`}>
-                <header className="flex items-baseline justify-between">
-                  <h2
-                    id={`cat-${cat.name.toLowerCase()}`}
-                    className="eyebrow text-ink"
-                  >
-                    {cat.name}
-                  </h2>
-                  <span className="font-mono text-[11px] tabular text-ink-quiet">
-                    {caps.length}{" "}
-                    {caps.length === 1 ? "capability" : "capabilities"}
-                  </span>
-                </header>
-                <Rule className="mt-4" />
-                <p className="mt-5 max-w-prose font-serif text-sm italic leading-relaxed text-ink-soft sm:mt-6 sm:text-base">
-                  {cat.gloss}
-                </p>
-                <div className="mt-2 space-y-0">
-                  {caps.map((cap) => {
-                    const exp = expiryFor(cap.id);
-                    const weight = weightFor(cap.id);
-                    const criticality = criticalityFor(cap.id);
-                    return (
-                      <div key={cap.id}>
-                        <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-6">
-                          <div className="space-y-3">
-                            <div className="flex flex-wrap items-baseline gap-x-4">
-                              <span className="font-mono text-sm tabular text-ink">
-                                {cap.id}
-                              </span>
-                              <span className="font-serif text-sm italic text-ink-soft">
-                                {cap.label.toLowerCase()}
-                              </span>
-                            </div>
-                            <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
-                              {cap.description}
-                            </p>
-                            <div className="flex flex-wrap items-baseline gap-3">
-                              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-terra">
-                                {criticality} &middot; w{weight}
-                              </span>
-                              <details className="group">
-                                <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.14em] text-ink-quiet marker:hidden hover:text-ink">
-                                  <span className="group-open:hidden">hash +</span><span className="hidden group-open:inline">hide hash −</span>
-                                </summary>
-                                <div className="mt-2 flex flex-wrap items-baseline gap-3">
-                                  <span className="font-mono text-[12px] tabular text-ink-quiet">{truncateHash(cap.hash, 14, 8)}</span>
-                                  <CopyButton value={cap.hash} />
-                                </div>
-                              </details>
-                            </div>
+            <section
+              key={cat.name}
+              aria-labelledby={`cat-${cat.name.toLowerCase()}`}
+            >
+              <header className="flex items-baseline justify-between">
+                <h2
+                  id={`cat-${cat.name.toLowerCase()}`}
+                  className="eyebrow text-ink"
+                >
+                  {cat.name}
+                </h2>
+                <span className="font-mono text-[11px] tabular text-ink-quiet">
+                  {caps.length}{" "}
+                  {caps.length === 1 ? "capability" : "capabilities"}
+                </span>
+              </header>
+              <Rule className="mt-4" />
+              <p className="mt-5 max-w-prose font-serif text-sm italic leading-relaxed text-ink-soft sm:mt-6 sm:text-base">
+                {cat.gloss}
+              </p>
+              <div className="mt-2 space-y-0">
+                {caps.map((cap) => {
+                  const exp = expiryFor(cap.id);
+                  const weight = weightFor(cap.id);
+                  const criticality = criticalityFor(cap.id);
+                  return (
+                    <div key={cap.id}>
+                      <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-6">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-baseline gap-x-4">
+                            <span className="font-mono text-sm tabular text-ink">
+                              {cap.id}
+                            </span>
+                            <span className="font-serif text-sm italic text-ink-soft">
+                              {cap.label.toLowerCase()}
+                            </span>
                           </div>
-                          <span className="whitespace-nowrap font-mono text-xs tabular text-ink-soft">
-                            {exp > 0 ? humanExpiry(exp) : "no default"}
-                          </span>
+                          <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
+                            {cap.description}
+                          </p>
+                          <div className="flex flex-wrap items-baseline gap-3">
+                            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-terra">
+                              {criticality} &middot; w{weight}
+                            </span>
+                            <details className="group">
+                              <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.14em] text-ink-quiet marker:hidden hover:text-ink">
+                                <span className="group-open:hidden">
+                                  hash +
+                                </span>
+                                <span className="hidden group-open:inline">
+                                  hide hash −
+                                </span>
+                              </summary>
+                              <div className="mt-2 flex flex-wrap items-baseline gap-3">
+                                <span className="font-mono text-[12px] tabular text-ink-quiet">
+                                  {truncateHash(cap.hash, 14, 8)}
+                                </span>
+                                <CopyButton value={cap.hash} />
+                              </div>
+                            </details>
+                          </div>
                         </div>
-                        <Rule tone="soft" />
+                        <span className="whitespace-nowrap font-mono text-xs tabular text-ink-soft">
+                          {exp > 0 ? humanExpiry(exp) : "no default"}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <Rule tone="soft" />
+                    </div>
+                  );
+                })}
+              </div>
             </section>
           );
         })}
@@ -192,10 +244,21 @@ export default function CapabilitiesPage() {
         </header>
         <Rule className="mt-4" />
         <details className="group mt-6 border-y border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">How to define one +</span><span className="hidden group-open:inline">Close naming guidance −</span></summary>
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            <span className="group-open:hidden">How to define one +</span>
+            <span className="hidden group-open:inline">
+              Close naming guidance −
+            </span>
+          </summary>
           <div className="border-t border-rule-soft py-5">
-            <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">Pick a name, hash it with keccak256, and that&rsquo;s the capability. The convention is <span className="font-mono text-ink">domain.subject.verb</span>; consistency helps other agents check the same thing.</p>
-            <pre className="mt-6 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[13px] leading-relaxed tabular text-ink">{`ligis hash agent.commerce.escrow
+            <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
+              Pick a name, hash it with keccak256, and that&rsquo;s the
+              capability. The convention is{" "}
+              <span className="font-mono text-ink">domain.subject.verb</span>;
+              consistency helps other agents check the same thing.
+            </p>
+            <pre className="mt-6 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[13px] leading-relaxed tabular text-ink">
+              {`ligis hash agent.commerce.escrow
 # -> 0x17775e488d090dd8527e0139b3472d4d03c3372525b10a7c1449f04027a3ebf8`}
             </pre>
           </div>
@@ -209,9 +272,7 @@ export default function CapabilitiesPage() {
         >
           &larr; Return to the index
         </Link>
-        <span className="font-mono tabular">
-          hashes stable across chains
-        </span>
+        <span className="font-mono tabular">hashes stable across chains</span>
       </footer>
     </main>
   );

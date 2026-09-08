@@ -68,17 +68,24 @@ and reach for typography, whitespace, and hairlines instead.
   - **App** (`/gate` and the moat routes): quiet paper, shared route shell.
     The dock names only the verb and the field; everything else is ⌘K.
 - **Dock inventory**: persistent items are `Ligis` (home / leave field),
-  `Gate`, and `Field`, plus chain and wallet. Steward, capabilities, issuers,
-  embed, CROO, and “how it works” must not appear in the dock — they are
-  command-palette destinations and in-page links. Promoting the moat as peer
+  `Gate`, and `Field`, plus chain and wallet. `Field`’s accessible name is
+  “Field · live registry” — the visible word stays short; it must not be
+  unexplained chrome. On `/field` the dock hides `Gate`: Ligis is leave,
+  Field is you-are-here. Steward, capabilities, issuers, embed, and CROO
+  must not appear in the dock or in the landing hero. They are command-palette
+  destinations and quiet landing-footer links. Promoting the moat as peer
   products is a design error.
+- **Field chrome**: one instruction line (controls + esc). No second title
+  competing with the dock, no ⌘K hint, no stacked leave buttons. The Ligis
+  mark leaves; Esc leaves. Opening a specimen keeps the camera; returning to
+  `/field` restores it. Only _Enter the field_ from landing resets the view.
 - **Mobile home**: content begins immediately beneath the dock. The landing
   invite is a static specimen texture; it must not reserve a viewport of live
-  WebGL or show desktop-only camera hints. Audience routing is compact action
-  rows, with explanatory copy deferred to wider screens or the destination.
-  `/field` is an explicit opt-in: on that route, capable devices may load
-  WebGL even below the desktop breakpoint. Reduced-motion still gets the
-  static field.
+  WebGL or show desktop-only camera hints. `/field` is an explicit opt-in: on
+  that route, capable devices may load WebGL even below the desktop
+  breakpoint. Reduced-motion still gets the static field.
+- **Moat routes**: back-link copy is `← Home`, never `Index`. The route
+  eyebrow names the room (`Ligis · Steward`, `Ligis · Gate`).
 - **Reference and operational routes**: begin below the fixed dock using the
   shared route shell; never make a route header compete with global chrome on a
   phone. Keep a reading-width introduction, but let ledgers, diagrams, and

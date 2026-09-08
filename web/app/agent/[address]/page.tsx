@@ -76,7 +76,11 @@ export default async function AgentPage({
 
   return (
     <>
-      <AgentHero address={address} heldCount={heldCount} />
+      <AgentHero
+        address={address}
+        heldCount={heldCount}
+        fieldHref={`/field?chain=${chain.id}`}
+      />
 
       <main className="route-shell max-w-5xl pb-16 sm:pb-24">
         <header className="route-header text-xs text-ink-quiet">
@@ -84,12 +88,6 @@ export default async function AgentPage({
             {snap.exists ? "Agent · in the index" : "Agent · not in the index"}
           </p>
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 sm:gap-x-6">
-            <Link
-              href={`/field?chain=${chain.id}`}
-              className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet underline decoration-rule underline-offset-4 hover:text-ink hover:decoration-terra"
-            >
-              ← Field
-            </Link>
             <ChainBadge chain={chain} />
             <span className="hidden font-mono tabular sm:inline">
               {chain.name.toLowerCase()} · chain {chain.chainId}

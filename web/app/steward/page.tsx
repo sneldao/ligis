@@ -54,14 +54,14 @@ export default async function StewardPage({
   return (
     <main className="route-shell max-w-5xl">
       <header className="route-header text-xs">
-        <p className="eyebrow">Ligis · autonomous bootstrap demo</p>
+        <p className="eyebrow">Ligis · Steward</p>
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
-            &larr; Index
+            ← Home
           </Link>
         </div>
       </header>
@@ -79,53 +79,58 @@ export default async function StewardPage({
           can prove, fills the gaps, and records the evidence.
         </p>
         <details className="group mt-6 border-y border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">How the loop works +</span><span className="hidden group-open:inline">Close loop details −</span></summary>
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            <span className="group-open:hidden">How the loop works +</span>
+            <span className="hidden group-open:inline">
+              Close loop details −
+            </span>
+          </summary>
           <ol className="grid grid-cols-1 divide-y divide-rule border-t border-rule sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <li className="space-y-2 py-4 sm:pr-6">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
-              01 · simulated
-            </p>
-            <p className="font-serif text-sm leading-relaxed text-ink-soft">
-              Default. No wallet, no writes.
-            </p>
-          </li>
-          <li className="space-y-2 py-4 sm:px-6">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
-              02 · live reads
-            </p>
-            <p className="font-serif text-sm leading-relaxed text-ink-soft">
-              Real{" "}
-              <span className="font-mono text-ink">
-                {isCasper ? "isCapable" : "isCapableMulti"}
-              </span>{" "}
-              against the registry.
-            </p>
-          </li>
-          <li className="space-y-2 py-4 sm:pl-6">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
-              03 · live writes
-            </p>
-            <p className="font-serif text-sm leading-relaxed text-ink-soft">
-              <span className="font-mono text-ink">
-                {isCasper ? "mint_self" : "mintSelf"}
-              </span>
-              , EIP-712 self-issue, anchor via{" "}
-              <span className="font-mono text-ink">
-                {isCasper ? "set_token_uri" : "setTokenURI"}
-              </span>
-              . When{" "}
-              <span className="font-mono text-ink">ZEROG_PRIVATE_KEY</span>{" "}
-              is set, REASON uses 0G Compute (TEE-verified) and RECORD
-              uploads to 0G Storage.{" "}
-              <strong className="text-ink">Requires a funded wallet.</strong>
-            </p>
-          </li>
+            <li className="space-y-2 py-4 sm:pr-6">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+                01 · simulated
+              </p>
+              <p className="font-serif text-sm leading-relaxed text-ink-soft">
+                Default. No wallet, no writes.
+              </p>
+            </li>
+            <li className="space-y-2 py-4 sm:px-6">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+                02 · live reads
+              </p>
+              <p className="font-serif text-sm leading-relaxed text-ink-soft">
+                Real{" "}
+                <span className="font-mono text-ink">
+                  {isCasper ? "isCapable" : "isCapableMulti"}
+                </span>{" "}
+                against the registry.
+              </p>
+            </li>
+            <li className="space-y-2 py-4 sm:pl-6">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+                03 · live writes
+              </p>
+              <p className="font-serif text-sm leading-relaxed text-ink-soft">
+                <span className="font-mono text-ink">
+                  {isCasper ? "mint_self" : "mintSelf"}
+                </span>
+                , EIP-712 self-issue, anchor via{" "}
+                <span className="font-mono text-ink">
+                  {isCasper ? "set_token_uri" : "setTokenURI"}
+                </span>
+                . When{" "}
+                <span className="font-mono text-ink">ZEROG_PRIVATE_KEY</span> is
+                set, REASON uses 0G Compute (TEE-verified) and RECORD uploads to
+                0G Storage.{" "}
+                <strong className="text-ink">Requires a funded wallet.</strong>
+              </p>
+            </li>
           </ol>
           <p className="py-4 font-serif text-xs italic leading-relaxed text-ink-quiet">
-          Operation names follow each chain&rsquo;s convention —{" "}
-          <span className="font-mono not-italic">mintSelf</span> on EVM,{" "}
-          <span className="font-mono not-italic">mint_self</span> on Casper.
-          Same operation, two chains.
+            Operation names follow each chain&rsquo;s convention —{" "}
+            <span className="font-mono not-italic">mintSelf</span> on EVM,{" "}
+            <span className="font-mono not-italic">mint_self</span> on Casper.
+            Same operation, two chains.
           </p>
         </details>
       </section>
@@ -138,19 +143,21 @@ export default async function StewardPage({
 
       {/* StewardRunner — the actual product. Primary, above the fold. */}
       <section className="mt-10">
-        <Suspense fallback={
-          <div className="space-y-8">
-            <div className="h-[3px] w-full bg-rule" />
-            <div className="space-y-3">
-              <div className="skeleton h-4 w-24" />
-              <div className="skeleton h-6 w-full max-w-md" />
+        <Suspense
+          fallback={
+            <div className="space-y-8">
+              <div className="h-[3px] w-full bg-rule" />
+              <div className="space-y-3">
+                <div className="skeleton h-4 w-24" />
+                <div className="skeleton h-6 w-full max-w-md" />
+              </div>
+              <div className="space-y-3">
+                <div className="skeleton h-4 w-16" />
+                <div className="skeleton h-24 w-full" />
+              </div>
             </div>
-            <div className="space-y-3">
-              <div className="skeleton h-4 w-16" />
-              <div className="skeleton h-24 w-full" />
-            </div>
-          </div>
-        }>
+          }
+        >
           <StewardRunner defaultGoal={defaultGoal} />
         </Suspense>
       </section>
@@ -161,15 +168,36 @@ export default async function StewardPage({
           prefers-reduced-motion. */}
       <section className="mt-20 max-w-3xl sm:mt-28">
         <details className="group border-y border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">See the three-act protocol story +</span><span className="hidden group-open:inline">Close protocol story −</span></summary>
-          <div className="border-t border-rule-soft py-6"><StewardTriptych isCasper={isCasper} /></div>
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            <span className="group-open:hidden">
+              See the three-act protocol story +
+            </span>
+            <span className="hidden group-open:inline">
+              Close protocol story −
+            </span>
+          </summary>
+          <div className="border-t border-rule-soft py-6">
+            <StewardTriptych isCasper={isCasper} />
+          </div>
         </details>
       </section>
 
       <section className="mt-12 max-w-3xl sm:mt-16">
         <details className="group border-y border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink"><span className="group-open:hidden">Run the same loop locally +</span><span className="hidden group-open:inline">Hide CLI instructions −</span></summary>
-          <div className="border-t border-rule-soft py-5"><p className="mb-6 max-w-prose font-serif text-base leading-relaxed text-ink-soft">The CLI uses your own keys. Nothing is shared with this site.</p><Snippet code={cliSnippet} lang="sh" /></div>
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            <span className="group-open:hidden">
+              Run the same loop locally +
+            </span>
+            <span className="hidden group-open:inline">
+              Hide CLI instructions −
+            </span>
+          </summary>
+          <div className="border-t border-rule-soft py-5">
+            <p className="mb-6 max-w-prose font-serif text-base leading-relaxed text-ink-soft">
+              The CLI uses your own keys. Nothing is shared with this site.
+            </p>
+            <Snippet code={cliSnippet} lang="sh" />
+          </div>
         </details>
       </section>
 
@@ -182,7 +210,9 @@ export default async function StewardPage({
         </Link>
         <span className="font-mono tabular">
           {chain.name.toLowerCase()}
-          {chain.chainId ? ` · chain ${chain.chainId}` : ` · ${chain.chainName}`}
+          {chain.chainId
+            ? ` · chain ${chain.chainId}`
+            : ` · ${chain.chainName}`}
         </span>
       </footer>
     </main>

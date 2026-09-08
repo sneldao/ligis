@@ -30,14 +30,14 @@ export default async function IssuersPage({
     return (
       <main className="route-shell max-w-5xl">
         <header className="route-header text-xs">
-          <p className="eyebrow">Ligis · who vouches for agents</p>
+          <p className="eyebrow">Ligis · Issuers</p>
           <div className="flex items-baseline gap-6">
             <ChainBadge chain={chain} />
             <Link
               href="/"
               className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
-              &larr; Index
+              ← Home
             </Link>
           </div>
         </header>
@@ -49,7 +49,8 @@ export default async function IssuersPage({
             issuers.
           </h1>
           <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
-            The chain RPC is temporarily unavailable. Please try again in a moment.
+            The chain RPC is temporarily unavailable. Please try again in a
+            moment.
           </p>
         </section>
       </main>
@@ -60,14 +61,14 @@ export default async function IssuersPage({
   return (
     <main className="route-shell max-w-5xl">
       <header className="route-header text-xs">
-        <p className="eyebrow">Ligis · who vouches for agents</p>
+        <p className="eyebrow">Ligis · Issuers</p>
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
-            &larr; Index
+            ← Home
           </Link>
         </div>
       </header>
@@ -102,9 +103,21 @@ export default async function IssuersPage({
         <Rule />
         {top.length === 0 ? (
           <div className="max-w-xl py-12 sm:py-16">
-            <p className="display text-2xl text-ink">No issuers in this scan yet.</p>
-            <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">An issuer is a KYC provider, compliance service, or protocol team that can attest to what an agent is allowed to do.</p>
-            <a href="https://github.com/sneldao/ligis?tab=readme-ov-file#quickstart" target="_blank" rel="noreferrer" className="mt-5 inline-block font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline decoration-rule underline-offset-4 hover:decoration-terra">Read the issuer quickstart ↗</a>
+            <p className="display text-2xl text-ink">
+              No issuers in this scan yet.
+            </p>
+            <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
+              An issuer is a KYC provider, compliance service, or protocol team
+              that can attest to what an agent is allowed to do.
+            </p>
+            <a
+              href="https://github.com/sneldao/ligis?tab=readme-ov-file#quickstart"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-block font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline decoration-rule underline-offset-4 hover:decoration-terra"
+            >
+              Read the issuer quickstart ↗
+            </a>
           </div>
         ) : (
           top.map((entry, i) => (
