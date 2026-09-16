@@ -30,6 +30,8 @@
     "smoke:casper": "tsx scripts/casper-smoke-test.ts",
     "demo:croo": "tsx scripts/croo-e2e-demo.ts",
     "demo:casper": "tsx scripts/casper-e2e-demo.ts",
+    "demo:genlayer": "tsx scripts/genlayer-agent-tank-demo.ts",
+    "demo:genlayer-gate": "tsx scripts/genlayer-gate-demo.ts",
     "demo:monid": "pnpm start -- trust check --intent 'pay a counterparty for premium RWA data' --counterparty '${MONID_COUNTERPARTY:-0x0000000000000000000000000000000000000000}'",
     "deploy:casper": "pnpm --filter @ligis/adapter-casper deploy",
     "demo": "bash scripts/demo.sh",

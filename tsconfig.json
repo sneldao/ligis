@@ -22,7 +22,8 @@
       "@ligis/zerog": ["packages/zerog/src/index.ts"],
       "@ligis/cli": ["packages/cli/src/index.ts"],
       "@ligis/mcp-server": ["packages/mcp-server/src/index.ts"],
-      "@ligis/x402-server": ["packages/x402-server/src/index.ts"]
+      "@ligis/x402-server": ["packages/x402-server/src/index.ts"],
+      "@ligis/adapter-genlayer": ["packages/adapter-genlayer/src/index.ts"]
     }
   },
   "references": [
@@ -34,6 +35,7 @@
     { "path": "packages/agent-logic/tsconfig.json" },
     { "path": "packages/cli/tsconfig.json" },
     { "path": "packages/mcp-server/tsconfig.json" },
-    { "path": "packages/x402-server/tsconfig.json" }
+    { "path": "packages/x402-server/tsconfig.json" },
+    { "path": "packages/adapter-genlayer/tsconfig.json" }
   ]
 }
