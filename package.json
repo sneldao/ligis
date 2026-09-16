@@ -62,7 +62,7 @@
     "husky": "9.1.7",
     "lint-staged": "17.4.1",
     "playwright": "^1.45.0",
-    "prettier": "^3.3.0",
+    "prettier": "^3.9.6",
     "tsx": "^4.23.13"
   },
   "engines": {
