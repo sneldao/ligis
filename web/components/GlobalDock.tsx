@@ -10,6 +10,11 @@ import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 
 const NAV = [
   { href: "/gate", label: "Gate", description: "Gate a payment" },
+  {
+    href: "/genlayer",
+    label: "Escrow",
+    description: "GenLayer JobEscrow · Agent Tank",
+  },
   { href: "/field", label: "Field", description: "Field · live registry" },
 ];
 

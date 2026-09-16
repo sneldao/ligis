@@ -29,6 +29,12 @@ const REFERENCE_CAPS = credentialsRef.capabilities.map((c) => ({
 
 const STATIC: Command[] = [
   { id: "gate", label: "Gate", hint: "gate a payment", href: "/gate" },
+  {
+    id: "genlayer",
+    label: "Escrow",
+    hint: "GenLayer JobEscrow · Agent Tank",
+    href: "/genlayer",
+  },
   { id: "field", label: "Field", hint: "live registry", href: "/field" },
   { id: "home", label: "Home", hint: "/", href: "/" },
   {
