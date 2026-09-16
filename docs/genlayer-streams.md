@@ -9,7 +9,7 @@
 | **1**  | `JobEscrow` Studio Next | _TBD_ | **DEPLOYED** 2026-09-16        | Live `61997` explorer URL ✓                               |
 | **2**  | `checkLigisGate`        | —     | **DONE** 2026-09-16            | Live Casper/Pharos `GateReceipt`; GO + STOP               |
 | **3**  | Demo orchestrator       | lead  | **DONE** 2026-09-16            | `pnpm demo:genlayer` → gate + `deploy.py` → `lastrun.txt` |
-| **4**  | Thin UI                 | _TBD_ | **code-complete** 2026-09-16   | Calls deployed IC (live reads unblocked)                  |
+| **4**  | Thin UI                 | _TBD_ | **DONE** 2026-09-17            | Live reads verified ✓                                     |
 | **5**  | Portal + video          | _TBD_ | unblocked — live address ready | Portal submit + YouTube/X                                 |
 | **6**  | Stretch                 | —     | after 1–4                      | Option B / reputation mapping                             |
 
@@ -50,7 +50,7 @@ pnpm demo:genlayer                 # live Ligis + GenLayer
 
 **Note:** genlayer-js 1.1.x ships `studionet`, not Studio Next (61997). The web UI defines the chain inline via `createClient({ chain: ... })` — reads work. Write lifecycle (create → deliver → dispute → resolve → claim) uses genlayer-py via `deploy.py` (Stream 3).
 
-## Stream 4 deliverables (code-complete 2026-09-16)
+## Stream 4 deliverables (done 2026-09-17)
 
 - [x] `web/lib/genlayer.ts` — genlayer-js client for Studio Next (chain 61997); reads `get_job`, `get_gate_receipt`, `job_count`, `is_eligible`
 - [x] `web/app/genlayer/page.tsx` — thin observer UI: contract address, job state, lifecycle visualization, gate receipt, verdict, architecture walkthrough
@@ -60,7 +60,7 @@ pnpm demo:genlayer                 # live Ligis + GenLayer
 - [x] Navigation: "Escrow" added to GlobalDock + CommandPalette (⌘K)
 - [x] `genlayer-js@^1.1.8` dependency; Studio Next chain defined inline (genlayer-js ships `studionet`, not 61997)
 - [x] Typecheck passes
-- [x] Live reads unblocked — contract deployed at `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
+- [x] Live reads verified against deployed contract `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F` — UI shows job status (disputed), brief, seller, buyer, stake, evidence URL, gate receipt (GO, agent.commerce.escrow), lifecycle visualization, and last demo run summary
 
 ## Kickoff (remaining)
 
