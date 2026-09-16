@@ -108,6 +108,30 @@ DIDs, secp256k1 signatures) but doesn't depend on any single one. The
 aggregation model means Ligis can map any external standard into its
 credential schema.
 
+### Adjudication (complementary — GenLayer)
+
+**GenLayer** is trustless adjudication for the agentic economy: Intelligent
+Contracts and AI-validator consensus resolve disputes that need judgment,
+not just deterministic code. Happy-path rails (x402, agent identity,
+marketplaces) do not ship dispute resolution; GenLayer fills that gap.
+
+| Layer        | Owner              | Question                                       |
+| ------------ | ------------------ | ---------------------------------------------- |
+| Eligibility  | **Ligis**          | _Who is allowed to trade?_ (`isCapable`, risk) |
+| Adjudication | **GenLayer**       | _What happened when delivery is contested?_    |
+| Payment      | x402 / CROO / etc. | _How does money move?_                         |
+
+**Product rule:** compose, do not merge. Ligis does not reimplement the
+registry on GenLayer; GenLayer does not mint core KYC/capability
+credentials in the happy path. GenLayer JobEscrow (and similar) should
+**call or record a Ligis gate** before opening funded work, then use
+subjective judgment only for delivery outcomes. Dispute outcomes are a
+future aggregation signal into Ligis risk — same pattern as EAS / Self /
+World ID.
+
+Full Agent Tank plan (parallel workstreams, portal requirements, non-goals):
+[`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md).
+
 ## Differentiation
 
 ### 1. Aggregation, not origination
@@ -275,7 +299,15 @@ Subscription pricing or CROO-bundled pricing could address this.
       0G Bridge is the ecosystem accelerator
 - [ ] SDK for third-party platforms to verify Ligis credentials
 
-### Phase 4: Credential marketplace
+### Phase 4: Adjudication compose (GenLayer Agent Tank → ongoing)
+
+- [ ] GenLayer `JobEscrow` Intelligent Contract on Studio Next (gate → escrow → dispute → settle)
+- [ ] Ligis pre-flight `GateReceipt` stored in job state (Casper/Pharos `isCapable` remains source of truth)
+- [ ] Demo + portal submission for Agent Tank — see [`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md)
+- [ ] Post-hackathon: map dispute terminal states into Ligis risk / `reputation.dispute_*` signals
+- [ ] Do **not** migrate CredentialRegistry to GenLayer; GenLayer stays a consumer + signal source
+
+### Phase 5: Credential marketplace
 
 - [ ] Third-party issuers issue Ligis-compatible credentials directly
 - [ ] Ligis becomes the schema/verification standard, not just an aggregator

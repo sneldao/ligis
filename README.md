@@ -11,6 +11,7 @@
 
 | Hackathon                          | Track                                | Demo                                                                                                                               | Submission doc                                                           |
 | ---------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **GenLayer Agent Tank 2026**       | Agent launch & commerce infra        | `pnpm demo:genlayer-gate` (Stream 2 gate proof; JobEscrow deploy pending Stream 1)                                                 | [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md)             |
 | **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure  | _(Monad deploy not started — web field/landing split in progress)_                                                                 | [`docs/metropolis-hackathon.md`](docs/metropolis-hackathon.md)           |
 | **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement        | _(in progress)_                                                                                                                    | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)                     |
 | **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:05 Casper walkthrough](https://youtu.be/eoOQmAx7U7s)                                                                            | [`docs/casper-buidl.md`](docs/casper-buidl.md)                           |
@@ -18,7 +19,20 @@
 | **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification   | _(in progress)_                                                                                                                    | [`docs/okx-ai.md`](docs/okx-ai.md)                                       |
 | **0G Bridge by AKINDO 2026**       | Trust & Safety / AI Agents           | _(in progress)_                                                                                                                    | [`docs/strategy.md`](docs/strategy.md)                                   |
 
-**One product, multiple proofs:** Casper contracts are the on-chain source of truth; CROO and OKX.AI are how other agents pay for verification before A2A commerce. 0G Compute, 0G Storage, and 0G Chain power the trust infrastructure. Same `CredentialRegistry` backs every marketplace.
+**One product, multiple proofs:** Casper contracts are the on-chain source of truth; CROO and OKX.AI are how other agents pay for verification before A2A commerce. GenLayer is the adjudication venue when delivery is disputed (Ligis still gates who may trade). 0G Compute, 0G Storage, and 0G Chain power the trust infrastructure. Same `CredentialRegistry` backs every marketplace.
+
+### GenLayer JobEscrow — Stream 2 (gate → receipt)
+
+```bash
+pnpm demo:genlayer-gate           # proves GO + STOP GateReceipt shapes (no RPC needed)
+LIGIS_LIVE_GATE=1 pnpm demo:genlayer-gate  # live Casper verifyCapability → GateReceipt
+```
+
+Implementation: `packages/adapter-genlayer/src/check-gate.ts`. Schema locked in
+[`docs/genlayer-interface-v1.md`](docs/genlayer-interface-v1.md); helper
+exports `checkLigisGate`, `refuseIfNotCapable`, `gateFromVerifyResult`, and
+`GateRefusedError`. Stream 3 wires this into `create_job` and shells out to
+`packages/contracts-genlayer/deploy.py --stop` for the IC-side STOP assertion.
 
 ## Demo videos
 

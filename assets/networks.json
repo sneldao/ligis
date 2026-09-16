@@ -4,9 +4,7 @@
       "name": "Pharos Atlantic Testnet",
       "chainId": 688689,
       "rpcUrl": "https://atlantic.dplabs-internal.com",
-      "fallbackRpcUrls": [
-        "https://testnet.dplabs-internal.com"
-      ],
+      "fallbackRpcUrls": ["https://testnet.dplabs-internal.com"],
       "explorerUrl": "https://atlantic.pharosscan.xyz",
       "explorerApiUrl": "https://api.socialscan.io/pharos-atlantic-testnet",
       "nativeToken": {
@@ -60,6 +58,18 @@
       "nativeToken": {
         "symbol": "A0GI",
         "name": "A0GI",
+        "decimals": 18
+      }
+    },
+    "genlayer-studio-next": {
+      "name": "GenLayer Studio Next",
+      "chainId": 61997,
+      "rpcUrl": "https://studio-dev.genlayer.com/api",
+      "explorerUrl": "https://explorer-studio-dev.genlayer.com",
+      "explorerApiUrl": "",
+      "nativeToken": {
+        "symbol": "GEN",
+        "name": "GEN",
         "decimals": 18
       }
     }
