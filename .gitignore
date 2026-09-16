@@ -119,3 +119,11 @@ web/package-lock.json
 /web/lib/**/*.d.ts
 
 .pnpm-store/
+
+# GenLayer Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+/packages/contracts-genlayer/artifacts/
+/packages/contracts-genlayer/.env
+

@@ -1,0 +1,13 @@
+{
+  "name": "@ligis/contracts-genlayer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GenLayer JobEscrow Intelligent Contract — credential-gated agent commerce with AI adjudication (Agent Tank, Studio Next chain 61997)",
+  "license": "MIT",
+  "scripts": {
+    "deploy": "python deploy.py",
+    "deploy:stop": "python deploy.py --stop",
+    "test": "pytest tests/direct/ -v",
+    "lint": "genvm-lint check contracts/JobEscrow.py"
+  }
+}

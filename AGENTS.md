@@ -136,6 +136,109 @@ The script auto-loads `.env.d/casper.env` (Casper deployer + contracts) and
 `.env.d/deployer.env` (Pharos deployer key + RPC). Output shows both chains
 with identical capability hash and issuer EVM address.
 
+### GenLayer Intelligent Contract (Agent Tank)
+
+The GenLayer `JobEscrow` contract lives in `packages/contracts-genlayer/` and is
+the adjudication half of the Ligis × GenLayer compose story. It targets
+**Studio Next (studio_devnet, chain ID 61997)** — the network the Agent Tank
+portal requires for the explorer-link field. Interface is frozen in
+`docs/genlayer-interface-v1.md`; shared TS types in `@ligis/core` → `genlayer.ts`.
+
+**Setup (one-time, in a venv):**
+
+```bash
+cd packages/contracts-genlayer
+pip install -r requirements.txt   # genlayer-py>=0.19.0rc2 (studio_devnet), genlayer-test, genvm-linter
+```
+
+**Lint:**
+
+```bash
+cd packages/contracts-genlayer
+genvm-lint check contracts/JobEscrow.py
+```
+
+**Direct-mode tests (no Docker/Studio needed, ~1s):**
+
+```bash
+cd packages/contracts-genlayer
+pytest tests/direct/ -v
+```
+
+Direct mode downloads the GenVM runtime tarball on first run (~216MB) into
+`~/.cache/gltest-direct/`. If the sandbox blocks the SSL download, pre-fetch
+with `curl -skL -o ~/.cache/gltest-direct/genvm-universal-v0.2.12.tar.xz
+https://github.com/genlayerlabs/genvm/releases/download/v0.2.12/genvm-universal.tar.xz`.
+
+**Deploy + full flow to Studio Next:**
+
+```bash
+cd packages/contracts-genlayer
+export GENLAYER_PRIVATE_KEY=0x...   # optional; fresh account created if unset
+python deploy.py                     # deploy + create -> deliver -> dispute -> resolve -> claim
+python deploy.py --stop              # also show the STOP gate path
+# -> scripts/genlayer-agent-tank-demo.lastrun.txt (address, job id, explorer URL)
+```
+
+Key points:
+
+- `studio_devnet` (chain 61997) requires `genlayer-py>=0.19.0rc2`; the stable
+  `studionet` preset is a different network and does NOT satisfy the portal.
+- Contract uses `gl.nondet.web.render()` + `gl.nondet.exec_prompt(response_format="json")`
+  inside `gl.vm.run_nondet_unsafe()` for the intelligent `resolve()` — judgment is
+  load-bearing (Equivalence Principle on the binary verdict).
+- Reverts use `raise Exception(msg)` (via `_require`), not `assert`, because
+  `genlayer-test` direct mode's `expect_revert` re-raises `AssertionError`.
+- `TreeMap` fields auto-initialize; do NOT assign `self.x = TreeMap()` in
+  `__init__` (causes a type-desc mismatch).
+- Default capability: `agent.commerce.escrow`. Gate is Option A (off-chain
+  Ligis pre-flight; receipt stored on-chain via `gate_receipts[id]`).
+
+### GenLayer Web UI (Stream 4)
+
+The thin observer UI lives at `web/app/genlayer/` and reads the deployed
+JobEscrow IC on Studio Next (chain 61997) via `genlayer-js`.
+
+**Pages:**
+
+- `/genlayer` — contract address, job state, lifecycle visualization, gate
+  receipt, verdict, architecture walkthrough
+- Falls back gracefully when no contract is deployed (shows "deploy pending"
+  - demo instructions from `pnpm demo:genlayer`)
+
+**Key files:**
+
+- `web/lib/genlayer.ts` — genlayer-js client with inline Studio Next chain
+  definition (genlayer-js 1.1.x ships `studionet`, not 61997); reads
+  `get_job`, `get_gate_receipt`, `job_count`, `is_eligible`
+- `web/app/genlayer/actions.ts` — server action; resolves contract address
+  from `GENLAYER_JOBEscrow_ADDRESS` env var or `lastrun.txt`
+- `web/app/genlayer/page.tsx` — server component, reads contract state
+
+**Navigation:** "Escrow" added to GlobalDock + CommandPalette (⌘K).
+
+**Typecheck:**
+
+```bash
+cd web && npx tsc --noEmit
+```
+
+**Dev:**
+
+```bash
+cd web && pnpm dev   # http://localhost:3000/genlayer
+```
+
+Key points:
+
+- genlayer-js 1.1.x supports custom chain configs via `createClient({ chain })`,
+  so Studio Next (61997) is defined inline — reads work without a preset.
+- The UI is read-only (observer). Write lifecycle (create → deliver → dispute
+  → resolve → claim) is owned by `pnpm demo:genlayer` (Stream 3, shells to
+  `deploy.py`).
+- Contract address resolution: `GENLAYER_JOBEscrow_ADDRESS` env var →
+  `scripts/genlayer-agent-tank-demo.lastrun.txt` → null (shows fallback).
+
 ### 0G Compute
 
 **Default provider:** Qwen 2.5 7B
