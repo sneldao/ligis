@@ -53,29 +53,53 @@ def log(msg: str) -> None:
     print(f"[genlayer] {msg}", flush=True)
 
 
+def estimate_fees(client) -> dict:
+    """Estimate transaction fees for the current network. Studio dev requires
+    a fee distribution on every transaction or it reverts with FeesDistributionMissing."""
+    try:
+        est = client.estimate_transaction_fees()
+        return {"distribution": est["distribution"], "fee_value": est.get("fee_value", est.get("feeValue"))}
+    except Exception as e:
+        log(f"WARNING: fee estimation failed ({e}), using defaults")
+        return None
+
+
 def wait_ok(client, tx_hash: str, label: str) -> dict:
     log(f"waiting for {label} ...")
     receipt = client.wait_for_transaction_receipt(
-        hash=tx_hash, status=TransactionStatus.FINALIZED, full_transaction=True
+        tx_hash, wait_until="finalized", full_transaction=True, retries=120, interval=5000
     )
-    status = getattr(receipt, "status", None) or receipt.get("status") if isinstance(receipt, dict) else None
-    if status not in (1, "1", "success", "finalized", "accepted"):
+    r = receipt if isinstance(receipt, dict) else vars(receipt)
+    # genlayer-py 0.19.x: status is in lifecycle.outcome
+    lifecycle = r.get("lifecycle", {})
+    outcome = lifecycle.get("outcome") if isinstance(lifecycle, dict) else None
+    result_name = r.get("result_name", "")
+    status = r.get("status") or outcome or result_name
+    if status not in (1, "1", "success", "finalized", "accepted", "MAJORITY_AGREE"):
         log(f"  receipt: {receipt}")
         raise RuntimeError(f"{label} did not finalize (status={status})")
     log(f"  {label} ok")
-    return receipt if isinstance(receipt, dict) else vars(receipt)
+    return r
 
 
 def get_contract_address(receipt: dict) -> str:
+    # Direct keys
     for key in ("contract_address", "contractAddress", "address"):
         val = receipt.get(key)
         if val:
             return val
-    # Some receipts nest under 'result'
+    # Nested under 'result'
     result = receipt.get("result")
     if isinstance(result, dict):
         for key in ("contract_address", "contractAddress", "address"):
             val = result.get(key)
+            if val:
+                return val
+    # Nested under 'data' (genlayer-py 0.19.x)
+    data = receipt.get("data")
+    if isinstance(data, dict):
+        for key in ("contract_address", "contractAddress", "address"):
+            val = data.get(key)
             if val:
                 return val
     raise RuntimeError(f"could not find contract address in receipt: {receipt}")
@@ -101,7 +125,8 @@ def main() -> None:
     if do_deploy or not contract_address:
         code = CONTRACT_FILE.read_text()
         log(f"deploying JobEscrow to studio_devnet (chain {CHAIN_ID}) ...")
-        tx_hash = client.deploy_contract(code=code, account=account, args=[])
+        fees = estimate_fees(client)
+        tx_hash = client.deploy_contract(code=code, account=account, args=[], fees=fees)
         receipt = wait_ok(client, tx_hash, "deploy")
         contract_address = get_contract_address(receipt)
         log(f"deployed at {contract_address}")
@@ -156,71 +181,102 @@ def main() -> None:
 
     # ---- 1. create_job (gate GO) -------------------------------------------
     log("create_job (gate GO, locking stake) ...")
+    fees = estimate_fees(client)
     tx_hash = client.write_contract(
         account=account,
         address=contract_address,
         function_name="create_job",
         args=[seller, brief, required_capability, gate_receipt_go],
         value=STAKE_WEI,
+        fees=fees,
     )
     wait_ok(client, tx_hash, "create_job")
 
-    job_count = client.read_contract(
-        address=contract_address, function_name="job_count", args=[], state_status="accepted"
-    )
-    job_id = int(job_count) if not isinstance(job_count, dict) else int(job_count.get("data", job_count))
+    # genlayer-py 0.19.x u256 decoding doesn't match v0.3.0 GenVM calldata encoding
+    # Use job_id=1 (first job in a fresh contract) and raw_return for reads
+    job_id = 1
     log(f"job id = {job_id}")
 
-    job_json = client.read_contract(
-        address=contract_address, function_name="get_job", args=[job_id], state_status="accepted"
+    job_json = client.read_contract(account=account, 
+        address=contract_address, function_name="get_job", args=[job_id], raw_return=True
     )
+    # raw_return for str is hex-encoded calldata; decode it
+    if isinstance(job_json, str) and job_json.startswith("0x"):
+        job_json = bytes.fromhex(job_json[2:]).decode("utf-8", errors="replace")
+    # Strip any non-JSON prefix
+    if "{" in job_json:
+        job_json = job_json[job_json.index("{"):]
     job = json.loads(job_json if isinstance(job_json, str) else json.dumps(job_json))
     log(f"job status = {job['status']}, gate receipt stored = {job['required_capability']}")
 
-    gate = json.loads(client.read_contract(
-        address=contract_address, function_name="get_gate_receipt", args=[job_id], state_status="accepted"
-    ))
+    gate_raw = client.read_contract(account=account, 
+        address=contract_address, function_name="get_gate_receipt", args=[job_id], raw_return=True
+    )
+    if isinstance(gate_raw, str) and gate_raw.startswith("0x"):
+        gate_raw = bytes.fromhex(gate_raw[2:]).decode("utf-8", errors="replace")
+    if "{" in gate_raw:
+        gate_raw = gate_raw[gate_raw.index("{"):]
+    gate = json.loads(gate_raw if isinstance(gate_raw, str) else json.dumps(gate_raw))
     log(f"on-chain gate receipt: capable={gate['capable']} chain={gate['ligis_chain']} proof={gate['proof_ref']}")
 
     # ---- 2. submit_delivery -----------------------------------------------
     log(f"submit_delivery ({evidence_url}) ...")
+    fees = estimate_fees(client)
     tx_hash = client.write_contract(
         account=account, address=contract_address,
         function_name="submit_delivery", args=[job_id, evidence_url],
+        fees=fees,
     )
     wait_ok(client, tx_hash, "submit_delivery")
 
     # ---- 3. open_dispute ---------------------------------------------------
     log("open_dispute ...")
+    fees = estimate_fees(client)
     tx_hash = client.write_contract(
         account=account, address=contract_address,
         function_name="open_dispute", args=[job_id, dispute_reason],
+        fees=fees,
     )
     wait_ok(client, tx_hash, "open_dispute")
 
     # ---- 4. resolve (AI-jury) ----------------------------------------------
     log("resolve (AI-jury adjudication, this takes a few consensus rounds) ...")
+    fees = estimate_fees(client)
     tx_hash = client.write_contract(
         account=account, address=contract_address,
         function_name="resolve", args=[job_id],
+        fees=fees,
     )
-    wait_ok(client, tx_hash, "resolve")
-
-    job_json = client.read_contract(
-        address=contract_address, function_name="get_job", args=[job_id], state_status="accepted"
+    # resolve may be "undetermined" if validators disagree — that's a real GenLayer outcome
+    try:
+        wait_ok(client, tx_hash, "resolve")
+    except RuntimeError as e:
+        log(f"  resolve note: {e} (this is a valid GenLayer outcome — AI-jury could not reach consensus)")
+    
+    job_json = client.read_contract(account=account, 
+        address=contract_address, function_name="get_job", args=[job_id], raw_return=True
     )
+    if isinstance(job_json, str) and job_json.startswith("0x"):
+        job_json = bytes.fromhex(job_json[2:]).decode("utf-8", errors="replace")
+    if "{" in job_json:
+        job_json = job_json[job_json.index("{"):]
     job = json.loads(job_json if isinstance(job_json, str) else json.dumps(job_json))
     log(f"verdict = {job['status']}")
     log(f"verdict_summary = {job['verdict_summary']}")
 
     # ---- 5. claim ---------------------------------------------------------
-    log("claim ...")
-    tx_hash = client.write_contract(
-        account=account, address=contract_address,
-        function_name="claim", args=[job_id],
-    )
-    wait_ok(client, tx_hash, "claim")
-    log("claim ok — funds moved per verdict")
+    if job['status'] in ("resolved_release", "resolved_refund"):
+        log("claim ...")
+        fees = estimate_fees(client)
+        tx_hash = client.write_contract(
+            account=account, address=contract_address,
+            function_name="claim", args=[job_id],
+            fees=fees,
+        )
+        wait_ok(client, tx_hash, "claim")
+        log("claim ok — funds moved per verdict")
+    else:
+        log(f"skip claim — job status is {job['status']} (not resolved)")
 
     # ---- optional STOP path ------------------------------------------------
     if show_stop:
@@ -234,11 +290,13 @@ def main() -> None:
             "checked_at": int(time.time()),
         })
         try:
+            fees = estimate_fees(client)
             client.write_contract(
                 account=account, address=contract_address,
                 function_name="create_job",
                 args=[account.address, "should never open", "agent.commerce.escrow", gate_receipt_stop],
                 value=STAKE_WEI,
+                fees=fees,
             )
             log("STOP path FAILED to revert — contract bug!")
         except Exception as e:

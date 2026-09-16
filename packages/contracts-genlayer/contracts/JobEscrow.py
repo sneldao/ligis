@@ -1,98 +1,52 @@
-# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
 
-"""
-JobEscrow — Ligis x GenLayer Agent Tank
-=======================================
-
-Credential-gated agent commerce with Intelligent Contract adjudication.
-
-  Ligis decides WHO may trade  (deterministic gate, off-chain pre-flight, Option A)
-  GenLayer decides WHAT happened (non-deterministic AI-jury verdict on disputed delivery)
-
-Lifecycle (status enum, locked by Stream 0):
-
-  open -> delivered -> disputed -> resolved_release | resolved_refund
-                                    --> claim() pays out per terminal status
-
-The gate is enforced in create_job(): the caller must supply a Ligis GateReceipt
-(JSON, produced by the off-chain Ligis pre-flight check) whose `capable` field is
-True and whose `capability` matches the job's `required_capability`. The receipt
-is stored on-chain so the panel can SEE Ligis in contract state, not only in the
-video voiceover. This is the "visible Ligis call" the win plan requires.
-
-Judgment is load-bearing: resolve() fetches the deliverable from the web and asks
-an LLM to compare it against the brief. If you removed the LLM/web step the product
-collapses — there is no deterministic fallback for "was it good enough?". That is
-why this contract lives on GenLayer and not on Casper/Pharos.
-"""
-
-from genlayer import *
-from dataclasses import dataclass
-from datetime import datetime, timezone
 import json
+from dataclasses import dataclass
+
+import genlayer as gl
+from genlayer.types import *  # u256, Address, etc.
 
 
 # ---------------------------------------------------------------------------
 # Storage types
 # ---------------------------------------------------------------------------
 
-@allow_storage
+@gl.storage.allow
 @dataclass
 class GateReceipt:
-    """Ligis pre-flight eligibility proof (Stream 0 schema, v1).
-
-    Produced off-chain by checkLigisGate({ subject, capability }) and passed
-    into create_job() as JSON. Mirrored on-chain for UI / explorer visibility.
-    """
-    subject: str          # agent / account identifier used in Ligis (account-hash-... / 0x...)
-    capability: str        # e.g. agent.commerce.escrow
-    capable: bool          # GO / STOP
-    ligis_chain: str       # casper-testnet | pharos-atlantic | ...
-    proof_ref: str        # tx hash, verify response id, or gate URL
-    checked_at: u256       # unix seconds
-    capability_hash: str   # optional (0x+keccak256); empty string if not provided
+    """Ligis pre-flight eligibility proof (Stream 0 schema, v1)."""
+    subject: str
+    capability: str
+    capable: bool
+    ligis_chain: str
+    proof_ref: str
+    checked_at: u256
+    capability_hash: str
 
 
-@allow_storage
+@gl.storage.allow
 @dataclass
 class Job:
     """A single escrow job. One contract instance holds many jobs (TreeMap)."""
     id: u256
-    buyer: Address         # who posted + funded the job (GenLayer address)
-    seller: Address        # who must deliver (GenLayer address, named by buyer)
-    brief: str             # text or URI describing the work
-    stake: u256            # locked GEN, in wei
-    status: str            # open | delivered | disputed | resolved_release | resolved_refund
-    evidence_uri: str      # deliverable URL submitted by seller
-    dispute_reason: str    # buyer's justification for disputing
-    verdict_summary: str   # AI-jury reasoning (post resolve)
+    buyer: Address
+    seller: Address
+    brief: str
+    stake: u256
+    status: str
+    evidence_uri: str
+    dispute_reason: str
+    verdict_summary: str
     required_capability: str
-    subject: str           # Ligis subject the gate checked (from receipt)
+    subject: str
     created_at: u256
     delivered_at: u256
     disputed_at: u256
     resolved_at: u256
-    claimed: bool          # payout already executed
-
-
-# EOA / EVM-side value transfer interface (used by claim() / cancel_job() payouts).
-# GenLayer ICs send native GEN to an EOA through their ghost contract.
-@gl.evm.contract_interface
-class _Payout:
-    class View:
-        pass
-
-    class Write:
-        pass
-
-
-def _now() -> u256:
-    return u256(int(datetime.now(timezone.utc).timestamp()))
+    claimed: bool
 
 
 def _require(cond: bool, msg: str) -> None:
-    """Revert with a message. Uses raise Exception (not assert) so direct-mode
-    tests can catch reverts via expect_revert, and on-chain GenVM rolls back."""
     if not cond:
         raise Exception(msg)
 
@@ -101,15 +55,14 @@ def _require(cond: bool, msg: str) -> None:
 # Contract
 # ---------------------------------------------------------------------------
 
-class JobEscrow(gl.Contract):
+class JobEscrow(gl.contract.Contract):
     """Credential-gated escrow with AI adjudication of disputed delivery."""
 
     next_job_id: u256
-    jobs: TreeMap[u256, Job]
-    gate_receipts: TreeMap[u256, GateReceipt]
+    jobs: gl.storage.TreeMap[u256, Job]
+    gate_receipts: gl.storage.TreeMap[u256, GateReceipt]
 
     def __init__(self) -> None:
-        # TreeMap fields auto-initialize to empty; only set the counter start.
         self.next_job_id = u256(1)
 
     # -- creation (gate-enforced) ------------------------------------------
@@ -117,32 +70,26 @@ class JobEscrow(gl.Contract):
     @gl.public.write.payable
     def create_job(
         self,
-        seller: Address,
+        seller: str,
         brief: str,
         required_capability: str,
         gate_receipt_json: str,
     ) -> u256:
-        """Open + fund a job. Only succeeds if the Ligis gate said GO.
-
-        The gate is NOT re-run here (Ligis is the eligibility source of truth,
-        on its own chain). We verify the receipt the caller already obtained:
-          - capable == True
-          - capability == required_capability
-        and store it so the receipt is visible in contract state.
-        """
+        """Open + fund a job. Only succeeds if the Ligis gate said GO."""
         _require(gl.message.value > u256(0), "must lock a stake")
 
         receipt = json.loads(gate_receipt_json)
         _require(receipt.get("capable") is True, "Ligis gate STOP: subject not capable")
         _require(receipt.get("capability") == required_capability, "gate capability mismatch")
 
+        seller_addr = Address(seller)
         job_id = self.next_job_id
         self.next_job_id = job_id + u256(1)
 
         job = Job(
             id=job_id,
             buyer=gl.message.sender_address,
-            seller=seller,
+            seller=seller_addr,
             brief=brief,
             stake=gl.message.value,
             status="open",
@@ -151,7 +98,7 @@ class JobEscrow(gl.Contract):
             verdict_summary="",
             required_capability=required_capability,
             subject=str(receipt.get("subject", "")),
-            created_at=_now(),
+            created_at=u256(0),
             delivered_at=u256(0),
             disputed_at=u256(0),
             resolved_at=u256(0),
@@ -181,7 +128,6 @@ class JobEscrow(gl.Contract):
 
         job.status = "delivered"
         job.evidence_uri = evidence_uri
-        job.delivered_at = _now()
         self.jobs[job_id] = job
 
     @gl.public.write
@@ -194,33 +140,21 @@ class JobEscrow(gl.Contract):
 
         job.status = "disputed"
         job.dispute_reason = reason
-        job.disputed_at = _now()
         self.jobs[job_id] = job
 
     # -- adjudication (Intelligent, load-bearing) --------------------------
 
     @gl.public.write
     def resolve(self, job_id: u256) -> str:
-        """AI-jury verdict on a disputed delivery. disputed -> resolved_*.
-
-        This is the GenLayer-native value: each validator independently fetches
-        the deliverable from the web and asks an LLM whether it satisfies the
-        brief. Consensus is reached on the binary verdict (APPROVED/REJECTED),
-        not on the reasoning — the Equivalence Principle in action.
-
-        Funds are NOT moved here; claim() pays out per the terminal status so
-        the state transition is visible in the explorer.
-        """
+        """AI-jury verdict on a disputed delivery. disputed -> resolved_*."""
         job = self.jobs[job_id]
         _require(job.status == "disputed", "job is not disputed")
 
-        # Capture deterministic inputs outside the nondet block.
         brief = job.brief
         evidence_uri = job.evidence_uri
         dispute_reason = job.dispute_reason
 
-        def leader_fn():
-            # 1. Fetch the deliverable from the web (each validator independently).
+        def judge_delivery() -> str:
             evidence_text = ""
             if evidence_uri.startswith("http"):
                 try:
@@ -228,7 +162,6 @@ class JobEscrow(gl.Contract):
                 except Exception:
                     evidence_text = ""
 
-            # 2. Ask the LLM to judge the deliverable against the brief.
             prompt = (
                 "You are an impartial adjudicator for an agent-to-agent job escrow.\n"
                 "A buyer hired a seller and locked funds. The seller submitted a deliverable.\n"
@@ -243,28 +176,16 @@ class JobEscrow(gl.Contract):
                 "Respond as JSON with exactly these fields:\n"
                 '{"verdict": "APPROVED" or "REJECTED", "reasoning": "2-3 sentence explanation"}'
             )
-            return gl.nondet.exec_prompt(prompt, response_format="json")
+            result = gl.nondet.exec_prompt(prompt, response_format="json")
+            return json.dumps(result, sort_keys=True)
 
-        def validator_fn(leaders_res) -> bool:
-            if not isinstance(leaders_res, gl.vm.Return):
-                return False
-            try:
-                my_result = leader_fn()
-                leader_verdict = leaders_res.calldata.get("verdict")
-                my_verdict = my_result.get("verdict")
-                # Equivalence: same binary verdict, reasoning may differ.
-                return my_verdict == leader_verdict and my_verdict in ("APPROVED", "REJECTED")
-            except Exception:
-                return False
-
-        verdict_data = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        verdict_json = gl.eq_principle.strict_eq(judge_delivery)
+        verdict_data = json.loads(verdict_json)
         verdict = verdict_data.get("verdict", "REJECTED")
         reasoning = verdict_data.get("reasoning", "")
 
-        # Storage writes happen AFTER consensus, in the deterministic context.
         job.status = "resolved_release" if verdict == "APPROVED" else "resolved_refund"
         job.verdict_summary = reasoning
-        job.resolved_at = _now()
         self.jobs[job_id] = job
         return job.status
 
@@ -272,12 +193,7 @@ class JobEscrow(gl.Contract):
 
     @gl.public.write
     def claim(self, job_id: u256) -> None:
-        """Pay out the locked stake per the terminal status.
-
-        resolved_release -> seller is paid.
-        resolved_refund  -> buyer is refunded.
-        Idempotent via the `claimed` flag.
-        """
+        """Pay out the locked stake per the terminal status."""
         job = self.jobs[job_id]
         _require(job.status in ("resolved_release", "resolved_refund"), "job not resolved")
         _require(not job.claimed, "already claimed")
@@ -291,11 +207,11 @@ class JobEscrow(gl.Contract):
         job.claimed = True
         self.jobs[job_id] = job
 
-        _Payout(recipient).emit_transfer(value=stake)
+        gl.chain.Account(recipient).emit_transfer(value=stake)
 
     @gl.public.write
     def cancel_job(self, job_id: u256) -> None:
-        """Buyer cancels an unfunded-progress open job and reclaims the stake."""
+        """Buyer cancels an open job and reclaims the stake."""
         job = self.jobs[job_id]
         _require(job.status == "open", "can only cancel open jobs")
         _require(gl.message.sender_address == job.buyer, "only the buyer may cancel")
@@ -305,7 +221,7 @@ class JobEscrow(gl.Contract):
         job.claimed = True
         self.jobs[job_id] = job
 
-        _Payout(job.buyer).emit_transfer(value=stake)
+        gl.chain.Account(job.buyer).emit_transfer(value=stake)
 
     # -- reads -------------------------------------------------------------
 

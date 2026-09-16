@@ -51,7 +51,7 @@ def _create_job(direct_vm, direct_deploy, buyer, seller, gate=GATE_GO, value=10*
     contract = direct_deploy(CONTRACT)
     direct_vm.sender = buyer
     direct_vm.value = value
-    job_id = contract.create_job(to_address(seller), BRIEF, cap, gate)
+    job_id = contract.create_job(to_hex(seller), BRIEF, cap, gate)
     direct_vm.value = 0
     return contract, job_id
 
