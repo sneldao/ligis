@@ -177,22 +177,50 @@ cd packages/contracts-genlayer
 export GENLAYER_PRIVATE_KEY=0x...   # optional; fresh account created if unset
 python deploy.py                     # deploy + create -> deliver -> dispute -> resolve -> claim
 python deploy.py --stop              # also show the STOP gate path
+python deploy.py --no-deploy         # reuse existing contract (set JOBEscrow_ADDRESS)
 # -> scripts/genlayer-agent-tank-demo.lastrun.txt (address, job id, explorer URL)
 ```
 
+**Live deployment (2026-09-16):**
+
+- Contract: `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
+- Explorer: https://explorer-studio-dev.genlayer.com/address/0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F
+- 5 transactions, all GenVM Result = SUCCESS
+- `resolve` returned "undetermined" (AI-jury could not reach consensus — a valid GenLayer outcome)
+
 Key points:
 
+- **GenLayer v0.3.0 API** — the Studio dev runner uses v0.3.0 which has breaking
+  changes: `gl.Contract` → `gl.contract.Contract`, `@allow_storage` →
+  `@gl.storage.allow`, `from genlayer import *` → `import genlayer as gl` +
+  `from genlayer.types import *`. Contract is fully migrated.
+- **GenVM runner hash** — the magic comment must pin the current runner:
+  `# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }`
+  (old hash `1jb45aa8...` causes `invalid_contract runner malformed`).
+- **Address fields** — the v0.3.0 GenVM does not auto-convert `str` to `Address`
+  in storage dataclasses. Methods take `seller: str` and convert with
+  `Address(seller)` internally.
 - `studio_devnet` (chain 61997) requires `genlayer-py>=0.19.0rc2`; the stable
   `studionet` preset is a different network and does NOT satisfy the portal.
+- **Fee estimation** — Studio dev requires fee distribution; `deploy.py` calls
+  `client.estimate_transaction_fees()` and passes fees to all writes.
+- **Receipt decoding** — `read_contract` with `raw_return=True` is needed for
+  v0.3.0 contracts; the SDK's default u256/string decoder doesn't match the
+  new GenVM calldata encoding. Decode hex manually: `bytes.fromhex(ret[2:]).decode()`.
+- **Wait for finalization** — `wait_until="finalized"` (not just "decided") so
+  reads see the post-transaction state. The `resolve` step may return
+  "undetermined" — that's a valid GenLayer consensus outcome, not a bug.
 - Contract uses `gl.nondet.web.render()` + `gl.nondet.exec_prompt(response_format="json")`
-  inside `gl.vm.run_nondet_unsafe()` for the intelligent `resolve()` — judgment is
-  load-bearing (Equivalence Principle on the binary verdict).
+  inside `gl.eq_principle.strict_eq()` for the intelligent `resolve()`.
 - Reverts use `raise Exception(msg)` (via `_require`), not `assert`, because
   `genlayer-test` direct mode's `expect_revert` re-raises `AssertionError`.
 - `TreeMap` fields auto-initialize; do NOT assign `self.x = TreeMap()` in
   `__init__` (causes a type-desc mismatch).
 - Default capability: `agent.commerce.escrow`. Gate is Option A (off-chain
   Ligis pre-flight; receipt stored on-chain via `gate_receipts[id]`).
+- **Direct tests** — `genlayer-test` 0.29.2 downloads GenVM v0.2.12 which
+  doesn't support the v0.3.0 API. Tests pass only when `genlayer-test` ships a
+  v0.3.0-compatible runtime. The contract is verified working on-chain.
 
 ### GenLayer Web UI (Stream 4)
 

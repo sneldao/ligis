@@ -141,9 +141,9 @@ python deploy.py
 
 ## Explorer
 
-> **Studio Next address (chain 61997):** _`0x…` — fill from `lastrun.txt` after first deploy._
-
-Explorer base: `https://explorer-studio-dev.genlayer.com/address/0x…`
+> **Studio Next address (chain 61997):** `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
+>
+> Explorer: https://explorer-studio-dev.genlayer.com/address/0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F
 
 ## Roadmap hook (not blocking)
 

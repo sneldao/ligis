@@ -1,0 +1,12 @@
+GenLayer Agent Tank — JobEscrow lastrun
+========================================
+chain: studio_devnet (id 61997)
+rpc: https://studio-dev.genlayer.com/api
+contract_address: 0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F
+explorer: https://explorer-studio-dev.genlayer.com/address/0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F
+job_id: 1
+final_status: disputed
+verdict_summary: 
+gate_proof_ref: mock:genlayer-only — set LIGIS_GATE_RECEIPT_JSON for live Ligis
+gate_chain: casper-testnet
+run_at: 2026-09-16T16:38:59Z
