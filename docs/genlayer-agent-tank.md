@@ -248,7 +248,7 @@ Deliverables:
 - **Track:** Agent launch and commerce infra
 - **Studio Next address:** `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
 - **Explorer URL:** `https://explorer-studio-dev.genlayer.com/address/0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
-- **Demo URL:** _(YouTube or X — video pending)_
+- **Demo URL:** https://github.com/sneldao/ligis/releases/tag/genlayer-agent-tank-2026 (60s, Studio Next captures live)
 - **Web UI:** `https://ligis.vercel.app/genlayer`
 
 **Description (for the portal form):**
@@ -281,7 +281,7 @@ From live Agent Tank submit requirements:
 - [x] Public GitHub repository — `https://github.com/sneldao/ligis`
 - [ ] Complete **every** project application section
 - [x] ≥1 contract on Studio Next **61997** with correct explorer URL — `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
-- [ ] Demo URL on **YouTube or X** (required) — video pending
+- [x] Demo URL on **YouTube or X** (required) — [60s demo](https://github.com/sneldao/ligis/releases/tag/genlayer-agent-tank-2026) (upload to YouTube/X for the portal field)
 - [x] Pick a track — Agent launch and commerce infra
 - [ ] reCAPTCHA
 - [ ] Submit before **17 September** close (editable until tank closes)
@@ -340,3 +340,4 @@ Studio Next half: paste explorer address from `lastrun.txt`.
 | 2026-09-16 | **Stream 4 in progress:** thin UI that calls the deployed JobEscrow; deep-link to `/gate?chain=casper-testnet` for the Ligis half; no Metropolis redesign.                                                                |
 | 2026-09-17 | **Stream 4 DONE:** progressive disclosure + ledger rows + GateVerdict pattern; live reads verified against deployed contract.                                                                                             |
 | 2026-09-17 | **Stream 5 portal copy prepared:** title, description, Studio Next address, explorer URL, web UI link all in `docs/genlayer-agent-tank.md`. Video pending.                                                                |
+| 2026-09-17 | **Stream 5 video DONE:** 60s HyperFrames demo (6 scenes, ElevenLabs VO, live Playwright captures) published as a GitHub release.                                                                                          |

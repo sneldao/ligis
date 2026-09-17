@@ -9,15 +9,15 @@
 
 ## Active hackathon submissions
 
-| Hackathon                          | Track                                | Demo                                                                                                                                       | Submission doc                                                           |
-| ---------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| **GenLayer Agent Tank 2026**       | Agent launch & commerce infra        | [ligis.vercel.app/genlayer](https://ligis.vercel.app/genlayer) · `pnpm demo:genlayer` · JobEscrow `0x64eF9e...D0cB0F` on Studio Next 61997 | [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md)             |
-| **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure  | _(Monad deploy not started — web field/landing split in progress)_                                                                         | [`docs/metropolis-hackathon.md`](docs/metropolis-hackathon.md)           |
-| **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement        | _(in progress)_                                                                                                                            | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)                     |
-| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:05 Casper walkthrough](https://youtu.be/eoOQmAx7U7s)                                                                                    | [`docs/casper-buidl.md`](docs/casper-buidl.md)                           |
-| **CROO Agent Hackathon 2026**      | Data & Verification + Open A2A       | [CROO demo](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4) _(upload before deadline)_         | [`docs/croo-hackathon-submission.md`](docs/croo-hackathon-submission.md) |
-| **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification   | _(in progress)_                                                                                                                            | [`docs/okx-ai.md`](docs/okx-ai.md)                                       |
-| **0G Bridge by AKINDO 2026**       | Trust & Safety / AI Agents           | _(in progress)_                                                                                                                            | [`docs/strategy.md`](docs/strategy.md)                                   |
+| Hackathon                          | Track                                | Demo                                                                                                                                                                                                           | Submission doc                                                           |
+| ---------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **GenLayer Agent Tank 2026**       | Agent launch & commerce infra        | [60s demo video](https://github.com/sneldao/ligis/releases/tag/genlayer-agent-tank-2026) · [ligis.vercel.app/genlayer](https://ligis.vercel.app/genlayer) · JobEscrow `0x64eF9e...D0cB0F` on Studio Next 61997 | [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md)             |
+| **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure  | _(Monad deploy not started — web field/landing split in progress)_                                                                                                                                             | [`docs/metropolis-hackathon.md`](docs/metropolis-hackathon.md)           |
+| **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement        | _(in progress)_                                                                                                                                                                                                | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)                     |
+| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:05 Casper walkthrough](https://youtu.be/eoOQmAx7U7s)                                                                                                                                                        | [`docs/casper-buidl.md`](docs/casper-buidl.md)                           |
+| **CROO Agent Hackathon 2026**      | Data & Verification + Open A2A       | [CROO demo](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4) _(upload before deadline)_                                                                             | [`docs/croo-hackathon-submission.md`](docs/croo-hackathon-submission.md) |
+| **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification   | _(in progress)_                                                                                                                                                                                                | [`docs/okx-ai.md`](docs/okx-ai.md)                                       |
+| **0G Bridge by AKINDO 2026**       | Trust & Safety / AI Agents           | _(in progress)_                                                                                                                                                                                                | [`docs/strategy.md`](docs/strategy.md)                                   |
 
 **One product, multiple proofs:** Casper contracts are the on-chain source of truth; CROO and OKX.AI are how other agents pay for verification before A2A commerce. GenLayer is the adjudication venue when delivery is disputed (Ligis still gates who may trade). 0G Compute, 0G Storage, and 0G Chain power the trust infrastructure. Same `CredentialRegistry` backs every marketplace.
 
@@ -50,6 +50,14 @@ Schema locked in [`docs/genlayer-interface-v1.md`](docs/genlayer-interface-v1.md
 full plan in [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md).
 
 ## Demo videos
+
+### GenLayer Agent Tank (gate -> escrow -> dispute -> settle)
+
+[Watch the 60s demo](https://github.com/sneldao/ligis/releases/tag/genlayer-agent-tank-2026)
+
+- Ligis gate on Casper -> GenLayer JobEscrow -> dispute -> AI-jury verdict,
+  with live captures of the deployed contract UI and the Studio Next explorer.
+  Source: [`videos/ligis-genlayer-tank/`](videos/ligis-genlayer-tank/).
 
 ### Casper Agentic Buildathon (on-chain identity + x402)
 
