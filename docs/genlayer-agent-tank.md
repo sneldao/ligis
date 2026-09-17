@@ -153,8 +153,8 @@ Owner: contract engineer(s).
 Deliverables:
 
 - [x] `packages/contracts-genlayer/` with `JobEscrow.py` (impl present — matches freeze)
-- [ ] Deploy to **Studio Next** (`studio-dev` / chain 61997)
-- [ ] Explorer link: `https://explorer-studio-dev.genlayer.com/address/0x…`
+- [x] Deploy to **Studio Next** (`studio-dev` / chain 61997) — `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
+- [x] Explorer link: https://explorer-studio-dev.genlayer.com/address/0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F
 - [x] Interaction script: `deploy.py` create → deliver → dispute → resolve → claim
 - [x] README: how judgment is invoked and what state changes
 - [x] Beyond boilerplate: LLM + web fetch in `resolve()`
@@ -212,18 +212,20 @@ Deliverables:
 
 **Done when:** `pnpm demo:genlayer` exits 0 on a funded Studio setup and prints explorer links.
 
-### Stream 4 — UI / Studio-facing surface · **in progress 2026-09-16**
+### Stream 4 — UI / Studio-facing surface · **DONE 2026-09-17**
 
 Owner: web.
 
 Deliverables:
 
-- [ ] Minimal page or local UI: show gate result → job status → dispute → verdict
-- [ ] Must call the **deployed** Studio Next contract (portal criterion)
-- [ ] Optional: deep-link to existing `/gate?chain=casper-testnet` for the Ligis half
-- [ ] No redesign of landing/field — don’t burn time on Metropolis UX here
+- [x] `/genlayer` page: shows gate result → job status → dispute → verdict
+- [x] Calls the **deployed** Studio Next contract (portal criterion)
+- [x] Deep-links to existing `/gate?chain=casper-testnet` for the Ligis half
+- [x] Progressive disclosure: gate receipt, last demo run, and architecture behind `<details>`
+- [x] Ledger rows with `Rule` separators matching `SignalStack` / `TrustReceipt`
+- [x] Verdict block uses `GateVerdict` left-rule pattern (border-l-2 in status tone)
 
-**Done when:** Screen recording can follow the full loop without raw RPC only.
+**Done when:** ✅ Screen recording can follow the full loop without raw RPC only.
 
 ### Stream 5 — Portal, video, partner messaging
 
@@ -244,6 +246,20 @@ Deliverables:
 - **Tagline:** Ligis says GO/STOP before payment; GenLayer rules when delivery is disputed
 - **Repo:** `https://github.com/sneldao/ligis`
 - **Track:** Agent launch and commerce infra
+- **Studio Next address:** `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
+- **Explorer URL:** `https://explorer-studio-dev.genlayer.com/address/0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
+- **Demo URL:** _(YouTube or X — video pending)_
+- **Web UI:** `https://ligis.vercel.app/genlayer`
+
+**Description (for the portal form):**
+
+> Ligis decides who may trade. GenLayer decides what happened when agents disagree on delivery.
+>
+> The compose story: Ligis checks the seller's capability on Casper (deterministic `isCapable` read). GO or STOP — from chain state, not a Ligis server. The gate receipt is passed to `create_job` on the GenLayer JobEscrow Intelligent Contract, which asserts `capable == true` and stores the receipt on-chain. The seller submits a deliverable. The buyer disputes. GenLayer validators fetch the deliverable from the web and ask an LLM to judge it against the brief. Consensus on the binary verdict (APPROVED / REJECTED). `claim()` pays the seller or refunds the buyer.
+>
+> The contract is deployed on Studio Next (chain 61997) with 5 transactions, all GenVM Result = SUCCESS. The `resolve()` step uses `gl.nondet.web.render()` + `gl.nondet.exec_prompt(response_format="json")` inside `gl.eq_principle.strict_eq()` — the Equivalence Principle means validators agree on the verdict, not the reasoning. If you removed the LLM/web step, the product collapses — there is no deterministic fallback for "was the delivery good enough?" That is exactly the gap GenLayer fills.
+>
+> Repo: `https://github.com/sneldao/ligis` · Web UI: `https://ligis.vercel.app/genlayer` · One-command repro: `pnpm demo:genlayer`
 
 **Done when:** Submission saved on the portal; video public; editable until close if panel requests changes.
 
@@ -262,11 +278,11 @@ From live Agent Tank submit requirements:
 
 - [ ] Become a **Builder** before submit
 - [ ] Connect wallet
-- [ ] Public GitHub repository
+- [x] Public GitHub repository — `https://github.com/sneldao/ligis`
 - [ ] Complete **every** project application section
-- [ ] ≥1 contract on Studio Next **61997** with correct explorer URL
-- [ ] Demo URL on **YouTube or X** (required)
-- [ ] Pick a track
+- [x] ≥1 contract on Studio Next **61997** with correct explorer URL — `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
+- [ ] Demo URL on **YouTube or X** (required) — video pending
+- [x] Pick a track — Agent launch and commerce infra
 - [ ] reCAPTCHA
 - [ ] Submit before **17 September** close (editable until tank closes)
 - [ ] If panel asks for more: edit existing submission — do **not** create a second project
@@ -322,3 +338,5 @@ Studio Next half: paste explorer address from `lastrun.txt`.
 | 2026-09-16 | **Stream 3:** `pnpm demo:genlayer` orchestrates Ligis gate + Python `deploy.py` (Studio Next 61997); per-method genlayer-js deferred until chain preset exists.                                                           |
 | 2026-09-16 | **Stream 2 DONE:** `checkLigisGate` in `@ligis/adapter-genlayer` calls `CasperAdapter.verifyCapability` by default; `refuseIfNotCapable` throws `GateRefusedError`; `pnpm demo:genlayer-gate` proves GO+STOP with no RPC. |
 | 2026-09-16 | **Stream 4 in progress:** thin UI that calls the deployed JobEscrow; deep-link to `/gate?chain=casper-testnet` for the Ligis half; no Metropolis redesign.                                                                |
+| 2026-09-17 | **Stream 4 DONE:** progressive disclosure + ledger rows + GateVerdict pattern; live reads verified against deployed contract.                                                                                             |
+| 2026-09-17 | **Stream 5 portal copy prepared:** title, description, Studio Next address, explorer URL, web UI link all in `docs/genlayer-agent-tank.md`. Video pending.                                                                |
