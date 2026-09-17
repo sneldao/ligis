@@ -66,22 +66,30 @@ web/package-lock.json
 .casper/
 
 # video projects — source tracked, rendered output + captures ignored
+# Composition source (index.html, STORYBOARD.md, capture scripts, VO scripts)
+# stays tracked so the repro is self-contained. Everything below is derived.
 /video/*/ligis-demo.mp4
 /video/*/renders/
 /video/*/thumbs/
-/video/*/assets/images/
-/video/*/assets/audio/
-/video/*/assets/captures/
+/video/*/assets/
 /video/*/node_modules/
 /video/*/package-lock.json
 /videos/*/renders/
 /videos/*/thumbs/
-/videos/*/assets/images/
-/videos/*/assets/audio/
+/videos/*/assets/
 /videos/*/audio/
 /videos/*/capture/
 /videos/*/node_modules/
 /videos/*/package-lock.json
+# media binaries anywhere in a video project
+/videos/**/*.png
+/videos/**/*.jpg
+/videos/**/*.jpeg
+/videos/**/*.gif
+/videos/**/*.svg
+# ...but keep the small poster/thumbnail frames at the project root
+!/videos/*/poster.jpg
+!/videos/*/thumb.jpg
 
 # all rendered video/audio output — never commit binaries
 *.mp4

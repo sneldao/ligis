@@ -248,7 +248,7 @@ Deliverables:
 - **Track:** Agent launch and commerce infra
 - **Studio Next address:** `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
 - **Explorer URL:** `https://explorer-studio-dev.genlayer.com/address/0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
-- **Demo URL:** https://github.com/sneldao/ligis/releases/tag/genlayer-agent-tank-2026 (60s, Studio Next captures live)
+- **Demo URL:** https://youtu.be/goACAqXjUxY (60s, Studio Next captures live)
 - **Web UI:** `https://ligis.vercel.app/genlayer`
 
 **Description (for the portal form):**
@@ -281,7 +281,7 @@ From live Agent Tank submit requirements:
 - [x] Public GitHub repository — `https://github.com/sneldao/ligis`
 - [ ] Complete **every** project application section
 - [x] ≥1 contract on Studio Next **61997** with correct explorer URL — `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`
-- [x] Demo URL on **YouTube or X** (required) — [60s demo](https://github.com/sneldao/ligis/releases/tag/genlayer-agent-tank-2026) (upload to YouTube/X for the portal field)
+- [x] Demo URL on **YouTube or X** (required) — https://youtu.be/goACAqXjUxY
 - [x] Pick a track — Agent launch and commerce infra
 - [ ] reCAPTCHA
 - [ ] Submit before **17 September** close (editable until tank closes)

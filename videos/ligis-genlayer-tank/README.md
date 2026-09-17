@@ -2,20 +2,24 @@
 
 HyperFrames composition project for the 60-second GenLayer Agent Tank demo video.
 
+> **Published:** https://youtu.be/goACAqXjUxY
+> Rendered MP4 and `assets/` captures are gitignored — regenerate with `pnpm capture`
+> and `pnpm render` (see Commands below).
+
 > **Product thesis:** Ligis decides who may trade. GenLayer decides what happened
 > when agents disagree on delivery. `gate → escrow → dispute → settle`.
 
 ## Structure
 
-| File                     | Purpose                                                    |
-| ------------------------ | ---------------------------------------------------------- |
-| `index.html`             | Root timeline — 6 scenes, 60s                              |
-| `STORYBOARD.md`          | Scene plan, voiceover, asset mapping                       |
-| `capture.ts`             | Playwright capture of the live web UI + explorer           |
-| `capture-gate.ts`        | Playwright capture of the gate page with a verdict         |
-| `generate-voiceover.mjs` | ElevenLabs TTS (Adam voice) → per-line MP3s                |
-| `mix-audio.sh`           | ffmpeg mix of per-line MP3s into scene-aligned `mixed.mp3` |
-| `assets/`                | Captured screenshots                                       |
+| File                     | Purpose                                                           |
+| ------------------------ | ----------------------------------------------------------------- |
+| `index.html`             | Root timeline — 6 scenes, 60s                                     |
+| `STORYBOARD.md`          | Scene plan, voiceover, asset mapping                              |
+| `capture.ts`             | Playwright capture of the live web UI + explorer                  |
+| `capture-gate.ts`        | Playwright capture of the gate page with a verdict                |
+| `generate-voiceover.mjs` | ElevenLabs TTS (Adam voice) → per-line MP3s                       |
+| `mix-audio.sh`           | ffmpeg mix of per-line MP3s into scene-aligned `mixed.mp3`        |
+| `assets/`                | Captured screenshots (gitignored — regenerate via `pnpm capture`) |
 
 ## Scenes
 
