@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Ligis x GenLayer - Agent Tank</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --paper: #f4f1ec;
+        --paper-soft: #ece7df;
+        --ink: #1c1b1a;
+        --ink-soft: #5c5852;
+        --ink-quiet: #6f6a62;
+        --rule: rgba(28, 27, 26, 0.14);
+        --rule-soft: rgba(28, 27, 26, 0.07);
+        --terra: #a85234;
+        --terra-bright: #d98b6a;
+        --sky-bright: #7fb8d4;
+        --ink-quiet-dark: #a8a29a;
+        --sage: #6f8267;
+        --revoke: #a13a2a;
+        --sky: #33607e;
+        --navy: #181615;
+        --dark-rule: rgba(236, 231, 223, 0.16);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1920px; height: 1080px; overflow: hidden;
+        background: var(--paper); color: var(--ink);
+        font-family: "Hanken Grotesk", sans-serif;
+      }
+      .serif { font-family: "Fraunces", serif; }
+      .mono { font-family: "JetBrains Mono", monospace; }
+      .eyebrow {
+        font-family: "JetBrains Mono", monospace; font-weight: 500;
+        font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--ink-quiet);
+      }
+      .display {
+        font-family: "Fraunces", serif; font-weight: 400;
+        line-height: 1.04; letter-spacing: -0.022em;
+      }
+      .body-text {
+        font-family: "Hanken Grotesk", sans-serif; font-weight: 400;
+        line-height: 1.5;
+      }
+
+      #root {
+        position: relative; width: 1920px; height: 1080px;
+        overflow: hidden; background: var(--paper);
+      }
+      .scene {
+        position: absolute; inset: 0; width: 1920px; height: 1080px;
+        display: flex; flex-direction: column;
+      }
+      .dark { background: var(--navy); color: #ece7df; }
+      .content {
+        position: relative; width: 100%; height: 100%;
+        padding: 80px 120px; display: flex; flex-direction: column;
+      }
+
+      .rule { width: 100%; height: 1px; background: var(--rule); border: 0; }
+      .rule-soft { width: 100%; height: 1px; background: var(--rule-soft); border: 0; }
+      .dark .rule { background: var(--dark-rule); }
+
+      .pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: "JetBrains Mono", monospace; font-size: 14px;
+        padding: 7px 14px; border: 1px solid var(--rule);
+        background: var(--paper); color: var(--ink-soft);
+      }
+      .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      .pill.sage { color: var(--sage); border-color: rgba(111, 130, 103, 0.45); }
+      .pill.terra { color: var(--terra); border-color: rgba(184, 93, 62, 0.45); }
+      .pill.sky { color: var(--sky); border-color: rgba(59, 110, 143, 0.45); }
+      .pill.revoke { color: var(--revoke); border-color: rgba(161, 58, 42, 0.45); }
+
+      .frame {
+        position: relative; border: 1px solid var(--rule);
+        overflow: hidden; background: var(--paper-soft);
+      }
+      .frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .frame .caption {
+        position: absolute; left: 16px; bottom: 14px;
+        font-family: "JetBrains Mono", monospace; font-size: 13px;
+        color: var(--ink-quiet); background: var(--paper);
+        padding: 5px 10px; border: 1px solid var(--rule-soft);
+      }
+
+      .ledger-row {
+        display: grid; grid-template-columns: 260px 1fr;
+        align-items: baseline; gap: 32px; padding: 16px 0;
+      }
+      .ledger-row .label {
+        font-family: "JetBrains Mono", monospace; font-size: 13px;
+        letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-quiet);
+      }
+      .ledger-row .value { font-family: "JetBrains Mono", monospace; font-size: 17px; color: var(--ink); }
+
+      .verdict-block { border-left: 3px solid var(--rule); padding-left: 40px; }
+      .verdict-block.sage { border-color: var(--sage); }
+      .verdict-block.terra { border-color: var(--terra); }
+      .verdict-block.revoke { border-color: var(--revoke); }
+      .verdict-block.sky { border-color: var(--sky); }
+
+      audio { display: none; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="ligis-genlayer-tank"
+      data-start="0"
+      data-duration="60"
+      data-width="1920"
+      data-height="1080"
+    >
+      <audio id="voiceover" src="audio/mixed.mp3" preload="auto" data-start="0" data-duration="60"></audio>
+
+      <!-- ============ SCENE 1 - HOOK (0..4s) ============ -->
+      <div id="s1-hook" class="scene clip" data-start="0" data-duration="4" data-track-index="0" style="background: var(--paper);">
+        <div class="content" style="justify-content: center;">
+          <div class="eyebrow s1-eyebrow" style="margin-bottom: 40px;">Ligis x GenLayer - Agent Tank</div>
+          <div class="display s1-line1" style="font-size: 118px; max-width: 1600px;">Who may trade?</div>
+          <div class="display s1-line2" style="font-size: 118px; max-width: 1600px; color: var(--terra); margin-top: 4px;">What happened?</div>
+          <div class="body-text s1-sub" style="font-size: 30px; color: var(--ink-soft); margin-top: 48px; max-width: 1200px;">
+            Two questions. Two different systems. One stack.
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SCENE 2 - THE GATE (4..14s) ============ -->
+      <div id="s2-gate" class="scene clip" data-start="4" data-duration="10" data-track-index="0" style="background: var(--paper);">
+        <div class="content">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="eyebrow s2-eyebrow">01 - The gate - who may trade</div>
+            <div class="pill terra s2-pill"><span class="dot"></span>casper-testnet</div>
+          </div>
+          <div class="display s2-headline" style="font-size: 62px; margin-top: 28px; max-width: 1300px;">
+            A deterministic gate. One on-chain read.
+          </div>
+          <div class="frame s2-img" style="margin-top: 40px; flex: 1; min-height: 0;">
+            <img src="assets/gate-go.png" alt="Ligis gate page" />
+            <div class="caption">ligis.vercel.app/gate - deterministic GO or STOP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SCENE 3 - THE ESCROW (14..24s) ============ -->
+      <div id="s3-escrow" class="scene clip" data-start="14" data-duration="10" data-track-index="0" style="background: var(--paper);">
+        <div class="content">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="eyebrow s3-eyebrow">02 - The escrow - what happened</div>
+            <div class="pill sky s3-pill"><span class="dot"></span>studio next - chain 61997</div>
+          </div>
+          <div class="display s3-headline" style="font-size: 62px; margin-top: 28px; max-width: 1400px;">
+            The receipt goes to GenLayer. The stake locks on-chain.
+          </div>
+          <div class="frame s3-img" style="margin-top: 40px; flex: 1; min-height: 0;">
+            <img src="assets/genlayer-ui.png" alt="GenLayer JobEscrow UI" />
+            <div class="caption">ligis.vercel.app/genlayer - live JobEscrow state</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SCENE 4 - THE DISPUTE (24..40s) ============ -->
+      <div id="s4-dispute" class="scene dark clip" data-start="24" data-duration="16" data-track-index="0">
+        <div class="content">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div class="eyebrow s4-eyebrow" style="color: var(--terra-bright);">03 - The dispute - AI-jury</div>
+            <div class="pill s4-pill" style="background: var(--navy); color: var(--sky-bright); border-color: rgba(127, 184, 212, 0.45);"><span class="dot"></span>explorer-studio-dev.genlayer.com</div>
+          </div>
+          <div class="display s4-headline" style="font-size: 58px; color: #ece7df; margin-top: 24px; max-width: 1500px;">
+            Validators fetch the deliverable. An LLM judges it against the brief.
+          </div>
+          <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; margin-top: 36px; flex: 1; min-height: 0;">
+            <div class="frame s4-img" style="min-height: 0;">
+              <img src="assets/explorer.png" alt="GenLayer explorer - 5 transactions" />
+              <div class="caption">5 transactions - all GenVM SUCCESS</div>
+            </div>
+            <div style="display: flex; flex-direction: column; justify-content: center; gap: 28px;">
+              <div class="s4-stat1">
+                <div class="mono" style="font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-quiet-dark);">equivalence principle</div>
+                <div class="body-text" style="font-size: 26px; color: #ece7df; margin-top: 10px;">
+                  Validators agree on the <span style="color: var(--terra-bright);">verdict</span>, not the reasoning.
+                </div>
+              </div>
+              <hr class="rule s4-rule" />
+              <div class="s4-stat2">
+                <div class="mono" style="font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-quiet-dark);">resolve outcome</div>
+                <div class="display" style="font-size: 54px; color: var(--terra-bright); margin-top: 10px;">undetermined</div>
+                <div class="body-text" style="font-size: 24px; color: #b9b3aa; margin-top: 8px;">
+                  A real consensus outcome - not a stub.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SCENE 5 - THE VERDICT (40..50s) ============ -->
+      <div id="s5-verdict" class="scene clip" data-start="40" data-duration="10" data-track-index="0" style="background: var(--paper);">
+        <div class="content">
+          <div class="eyebrow s5-eyebrow">04 - The verdict - why GenLayer</div>
+          <div class="display s5-headline" style="font-size: 56px; margin-top: 26px; max-width: 1500px;">
+            No deterministic fallback for <span style="color: var(--terra);">"was it good enough?"</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 80px; margin-top: 56px; flex: 1; min-height: 0;">
+            <div>
+              <div class="mono" style="font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-quiet); margin-bottom: 20px;">lifecycle</div>
+              <div class="s5-life">
+                <div class="ledger-row" style="padding: 12px 0;"><span class="label">open</span><span class="value" style="color: var(--sky);">stake locked</span></div>
+                <hr class="rule-soft" />
+                <div class="ledger-row" style="padding: 12px 0;"><span class="label">delivered</span><span class="value" style="color: var(--sky);">evidence submitted</span></div>
+                <hr class="rule-soft" />
+                <div class="ledger-row" style="padding: 12px 0;"><span class="label">disputed</span><span class="value" style="color: var(--terra);">AI-jury adjudicating</span></div>
+                <hr class="rule-soft" />
+                <div class="ledger-row" style="padding: 12px 0;"><span class="label">resolved</span><span class="value" style="color: var(--ink-quiet);">release / refund</span></div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+              <div class="verdict-block terra s5-callout">
+                <div class="eyebrow" style="color: var(--terra);">the gap</div>
+                <div class="display" style="font-size: 42px; margin-top: 18px; max-width: 640px;">
+                  If you remove the LLM and the web fetch, the product collapses.
+                </div>
+                <div class="body-text" style="font-size: 25px; color: var(--ink-soft); margin-top: 22px; max-width: 620px;">
+                  That is exactly why the adjudication layer lives on GenLayer - and not on the payment rail.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SCENE 6 - CLOSE (50..60s) ============ -->
+      <div id="s6-close" class="scene clip" data-start="50" data-duration="10" data-track-index="0" style="background: var(--paper);">
+        <div class="content" style="justify-content: center;">
+          <div class="eyebrow s6-eyebrow" style="margin-bottom: 36px;">one stack</div>
+          <div class="display s6-line1" style="font-size: 88px; max-width: 1600px;">
+            Ligis gates <span style="color: var(--sage);">who may trade</span>.
+          </div>
+          <div class="display s6-line2" style="font-size: 88px; max-width: 1600px; margin-top: 6px;">
+            GenLayer adjudicates <span style="color: var(--terra);">what happened</span>.
+          </div>
+          <hr class="rule s6-rule" style="margin: 48px 0 32px; max-width: 1400px;" />
+          <div class="s6-links" style="display: flex; gap: 48px; align-items: center;">
+            <div class="mono" style="font-size: 19px; color: var(--ink-soft);">0x64eF9e55..92D0cB0F</div>
+            <div class="mono" style="font-size: 19px; color: var(--ink-quiet);">studio next - 61997</div>
+            <div class="mono" style="font-size: 19px; color: var(--ink-quiet);">github.com/sneldao/ligis</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // SCENE 1 - Hook
+      tl.from("#s1-hook .s1-eyebrow", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 0.15);
+      tl.from("#s1-hook .s1-line1", { y: 50, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.35);
+      tl.from("#s1-hook .s1-line2", { y: 50, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.85);
+      tl.from("#s1-hook .s1-sub", { y: 24, opacity: 0, duration: 0.6, ease: "power3.out" }, 1.5);
+      tl.to("#s1-hook .content", { opacity: 0, duration: 0.45, ease: "power2.in" }, 3.55);
+      tl.set("#s1-hook .content", { opacity: 0 }, 4.0);
+
+      // SCENE 2 - Gate
+      tl.from("#s2-gate .s2-eyebrow", { x: -30, opacity: 0, duration: 0.5, ease: "power3.out" }, 4.2);
+      tl.from("#s2-gate .s2-pill", { x: 30, opacity: 0, duration: 0.5, ease: "power3.out" }, 4.35);
+      tl.from("#s2-gate .s2-headline", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 4.5);
+      tl.from("#s2-gate .s2-img", { y: 40, opacity: 0, scale: 1.02, duration: 0.8, ease: "power3.out" }, 5.1);
+      tl.to("#s2-gate .content", { opacity: 0, duration: 0.45, ease: "power2.in" }, 13.55);
+      tl.set("#s2-gate .content", { opacity: 0 }, 14.0);
+
+      // SCENE 3 - Escrow
+      tl.from("#s3-escrow .s3-eyebrow", { x: -30, opacity: 0, duration: 0.5, ease: "power3.out" }, 14.2);
+      tl.from("#s3-escrow .s3-pill", { x: 30, opacity: 0, duration: 0.5, ease: "power3.out" }, 14.35);
+      tl.from("#s3-escrow .s3-headline", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 14.5);
+      tl.from("#s3-escrow .s3-img", { y: 40, opacity: 0, scale: 1.02, duration: 0.8, ease: "power3.out" }, 15.1);
+      tl.to("#s3-escrow .content", { opacity: 0, duration: 0.45, ease: "power2.in" }, 23.55);
+      tl.set("#s3-escrow .content", { opacity: 0 }, 24.0);
+
+      // SCENE 4 - Dispute
+      tl.from("#s4-dispute .s4-eyebrow", { x: -30, opacity: 0, duration: 0.5, ease: "power3.out" }, 24.2);
+      tl.from("#s4-dispute .s4-pill", { x: 30, opacity: 0, duration: 0.5, ease: "power3.out" }, 24.35);
+      tl.from("#s4-dispute .s4-headline", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 24.5);
+      tl.from("#s4-dispute .s4-img", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 25.1);
+      tl.from("#s4-dispute .s4-stat1", { x: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 25.5);
+      tl.from("#s4-dispute .s4-rule", { opacity: 0, duration: 0.5, ease: "power2.out" }, 26.2);
+      tl.from("#s4-dispute .s4-stat2", { x: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 26.5);
+      tl.to("#s4-dispute .content", { opacity: 0, duration: 0.45, ease: "power2.in" }, 39.55);
+      tl.set("#s4-dispute .content", { opacity: 0 }, 40.0);
+
+      // SCENE 5 - Verdict
+      tl.from("#s5-verdict .s5-eyebrow", { x: -30, opacity: 0, duration: 0.5, ease: "power3.out" }, 40.2);
+      tl.from("#s5-verdict .s5-headline", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 40.4);
+      tl.from("#s5-verdict .s5-life .ledger-row", { x: -24, opacity: 0, duration: 0.45, stagger: 0.12, ease: "power3.out" }, 41.0);
+      tl.from("#s5-verdict .s5-callout", { x: 36, opacity: 0, duration: 0.7, ease: "power3.out" }, 41.4);
+      tl.to("#s5-verdict .content", { opacity: 0, duration: 0.45, ease: "power2.in" }, 49.55);
+      tl.set("#s5-verdict .content", { opacity: 0 }, 50.0);
+
+      // SCENE 6 - Close
+      tl.from("#s6-close .s6-eyebrow", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 50.2);
+      tl.from("#s6-close .s6-line1", { y: 44, opacity: 0, duration: 0.7, ease: "power3.out" }, 50.45);
+      tl.from("#s6-close .s6-line2", { y: 44, opacity: 0, duration: 0.7, ease: "power3.out" }, 50.95);
+      tl.from("#s6-close .s6-rule", { scaleX: 0, transformOrigin: "left center", duration: 0.6, ease: "power2.out" }, 51.6);
+      tl.from("#s6-close .s6-links", { y: 20, opacity: 0, duration: 0.6, ease: "power3.out" }, 51.9);
+
+      window.__timelines["ligis-genlayer-tank"] = tl;
+    </script>
+  </body>
+</html>
