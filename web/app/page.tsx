@@ -2,12 +2,15 @@ import Link from "next/link";
 import { FieldInvite } from "@/components/catalog/FieldInvite";
 import { ChainBadge } from "@/components/ChainBadge";
 import { Diagram } from "@/components/Diagram";
+import { GateStates } from "@/components/GateStates";
 import { Rule } from "@/components/Rule";
+import { SituationCast } from "@/components/SituationCast";
 import { Snippet } from "@/components/Snippet";
 import { VerifyDemo } from "@/components/VerifyDemo";
-import { capabilities, addresses } from "@/lib/chain";
+import { capabilities } from "@/lib/chain";
 import {
   readBlockNumber,
+  readDeployment,
   readTotalSupply,
   isCasperChain,
 } from "@/lib/chain-router";
@@ -78,6 +81,7 @@ export default async function HomePage({
 }) {
   const chain = getChain(await searchParams);
   const stats = await liveStats(chain);
+  const chainDeployment = readDeployment(chain);
   const capOptions = capabilities.map((c) => ({ id: c.id, label: c.label }));
   const isCasper = isCasperChain(chain);
   const sampleSubject = isCasper
@@ -124,7 +128,8 @@ export default async function HomePage({
             Ligis is the one on-chain read that turns &ldquo;trust this
             wallet&rdquo; into <span className="text-sage">GO</span> or{" "}
             <span className="text-revoke">STOP</span> &mdash; before money
-            moves. No API, no intermediary, no trust required.
+            moves. Start from a moment you recognize, not from a capability
+            name.
           </p>
           <p className="mt-5 max-w-2xl font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
             {stats.ok ? (
@@ -158,31 +163,12 @@ export default async function HomePage({
           </p>
         </section>
 
-        {/* Onboarding moment — plain-language problem framing for
-              first-time visitors who don't already know what on-chain
-              credentials are. Sits between the hero claim and the
-              live verify demo so the visitor understands the "why"
-              before the "how". */}
-        <section className="mt-12 max-w-2xl sm:mt-16">
-          <p className="font-serif text-base leading-relaxed text-ink-soft">
-            Agents transact autonomously &mdash; sending payments, opening
-            escrows, buying data. The dangerous moment is the one before money
-            moves to a wallet your agent has never met. Ligis makes that moment
-            a decision: one blockchain read returns{" "}
-            <span className="text-sage">GO</span> or{" "}
-            <span className="text-revoke">STOP</span>. If the counterparty
-            can&rsquo;t prove it&rsquo;s authorized, the agent halts before the
-            transaction fires.
-          </p>
-          <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
-            <Link
-              href={`/field?chain=${chain.id}&enter=1`}
-              className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-            >
-              The field — live registry →
-            </Link>
-          </p>
-        </section>
+        {/* Cast the visitor into a role before the mechanism. Abstract
+            "counterparty / capability" copy loses people who don't already
+            live in agent commerce — named situations come first. */}
+        <div className="mt-16 sm:mt-20">
+          <SituationCast chainId={chain.id} />
+        </div>
 
         <section id="verify" className="mt-16 scroll-mt-24 sm:mt-28">
           <header className="flex items-baseline justify-between">
@@ -192,28 +178,40 @@ export default async function HomePage({
             </p>
           </header>
           <Rule className="mt-4" />
-          <div className="mt-8 grid grid-cols-1 gap-x-16 gap-y-8 sm:mt-10 sm:gap-y-12 lg:grid-cols-[18rem_1fr]">
+          <div className="mt-8 grid grid-cols-1 gap-x-16 gap-y-10 sm:mt-10 lg:grid-cols-[18rem_1fr] lg:gap-y-12">
             <div>
               <h2 className="display text-3xl text-ink">
                 Gate it before it pays.
               </h2>
               <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft sm:mt-6">
-                Choose a counterparty wallet and a capability. The verdict comes
-                from chain state, signed by the issuer &mdash; the same read an
-                agent makes the instant before sending a transaction.
+                Once you know your moment, run the same read an agent makes the
+                instant before money moves. Verdict from chain state &mdash; not
+                a Ligis server.
               </p>
               <p className="mt-3 font-serif text-sm italic leading-relaxed text-ink-quiet">
-                This is the wedge: one{" "}
-                <code className="font-mono not-italic">isCapable</code> call,
-                returned as GO or STOP.
+                One <code className="font-mono not-italic">isCapable</code>{" "}
+                call, returned as{" "}
+                <span className="not-italic text-sage">GO</span> or{" "}
+                <span className="not-italic text-revoke">STOP</span>.
+              </p>
+              <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+                <Link
+                  href={`/field?chain=${chain.id}&enter=1`}
+                  className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+                >
+                  The field — live registry →
+                </Link>
               </p>
             </div>
-            <VerifyDemo
-              capabilities={capOptions}
-              defaultSubject={sampleSubject}
-              explorerUrl={chain.explorerUrl}
-              chainId={chain.id}
-            />
+            <div className="space-y-12">
+              <GateStates />
+              <VerifyDemo
+                capabilities={capOptions}
+                defaultSubject={sampleSubject}
+                explorerUrl={chain.explorerUrl}
+                chainId={chain.id}
+              />
+            </div>
           </div>
         </section>
       </main>
@@ -437,19 +435,19 @@ export default async function HomePage({
               ) : (
                 <>
                   <a
-                    href={`${chain.explorerUrl}/address/${addresses.pharosAgentId}`}
+                    href={`${chain.explorerUrl}/address/${chainDeployment.agentIdContract}`}
                     target="_blank"
                     rel="noreferrer"
                     className="group block space-y-2 py-2"
                   >
-                    <p className="eyebrow">PharosAgentID</p>
+                    <p className="eyebrow">AgentID</p>
                     <Rule tone="soft" />
                     <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
-                      {addresses.pharosAgentId}
+                      {chainDeployment.agentIdContract}
                     </p>
                   </a>
                   <a
-                    href={`${chain.explorerUrl}/address/${addresses.credentialRegistry}`}
+                    href={`${chain.explorerUrl}/address/${chainDeployment.credentialRegistry}`}
                     target="_blank"
                     rel="noreferrer"
                     className="group block space-y-2 py-2"
@@ -457,7 +455,7 @@ export default async function HomePage({
                     <p className="eyebrow">CredentialRegistry</p>
                     <Rule tone="soft" />
                     <p className="pt-1 font-mono text-sm tabular text-ink group-hover:text-terra">
-                      {addresses.credentialRegistry}
+                      {chainDeployment.credentialRegistry}
                     </p>
                   </a>
                 </>
