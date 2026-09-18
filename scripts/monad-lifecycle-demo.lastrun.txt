@@ -1,0 +1,9 @@
+network=monad-testnet
+chainId=10143
+controller=0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec
+capability=kyc.basic
+capabilityHash=0x71389c3c607929c3bacb18fee6a304d8e2f68a55746507b46d1b9529064596d5
+gateBefore=true
+gateAfter=false
+issue=0x1be64aa96abeb6625b89382c3f6873056904e9d15ed4fcbee8bb15098bce7cc5
+revoke=0xb023185a96cd8c508d40e6d09aa23033fb24b9e4752a4e55c530abdd988a37a4

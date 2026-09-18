@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Deploy the Pharos Agent Identity Skill contracts to Pharos Atlantic testnet (default) or mainnet.
-# Reads PRIVATE_KEY from the environment. Writes the deployed addresses to
-# assets/deployment.json.
+# Deploy the Ligis EVM contracts to Pharos, Monad testnet, or local Anvil.
+# Reads PRIVATE_KEY from the environment. Writes verified deployed addresses to
+# assets/networks.json.
 #
 # Usage:
 #   PRIVATE_KEY=0x... ./scripts/deploy.sh atlantic
@@ -28,6 +28,12 @@ case "$NETWORK" in
     CHAIN_ID=1672
     EXPLORER="https://www.pharosscan.xyz"
     NETWORK_KEY="mainnet"
+    ;;
+  monad|monad-testnet)
+    RPC="${LIGIS_RPC_URL:-https://testnet-rpc.monad.xyz}"
+    CHAIN_ID=10143
+    EXPLORER="https://testnet.monadscan.com"
+    NETWORK_KEY="monad-testnet"
     ;;
   local|local-anvil)
     RPC="${LOCAL_RPC:-http://127.0.0.1:8545}"
@@ -68,25 +74,34 @@ if [[ ! -x "$FORGE" ]]; then
   FORGE="forge"
 fi
 
-# Derive the deployer address
-DEPLOYER=$("$FORGE" wallet address --private-key "$PRIVATE_KEY" 2>/dev/null || cast wallet address --private-key "$PRIVATE_KEY")
+CAST="$HOME/.foundry/bin/cast"
+if [[ ! -x "$CAST" ]]; then
+  CAST="cast"
+fi
+
+# Fail closed before signing if an RPC override points at the wrong chain.
+ACTUAL_CHAIN_ID=$("$CAST" chain-id --rpc-url "$RPC")
+if [[ "$ACTUAL_CHAIN_ID" != "$CHAIN_ID" ]]; then
+  echo "ERROR: RPC chain ID $ACTUAL_CHAIN_ID does not match expected $CHAIN_ID." >&2
+  exit 1
+fi
+
+# Derive the deployer address without logging the key.
+DEPLOYER=$("$CAST" wallet address --private-key "$PRIVATE_KEY")
 echo "Deployer: $DEPLOYER"
 echo "Network:  $NETWORK_KEY (chainId $CHAIN_ID)"
 echo "RPC:      $RPC"
 echo
 
-# Check deployer balance
-BALANCE_HEX=$(cast balance "$DEPLOYER" --rpc-url "$RPC" --ether 2>/dev/null || echo "0")
-echo "Balance:  $BALANCE_HEX native"
-
-if [[ "$BALANCE_HEX" == "0" || "$BALANCE_HEX" == "0.000000000" ]]; then
-  echo "WARNING: deployer has zero balance on $NETWORK_KEY." >&2
-  echo "Get testnet PHRS from the Pharos Atlantic faucet or ask in the Pharos developer Telegram/Discord." >&2
-  read -r -p "Continue anyway? (yes/no) " REPLY
-  if [[ "$REPLY" != "yes" ]]; then
-    echo "Aborted."
-    exit 1
+# Check balance in integer wei; RPC errors must not masquerade as zero funds.
+BALANCE_WEI=$("$CAST" balance "$DEPLOYER" --rpc-url "$RPC")
+echo "Balance:  $BALANCE_WEI wei"
+if [[ "$BALANCE_WEI" == "0" ]]; then
+  echo "ERROR: fund $DEPLOYER on $NETWORK_KEY before deploying." >&2
+  if [[ "$NETWORK_KEY" == "monad-testnet" ]]; then
+    echo "Monad testnet faucet: https://faucet.monad.xyz" >&2
   fi
+  exit 1
 fi
 
 # Confirm mainnet
@@ -146,5 +161,11 @@ echo "  PharosAgentID:        $PHAROS_AGENT_ID_ADDR"
 echo "  CredentialRegistry:   $CREG_ADDR"
 echo "  Explorer:             $EXPLORER"
 echo
-echo "Next: bash scripts/verify.sh $NETWORK  (to verify source on Pharos Scan)"
-echo "      bash scripts/demo.sh          (to walk the end-to-end demo)"
+if [[ "$NETWORK_KEY" == "monad-testnet" ]]; then
+  echo "Monad deployment complete. Explorer source verification is a separate step."
+  echo "Web reads are live via ?chain=monad-testnet (read-only until writeReady)."
+  echo "Reproduce the gate: pnpm demo:monad"
+else
+  echo "Next: bash scripts/verify.sh $NETWORK  (to verify source on Pharos Scan)"
+  echo "      bash scripts/demo.sh          (to walk the end-to-end demo)"
+fi

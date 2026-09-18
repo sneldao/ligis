@@ -46,8 +46,12 @@ contract DeployIdentitySkill is Script {
             networkKey = "atlantic-testnet";
         } else if (block.chainid == 1672) {
             networkKey = "mainnet";
-        } else {
+        } else if (block.chainid == 10_143) {
+            networkKey = "monad-testnet";
+        } else if (block.chainid == 31_337) {
             networkKey = "local-anvil";
+        } else {
+            revert("Unsupported deployment chain");
         }
 
         string memory dep = string.concat(
