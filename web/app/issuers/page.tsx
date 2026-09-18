@@ -84,9 +84,11 @@ export default async function IssuersPage({
           signatures make a claim independently verifiable by any caller.
         </p>
         <p className="mt-4 max-w-prose font-serif text-sm italic leading-relaxed text-ink-quiet">
-          {log.issuers.length === 0
-            ? "No issuances detected in the scanned range yet."
-            : `${log.issuers.length} ${log.issuers.length === 1 ? "issuer has" : "issuers have"} vouched, ${log.totalIssuances} ${log.totalIssuances === 1 ? "credential" : "credentials"} signed.`}{" "}
+          {log.unavailable
+            ? `History is unavailable on this chain's public RPC (${chain.name}), so this list is unknown rather than empty.`
+            : log.issuers.length === 0
+              ? "No issuances detected in the scanned range yet."
+              : `${log.issuers.length} ${log.issuers.length === 1 ? "issuer has" : "issuers have"} vouched, ${log.totalIssuances} ${log.totalIssuances === 1 ? "credential" : "credentials"} signed.`}{" "}
           {log.truncated
             ? `Scanned blocks ${log.blockRange.from.toString()} -> ${log.blockRange.to.toString()}.`
             : null}
@@ -104,11 +106,14 @@ export default async function IssuersPage({
         {top.length === 0 ? (
           <div className="max-w-xl py-12 sm:py-16">
             <p className="display text-2xl text-ink">
-              No issuers in this scan yet.
+              {log.unavailable
+                ? "Issuer history could not be read."
+                : "No issuers in this scan yet."}
             </p>
             <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
-              An issuer is a KYC provider, compliance service, or protocol team
-              that can attest to what an agent is allowed to do.
+              {log.unavailable
+                ? "The gate still works on this chain: a direct credential read answers GO or STOP. Only the block-scanning history view needs a log-capable RPC or an indexer."
+                : "An issuer is a KYC provider, compliance service, or protocol team that can attest to what an agent is allowed to do."}
             </p>
             <a
               href="https://github.com/sneldao/ligis?tab=readme-ov-file#quickstart"

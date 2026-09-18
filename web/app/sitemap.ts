@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { readRecentSubjects } from "@/lib/chain";
-import { CHAINS } from "@/lib/network";
+import { CHAINS, evmNetworkKey } from "@/lib/network";
 import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 3600; // 1 hour
@@ -58,7 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const chain of CHAINS) {
     if (chain.kind === "evm") {
       try {
-        const subjects = await readRecentSubjects(50);
+        const subjects = await readRecentSubjects(50, evmNetworkKey(chain));
         for (const subject of subjects) {
           agentPages.push({
             url: `${SITE_URL}/agent/${subject}?chain=${chain.id}`,

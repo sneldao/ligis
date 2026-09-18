@@ -30,7 +30,7 @@ function ChainSelectorFallback() {
             key={chain.id}
             className="px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet"
           >
-            {shortName(chain)}
+            {chain.shortName}
           </span>
         ))}
       </div>
@@ -47,7 +47,8 @@ function ChainSelectorInner({ activeId }: { activeId?: string }) {
   const chains: ChainNetwork[] = CHAINS;
 
   // If activeId is not passed, derive from the URL ?chain= param.
-  const resolvedActiveId = activeId ?? searchParams.get("chain") ?? chains[0]!.id;
+  const resolvedActiveId =
+    activeId ?? searchParams.get("chain") ?? chains[0]!.id;
 
   const onSelect = useCallback(
     (chainId: string) => {
@@ -93,13 +94,20 @@ function ChainSelectorInner({ activeId }: { activeId?: string }) {
                   : "text-ink-quiet hover:bg-paper-deep hover:text-ink-soft"
               }`}
             >
-              <span>{shortName(chain)}</span>
+              <span>{chain.shortName}</span>
               {!chain.live ? (
                 <span
                   className="ml-2 inline-block rounded-sm border border-rule px-1 py-px text-[9px] normal-case tracking-normal text-ink-quiet"
                   title="Contracts not deployed yet — reads will fall through to Pharos"
                 >
                   preview
+                </span>
+              ) : !chain.writeReady ? (
+                <span
+                  className="ml-2 inline-block rounded-sm border border-rule px-1 py-px text-[9px] normal-case tracking-normal text-ink-quiet"
+                  title="Reads are live on this chain. Writes from the browser are not wired yet."
+                >
+                  read-only
                 </span>
               ) : null}
             </button>
@@ -110,8 +118,7 @@ function ChainSelectorInner({ activeId }: { activeId?: string }) {
   );
 }
 
-function shortName(chain: ChainNetwork): string {
-  if (chain.kind === "evm") return "pharos";
-  if (chain.kind === "casper") return "casper";
-  return chain.id;
-}
+/*
+ * Labels come from each chain's `shortName` in `@/lib/network` so the switcher
+ * stays in step with the rest of the app.
+ */

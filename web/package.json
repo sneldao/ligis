@@ -9,7 +9,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "pretypecheck": "cd .. && pnpm --filter @ligis/zerog build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/**/*.test.ts"
   },
   "dependencies": {
     "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",

@@ -29,14 +29,13 @@ export type CapabilityRef = {
   description: string;
 };
 
-export const capabilities: ReadonlyArray<CapabilityRef> = credentialsRef.capabilities.map(
-  (c) => ({
+export const capabilities: ReadonlyArray<CapabilityRef> =
+  credentialsRef.capabilities.map((c) => ({
     id: c.id,
     label: c.label,
     hash: c.hash as Hex,
     description: c.description,
-  })
-);
+  }));
 
 export type CredentialView = {
   issuer: Hex;
@@ -70,6 +69,8 @@ export type IssuanceLog = {
   truncated: boolean;
   issuers: IssuerActivity[];
   totalIssuances: number;
+  /** True when the history read failed, as opposed to finding no issuances. */
+  unavailable: boolean;
 };
 
 export type CapabilityChange = {
@@ -116,10 +117,12 @@ export async function readTotalSupply(): Promise<bigint> {
 
 export async function isCapable(
   subject: string,
-  capabilityHash: Hex
+  capabilityHash: Hex,
 ): Promise<boolean> {
   try {
-    const cap = capabilities.find((c) => c.hash.toLowerCase() === capabilityHash.toLowerCase());
+    const cap = capabilities.find(
+      (c) => c.hash.toLowerCase() === capabilityHash.toLowerCase(),
+    );
     const capId = cap?.id ?? capabilityHash;
     const result = await adapter().verifyCapability({
       subject,
@@ -133,20 +136,22 @@ export async function isCapable(
 
 export async function isCapableMulti(
   subject: string,
-  capabilityHashes: readonly Hex[]
+  capabilityHashes: readonly Hex[],
 ): Promise<boolean[]> {
   const results = await Promise.all(
-    capabilityHashes.map((h) => isCapable(subject, h))
+    capabilityHashes.map((h) => isCapable(subject, h)),
   );
   return results;
 }
 
 export async function readCredential(
   subject: string,
-  capabilityHash: Hex
+  capabilityHash: Hex,
 ): Promise<CredentialView> {
   try {
-    const cap = capabilities.find((c) => c.hash.toLowerCase() === capabilityHash.toLowerCase());
+    const cap = capabilities.find(
+      (c) => c.hash.toLowerCase() === capabilityHash.toLowerCase(),
+    );
     const capId = cap?.id ?? capabilityHash;
     const result = await adapter().verifyCapability({
       subject,
@@ -170,19 +175,29 @@ export async function readCredential(
   }
 }
 
-export async function readAgentSnapshot(accountHash: string): Promise<AgentSnapshot> {
+export async function readAgentSnapshot(
+  accountHash: string,
+): Promise<AgentSnapshot> {
   const tokenId = await readAgentId(accountHash);
   if (tokenId === 0n) {
-    return { exists: false, tokenId: 0n, controller: null, tokenUri: "", held: [] };
+    return {
+      exists: false,
+      tokenId: 0n,
+      controller: null,
+      tokenUri: "",
+      held: [],
+    };
   }
 
   const capableResults = await isCapableMulti(
     accountHash,
-    capabilities.map((c) => c.hash)
+    capabilities.map((c) => c.hash),
   ).catch(() => capabilities.map(() => false));
 
   const views = await Promise.all(
-    capabilities.map((c) => readCredential(accountHash, c.hash).catch(() => null))
+    capabilities.map((c) =>
+      readCredential(accountHash, c.hash).catch(() => null),
+    ),
   );
 
   const held: HeldCredential[] = [];
@@ -221,13 +236,14 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
     const config = ctx.config;
     const credRegHash = config.deployment.credentialRegistry;
     if (!credRegHash) {
-      return emptyIssuanceLog();
+      // Not configured ≠ empty history; treat as unreadable.
+      return emptyIssuanceLog(true);
     }
 
     // Get current block height
     const latestBlock = await rpc.getLatestBlockInfo();
     const head = (latestBlock as any)?.block?.header?.height;
-    if (head == null) return emptyIssuanceLog();
+    if (head == null) return emptyIssuanceLog(true);
 
     const headBig = BigInt(head);
     const SPAN = 200n;
@@ -241,9 +257,7 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
       const batch: Promise<any[]>[] = [];
       for (let i = 0; i < BATCH && b + BigInt(i) <= headBig; i++) {
         const blockNum = b + BigInt(i);
-        batch.push(
-          rpc.getBlockByHeight(Number(blockNum)).catch(() => null)
-        );
+        batch.push(rpc.getBlockByHeight(Number(blockNum)).catch(() => null));
       }
       const blocks = await Promise.all(batch);
 
@@ -265,11 +279,21 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
             if (entryPoint !== "issue") continue;
 
             // Check if target matches credential registry package hash
-            const targetHash = typeof target === "object" ? target.hash : target;
-            const normalizedTarget = String(targetHash ?? "").replace(/^hash-/, "").replace(/^contract-package-/, "").replace(/^0x/, "");
-            const normalizedCredReg = credRegHash.replace(/^hash-/, "").replace(/^contract-package-/, "").replace(/^0x/, "");
+            const targetHash =
+              typeof target === "object" ? target.hash : target;
+            const normalizedTarget = String(targetHash ?? "")
+              .replace(/^hash-/, "")
+              .replace(/^contract-package-/, "")
+              .replace(/^0x/, "");
+            const normalizedCredReg = credRegHash
+              .replace(/^hash-/, "")
+              .replace(/^contract-package-/, "")
+              .replace(/^0x/, "");
 
-            if (normalizedTarget.toLowerCase() !== normalizedCredReg.toLowerCase()) continue;
+            if (
+              normalizedTarget.toLowerCase() !== normalizedCredReg.toLowerCase()
+            )
+              continue;
 
             // Extract issuer from transaction args
             const args = tx.args;
@@ -280,9 +304,12 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
             if (args instanceof Map) {
               const issuerArg = args.get("issuer");
               if (issuerArg) {
-                const issuerBytes = issuerArg.value?.data ?? issuerArg.data ?? issuerArg;
+                const issuerBytes =
+                  issuerArg.value?.data ?? issuerArg.data ?? issuerArg;
                 if (issuerBytes instanceof Uint8Array) {
-                  issuerHex += Array.from(issuerBytes.slice(0, 20)).map((b: number) => b.toString(16).padStart(2, "0")).join("");
+                  issuerHex += Array.from(issuerBytes.slice(0, 20))
+                    .map((b: number) => b.toString(16).padStart(2, "0"))
+                    .join("");
                 }
               }
             }
@@ -293,7 +320,8 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
             const prev = tally.get(issuerHex);
             tally.set(issuerHex, {
               count: (prev?.count ?? 0) + 1,
-              lastSeen: prev && prev.lastSeen > blockNum ? prev.lastSeen : blockNum,
+              lastSeen:
+                prev && prev.lastSeen > blockNum ? prev.lastSeen : blockNum,
             });
           } catch {
             continue;
@@ -303,7 +331,11 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
     }
 
     const issuers = Array.from(tally.entries())
-      .map(([issuer, v]) => ({ issuer: issuer as Hex, count: v.count, lastSeen: v.lastSeen }))
+      .map(([issuer, v]) => ({
+        issuer: issuer as Hex,
+        count: v.count,
+        lastSeen: v.lastSeen,
+      }))
       .sort((a, b) => b.count - a.count || (b.lastSeen > a.lastSeen ? 1 : -1));
 
     return {
@@ -311,18 +343,20 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
       truncated: fromBlock > 0n,
       issuers,
       totalIssuances: issuers.reduce((s, i) => s + i.count, 0),
+      unavailable: false,
     };
   } catch {
-    return emptyIssuanceLog();
+    return emptyIssuanceLog(true);
   }
 }
 
-function emptyIssuanceLog(): IssuanceLog {
+function emptyIssuanceLog(unavailable = false): IssuanceLog {
   return {
     blockRange: { from: 0n, to: 0n },
     truncated: false,
     issuers: [],
     totalIssuances: 0,
+    unavailable,
   };
 }
 
@@ -335,7 +369,7 @@ function emptyIssuanceLog(): IssuanceLog {
  */
 export async function readCapabilityHistory(
   subject: string,
-  opts?: { fromBlock?: bigint; toBlock?: bigint }
+  opts?: { fromBlock?: bigint; toBlock?: bigint },
 ): Promise<CapabilityChange[]> {
   try {
     const ctx = (adapter() as any).ctx;
@@ -345,7 +379,8 @@ export async function readCapabilityHistory(
     if (!credRegHash) return [];
 
     const latestBlock = await rpc.getLatestBlockInfo();
-    const head = opts?.toBlock ?? BigInt((latestBlock as any)?.block?.header?.height ?? 0);
+    const head =
+      opts?.toBlock ?? BigInt((latestBlock as any)?.block?.header?.height ?? 0);
     const SPAN = 200n;
     const fromBlock = opts?.fromBlock ?? (head > SPAN ? head - SPAN : 0n);
 
@@ -358,7 +393,7 @@ export async function readCapabilityHistory(
       const batch: Promise<any[]>[] = [];
       for (let i = 0; i < BATCH && b + BigInt(i) <= head; i++) {
         batch.push(
-          rpc.getBlockByHeight(Number(b + BigInt(i))).catch(() => null)
+          rpc.getBlockByHeight(Number(b + BigInt(i))).catch(() => null),
         );
       }
       const blocks = await Promise.all(batch);
@@ -377,11 +412,21 @@ export async function readCapabilityHistory(
             if (entryPoint !== "issue" && entryPoint !== "revoke") continue;
 
             const target = tx.target;
-            const targetHash = typeof target === "object" ? target.hash : target;
-            const normalizedTarget = String(targetHash ?? "").replace(/^hash-/, "").replace(/^contract-package-/, "").replace(/^0x/, "");
-            const normalizedCredReg = credRegHash.replace(/^hash-/, "").replace(/^contract-package-/, "").replace(/^0x/, "");
+            const targetHash =
+              typeof target === "object" ? target.hash : target;
+            const normalizedTarget = String(targetHash ?? "")
+              .replace(/^hash-/, "")
+              .replace(/^contract-package-/, "")
+              .replace(/^0x/, "");
+            const normalizedCredReg = credRegHash
+              .replace(/^hash-/, "")
+              .replace(/^contract-package-/, "")
+              .replace(/^0x/, "");
 
-            if (normalizedTarget.toLowerCase() !== normalizedCredReg.toLowerCase()) continue;
+            if (
+              normalizedTarget.toLowerCase() !== normalizedCredReg.toLowerCase()
+            )
+              continue;
 
             // Check if subject matches
             const args = tx.args;
@@ -393,7 +438,8 @@ export async function readCapabilityHistory(
             if (args instanceof Map) {
               const subjectArg = args.get("subject");
               if (subjectArg) {
-                const data = subjectArg.value?.data ?? subjectArg.data ?? subjectArg;
+                const data =
+                  subjectArg.value?.data ?? subjectArg.data ?? subjectArg;
                 if (data instanceof Uint8Array) subjectBytes = data;
               }
               const capArg = args.get("capability_hash");
@@ -405,10 +451,15 @@ export async function readCapabilityHistory(
 
             if (!subjectBytes || !capHashBytes) continue;
 
-            const subjectHex = Array.from(subjectBytes).map((b: number) => b.toString(16).padStart(2, "0")).join("");
+            const subjectHex = Array.from(subjectBytes)
+              .map((b: number) => b.toString(16).padStart(2, "0"))
+              .join("");
             if (subjectHex.toLowerCase() !== subjectLower) continue;
 
-            const capHashHex = "0x" + Array.from(capHashBytes).map((b: number) => b.toString(16).padStart(2, "0")).join("") as Hex;
+            const capHashHex = ("0x" +
+              Array.from(capHashBytes)
+                .map((b: number) => b.toString(16).padStart(2, "0"))
+                .join("")) as Hex;
             const blockNum = BigInt(block.header.height);
 
             changes.push({
@@ -425,7 +476,13 @@ export async function readCapabilityHistory(
       }
     }
 
-    return changes.sort((a, b) => (b.blockNumber > a.blockNumber ? 1 : b.blockNumber < a.blockNumber ? -1 : b.logIndex - a.logIndex));
+    return changes.sort((a, b) =>
+      b.blockNumber > a.blockNumber
+        ? 1
+        : b.blockNumber < a.blockNumber
+          ? -1
+          : b.logIndex - a.logIndex,
+    );
   } catch {
     return [];
   }
@@ -438,7 +495,9 @@ export function isCasperAccountHash(value: string): boolean {
 }
 
 export function isCasperPublicKey(value: string): boolean {
-  return /^0[12][a-f0-9]{64}$/.test(value) || /^0x0[12][a-f0-9]{64}$/.test(value);
+  return (
+    /^0[12][a-f0-9]{64}$/.test(value) || /^0x0[12][a-f0-9]{64}$/.test(value)
+  );
 }
 
 export function isCasperAddress(value: string): boolean {

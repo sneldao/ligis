@@ -18,16 +18,43 @@ type State = {
   reasonModel?: string;
   reasonVerified?: boolean;
   reasonSource?: "0g" | "local";
-  capabilities: Array<{ name: string; capable: boolean; selfIssued: boolean; issueTxHash?: string }>;
+  capabilities: Array<{
+    name: string;
+    capable: boolean;
+    selfIssued: boolean;
+    issueTxHash?: string;
+  }>;
   txs: Array<{ name: string; txHash: string }>;
-  manifest: { rootHash: string; anchorTx: string; storageType: string; tokenUri: string; storageTxHash?: string } | null;
-  summary: { ok: boolean; tokenId?: string; gated?: boolean; live: boolean; rpcCalls?: number; subject?: string; minted?: boolean; model?: string; source?: "0g" | "local" } | null;
+  manifest: {
+    rootHash: string;
+    anchorTx: string;
+    storageType: string;
+    tokenUri: string;
+    storageTxHash?: string;
+  } | null;
+  summary: {
+    ok: boolean;
+    tokenId?: string;
+    gated?: boolean;
+    live: boolean;
+    rpcCalls?: number;
+    subject?: string;
+    minted?: boolean;
+    model?: string;
+    source?: "0g" | "local";
+  } | null;
   error: string | null;
   events: StewardEvent[];
 };
 
 const EMPTY: State = {
-  phaseStatus: { BOOT: "idle", REASON: "idle", GATE: "idle", ACT: "idle", RECORD: "idle" },
+  phaseStatus: {
+    BOOT: "idle",
+    REASON: "idle",
+    GATE: "idle",
+    ACT: "idle",
+    RECORD: "idle",
+  },
   reasonText: "",
   capabilities: [],
   txs: [],
@@ -44,10 +71,19 @@ function apply(state: State, ev: StewardEvent): State {
   };
   switch (ev.type) {
     case "phase":
-      next.phaseStatus = { ...state.phaseStatus, [ev.phase]: ev.status === "start" ? "running" : ev.status };
+      next.phaseStatus = {
+        ...state.phaseStatus,
+        [ev.phase]: ev.status === "start" ? "running" : ev.status,
+      };
       break;
     case "boot":
-      next.summary = { ok: true, tokenId: ev.tokenId, live: false, subject: ev.subject, minted: ev.minted };
+      next.summary = {
+        ok: true,
+        tokenId: ev.tokenId,
+        live: false,
+        subject: ev.subject,
+        minted: ev.minted,
+      };
       break;
     case "delta":
       next.reasonText = state.reasonText + ev.text;
@@ -57,9 +93,16 @@ function apply(state: State, ev: StewardEvent): State {
       break;
     case "capability": {
       const existing = state.capabilities.findIndex((c) => c.name === ev.name);
-      const entry = { name: ev.name, capable: ev.capable, selfIssued: ev.selfIssued, issueTxHash: ev.issueTxHash };
+      const entry = {
+        name: ev.name,
+        capable: ev.capable,
+        selfIssued: ev.selfIssued,
+        issueTxHash: ev.issueTxHash,
+      };
       if (existing >= 0) {
-        next.capabilities = state.capabilities.map((c, i) => i === existing ? entry : c);
+        next.capabilities = state.capabilities.map((c, i) =>
+          i === existing ? entry : c,
+        );
       } else {
         next.capabilities = [...state.capabilities, entry];
       }
@@ -69,10 +112,26 @@ function apply(state: State, ev: StewardEvent): State {
       next.txs = [...state.txs, { name: ev.name, txHash: ev.txHash }];
       break;
     case "manifest":
-      next.manifest = { rootHash: ev.rootHash, anchorTx: ev.anchorTx, storageType: ev.storageType, tokenUri: ev.tokenUri, storageTxHash: ev.storageTxHash };
+      next.manifest = {
+        rootHash: ev.rootHash,
+        anchorTx: ev.anchorTx,
+        storageType: ev.storageType,
+        tokenUri: ev.tokenUri,
+        storageTxHash: ev.storageTxHash,
+      };
       break;
     case "summary":
-      next.summary = { ok: ev.ok, tokenId: ev.tokenId, gated: ev.gated, live: ev.live, rpcCalls: ev.rpcCalls, subject: ev.subject, minted: next.summary?.minted, model: ev.model, source: ev.source };
+      next.summary = {
+        ok: ev.ok,
+        tokenId: ev.tokenId,
+        gated: ev.gated,
+        live: ev.live,
+        rpcCalls: ev.rpcCalls,
+        subject: ev.subject,
+        minted: next.summary?.minted,
+        model: ev.model,
+        source: ev.source,
+      };
       break;
     case "error":
       next.error = ev.message;
@@ -133,13 +192,32 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     const chainParam = searchParams.get("chain") ?? "casper-testnet";
     const activeChain = CHAINS.find((c) => c.id === chainParam) ?? CHAINS[0]!;
 
+    // Honest failure instead of a 400 from the API: the loop has no Monad
+    // implementation, and running it against Pharos under a Monad label would
+    // misreport which chain produced the transactions.
+    if (!activeChain.writeReady) {
+      setState((s) => ({
+        ...s,
+        error: `${activeChain.name} is read-only here. The steward loop writes on-chain for ${CHAINS.filter(
+          (c) => c.writeReady,
+        )
+          .map((c) => c.name)
+          .join(" and ")}.`,
+      }));
+      setRunning(false);
+      return;
+    }
+
     // Browser-side Casper path: user-connected wallet signs + submits
     // directly via the stateless /api/casper-rpc proxy. No server
     // custodian, no signing relayer — the user funds their own wallet.
     if (activeChain.id === CASPER_TESTNET.id && live && wallet.pair) {
       try {
-        const configRes = await fetch("/api/casper-config", { cache: "no-store" });
-        if (!configRes.ok) throw new Error(`casper-config HTTP ${configRes.status}`);
+        const configRes = await fetch("/api/casper-config", {
+          cache: "no-store",
+        });
+        if (!configRes.ok)
+          throw new Error(`casper-config HTTP ${configRes.status}`);
         const cfg = (await configRes.json()) as {
           chainName: string;
           agentIdPackageHash: string | null;
@@ -156,9 +234,13 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
           agentIdPackageHash: cfg.agentIdPackageHash,
           credentialRegistryPackageHash: cfg.credentialRegistryPackageHash,
         };
-        const { stewardLoopBrowser } = await import("@/lib/casper-browser/steward");
+        const { stewardLoopBrowser } =
+          await import("@/lib/casper-browser/steward");
         let acc = EMPTY;
-        for await (const ev of stewardLoopBrowser(goal, { env, signer: wallet.pair })) {
+        for await (const ev of stewardLoopBrowser(goal, {
+          env,
+          signer: wallet.pair,
+        })) {
           if (controller.signal.aborted) break;
           acc = apply(acc, ev as StewardEvent);
           setState(acc);
@@ -225,21 +307,29 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     lines.push(`Agent: ${state.summary.subject ?? "unknown"}`);
     lines.push(`Token: #${state.summary.tokenId ?? "?"}`);
     lines.push(`Mode: ${state.summary.live ? "live on-chain" : "simulated"}`);
-    if (state.summary.model) lines.push(`Reasoning: ${state.summary.model} (${state.summary.source === "0g" ? "0G Compute · TEE-verified" : "local"})`);
+    if (state.summary.model)
+      lines.push(
+        `Reasoning: ${state.summary.model} (${state.summary.source === "0g" ? "0G Compute · TEE-verified" : "local"})`,
+      );
     lines.push(`Gated: ${state.summary.gated ? "yes" : "no"}`);
     lines.push(`Capabilities:`);
     for (const c of state.capabilities) {
-      lines.push(`  ${c.name}: ${c.capable ? "held" : "not held"}${c.selfIssued ? " (self-issued)" : ""}${c.issueTxHash ? ` tx:${c.issueTxHash}` : ""}`);
+      lines.push(
+        `  ${c.name}: ${c.capable ? "held" : "not held"}${c.selfIssued ? " (self-issued)" : ""}${c.issueTxHash ? ` tx:${c.issueTxHash}` : ""}`,
+      );
     }
     if (state.txs.length > 0) {
       lines.push(`Transactions:`);
       for (const t of state.txs) lines.push(`  ${t.name}: ${t.txHash}`);
     }
     if (state.manifest) {
-      lines.push(`Evidence: ${state.manifest.storageType === "0g" ? "0G Storage" : "local hash"}`);
+      lines.push(
+        `Evidence: ${state.manifest.storageType === "0g" ? "0G Storage" : "local hash"}`,
+      );
       lines.push(`  Root: ${state.manifest.rootHash}`);
       lines.push(`  Anchor: ${state.manifest.anchorTx}`);
-      if (state.manifest.storageTxHash) lines.push(`  0G Upload: ${state.manifest.storageTxHash}`);
+      if (state.manifest.storageTxHash)
+        lines.push(`  0G Upload: ${state.manifest.storageTxHash}`);
     }
     navigator.clipboard.writeText(lines.join("\n"));
     setCopied(true);
@@ -247,7 +337,10 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   }, [state.summary, state.capabilities, state.txs, state.manifest]);
 
   const eventCount = state.events.length;
-  const jsonPanel = useMemo(() => JSON.stringify(state.events, null, 2), [state.events]);
+  const jsonPanel = useMemo(
+    () => JSON.stringify(state.events, null, 2),
+    [state.events],
+  );
 
   const thought = useMemo(() => {
     const ps = state.phaseStatus;
@@ -260,26 +353,36 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
       const s = ps[phase];
       if (s === "running" || s === "done") {
         if (phase === "BOOT") {
-          if (s === "running") return "Searching the registry for my agent token…";
-          return tokenId ? `I'm token #${tokenId}. I exist on-chain. Now — what am I for?` : "I exist on-chain. Now — what am I for?";
+          if (s === "running")
+            return "Searching the registry for my agent token…";
+          return tokenId
+            ? `I'm token #${tokenId}. I exist on-chain. Now — what am I for?`
+            : "I exist on-chain. Now — what am I for?";
         }
         if (phase === "REASON") {
-          if (s === "running") return "Sending my goal to 0G Compute. What capabilities does this require?";
-          return caps.length > 0 ? `I need ${caps.map((c) => c.name.split(".").pop()).join(" and ")}. Let me check what I already hold.` : "I know what I need. Let me check what I already hold.";
+          if (s === "running")
+            return "Sending my goal to 0G Compute. What capabilities does this require?";
+          return caps.length > 0
+            ? `I need ${caps.map((c) => c.name.split(".").pop()).join(" and ")}. Let me check what I already hold.`
+            : "I know what I need. Let me check what I already hold.";
         }
         if (phase === "GATE") {
-          if (s === "running") return "Checking the credential registry — what do I have, what's missing?";
-          if (missing.length === 0) return "I hold everything I need. I'm ready.";
+          if (s === "running")
+            return "Checking the credential registry — what do I have, what's missing?";
+          if (missing.length === 0)
+            return "I hold everything I need. I'm ready.";
           const heldShort = held.map((n) => n.split(".").pop());
           const missingShort = missing.map((n) => n.split(".").pop());
           return `I hold ${held.length > 0 ? heldShort.join(", ") : "nothing"}, but ${missingShort.join(" and ")} ${missing.length === 1 ? "is" : "are"} missing. I know what I need.`;
         }
         if (phase === "ACT") {
-          if (s === "running") return "Self-issuing the missing credential. I don't need permission — I'm authorized.";
+          if (s === "running")
+            return "Self-issuing the missing credential. I don't need permission — I'm authorized.";
           return "Credential issued and on-chain. I have everything I need.";
         }
         if (phase === "RECORD") {
-          if (s === "running") return "Writing my evidence manifest to 0G Storage — goal, reasoning, every tx hash.";
+          if (s === "running")
+            return "Writing my evidence manifest to 0G Storage — goal, reasoning, every tx hash.";
           return "I know who I am, what I can do, and I can prove both.";
         }
       }
@@ -296,7 +399,9 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <span className="eyebrow">agent readiness</span>
-            <span className="font-mono text-[11px] tabular text-ink-soft">{readiness}%</span>
+            <span className="font-mono text-[11px] tabular text-ink-soft">
+              {readiness}%
+            </span>
           </div>
           <div className="h-[3px] w-full bg-rule">
             <div
@@ -359,7 +464,13 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
             </button>
             {live && state.summary?.subject ? (
               <span className="font-mono text-[10px] tabular text-ink-soft">
-                steward · <Link href={`/agent/${state.summary.subject}`} className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra">{truncateAddress(state.summary.subject, 6, 4)}</Link>
+                steward ·{" "}
+                <Link
+                  href={`/agent/${state.summary.subject}`}
+                  className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+                >
+                  {truncateAddress(state.summary.subject, 6, 4)}
+                </Link>
               </span>
             ) : null}
           </div>
@@ -382,7 +493,17 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
             >
               {running ? (
                 <>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="spinner">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    aria-hidden
+                    className="spinner"
+                  >
                     <path d="M6 1.5 A4.5 4.5 0 0 1 10.5 6" />
                   </svg>
                   running…
@@ -439,7 +560,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                 </div>
               ) : null}
 
-      {p.key === "GATE" && state.capabilities.length > 0 ? (
+              {p.key === "GATE" && state.capabilities.length > 0 ? (
                 <CapabilityLedger
                   capabilities={state.capabilities}
                   gateDone={state.phaseStatus.GATE === "done"}
@@ -448,11 +569,17 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
               ) : null}
 
               {p.key === "ACT" && state.txs.length > 0 ? (
-                <TransactionLog txs={state.txs} explorerUrl={network.explorerUrl} />
+                <TransactionLog
+                  txs={state.txs}
+                  explorerUrl={network.explorerUrl}
+                />
               ) : null}
 
               {p.key === "RECORD" && state.manifest ? (
-                <ManifestSummary manifest={state.manifest} explorerUrl={network.explorerUrl} />
+                <ManifestSummary
+                  manifest={state.manifest}
+                  explorerUrl={network.explorerUrl}
+                />
               ) : null}
             </PhaseRow>
           );
@@ -470,7 +597,9 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
         <section className="space-y-3">
           <p className="eyebrow">error</p>
           <Rule />
-          <p className="font-serif text-base italic text-revoke">{state.error}</p>
+          <p className="font-serif text-base italic text-revoke">
+            {state.error}
+          </p>
           {!running ? (
             <button
               type="button"
@@ -542,41 +671,70 @@ function StewardSummary({
     <section className="space-y-5 border-l-2 border-sage pl-6">
       <p className="eyebrow text-sage">what just happened</p>
       <dl className="grid grid-cols-[6.5rem_1fr] gap-x-6 border-t border-rule divide-y divide-rule">
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">subject</dt>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+          subject
+        </dt>
         <dd className="pt-3 font-mono tabular text-ink">
           {state.summary.subject ? (
-            <Link href={`/agent/${state.summary.subject}`} className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 hover:decoration-terra">
+            <Link
+              href={`/agent/${state.summary.subject}`}
+              className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 hover:decoration-terra"
+            >
               {truncateAddress(state.summary.subject, 6, 4)}
             </Link>
           ) : (
             "unknown"
           )}
         </dd>
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">token</dt>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+          token
+        </dt>
         <dd className="pt-3 font-mono tabular text-ink">
-          #{state.summary.tokenId ?? "?"} · {state.summary.minted ? "minted" : "found"}
+          #{state.summary.tokenId ?? "?"} ·{" "}
+          {state.summary.minted ? "minted" : "found"}
         </dd>
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">reasoning</dt>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+          reasoning
+        </dt>
         <dd className="pt-3 font-mono tabular text-ink">
-          {state.summary.model ?? "—"} · {state.summary.source === "0g" ? "0G Compute · TEE-verified" : "local keyword match"}
+          {state.summary.model ?? "—"} ·{" "}
+          {state.summary.source === "0g"
+            ? "0G Compute · TEE-verified"
+            : "local keyword match"}
         </dd>
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">capabilities</dt>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+          capabilities
+        </dt>
         <dd className="pt-3 font-mono tabular text-ink">
-          {state.capabilities.length} required · {state.capabilities.filter((c) => c.capable).length} held · {state.txs.length} self-issued
+          {state.capabilities.length} required ·{" "}
+          {state.capabilities.filter((c) => c.capable).length} held ·{" "}
+          {state.txs.length} self-issued
         </dd>
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">gated</dt>
-        <dd className="pt-3 font-mono tabular text-ink">{state.summary.gated ? "yes" : "no"}</dd>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+          gated
+        </dt>
+        <dd className="pt-3 font-mono tabular text-ink">
+          {state.summary.gated ? "yes" : "no"}
+        </dd>
         {state.manifest ? (
           <>
-            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">evidence</dt>
+            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              evidence
+            </dt>
             <dd className="pt-3 font-mono tabular text-ink">
-              {state.manifest.storageType === "0g" ? "0G Storage" : "local hash"} · root {truncateHash(state.manifest.rootHash, 10, 6)}
+              {state.manifest.storageType === "0g"
+                ? "0G Storage"
+                : "local hash"}{" "}
+              · root {truncateHash(state.manifest.rootHash, 10, 6)}
             </dd>
           </>
         ) : null}
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">txs</dt>
+        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+          txs
+        </dt>
         <dd className="pt-3 font-mono tabular text-ink">
-          {state.txs.length + (state.manifest?.storageTxHash ? 1 : 0) + 1} on-chain
+          {state.txs.length + (state.manifest?.storageTxHash ? 1 : 0) + 1}{" "}
+          on-chain
         </dd>
       </dl>
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
@@ -607,7 +765,9 @@ function StewardSummary({
         ) : null}
       </div>
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-xs">
-        <span className={`font-mono tabular ${state.summary.live ? "text-sage" : "text-ink-quiet"}`}>
+        <span
+          className={`font-mono tabular ${state.summary.live ? "text-sage" : "text-ink-quiet"}`}
+        >
           {state.summary.live ? "● live on-chain" : "○ simulated"}
         </span>
         {state.summary.gated !== undefined ? (
@@ -644,7 +804,10 @@ function StewardDeveloperChrome({
   setShowEvents: (updater: (v: boolean) => boolean) => void;
 }) {
   const eventCount = state.events.length;
-  const jsonPanel = useMemo(() => JSON.stringify(state.events, null, 2), [state.events]);
+  const jsonPanel = useMemo(
+    () => JSON.stringify(state.events, null, 2),
+    [state.events],
+  );
 
   return (
     <section className="space-y-6 border-t border-rule pt-8">
@@ -711,7 +874,9 @@ function StewardDeveloperChrome({
         </button>
         {showEvents ? (
           <pre className="max-h-72 overflow-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink">
-            {eventCount === 0 ? "// Run the loop to populate the stream." : jsonPanel}
+            {eventCount === 0
+              ? "// Run the loop to populate the stream."
+              : jsonPanel}
           </pre>
         ) : null}
       </div>
@@ -733,13 +898,18 @@ function CapabilityLedger({
       {capabilities.map((c) => (
         <div key={c.name}>
           <div className="grid grid-cols-[auto_1fr_auto_auto] items-baseline gap-x-4 py-3 text-sm">
-            <span className={`text-base ${c.capable ? "text-sage" : "text-ink-quiet"}`} aria-hidden>
+            <span
+              className={`text-base ${c.capable ? "text-sage" : "text-ink-quiet"}`}
+              aria-hidden
+            >
               {c.capable ? "✓" : "✕"}
             </span>
             <div className="space-y-0.5">
               <span className="font-mono tabular text-ink">{c.name}</span>
               {c.selfIssued ? (
-                <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.12em] text-terra">self-issued</span>
+                <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.12em] text-terra">
+                  self-issued
+                </span>
               ) : null}
             </div>
             <span
@@ -757,7 +927,9 @@ function CapabilityLedger({
                 >
                   {truncateHash(c.issueTxHash, 8, 6)}
                 </a>
-              ) : ""}
+              ) : (
+                ""
+              )}
             </span>
           </div>
           <Rule tone="soft" />
@@ -765,7 +937,8 @@ function CapabilityLedger({
       ))}
       {gateDone ? (
         <p className="pt-3 font-mono text-[11px] tabular text-ink-quiet">
-          {capabilities.filter((c) => c.capable).length} held · {capabilities.filter((c) => !c.capable).length} missing
+          {capabilities.filter((c) => c.capable).length} held ·{" "}
+          {capabilities.filter((c) => !c.capable).length} missing
         </p>
       ) : null}
     </div>
@@ -784,9 +957,7 @@ function TransactionLog({
       {txs.map((t) => (
         <div key={t.txHash}>
           <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
-            <span className="font-mono tabular text-ink">
-              issued {t.name}
-            </span>
+            <span className="font-mono tabular text-ink">issued {t.name}</span>
             <a
               href={`${explorerUrl}/tx/${t.txHash}`}
               target="_blank"
@@ -901,7 +1072,9 @@ function PhaseRow({
       </div>
       <div className="space-y-3" key={statusKey}>
         <header className="flex items-baseline justify-between">
-          <p className={`text-[11px] uppercase tracking-[0.16em] ${indexColor}`}>
+          <p
+            className={`text-[11px] uppercase tracking-[0.16em] ${indexColor}`}
+          >
             {String(index).padStart(2, "0")} · {phase.label}
           </p>
           <span className="font-mono text-[11px] tabular text-ink-quiet">
@@ -909,7 +1082,9 @@ function PhaseRow({
           </span>
         </header>
         <Rule />
-        <p className={`font-serif text-sm italic transition-colors duration-500 ${status === "running" ? "text-terra" : status === "done" ? "text-sage" : "text-ink-quiet"}`}>
+        <p
+          className={`font-serif text-sm italic transition-colors duration-500 ${status === "running" ? "text-terra" : status === "done" ? "text-sage" : "text-ink-quiet"}`}
+        >
           {phase.gloss}.
         </p>
         {status !== "idle" ? (

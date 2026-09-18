@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { stewardLoop } from "@/lib/steward";
 import { stewardLoopCasper } from "@/lib/steward-casper";
+import { CHAINS, chainById, isWriteReadyChain } from "@/lib/network";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,17 +11,33 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: "Invalid JSON body" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
   const goal = (body.goal ?? "").trim() || "Operate as a Pharos agent.";
   const live = body.live === true;
   const chain = body.chain ?? "casper-testnet";
-  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const clientIp =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
-  const isCasper = chain === "casper-testnet";
+  // The steward loop is implemented for Casper and Pharos only. Refuse other
+  // chains rather than silently running the loop against Pharos.
+  const chainConfig = chainById(chain);
+  if (!chainConfig || !isWriteReadyChain(chainConfig)) {
+    const writable = CHAINS.filter(isWriteReadyChain)
+      .map((c) => c.id)
+      .join(", ");
+    return new Response(
+      JSON.stringify({
+        error: `The steward loop cannot run on "${chain}" yet. Writes are wired for ${writable}.`,
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const isCasper = chainConfig.id === "casper-testnet";
   const enc = (event: any): Uint8Array =>
     new TextEncoder().encode(JSON.stringify(event) + "\n");
 
@@ -35,14 +52,17 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        const retryable = msg.includes("timeout") || msg.includes("network") || msg.includes("fetch");
+        const retryable =
+          msg.includes("timeout") ||
+          msg.includes("network") ||
+          msg.includes("fetch");
         console.error("[steward API] Error:", msg);
         controller.enqueue(
           enc({
             type: "error",
             message: msg,
             retryable,
-          })
+          }),
         );
       } finally {
         controller.close();

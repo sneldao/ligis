@@ -6,51 +6,157 @@ import {
   type Address,
   type Hex,
 } from "viem";
-import { PHAROS_AGENT_ID_ABI, CREDENTIAL_REGISTRY_ABI } from "@ligis/adapter-evm";
+import {
+  PHAROS_AGENT_ID_ABI,
+  CREDENTIAL_REGISTRY_ABI,
+} from "@ligis/adapter-evm";
 import networks from "../../assets/networks.json";
 import credentialsRef from "../../assets/credentials.example.json";
 
-const atlantic = networks.networks["atlantic-testnet"];
-const deployment = networks.deployment["atlantic-testnet"];
+/** EVM network slug used when a caller does not name one explicitly. */
+export const DEFAULT_EVM_NETWORK = "atlantic-testnet";
 
-const RPC_URL = process.env.PHAROS_RPC_URL ?? atlantic.rpcUrl;
-if (!RPC_URL) {
-  console.warn("[ligis] No PHAROS_RPC_URL set and no fallback in networks.json — chain reads will fail.");
+/** Shape of the network/deployment records read from assets/networks.json. */
+type NetworkRecord = {
+  name: string;
+  chainId: number;
+  rpcUrl: string;
+  explorerUrl: string;
+  nativeToken: { symbol: string; name: string; decimals: number };
+};
+type DeploymentRecord = {
+  pharosAgentId: string;
+  credentialRegistry: string;
+  chainId: number;
+  deployer: string;
+  deployedAt: string;
+};
+type NetworksConfig = {
+  networks: Record<string, NetworkRecord>;
+  deployment: Record<string, DeploymentRecord>;
+};
+
+const config = networks as unknown as NetworksConfig;
+
+/**
+ * Per-network RPC overrides, keyed by network so one global override can never
+ * point two chains at the same endpoint.
+ */
+const RPC_OVERRIDES: Record<string, string | undefined> = {
+  "atlantic-testnet": process.env.PHAROS_RPC_URL,
+  "monad-testnet": process.env.LIGIS_MONAD_RPC_URL,
+};
+
+/**
+ * Event-history limits, per network.
+ *
+ * `LOG_CHUNK` is the largest block range the network's public RPC accepts in a
+ * single `eth_getLogs` call — exceeding it is an error, not a partial result.
+ * `LOG_REQUESTS` caps how many calls a page render will make, so the scan
+ * window is `LOG_CHUNK * LOG_REQUESTS` blocks, newest first.
+ */
+const LOG_CHUNK: Record<string, bigint> = {
+  // Measured limit: 1000 blocks inclusive. 200k was requested historically and
+  // silently failed, which is why issuer history looked permanently empty.
+  "atlantic-testnet": 1_000n,
+  "monad-testnet": 20_000n,
+};
+
+const LOG_REQUESTS: Record<string, number> = {
+  "atlantic-testnet": 25,
+  "monad-testnet": 8,
+};
+
+export type EvmReadContext = {
+  networkId: string;
+  chain: ReturnType<typeof defineChain>;
+  client: ReturnType<typeof createPublicClient>;
+  addresses: { pharosAgentId: Address; credentialRegistry: Address };
+  explorerUrl: string;
+  rpcUrl: string;
+};
+
+const contexts = new Map<string, EvmReadContext>();
+
+/** Network slugs that have both a network entry and a recorded deployment. */
+export function evmNetworkIds(): string[] {
+  return Object.keys(config.deployment).filter((id) =>
+    Boolean(config.networks[id]),
+  );
 }
 
-export const pharosAtlantic = defineChain({
-  id: atlantic.chainId,
-  name: atlantic.name,
-  nativeCurrency: {
-    name: atlantic.nativeToken.name,
-    symbol: atlantic.nativeToken.symbol,
-    decimals: atlantic.nativeToken.decimals,
-  },
-  rpcUrls: {
-    default: { http: [atlantic.rpcUrl] },
-  },
-  blockExplorers: {
-    default: { name: "PharosScan", url: atlantic.explorerUrl },
-  },
-});
+export function hasEvmDeployment(networkId: string): boolean {
+  return Boolean(config.networks[networkId] && config.deployment[networkId]);
+}
 
-export const publicClient = createPublicClient({
-  chain: pharosAtlantic,
-  transport: http(RPC_URL, {
-    retryCount: 3,
-    timeout: 20_000,
-  }),
-});
+/**
+ * Build (and memoize) the read context for a network. Throws when the network
+ * has no recorded deployment, so a read can never silently fall through to
+ * another chain's contracts.
+ */
+export function getEvmReadContext(
+  networkId: string = DEFAULT_EVM_NETWORK,
+): EvmReadContext {
+  const cached = contexts.get(networkId);
+  if (cached) return cached;
 
-export const addresses = {
-  pharosAgentId: deployment.pharosAgentId as Address,
-  credentialRegistry: deployment.credentialRegistry as Address,
-};
+  const net = config.networks[networkId];
+  const dep = config.deployment[networkId];
+  if (!net || !dep) {
+    throw new Error(`No EVM network/deployment configured for "${networkId}".`);
+  }
+
+  const rpcUrl = RPC_OVERRIDES[networkId] ?? net.rpcUrl;
+  const chain = defineChain({
+    id: net.chainId,
+    name: net.name,
+    nativeCurrency: {
+      name: net.nativeToken.name,
+      symbol: net.nativeToken.symbol,
+      decimals: net.nativeToken.decimals,
+    },
+    rpcUrls: { default: { http: [rpcUrl] } },
+    blockExplorers: {
+      default: { name: net.name, url: net.explorerUrl },
+    },
+  });
+
+  const ctx: EvmReadContext = {
+    networkId,
+    chain,
+    client: createPublicClient({
+      chain,
+      transport: http(rpcUrl, { retryCount: 3, timeout: 20_000 }),
+    }),
+    addresses: {
+      pharosAgentId: dep.pharosAgentId as Address,
+      credentialRegistry: dep.credentialRegistry as Address,
+    },
+    explorerUrl: net.explorerUrl,
+    rpcUrl,
+  };
+  contexts.set(networkId, ctx);
+  return ctx;
+}
+
+/*
+ * Legacy Pharos-bound exports. The Trust Steward and a few editorial surfaces
+ * are Pharos-specific by design; everything chain-selectable goes through
+ * `chain-router.ts`, which passes the selected network explicitly.
+ */
+const defaultContext = getEvmReadContext(DEFAULT_EVM_NETWORK);
+export const pharosAtlantic = defaultContext.chain;
+export const publicClient = defaultContext.client;
+export const addresses = defaultContext.addresses;
 
 export { network } from "./network";
 
-export async function readAgentId(wallet: Address): Promise<bigint> {
-  return (await publicClient.readContract({
+export async function readAgentId(
+  wallet: Address,
+  networkId: string = DEFAULT_EVM_NETWORK,
+): Promise<bigint> {
+  const { client, addresses } = getEvmReadContext(networkId);
+  return (await client.readContract({
     address: addresses.pharosAgentId,
     abi: PHAROS_AGENT_ID_ABI,
     functionName: "walletOfAgent",
@@ -58,8 +164,12 @@ export async function readAgentId(wallet: Address): Promise<bigint> {
   })) as bigint;
 }
 
-export async function readOwnerOf(tokenId: bigint): Promise<Address> {
-  return (await publicClient.readContract({
+export async function readOwnerOf(
+  tokenId: bigint,
+  networkId: string = DEFAULT_EVM_NETWORK,
+): Promise<Address> {
+  const { client, addresses } = getEvmReadContext(networkId);
+  return (await client.readContract({
     address: addresses.pharosAgentId,
     abi: PHAROS_AGENT_ID_ABI,
     functionName: "ownerOf",
@@ -67,8 +177,11 @@ export async function readOwnerOf(tokenId: bigint): Promise<Address> {
   })) as Address;
 }
 
-export async function readTotalSupply(): Promise<bigint> {
-  return (await publicClient.readContract({
+export async function readTotalSupply(
+  networkId: string = DEFAULT_EVM_NETWORK,
+): Promise<bigint> {
+  const { client, addresses } = getEvmReadContext(networkId);
+  return (await client.readContract({
     address: addresses.pharosAgentId,
     abi: PHAROS_AGENT_ID_ABI,
     functionName: "totalSupply",
@@ -76,15 +189,20 @@ export async function readTotalSupply(): Promise<bigint> {
   })) as bigint;
 }
 
-export async function readBlockNumber(): Promise<bigint> {
-  return await publicClient.getBlockNumber();
+export async function readBlockNumber(
+  networkId: string = DEFAULT_EVM_NETWORK,
+): Promise<bigint> {
+  const { client } = getEvmReadContext(networkId);
+  return await client.getBlockNumber();
 }
 
 export async function isCapable(
   subject: Address,
-  capabilityHash: Hex
+  capabilityHash: Hex,
+  networkId: string = DEFAULT_EVM_NETWORK,
 ): Promise<boolean> {
-  return (await publicClient.readContract({
+  const { client, addresses } = getEvmReadContext(networkId);
+  return (await client.readContract({
     address: addresses.credentialRegistry,
     abi: CREDENTIAL_REGISTRY_ABI,
     functionName: "isCapable",
@@ -94,9 +212,11 @@ export async function isCapable(
 
 export async function isCapableMulti(
   subject: Address,
-  capabilityHashes: readonly Hex[]
+  capabilityHashes: readonly Hex[],
+  networkId: string = DEFAULT_EVM_NETWORK,
 ): Promise<boolean[]> {
-  return (await publicClient.readContract({
+  const { client, addresses } = getEvmReadContext(networkId);
+  return (await client.readContract({
     address: addresses.credentialRegistry,
     abi: CREDENTIAL_REGISTRY_ABI,
     functionName: "isCapableMulti",
@@ -104,8 +224,12 @@ export async function isCapableMulti(
   })) as boolean[];
 }
 
-export async function readTokenUri(tokenId: bigint): Promise<string> {
-  return (await publicClient.readContract({
+export async function readTokenUri(
+  tokenId: bigint,
+  networkId: string = DEFAULT_EVM_NETWORK,
+): Promise<string> {
+  const { client, addresses } = getEvmReadContext(networkId);
+  return (await client.readContract({
     address: addresses.pharosAgentId,
     abi: PHAROS_AGENT_ID_ABI,
     functionName: "tokenURI",
@@ -120,14 +244,13 @@ export type CapabilityRef = {
   description: string;
 };
 
-export const capabilities: ReadonlyArray<CapabilityRef> = credentialsRef.capabilities.map(
-  (c) => ({
+export const capabilities: ReadonlyArray<CapabilityRef> =
+  credentialsRef.capabilities.map((c) => ({
     id: c.id,
     label: c.label,
     hash: c.hash as Hex,
     description: c.description,
-  })
-);
+  }));
 
 export type CredentialView = {
   issuer: Address;
@@ -144,9 +267,11 @@ export type HeldCredential = {
 
 export async function readCredential(
   subject: Address,
-  capabilityHash: Hex
+  capabilityHash: Hex,
+  networkId: string = DEFAULT_EVM_NETWORK,
 ): Promise<CredentialView> {
-  return (await publicClient.readContract({
+  const { client, addresses } = getEvmReadContext(networkId);
+  return (await client.readContract({
     address: addresses.credentialRegistry,
     abi: CREDENTIAL_REGISTRY_ABI,
     functionName: "latestCredential",
@@ -162,19 +287,32 @@ export type AgentSnapshot = {
   held: HeldCredential[];
 };
 
-export async function readAgentSnapshot(wallet: Address): Promise<AgentSnapshot> {
-  const tokenId = await readAgentId(wallet).catch(() => 0n);
+export async function readAgentSnapshot(
+  wallet: Address,
+  networkId: string = DEFAULT_EVM_NETWORK,
+): Promise<AgentSnapshot> {
+  const tokenId = await readAgentId(wallet, networkId).catch(() => 0n);
   if (tokenId === 0n) {
-    return { exists: false, tokenId: 0n, controller: null, tokenUri: "", held: [] };
+    return {
+      exists: false,
+      tokenId: 0n,
+      controller: null,
+      tokenUri: "",
+      held: [],
+    };
   }
 
   const [controller, tokenUri, capableResults, ...views] = await Promise.all([
-    readOwnerOf(tokenId).catch(() => null as Address | null),
-    readTokenUri(tokenId).catch(() => ""),
-    isCapableMulti(wallet, capabilities.map((c) => c.hash)).catch(() =>
-      capabilities.map(() => false)
+    readOwnerOf(tokenId, networkId).catch(() => null as Address | null),
+    readTokenUri(tokenId, networkId).catch(() => ""),
+    isCapableMulti(
+      wallet,
+      capabilities.map((c) => c.hash),
+      networkId,
+    ).catch(() => capabilities.map(() => false)),
+    ...capabilities.map((c) =>
+      readCredential(wallet, c.hash, networkId).catch(() => null),
     ),
-    ...capabilities.map((c) => readCredential(wallet, c.hash).catch(() => null)),
   ]);
 
   const held: HeldCredential[] = [];
@@ -206,6 +344,12 @@ export type IssuanceLog = {
   truncated: boolean;
   issuers: IssuerActivity[];
   totalIssuances: number;
+  /**
+   * True when the history read itself failed. Some RPCs (notably Monad's public
+   * endpoint) reject `eth_getLogs` outright, and "no issuers" must not be shown
+   * when the truth is "could not read".
+   */
+  unavailable: boolean;
 };
 
 const CREDENTIAL_ISSUED_EVENT = {
@@ -221,74 +365,123 @@ const CREDENTIAL_ISSUED_EVENT = {
   ],
 } as const;
 
-export async function readIssuerActivity(): Promise<IssuanceLog> {
+/** A log entry narrowed to the fields these readers actually consume. */
+type ScannedLog = {
+  args: unknown;
+  blockNumber: bigint;
+  transactionHash?: Hex;
+  logIndex: number;
+};
+
+/**
+ * Scan a block window for a registry event, newest block first, in chunks the
+ * network's public RPC will accept.
+ *
+ * Returns `null` when the first chunk fails, so callers can distinguish "no
+ * activity" from "this RPC cannot serve history at all".
+ */
+async function scanRegistryLogs(
+  networkId: string,
+  event: object,
+  args: object | undefined,
+): Promise<{ logs: ScannedLog[]; range: { from: bigint; to: bigint } } | null> {
+  const ctx = getEvmReadContext(networkId);
+  const chunk = LOG_CHUNK[networkId] ?? 1_000n;
+  const maxRequests = LOG_REQUESTS[networkId] ?? 10;
+
   try {
-    const head = await publicClient.getBlockNumber();
-    const SPAN = 200_000n;
-    const fromBlock = head > SPAN ? head - SPAN : 0n;
+    const head = await ctx.client.getBlockNumber();
+    const logs: ScannedLog[] = [];
+    let scannedFrom = head;
 
-    const logs = await publicClient.getLogs({
-      address: addresses.credentialRegistry,
-      event: CREDENTIAL_ISSUED_EVENT,
-      fromBlock,
-      toBlock: head,
-    });
+    for (let i = 0; i < maxRequests; i++) {
+      const toBlock = head - BigInt(i) * chunk;
+      if (toBlock < 0n) break;
+      const fromBlock = toBlock > chunk ? toBlock - chunk + 1n : 0n;
 
-    const tally = new Map<Address, { count: number; lastSeen: bigint }>();
-    for (const log of logs) {
-      const issuer = (log.args as { issuer?: Address }).issuer;
-      if (!issuer) continue;
-      const prev = tally.get(issuer);
-      tally.set(issuer, {
-        count: (prev?.count ?? 0) + 1,
-        lastSeen:
-          prev && prev.lastSeen > log.blockNumber ? prev.lastSeen : log.blockNumber,
-      });
+      const page = await ctx.client.getLogs({
+        address: ctx.addresses.credentialRegistry,
+        event,
+        args,
+        fromBlock,
+        toBlock,
+      } as Parameters<typeof ctx.client.getLogs>[0]);
+
+      logs.push(...(page as unknown as ScannedLog[]));
+      scannedFrom = fromBlock;
+      if (fromBlock === 0n) break;
     }
 
-    const issuers = Array.from(tally.entries())
-      .map(([issuer, v]) => ({ issuer, count: v.count, lastSeen: v.lastSeen }))
-      .sort((a, b) => b.count - a.count || (b.lastSeen > a.lastSeen ? 1 : -1));
-
-    return {
-      blockRange: { from: fromBlock, to: head },
-      truncated: fromBlock > 0n,
-      issuers,
-      totalIssuances: logs.length,
-    };
+    return { logs, range: { from: scannedFrom, to: head } };
   } catch {
+    // A rejected first call means history is not readable here at all.
+    return null;
+  }
+}
+
+export async function readIssuerActivity(
+  networkId: string = DEFAULT_EVM_NETWORK,
+): Promise<IssuanceLog> {
+  const scan = await scanRegistryLogs(
+    networkId,
+    CREDENTIAL_ISSUED_EVENT,
+    undefined,
+  );
+  if (!scan) {
     return {
       blockRange: { from: 0n, to: 0n },
       truncated: false,
       issuers: [],
       totalIssuances: 0,
+      unavailable: true,
     };
   }
+
+  const tally = new Map<Address, { count: number; lastSeen: bigint }>();
+  for (const log of scan.logs) {
+    const issuer = (log.args as { issuer?: Address }).issuer;
+    if (!issuer) continue;
+    const prev = tally.get(issuer);
+    tally.set(issuer, {
+      count: (prev?.count ?? 0) + 1,
+      lastSeen:
+        prev && prev.lastSeen > log.blockNumber
+          ? prev.lastSeen
+          : log.blockNumber,
+    });
+  }
+
+  const issuers = Array.from(tally.entries())
+    .map(([issuer, v]) => ({ issuer, count: v.count, lastSeen: v.lastSeen }))
+    .sort((a, b) => b.count - a.count || (b.lastSeen > a.lastSeen ? 1 : -1));
+
+  return {
+    blockRange: scan.range,
+    truncated: scan.range.from > 0n,
+    issuers,
+    totalIssuances: scan.logs.length,
+    unavailable: false,
+  };
 }
 
 /** Read unique agent addresses (subjects) from recent CredentialIssued events. */
-export async function readRecentSubjects(limit = 100): Promise<Address[]> {
-  try {
-    const head = await publicClient.getBlockNumber();
-    const SPAN = 200_000n;
-    const fromBlock = head > SPAN ? head - SPAN : 0n;
+export async function readRecentSubjects(
+  limit = 100,
+  networkId: string = DEFAULT_EVM_NETWORK,
+): Promise<Address[]> {
+  const scan = await scanRegistryLogs(
+    networkId,
+    CREDENTIAL_ISSUED_EVENT,
+    undefined,
+  );
+  if (!scan) return [];
 
-    const logs = await publicClient.getLogs({
-      address: addresses.credentialRegistry,
-      event: CREDENTIAL_ISSUED_EVENT,
-      fromBlock,
-      toBlock: head,
-    });
-
-    const seen = new Set<Address>();
-    for (const log of logs) {
-      const subject = (log.args as { subject?: Address }).subject;
-      if (subject) seen.add(subject);
-    }
-    return Array.from(seen).slice(0, limit);
-  } catch {
-    return [];
+  const seen = new Set<Address>();
+  for (const log of scan.logs) {
+    const subject = (log.args as { subject?: Address }).subject;
+    if (subject) seen.add(subject);
   }
+  return Array.from(seen).slice(0, limit);
 }
 
 export { PHAROS_AGENT_ID_ABI, CREDENTIAL_REGISTRY_ABI };
@@ -315,31 +508,41 @@ export type CapabilityChange = {
 
 export async function readCapabilityHistory(
   subject: Address,
-  opts?: { fromBlock?: bigint; toBlock?: bigint }
+  opts?: { fromBlock?: bigint; toBlock?: bigint; networkId?: string },
+  networkId: string = opts?.networkId ?? DEFAULT_EVM_NETWORK,
 ): Promise<CapabilityChange[]> {
-  try {
-    const head = opts?.toBlock ?? (await publicClient.getBlockNumber());
-    const SPAN = 200_000n;
-    const fromBlock = opts?.fromBlock ?? (head > SPAN ? head - SPAN : 0n);
+  const scan = await scanRegistryLogs(
+    networkId,
+    AGENT_CAPABILITY_CHANGED_EVENT,
+    {
+      subject,
+    },
+  );
+  if (!scan) return [];
 
-    const logs = await publicClient.getLogs({
-      address: addresses.credentialRegistry,
-      event: AGENT_CAPABILITY_CHANGED_EVENT,
-      args: { subject },
-      fromBlock,
-      toBlock: head,
-    });
+  const fromFilter = opts?.fromBlock;
+  const toFilter = opts?.toBlock;
 
-    return logs
-      .map((log) => ({
-        capabilityHash: (log.args as { capabilityHash?: Hex }).capabilityHash ?? "0x" as Hex,
-        capable: (log.args as { capable?: boolean }).capable ?? false,
-        blockNumber: log.blockNumber,
-        txHash: log.transactionHash ?? "0x" as Hex,
-        logIndex: log.logIndex,
-      }))
-      .sort((a, b) => (b.blockNumber > a.blockNumber ? 1 : b.blockNumber < a.blockNumber ? -1 : b.logIndex - a.logIndex));
-  } catch {
-    return [];
-  }
+  return scan.logs
+    .filter((log) =>
+      fromFilter === undefined ? true : log.blockNumber >= fromFilter,
+    )
+    .filter((log) =>
+      toFilter === undefined ? true : log.blockNumber <= toFilter,
+    )
+    .map((log) => ({
+      capabilityHash:
+        (log.args as { capabilityHash?: Hex }).capabilityHash ?? ("0x" as Hex),
+      capable: (log.args as { capable?: boolean }).capable ?? false,
+      blockNumber: log.blockNumber,
+      txHash: log.transactionHash ?? ("0x" as Hex),
+      logIndex: log.logIndex,
+    }))
+    .sort((a, b) =>
+      b.blockNumber > a.blockNumber
+        ? 1
+        : b.blockNumber < a.blockNumber
+          ? -1
+          : b.logIndex - a.logIndex,
+    );
 }

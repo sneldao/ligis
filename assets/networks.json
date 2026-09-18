@@ -61,6 +61,18 @@
         "decimals": 18
       }
     },
+    "monad-testnet": {
+      "name": "Monad Testnet",
+      "chainId": 10143,
+      "rpcUrl": "https://testnet-rpc.monad.xyz",
+      "explorerUrl": "https://testnet.monadscan.com",
+      "explorerApiUrl": "",
+      "nativeToken": {
+        "symbol": "MON",
+        "name": "Monad",
+        "decimals": 18
+      }
+    },
     "genlayer-studio-next": {
       "name": "GenLayer Studio Next",
       "chainId": 61997,
@@ -90,6 +102,14 @@
       "chainId": 31337,
       "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "deployedAt": "1781677354"
+    },
+    "monad-testnet": {
+      "network": "monad-testnet",
+      "pharosAgentId": "0x7371bf6c8cBedcbb6B3da78c1da080e408cA7987",
+      "credentialRegistry": "0x698e1C05d34e2b6d0B6eCd71f3fC9e84e64733c5",
+      "chainId": 10143,
+      "deployer": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+      "deployedAt": "1789662100"
     }
   }
 }
