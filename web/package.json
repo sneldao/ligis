@@ -13,7 +13,7 @@
     "test": "node --import tsx --test test/**/*.test.ts"
   },
   "dependencies": {
-    "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",
+    "@0gfoundation/0g-compute-ts-sdk": "^0.9.0",
     "@casper-ecosystem/casper-eip-712": "^1.0.0",
     "@0gfoundation/0g-storage-ts-sdk": "^1.2.6",
     "@ligis/adapter-casper": "workspace:*",
