@@ -5,6 +5,7 @@ import { verifySubject } from "@/lib/verify";
 import { truncateAddress } from "@/lib/format";
 import { GateVerdict } from "@/components/GateVerdict";
 import { GateStates } from "@/components/GateStates";
+import { JevTelemetry } from "@/components/JevTelemetry";
 import { CopyButton } from "@/components/CopyButton";
 import { Rule } from "@/components/Rule";
 import { SituationCast } from "@/components/SituationCast";
@@ -200,6 +201,10 @@ export default async function VerifyPage({
 
       <section className="mt-14">
         <GateStates />
+      </section>
+
+      <section className="mt-14">
+        <JevTelemetry />
       </section>
 
       <section className="mt-14">

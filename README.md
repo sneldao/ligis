@@ -107,6 +107,29 @@ Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgent
 
 It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter (`@ligis/adapter-casper`) is fully implemented and **live on Casper Testnet** — all 8 `ChainAdapter` operations talk to Odra contracts via `casper-client`, the WASM contracts are deployed (AgentId + CredentialRegistry + GatedVault), and the smoke test passes end-to-end (mint → sign → submit → verify → revoke). The web frontend is chain-aware on all pages (`?chain=casper-testnet` is live). See [`docs/casper-buildathon.md`](docs/casper-buildathon.md) for the submission plan.
 
+### Jev intent layer — the gate has reflexes
+
+The x402 Trust Gate annotates every decision (401/402/200) with a typed GO/STOP
+intent verdict from **Jev** (TypeSafe's System One model, routed free through
+the Vercel AI Gateway): scope consistency, amount plausibility, payee match,
+and request normality — four questions, one parallel call, ~350–650ms, billed
+at $0.00 during the promo. Fail-open: the credential check stays the source of
+truth.
+
+```bash
+# Terminal 1 — gate with the intent layer on (key in .env.d/aigateway.env)
+set -a; source .env.d/casper.env .env.d/aigateway.env; set +a
+LIGIS_JEV_ENABLED=1 LIGIS_GATE_CREDENTIAL_TTL_MS=30000 pnpm x402:dev
+
+# Terminal 2 — stress it: legit / underpay / overpay / misdirected payee
+pnpm demo:jev
+```
+
+Every response carries the verdict in headers — `x-jev-verdict`,
+`x-jev-confidence`, `x-jev-flags`, `x-jev-latency-ms`, `x-jev-cost-usd` — and
+`/gate` renders the live telemetry waterfall. See `AGENTS.md` ("Jev Intent
+Evaluation") for the full design.
+
 ## Skills
 
 | Skill               | What it does                                                                                                |

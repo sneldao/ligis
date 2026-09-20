@@ -8,6 +8,11 @@
  *     ├─ has credential, no X-PAYMENT       → 402 with x402 PaymentRequirements
  *     └─ has credential + valid X-PAYMENT   → 200 with payload, payment settled
  *
+ * Optional Jev intent layer (LIGIS_JEV_ENABLED=1): after the credential read
+ * and before settlement, every gated response is annotated with X-Jev-*
+ * headers — a typed GO/STOP intent signal from TypeSafe's System One model,
+ * evaluated in ~100ms for fractions of a cent. Fail-open: see jev-intent.ts.
+ *
  * Settlement modes:
  *   - "facilitator": Forward to CSPR.cloud x402 facilitator for real
  *                    CEP-18 transfer_with_authorization settlement.
@@ -23,9 +28,18 @@
  */
 
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { serve } from "@hono/node-server";
 import { CasperAdapter } from "@ligis/adapter-casper";
 import { execFileSync } from "node:child_process";
+import {
+  evaluatePaymentIntent,
+  jevHeaders,
+  jevSummary,
+  loadJevConfig,
+  type JevIntentResult,
+} from "./jev-intent.js";
+import { recordVerdict, recentVerdicts } from "./verdict-log.js";
 
 const PORT = Number(process.env.PORT ?? 4040);
 
@@ -66,6 +80,9 @@ const CONFIG = {
 const adapter = new CasperAdapter();
 const app = new Hono();
 
+// Jev intent layer — opt-in, fail-open (see jev-intent.ts).
+const JEVC = loadJevConfig();
+
 // ---------- Routes ----------
 
 app.get("/", (c) =>
@@ -75,12 +92,36 @@ app.get("/", (c) =>
     chain: adapter.chainId,
     endpoint: "/premium",
     settlement: CONFIG.settlementMode,
+    price: {
+      smallestUnit: CONFIG.priceSmallestUnit,
+      tokenSymbol: process.env.LIGIS_GATE_TOKEN_SYMBOL ?? "CSPR",
+    },
+    payTo: CONFIG.payTo || null,
+    jev: JEVC.enabled ? "on" : "off",
   }),
 );
 
 app.get("/health", (c) =>
-  c.json({ ok: true, settlement: CONFIG.settlementMode }),
+  c.json({
+    ok: true,
+    settlement: CONFIG.settlementMode,
+    jev: {
+      enabled: JEVC.enabled,
+      ...(JEVC.enabled ? { model: JEVC.model } : {}),
+      enforce: JEVC.enforce,
+    },
+  }),
 );
+
+/**
+ * Recent Jev intent verdicts (newest first), for the /gate telemetry panel.
+ * CORS-open: the panel runs in the browser against a locally-running gate.
+ */
+app.get("/verdicts", (c) => {
+  c.header("Access-Control-Allow-Origin", "*");
+  const limit = Number(c.req.query("limit") ?? "20");
+  return c.json({ ok: true, verdicts: recentVerdicts(limit) });
+});
 
 /**
  * Proxy to the CSPR.cloud facilitator's /supported endpoint.
@@ -124,14 +165,31 @@ app.get("/premium", async (c) => {
       400,
     );
   }
+  const paymentHeader = c.req.header("X-PAYMENT");
 
-  // 1. Gate: does this subject hold a valid Ligis credential?
-  let capable = false;
-  try {
-    const check = await adapter.verifyCapability({
+  // 1. Credential read + Jev intent, concurrently. The credential check
+  //    shells out synchronously to the casper-client CLI (which blocks the
+  //    event loop), so Jev dispatches first and its ~100ms latency stays
+  //    honest. The verdict still lands on every gate decision, including
+  //    401s for uncredentialed agents.
+  const jevPromise = evaluatePaymentIntent(
+    {
       subject,
       capability: CONFIG.capability,
-    });
+      capabilityDescription: CAPABILITY_DESCRIPTION,
+      gatePriceSmallestUnit: CONFIG.priceSmallestUnit,
+      tokenSymbol: process.env.LIGIS_GATE_TOKEN_SYMBOL ?? "CSPR",
+      tokenDecimals: process.env.LIGIS_GATE_TOKEN_DECIMALS ?? "9",
+      advertisedPayTo: CONFIG.payTo || "unconfigured",
+      payment: decodePaymentInfo(paymentHeader),
+    },
+    JEVC,
+  );
+
+  // Gate: does this subject hold a valid Ligis credential?
+  let capable = false;
+  try {
+    const check = await verifyCapabilityCached(subject, CONFIG.capability);
     capable = check.capable;
   } catch (err) {
     return c.json(
@@ -144,30 +202,59 @@ app.get("/premium", async (c) => {
       503,
     );
   }
+
+  const jev = await jevPromise;
+  applyJevHeaders(c, jev);
+
+  // Uniform response helper: records the verdict + attaches the jev block.
+  const respond = (
+    status: 200 | 401 | 402 | 403,
+    body: Record<string, unknown>,
+  ) => {
+    recordVerdict({
+      ts: new Date().toISOString(),
+      status,
+      subject,
+      capability: CONFIG.capability,
+      verdict: jev.verdict,
+      confidence: jev.confidence,
+      flags: jev.flags.map((f) => f.id),
+      latencyMs: jev.latencyMs,
+      ...(jev.costUsd !== undefined ? { costUsd: jev.costUsd } : {}),
+      ...(jev.model ? { model: jev.model } : {}),
+      ...(jev.skippedReason ? { skippedReason: jev.skippedReason } : {}),
+    });
+    return c.json({ ...body, jev: jevSummary(jev) }, status);
+  };
+
   if (!capable) {
-    return c.json(
-      {
-        ok: false,
-        error: "not authorized",
-        requiredCapability: CONFIG.capability,
-        hint: `request a credential for ${CONFIG.capability} via Trust Steward, then retry`,
-      },
-      401,
-    );
+    return respond(401, {
+      ok: false,
+      error: "not authorized",
+      requiredCapability: CONFIG.capability,
+      hint: `request a credential for ${CONFIG.capability} via Trust Steward, then retry`,
+    });
+  }
+
+  // Confidence-gated enforcement — opt-in (LIGIS_JEV_ENFORCE=1). Off by
+  // default: Jev is a signal, not a gate. The credential check above remains
+  // the source of truth.
+  if (JEVC.enforce && jev.verdict === "STOP") {
+    return respond(403, {
+      ok: false,
+      error: "intent gate refused this payment",
+      flags: jev.flags.map((f) => f.id),
+    });
   }
 
   // 2. Payment: do we have an X-PAYMENT header?
-  const paymentHeader = c.req.header("X-PAYMENT");
   if (!paymentHeader) {
     const reqs = paymentRequirements(c.req.url);
-    return c.json(
-      {
-        x402Version: 2,
-        error: "X-PAYMENT header is required",
-        accepts: [reqs],
-      },
-      402,
-    );
+    return respond(402, {
+      x402Version: 2,
+      error: "X-PAYMENT header is required",
+      accepts: [reqs],
+    });
   }
 
   // 3. Settle
@@ -184,20 +271,17 @@ app.get("/premium", async (c) => {
   }
 
   if (!settleResult.ok) {
-    return c.json(
-      {
-        ok: false,
-        error: "payment settlement failed",
-        detail: settleResult.error,
-      },
-      402,
-    );
+    return respond(402, {
+      ok: false,
+      error: "payment settlement failed",
+      detail: settleResult.error,
+    });
   }
 
   // 4. Deliver
   const payload = await premiumPayload();
   c.header("X-PAYMENT-RESPONSE", settleResult.txHash ?? "");
-  return c.json({
+  return respond(200, {
     ok: true,
     capability: CONFIG.capability,
     subject,
@@ -211,6 +295,73 @@ app.get("/premium", async (c) => {
 });
 
 // ---------- Helpers ----------
+
+/** Shown to the Jev intent layer — what the gated capability actually grants. */
+const CAPABILITY_DESCRIPTION =
+  "Premium tokenized real-world-asset (RWA) market data feed: live prices, " +
+  "24h changes, market caps, and volume for major RWA tokens (ONDO, CFG, " +
+  "PENDLE, MPL, POLYX).";
+
+/** What the payment payload claims — used as Jev state, not as verification. */
+function decodePaymentInfo(
+  paymentHeader: string | undefined,
+):
+  | { scheme?: string; amountSmallestUnit?: string; payTo?: string }
+  | undefined {
+  if (!paymentHeader) return undefined;
+  try {
+    const p = JSON.parse(Buffer.from(paymentHeader, "base64").toString());
+    const auth = p?.payload?.authorization;
+    if (!auth || typeof auth !== "object") return undefined;
+    return {
+      scheme:
+        typeof p?.accepted?.scheme === "string" ? p.accepted.scheme : undefined,
+      amountSmallestUnit:
+        typeof auth.value === "string" ? auth.value : undefined,
+      payTo: typeof auth.to === "string" ? auth.to : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function applyJevHeaders(c: Context, jev: JevIntentResult): void {
+  for (const [name, value] of Object.entries(jevHeaders(jev))) {
+    if (value !== "") c.header(name, value);
+  }
+}
+
+/**
+ * Short-TTL in-memory cache for credential checks. The Casper read path
+ * shells out to the casper-client CLI synchronously (slow + loop-blocking),
+ * so repeated checks for the same subject — demos, polling clients — are
+ * served from cache. Default TTL 0 = disabled; set
+ * LIGIS_GATE_CREDENTIAL_TTL_MS to enable (e.g. 30000 for the stress demo).
+ * A cached GO can lag a revocation by up to the TTL.
+ */
+const credentialCache = new Map<
+  string,
+  { capable: boolean; expiresAt: number }
+>();
+
+async function verifyCapabilityCached(subject: string, capability: string) {
+  const ttl = Number(process.env.LIGIS_GATE_CREDENTIAL_TTL_MS ?? "0");
+  const key = `${subject}|${capability}`;
+  if (ttl > 0) {
+    const hit = credentialCache.get(key);
+    if (hit && hit.expiresAt > Date.now()) {
+      return { capable: hit.capable };
+    }
+  }
+  const check = await adapter.verifyCapability({ subject, capability });
+  if (ttl > 0) {
+    credentialCache.set(key, {
+      capable: check.capable,
+      expiresAt: Date.now() + ttl,
+    });
+  }
+  return check;
+}
 
 function paymentRequirements(resourceUrl: string): PaymentRequirements {
   // If a CEP-18 token is configured (LIGIS_GATE_ASSET), use it as the asset.
@@ -627,4 +778,7 @@ console.log(`  capability:   ${CONFIG.capability}`);
 console.log(`  chain:        ${adapter.chainId}`);
 console.log(`  settlement:   ${CONFIG.settlementMode}`);
 console.log(`  facilitator:  ${CONFIG.facilitatorUrl}`);
+console.log(
+  `  jev intent:   ${JEVC.enabled ? `on (${JEVC.model}${JEVC.enforce ? ", enforce" : ""})` : "off"}`,
+);
 serve({ fetch: app.fetch, port: PORT });

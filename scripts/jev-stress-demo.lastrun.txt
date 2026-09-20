@@ -1,0 +1,8 @@
+gate: http://localhost:4040
+requests: 8
+wall_ms: 6315
+avg_intent_ms: 1139
+flagged: 6
+intent_cost_usd: 0.000000
+scenarios: legit,underpay,overpay,misdirected x2
+date: 2026-09-20T13:34:22.462Z

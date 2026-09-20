@@ -32,6 +32,7 @@
     "demo:casper": "tsx scripts/casper-e2e-demo.ts",
     "demo:genlayer": "tsx scripts/genlayer-agent-tank-demo.ts",
     "demo:genlayer-gate": "tsx scripts/genlayer-gate-demo.ts",
+    "demo:jev": "tsx scripts/jev-stress-demo.ts",
     "demo:monad": "tsx scripts/monad-lifecycle-demo.ts",
     "demo:monid": "pnpm start -- trust check --intent 'pay a counterparty for premium RWA data' --counterparty '${MONID_COUNTERPARTY:-0x0000000000000000000000000000000000000000}'",
     "deploy:casper": "pnpm --filter @ligis/adapter-casper deploy",

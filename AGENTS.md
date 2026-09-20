@@ -403,3 +403,154 @@ fs.writeFileSync('.env.d/casper-deployer.pem', pk.exportPrivateKeyInPem());
   `parseServiceRequirements` unwraps it automatically.
 - Orders are marked fulfilled only after successful delivery (with 3 retries).
 - Idempotency DB at `~/.ligis/croo-idempotency.db` (SQLite, auto-pruned hourly).
+
+## Jev Intent Evaluation (implemented, opt-in)
+
+The x402 Trust Gate has an optional intent layer built on **Jev**, TypeSafe's
+System One model (launched 2026-09-15). It reads _what the paying agent is
+trying to do_ and annotates every gate decision (401/402/200) with a GO/STOP
+signal — a reflex, not an authority. The credential check remains the source
+of truth; without the layer (or when Jev is unavailable) the flow is unchanged.
+
+### Jev API facts
+
+Two interchangeable routes — identical wire shapes (Choice/Score/Noul,
+confidence, `input_tokens`), different base URL + credential. Select with
+`LIGIS_JEV_TRANSPORT=gateway|direct|auto` (default auto: gateway when
+`AI_GATEWAY_API_KEY` is set, else direct when `TYPESAFE_API_KEY` is set,
+else gateway so the skip reason names the key we want):
+
+- **AI Gateway (current default — free promo through 2026-09-25)**:
+  `POST https://ai-gateway.vercel.sh/typesafe/v1/systemone`, auth
+  `AI_GATEWAY_API_KEY`, model slug `typesafe-ai/jev`. Responses carry
+  `provider_metadata.gateway.cost` (billed USD) — used directly for
+  `X-Jev-Cost-Usd`, so during the promo it reads 0. After the promo ends:
+  flip to direct, or keep the gateway with billing/BYOK.
+- **TypeSafe direct**: `POST https://api.typesafe.ai/v1/systemone`, auth
+  `TYPESAFE_API_KEY` (console.typesafe.ai, early access), model `jev-latest`
+  (response reports the versioned id — log it). Cost derived from input
+  tokens at $0.042/MTok, output free.
+
+Shared behavior:
+
+- Send `{ model, state, questions }`; get `{ model, answers, usage }`. Text
+  state only. All questions in one call evaluate in parallel against the same
+  state (~100ms typical, 70–500ms range).
+- Primitives: **Choice** → `{ choice, probabilities, confidence }`; **Score**
+  → `{ score, legend, probabilities, confidence }` (score can land between
+  levels); **Noul** → `{ noul }` (0–1 probability, no separate confidence).
+- Adding questions barely changes latency — ask atomic questions, compose in
+  code (TypeSafe's "Composite Scoring" + "Confidence-Gated Routing" patterns).
+- Implementation uses plain `fetch`, not the early-access `@typesafe-ai/sdk`
+  (the gateway's TypeSafe-compatible endpoint accepts the same shapes).
+
+### The four-question gate fingerprint
+
+One parallel call, atomic questions, composed in `jev-intent.ts`:
+
+| id                    | type   | flag when                             | catches                                |
+| --------------------- | ------ | ------------------------------------- | -------------------------------------- |
+| `scope`               | Choice | choice=inconsistent, conf ≥ min       | request inconsistent with capability   |
+| `amount_plausibility` | Score  | score ≤ 0.5 (implausible), conf ≥ min | under/over-payment vs capability value |
+| `payee_consistency`   | Noul   | noul ≤ 0.3                            | payee mismatch vs advertised payTo     |
+| `request_normality`   | Noul   | noul ≤ 0.3                            | abnormal request pattern               |
+
+Verdict: STOP if any flag fires, else GO. STOP confidence = max flag
+confidence; GO confidence = mean of the Choice/Score confidences.
+
+Policy questions with computable answers (e.g. "is this payment redundant
+for something the subject already holds?") stay in code — in this gate's
+semantics paying while credentialed is the happy path, and a boolean doesn't
+need a model. Jev is for judgments an `=IF()` cannot make.
+
+### Placement (differs from the original sketch)
+
+Jev dispatches CONCURRENTLY with the on-chain credential read and always
+precedes settlement:
+
+```
+1. subject parse → 400            (no Jev — nothing to judge)
+2. Jev dispatch + credential read, in parallel
+3. 401/402/settle branches — every response carries the verdict
+```
+
+Rationale: the Casper credential read shells out synchronously to the
+`casper-client` CLI (blocking), so dispatching Jev first keeps its ~100ms
+latency honest instead of queueing behind RPC work. The verdict still lands
+on 401s — intent is judged even for rejected agents.
+
+For the same reason the gate has an optional short-TTL credential cache:
+`LIGIS_GATE_CREDENTIAL_TTL_MS` (default 0 = off; e.g. 30000 for demos). A
+cached GO can lag a revocation by up to the TTL — keep prod use deliberate.
+
+### Config
+
+- `LIGIS_JEV_ENABLED=1` (default off — the layer is opt-in)
+- `AI_GATEWAY_API_KEY` (gateway route — current default) or `TYPESAFE_API_KEY`
+  (direct route); `LIGIS_JEV_API_KEY` overrides either
+- `LIGIS_JEV_TRANSPORT` = gateway | direct | auto (default auto)
+- `LIGIS_JEV_API_URL` / `LIGIS_JEV_MODEL` — override the resolved route's
+  URL / model slug (gateway defaults: …/typesafe/v1/systemone +
+  `typesafe-ai/jev`; direct defaults: api.typesafe.ai/v1/systemone +
+  `jev-latest`)
+- `LIGIS_JEV_MIN_CONFIDENCE` (0.6), `LIGIS_JEV_TIMEOUT_MS` (4000 — headroom
+  over Jev's 70–500ms for the gate's blocking casper-client reads),
+  `LIGIS_JEV_ENFORCE` (off; =1 → 403 on confident STOP)
+
+Fail-open: missing key, timeout, non-200, or malformed response → verdict
+SKIPPED and the flow proceeds unchanged. Jev never blocks a payment unless
+enforce mode is explicitly enabled.
+
+### Telemetry
+
+Every gated response carries `X-Jev-Verdict`, `X-Jev-Confidence`,
+`X-Jev-Latency-Ms`, `X-Jev-Cost-Usd`, `X-Jev-Model`, `X-Jev-Flags` headers;
+200 bodies include a `jev` block. `GET /verdicts?limit=N` (CORS-enabled)
+serves an in-memory ring buffer of the last 50 verdicts.
+
+`web/components/JevTelemetry.tsx` (client) polls `/verdicts` on the gate
+(`NEXT_PUBLIC_LIGIS_GATE_URL`, default http://localhost:4040) and renders the
+live verdict waterfall on `/gate`.
+
+### Stress demo
+
+```bash
+LIGIS_JEV_ENABLED=1 AI_GATEWAY_API_KEY=... pnpm x402:dev    # terminal 1 (gateway, free promo)
+# or: LIGIS_JEV_ENABLED=1 TYPESAFE_API_KEY=sk-... pnpm x402:dev  (direct)
+pnpm demo:jev                                                # terminal 2
+```
+
+Fires legit / underpay / overpay / misdirected-payee requests at the gate in
+configurable waves and prints a per-request verdict table plus totals (wall
+time, avg decision latency, total cost, flagged count). 401s are expected
+without a deployed credential — the Jev headers land regardless. Set
+`LIGIS_GATE_CREDENTIAL_TTL_MS=30000` on the gate so repeated subjects don't
+re-run the blocking casper-client CLI reads.
+
+No early-access key yet? Run the stub upstream instead:
+`npx tsx scripts/jev-stub.ts` + `LIGIS_JEV_API_URL=http://localhost:4099/v1/systemone`
+— verdicts are labeled `jev-stub-1.0` so they're never mistaken for real ones.
+
+### Live verification (2026-09-20, AI Gateway)
+
+Real Jev through the AI Gateway confirmed working end-to-end: key stored at
+`.env.d/aigateway.env` (gitignored), direct probe 582ms round-trip,
+`provider_metadata.gateway.cost: "0"` during the promo, noul/choice/score
+shapes identical to the native API. Gate responses carry real verdicts and
+flags; the first request after a cold start reads ~2–3s of latency from the
+blocking casper-client reads (absorbed by the TTL cache afterwards).
+
+State enrichment (human-readable amounts, operator-declared price +
+capability class, `code_checks` facts) lifted verdict confidence across the
+board on the stress demo: legit GO 0.49 → 0.93; underpay STOP 0.84 → 0.98;
+overpay STOP 0.77 → 0.93; misdirected STOP 0.92 → 0.96. Warm decisions run
+~350–650ms.
+
+### Marketing notes
+
+Launch-week Jev demos (ads teardown, lead scoring, browser agent) are all
+speed/cost flexes. Our equivalent: _every payment through the gate gets an
+intent read in ~100ms for fractions of a cent_ — and the evidence is one
+curl away (`curl -i` any gate response, read the Jev headers). Visual-first
+surfaces that exist today: the header capture, `pnpm demo:jev` table, and
+the `/gate` telemetry waterfall. Tagline: "the gate has reflexes."
