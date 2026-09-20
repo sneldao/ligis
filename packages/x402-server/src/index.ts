@@ -8,10 +8,12 @@
  *     ├─ has credential, no X-PAYMENT       → 402 with x402 PaymentRequirements
  *     └─ has credential + valid X-PAYMENT   → 200 with payload, payment settled
  *
- * Optional Jev intent layer (LIGIS_JEV_ENABLED=1): after the credential read
- * and before settlement, every gated response is annotated with X-Jev-*
- * headers — a typed GO/STOP intent signal from TypeSafe's System One model,
- * evaluated in ~100ms for fractions of a cent. Fail-open: see jev-intent.ts.
+ * Optional Jev intent layer (LIGIS_JEV_ENABLED=1): dispatched concurrently
+ * with the credential read and before settlement; every gated response is
+ * annotated with X-Jev-* headers — a typed GO/STOP intent signal from
+ * TypeSafe's System One model, evaluated in ~100ms for fractions of a cent.
+ * Fail-open; implementation in @ligis/core (packages/core/src/jev.ts).
+ * Also sold as the `ligis.gate` service on CROO (packages/croo-adapter).
  *
  * Settlement modes:
  *   - "facilitator": Forward to CSPR.cloud x402 facilitator for real
@@ -38,7 +40,7 @@ import {
   jevSummary,
   loadJevConfig,
   type JevIntentResult,
-} from "./jev-intent.js";
+} from "@ligis/core";
 import { recordVerdict, recentVerdicts } from "./verdict-log.js";
 
 const PORT = Number(process.env.PORT ?? 4040);
@@ -80,7 +82,7 @@ const CONFIG = {
 const adapter = new CasperAdapter();
 const app = new Hono();
 
-// Jev intent layer — opt-in, fail-open (see jev-intent.ts).
+// Jev intent layer — opt-in, fail-open (see @ligis/core/src/jev.ts).
 const JEVC = loadJevConfig();
 
 // ---------- Routes ----------

@@ -5,6 +5,7 @@ import { EventType } from "@croo-network/sdk";
 import { handleVerify } from "./verify.js";
 import { handleIssue } from "./issue.js";
 import { handleRisk } from "./risk.js";
+import { handleGate } from "./gate.js";
 import type { CrooClient, EventStreamLike } from "./client.js";
 import {
   type ServiceDescriptor,
@@ -167,6 +168,79 @@ export const defaultServices: ServiceDescriptor[] = [
       },
     },
     handler: handleIssue,
+  },
+  {
+    id: "ligis.gate",
+    name: "Ligis Trust Gate (Intent + Credential)",
+    description:
+      "Pre-flight trust read for an agent payment, in one call: a Jev (TypeSafe System One) intent verdict — is the amount plausible, does the payee match, is the pattern normal — alongside an on-chain credential check on Casper or Pharos. Fail-open and typed; run it before money moves.",
+    priceUsd: "1.00",
+    inputSchema: {
+      type: "object",
+      required: ["subject", "capability", "priceSmallestUnit", "payTo"],
+      properties: {
+        subject: {
+          type: "string",
+          description:
+            "Agent DID or chain-native address of the payer (or the counterparty whose payment you are judging)",
+        },
+        capability: {
+          type: "string",
+          description:
+            "Capability the payment targets, e.g. data.premium or agent.commerce.escrow",
+        },
+        priceSmallestUnit: {
+          type: "string",
+          description:
+            "Advertised price in smallest units (motes/wei) for the capability",
+        },
+        payTo: {
+          type: "string",
+          description:
+            "Account the payment is headed to (the collector advertised by the service)",
+        },
+        tokenSymbol: {
+          type: "string",
+          description: "Token symbol for the price, e.g. CSPR (default)",
+        },
+        tokenDecimals: {
+          type: "string",
+          description: "Token decimals, e.g. 9 for CSPR (default)",
+        },
+        payment: {
+          type: "object",
+          description:
+            "Optional payment about to be sent: { scheme?, amountSmallestUnit?, payTo? }",
+        },
+        issuer: {
+          type: "string",
+          description:
+            "Optional trusted issuer to constrain the credential check",
+        },
+        capabilityDescription: {
+          type: "string",
+          description:
+            "Optional human description of what the capability grants",
+        },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        credential: { type: "object" },
+        intent: {
+          type: "object",
+          properties: {
+            verdict: { type: "string" },
+            confidence: { type: "number" },
+            flags: { type: "array" },
+            latencyMs: { type: "number" },
+          },
+        },
+        proceed: { type: "boolean" },
+      },
+    },
+    handler: handleGate,
   },
 ];
 

@@ -6,7 +6,7 @@ import {
   loadJevConfig,
   type JevConfig,
   type JevIntentInput,
-} from "../src/jev-intent.js";
+} from "@ligis/core";
 
 const SUBJECT =
   "account-hash-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1";

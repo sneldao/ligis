@@ -363,10 +363,12 @@ curl http://127.0.0.1:9430/health
 - `CROO_SERVICE_ID_LIGIS_RISK` — listing UUID from CROO Dashboard
 - `CROO_SERVICE_ID_LIGIS_VERIFY` — listing UUID from CROO Dashboard
 - `CROO_SERVICE_ID_LIGIS_ISSUE` — listing UUID from CROO Dashboard
+- `CROO_SERVICE_ID_LIGIS_GATE` — listing UUID for `ligis.gate` (once registered in the Dashboard)
 - `LIGIS_CHAIN` — `casper` or `pharos`
 - `LIGIS_ISSUER_PRIVATE_KEY` — hex private key for signing credentials (required for ligis.issue)
 - `LIGIS_CASPER_KEY_PATH` — path to PEM file for casper-client CLI (required for ligis.issue on Casper)
 - All `LIGIS_CASPER_*` vars from `.env.d/casper.env`
+- Jev vars (`AI_GATEWAY_API_KEY` or `TYPESAFE_API_KEY`, plus `LIGIS_JEV_*`) — required for `ligis.gate` intent reads; without them the gate fails open and the intent block reports `SKIPPED` while the credential check still runs
 
 **casper-client CLI (required for ligis.issue on Casper):**
 The `submitCredential` function uses `casper-client` to submit signed
@@ -412,6 +414,11 @@ trying to do_ and annotates every gate decision (401/402/200) with a GO/STOP
 signal — a reflex, not an authority. The credential check remains the source
 of truth; without the layer (or when Jev is unavailable) the flow is unchanged.
 
+The Jev client lives in **`@ligis/core` (`packages/core/src/jev.ts`)** so it is
+shared: the x402 gate imports it, and the CROO adapter's `ligis.gate` service
+(see "CROO Provider Deployment") sells the same pre-flight read — intent
+verdict + credential check in one deliverable, dispatched concurrently.
+
 ### Jev API facts
 
 Two interchangeable routes — identical wire shapes (Choice/Score/Noul,
@@ -446,7 +453,7 @@ Shared behavior:
 
 ### The four-question gate fingerprint
 
-One parallel call, atomic questions, composed in `jev-intent.ts`:
+One parallel call, atomic questions, composed in `@ligis/core` (`jev.ts`):
 
 | id                    | type   | flag when                             | catches                                |
 | --------------------- | ------ | ------------------------------------- | -------------------------------------- |

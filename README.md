@@ -347,13 +347,14 @@ set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm d
 > back off. Without it, `pnpm croo` fails immediately with `Missing required
 environment variable: CROO_SDK_KEY`.
 
-| Service        | Price | What you get                                                                            | Input                                                              |
-| -------------- | ----- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `ligis.risk`   | $0.75 | **Counterparty risk check** — pass/warn/fail + 0–100 score                              | `{ subject, capabilities, issuer?, minTtlSeconds? }`               |
-| `ligis.verify` | $0.50 | On-chain credential verification                                                        | `{ subject, capability, issuer? }`                                 |
-| `ligis.issue`  | $1.00 | Signed capability credential issuance; optionally imports EAS provenance before issuing | `{ subject, capability, expiresInSeconds?, externalAttestation? }` |
+| Service        | Price | What you get                                                                                                                                                     | Input                                                                                                |
+| -------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `ligis.risk`   | $0.75 | **Counterparty risk check** — pass/warn/fail + 0–100 score                                                                                                       | `{ subject, capabilities, issuer?, minTtlSeconds? }`                                                 |
+| `ligis.verify` | $0.50 | On-chain credential verification                                                                                                                                 | `{ subject, capability, issuer? }`                                                                   |
+| `ligis.issue`  | $1.00 | Signed capability credential issuance; optionally imports EAS provenance before issuing                                                                          | `{ subject, capability, expiresInSeconds?, externalAttestation? }`                                   |
+| `ligis.gate`   | $1.00 | **Trust Gate pre-flight** — Jev (TypeSafe System One) payment-intent verdict (GO/STOP + confidence + flags) alongside the on-chain credential check, in one call | `{ subject, capability, priceSmallestUnit, payTo, payment?, issuer?, tokenSymbol?, tokenDecimals? }` |
 
-All three services are live and tested end-to-end: issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass` after 7 days).
+All three services are live and tested end-to-end: issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass` after 7 days). `ligis.gate` runs the same reflex the x402 Trust Gate uses on `/gate` — four typed Jev questions in one parallel call, fail-open, with the credential registry staying the source of truth.
 
 See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/okx-ai.md`](docs/okx-ai.md), [`docs/attestation-integrations.md`](docs/attestation-integrations.md), [`docs/strategy.md`](docs/strategy.md), and [`packages/croo-adapter/`](packages/croo-adapter/).
 

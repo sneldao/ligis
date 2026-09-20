@@ -35,6 +35,7 @@ export const SUPPORTED_SERVICES = [
   "ligis.risk",
   "ligis.verify",
   "ligis.issue",
+  "ligis.gate",
 ] as const;
 
 export type SupportedServiceId = (typeof SUPPORTED_SERVICES)[number];

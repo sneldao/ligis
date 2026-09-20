@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Ligis - The Gate Has Reflexes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=JetBrains+Mono:wght@400;500;700&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --paper: #f4f1ec;
+        --paper-deep: #ece7df;
+        --ink: #1c1b1a;
+        --ink-soft: #5c5852;
+        --ink-quiet: #6f6a62;
+        --rule: rgba(28, 27, 26, 0.14);
+        --rule-soft: rgba(28, 27, 26, 0.07);
+        --terra: #a85234;
+        --sage: #6f8267;
+        --revoke: #a13a2a;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1920px; height: 1080px; overflow: hidden;
+        background: var(--paper); color: var(--ink);
+        font-family: "Hanken Grotesk", sans-serif;
+      }
+      .serif { font-family: "Fraunces", serif; }
+      .mono { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+      .eyebrow {
+        font-family: "JetBrains Mono", monospace; font-weight: 500;
+        font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--ink-quiet);
+      }
+      .display {
+        font-family: "Fraunces", serif; font-weight: 400;
+        line-height: 1.05; letter-spacing: -0.022em;
+      }
+      #root {
+        position: relative; width: 1920px; height: 1080px;
+        overflow: hidden; background: var(--paper);
+      }
+      .scene {
+        position: absolute; inset: 0; width: 1920px; height: 1080px;
+        display: flex; flex-direction: column;
+      }
+      .content {
+        position: relative; width: 100%; height: 100%;
+        padding: 90px 130px; display: flex; flex-direction: column;
+      }
+      .rule { width: 100%; height: 1px; background: var(--rule); border: 0; }
+      .rule-soft { width: 100%; height: 1px; background: var(--rule-soft); border: 0; }
+
+      .verdict-block { border-left: 3px solid var(--rule); padding-left: 40px; }
+      .verdict-block.sage { border-color: var(--sage); }
+      .verdict-block.revoke { border-color: var(--revoke); }
+
+      /* Scene 2 terminal — paper-deep, hairline frame, no rounded chrome */
+      .terminal {
+        background: var(--paper-deep); border: 1px solid var(--rule);
+        padding: 44px 52px; font-family: "JetBrains Mono", monospace;
+        font-size: 26px; line-height: 2.0; color: var(--ink);
+      }
+      .terminal .cmd { color: #6c6860; font-size: 22px; margin-bottom: 22px; }
+      .terminal .k { color: var(--ink-soft); }
+      .terminal .verdict-go { color: var(--sage); font-weight: 700; }
+      .terminal .verdict-stop { color: var(--revoke); font-weight: 700; }
+      .terminal .num { color: var(--ink); font-weight: 500; }
+      .terminal .zero { color: var(--sage); }
+
+      .qrow {
+        display: grid; grid-template-columns: 44px 1fr auto;
+        align-items: baseline; gap: 18px; padding: 14px 0;
+        font-family: "JetBrains Mono", monospace; font-size: 22px;
+      }
+      .qrow .mark { font-size: 20px; }
+      .qrow .mark.ok { color: #62735b; }
+      .qrow .mark.no { color: var(--revoke); }
+      .qrow .qname { color: var(--ink); }
+      .qrow .qval { color: #6c6860; font-size: 19px; }
+
+      .srow {
+        display: grid; grid-template-columns: 300px 150px 120px 1fr;
+        align-items: center; gap: 30px; padding: 22px 0;
+        font-family: "JetBrains Mono", monospace; font-size: 24px;
+      }
+      .srow .scenario { color: var(--ink-soft); }
+      .srow .verdict { font-weight: 700; letter-spacing: 0.04em; }
+      .srow .verdict.go { color: var(--sage); }
+      .srow .verdict.stop { color: var(--revoke); }
+      .srow .conf { color: var(--ink); }
+      .srow .bar-track { height: 4px; background: var(--rule-soft); position: relative; }
+      .srow .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; }
+      .srow .bar.go { background: var(--sage); }
+      .srow .bar.stop { background: var(--revoke); }
+
+      audio { display: none; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-qu3k" id="root" data-composition-id="ligis-jev-reflexes" data-start="0" data-duration="28" data-width="1920" data-height="1080">
+      <!-- ============ SCENE 1 - HOOK (0..3s) ============ -->
+      <div data-hf-id="hf-i24k" id="s1-hook" class="scene clip" data-start="0" data-duration="3" data-track-index="0" style="background: var(--paper);">
+        <div data-hf-id="hf-1kwp" class="content" style="justify-content: center;">
+          <div data-hf-id="hf-fxv6" class="eyebrow s1-eyebrow" style="margin-bottom: 36px;">Ligis · gate telemetry</div>
+          <div data-hf-id="hf-yua8" class="display s1-line" style="font-size: 104px; max-width: 1560px;">An agent was about to pay a stranger.</div>
+          <div data-hf-id="hf-4uwu" class="verdict-block revoke s1-verdict" style="margin-top: 64px;">
+            <div data-hf-id="hf-bvdw" class="display" style="font-size: 96px; color: var(--revoke);">✗ STOP</div>
+            <div data-hf-id="hf-lvl7" class="mono" style="font-size: 30px; color: var(--ink-soft); margin-top: 14px;">0.96 · judged in 436ms · $0.00</div>
+          </div>
+          <div data-hf-id="hf-v2a0" class="s1-rail" style="position: absolute; left: 130px; right: 130px; bottom: 84px;">
+            <hr data-hf-id="hf-v2a1" class="rule-soft s1-railrule">
+            <div data-hf-id="hf-v2a2" class="mono s1-railrow" style="display: flex; justify-content: space-between; margin-top: 18px; font-size: 19px; color: var(--ink-soft);">
+              <span data-hf-id="hf-v2a3">casper-testnet · credential registry</span>
+              <span data-hf-id="hf-v2a4">pharos-atlantic · agent economy</span>
+              <span data-hf-id="hf-v2a5">CROO agent store</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SCENE 2 - THE RECEIPT (3..12s) ============ -->
+      <div data-hf-id="hf-akrl" id="s2-receipt" class="scene clip" data-start="3" data-duration="9" data-track-index="0" style="background: var(--paper);">
+        <div data-hf-id="hf-mcm7" class="content">
+          <div data-hf-id="hf-vhw6" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div data-hf-id="hf-mzmx" class="eyebrow s2-eyebrow">01 · the receipt — one curl, real headers</div>
+            <div data-hf-id="hf-ej3k" class="mono s2-pill" style="font-size: 19px; color: var(--ink-quiet);">casper-testnet · x402</div>
+          </div>
+          <div data-hf-id="hf-c2gu" class="display s2-headline" style="font-size: 54px; margin-top: 24px; max-width: 1500px;">
+            Every payment gets a typed intent read before money moves.
+          </div>
+          <div data-hf-id="hf-mcjw" style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; margin-top: 36px; flex: 1; min-height: 0;">
+            <div data-hf-id="hf-rlle" class="terminal s2-term">
+              <div data-hf-id="hf-0g8m" class="cmd s2-cmd">$ curl -i /premium</div>
+              <div data-hf-id="hf-ahk1" class="s2-h s2-h1"><span data-hf-id="hf-h5dw" class="k">x-jev-verdict</span>&#160;&#160;&#160;&#160;<span data-hf-id="hf-swmd" class="verdict-stop">STOP</span></div>
+              <div data-hf-id="hf-efo2" class="s2-h s2-h2"><span data-hf-id="hf-n03b" class="k">x-jev-confidence</span> <span data-hf-id="hf-4hg6" class="num">0.960</span></div>
+              <div data-hf-id="hf-ids3" class="s2-h s2-h3"><span data-hf-id="hf-g3yi" class="k">x-jev-latency-ms</span> <span data-hf-id="hf-o22o" class="num">436</span></div>
+              <div data-hf-id="hf-uwak" class="s2-h s2-h4"><span data-hf-id="hf-pzw7" class="k">x-jev-cost-usd</span>&#160;&#160; <span data-hf-id="hf-ypg5" class="zero">0.00000000</span></div>
+              <div data-hf-id="hf-vnyd" class="s2-h s2-h5"><span data-hf-id="hf-fmxm" class="k">x-jev-flags</span>&#160;&#160;&#160;&#160;&#160;<span data-hf-id="hf-hb9u" style="color: var(--revoke);">scope-mismatch, payee-mismatch</span></div>
+            </div>
+            <div data-hf-id="hf-g80v" style="display: flex; flex-direction: column; justify-content: center;">
+              <div data-hf-id="hf-ly4m" class="eyebrow s2-qhead" style="margin-bottom: 8px;">four questions · one parallel call</div>
+              <div data-hf-id="hf-j9bt" class="qrow s2-q1"><span data-hf-id="hf-ohix" class="mark ok">✓</span><span data-hf-id="hf-9tvd" class="qname">scope</span><span data-hf-id="hf-vzrr" class="qval">consistent</span></div>
+              <hr data-hf-id="hf-da1m" class="rule-soft">
+              <div data-hf-id="hf-n7fu" class="qrow s2-q2"><span data-hf-id="hf-29k8" class="mark no">✗</span><span data-hf-id="hf-tbkr" class="qname">amount_plausibility</span><span data-hf-id="hf-b0kg" class="qval">implausible</span></div>
+              <hr data-hf-id="hf-wlku" class="rule-soft">
+              <div data-hf-id="hf-r5jv" class="qrow s2-q3"><span data-hf-id="hf-yti8" class="mark no">✗</span><span data-hf-id="hf-kqre" class="qname">payee_consistency</span><span data-hf-id="hf-5ycv" class="qval">mismatch</span></div>
+              <hr data-hf-id="hf-wzvv" class="rule-soft">
+              <div data-hf-id="hf-3o2c" class="qrow s2-q4"><span data-hf-id="hf-xml5" class="mark no">✗</span><span data-hf-id="hf-j0ae" class="qname">request_normality</span><span data-hf-id="hf-geh3" class="qval">abnormal</span></div>
+              <hr data-hf-id="hf-xe6w" class="rule-soft">
+              <div data-hf-id="hf-29fg" class="body-text s2-note" style="font-family: 'Hanken Grotesk', sans-serif; font-size: 24px; color: var(--ink-soft); margin-top: 26px; line-height: 1.5;">
+                Jev answers Choice, Score, and Noul questions against shared state.
+                The gate composes the verdict in code. The credential check stays
+                the source of truth — this is the reflex, not the authority.
+              </div>
+            </div>
+          </div>
+          <div data-hf-id="hf-v2b0" class="s2-arch" style="margin-top: 30px;">
+            <hr data-hf-id="hf-v2b1" class="rule s2-archrule">
+            <div data-hf-id="hf-v2b2" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 44px; margin-top: 24px;">
+              <div data-hf-id="hf-v2b3" class="s2-archcell">
+                <div data-hf-id="hf-v2b4" class="eyebrow" style="font-size: 13px;">the authority</div>
+                <div data-hf-id="hf-v2b5" class="mono" style="font-size: 19px; color: var(--ink-soft); margin-top: 8px;">credential registry — on-chain, casper-testnet</div>
+              </div>
+              <div data-hf-id="hf-v2b6" class="s2-archcell">
+                <div data-hf-id="hf-v2b7" class="eyebrow" style="font-size: 13px;">the reflex</div>
+                <div data-hf-id="hf-v2b8" class="mono" style="font-size: 19px; color: var(--ink-soft); margin-top: 8px;">jev — 4 questions, one parallel call, 436ms</div>
+              </div>
+              <div data-hf-id="hf-v2b9" class="s2-archcell">
+                <div data-hf-id="hf-v2ba" class="eyebrow" style="font-size: 13px;">the settlement</div>
+                <div data-hf-id="hf-v2bb" class="mono" style="font-size: 19px; color: var(--ink-soft); margin-top: 8px;">x402 — waits for both · judged for $0.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SCENE 3 - THE STRESS (12..20s) ============ -->
+      <div data-hf-id="hf-3luv" id="s3-stress" class="scene clip" data-start="12" data-duration="8" data-track-index="0" style="background: var(--paper);">
+        <div data-hf-id="hf-i7rz" class="content">
+          <div data-hf-id="hf-2iwq" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div data-hf-id="hf-h0f6" class="eyebrow s3-eyebrow">02 · under load — 8 live requests, one gate</div>
+            <div data-hf-id="hf-98tx" class="mono s3-pill" style="font-size: 19px; color: var(--ink-quiet);">pnpm demo:jev</div>
+          </div>
+          <div data-hf-id="hf-4pjc" class="display s3-headline" style="font-size: 54px; margin-top: 24px; max-width: 1500px;">
+            Honest payments pass. Deviant ones get caught.
+          </div>
+          <div data-hf-id="hf-l0ue" style="margin-top: 44px;">
+            <div data-hf-id="hf-aq3r" class="srow s3-hrow" style="font-size: 17px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-quiet); padding-bottom: 10px;">
+              <span data-hf-id="hf-xwph">payment</span><span data-hf-id="hf-ka0a">verdict</span><span data-hf-id="hf-nm2j">conf</span><span data-hf-id="hf-63m4">decision time</span>
+            </div>
+            <hr data-hf-id="hf-a4c8" class="rule s3-rule">
+            <div data-hf-id="hf-2g27" class="srow s3-row1">
+              <span data-hf-id="hf-n35r" class="scenario">legit · exact price</span>
+              <span data-hf-id="hf-1us7" class="verdict go">✓ GO</span>
+              <span data-hf-id="hf-b8t9" class="conf">0.93</span>
+              <span data-hf-id="hf-gdgi" class="bar-track"><div data-hf-id="hf-3wap" class="bar go" data-bar="34"></div></span>
+            </div>
+            <hr data-hf-id="hf-um1p" class="rule-soft">
+            <div data-hf-id="hf-rkkk" class="srow s3-row2">
+              <span data-hf-id="hf-k9ds" class="scenario">underpay · 1 mote</span>
+              <span data-hf-id="hf-y3mv" class="verdict stop">✗ STOP</span>
+              <span data-hf-id="hf-fm6k" class="conf">0.98</span>
+              <span data-hf-id="hf-98na" class="bar-track"><div data-hf-id="hf-e8iy" class="bar stop" data-bar="62"></div></span>
+            </div>
+            <hr data-hf-id="hf-v0cq" class="rule-soft">
+            <div data-hf-id="hf-uju5" class="srow s3-row3">
+              <span data-hf-id="hf-4ees" class="scenario">overpay · 500×</span>
+              <span data-hf-id="hf-grrb" class="verdict stop">✗ STOP</span>
+              <span data-hf-id="hf-zey9" class="conf">0.93</span>
+              <span data-hf-id="hf-9myb" class="bar-track"><div data-hf-id="hf-o3m4" class="bar stop" data-bar="33"></div></span>
+            </div>
+            <hr data-hf-id="hf-venr" class="rule-soft">
+            <div data-hf-id="hf-b3y2" class="srow s3-row4">
+              <span data-hf-id="hf-opam" class="scenario">misdirected payee</span>
+              <span data-hf-id="hf-gdga" class="verdict stop">✗ STOP</span>
+              <span data-hf-id="hf-d8ce" class="conf">0.96</span>
+              <span data-hf-id="hf-a19c" class="bar-track"><div data-hf-id="hf-a9ik" class="bar stop" data-bar="42"></div></span>
+            </div>
+            <hr data-hf-id="hf-qckq" class="rule s3-rule2">
+          </div>
+          <div data-hf-id="hf-478m" class="mono s3-stats" style="font-size: 24px; color: var(--ink-soft); margin-top: 34px;">
+            8 requests · 6 flagged · <span data-hf-id="hf-mpkj" style="color: var(--sage);">$0.00000000 total intent cost</span> · billed by the AI Gateway
+          </div>
+          <div data-hf-id="hf-v2c0" class="s3-eco" style="margin-top: 26px;">
+            <hr data-hf-id="hf-v2c1" class="rule-soft s3-ecorule">
+            <div data-hf-id="hf-v2c2" style="display: flex; flex-direction: column; gap: 14px; margin-top: 22px; font-family: 'JetBrains Mono', monospace; font-size: 20px; color: var(--ink-soft);">
+              <div data-hf-id="hf-v2c3" class="s3-ecoline"><span data-hf-id="hf-v2c4" style="color: var(--sage);">●</span>&#160;&#160;cross-chain — capabilityHash("data.premium") identical on casper + pharos</div>
+              <div data-hf-id="hf-v2c5" class="s3-ecoline"><span data-hf-id="hf-v2c6" style="color: var(--terra);">●</span>&#160;&#160;sold as a service — <span data-hf-id="hf-v2c7" style="color: var(--ink); font-weight: 500;">ligis.gate</span> · intent + credential pre-flight · CROO Agent Store</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SCENE 4 - CLOSE (20..28s) ============ -->
+      <div data-hf-id="hf-aq59" id="s4-close" class="scene clip" data-start="20" data-duration="8" data-track-index="0" style="background: var(--paper);">
+        <div data-hf-id="hf-iajx" class="content" style="justify-content: center;">
+          <div data-hf-id="hf-y047" class="eyebrow s4-eyebrow" style="margin-bottom: 36px;">ligis · the gate before the payment</div>
+          <div data-hf-id="hf-jtzn" class="display s4-line" style="font-size: 118px; max-width: 1600px;">
+            The gate has <span data-hf-id="hf-ujx0" style="color: var(--terra);">reflexes</span>.
+          </div>
+          <hr data-hf-id="hf-7tbb" class="rule s4-rule" style="margin: 52px 0 36px; max-width: 1400px;">
+          <div data-hf-id="hf-zm8l" class="s4-links" style="display: flex; gap: 56px; align-items: center;">
+            <div data-hf-id="hf-yet9" class="mono" style="font-size: 24px; color: var(--terra);">ligis.vercel.app/gate</div>
+            <div data-hf-id="hf-6yn0" class="mono" style="font-size: 21px; color: var(--ink-quiet);">four questions · one call · 436ms · $0.00</div>
+            <div data-hf-id="hf-v2d1" class="mono" style="font-size: 21px; color: var(--ink-soft);">github.com/sneldao/ligis</div>
+          </div>
+          <div data-hf-id="hf-z205" class="body-text s4-sub" style="font-size: 27px; color: var(--ink-soft); margin-top: 46px; max-width: 1250px; line-height: 1.55;">
+            Jev is the reflex. The credential registry is the authority.
+            Your agent gets both, in one response — live now as
+            <span data-hf-id="hf-v2d2" class="mono" style="font-size: 24px; color: var(--ink);">ligis.gate</span>
+            on the CROO Agent Store.
+          </div>
+          <div data-hf-id="hf-v2d3" class="s4-rail" style="position: absolute; left: 130px; right: 130px; bottom: 84px;">
+            <hr data-hf-id="hf-v2d4" class="rule-soft s4-railrule">
+            <div data-hf-id="hf-v2d5" class="mono s4-railrow" style="display: flex; justify-content: space-between; margin-top: 18px; font-size: 19px; color: var(--ink-soft);">
+              <span data-hf-id="hf-v2d6">casper-testnet</span>
+              <span data-hf-id="hf-v2d7">pharos-atlantic</span>
+              <span data-hf-id="hf-v2d8">CROO agent store</span>
+              <span data-hf-id="hf-v2d9">0G compute</span>
+              <span data-hf-id="hf-v2da">vercel ai gateway</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // SCENE 1 - Hook
+      tl.from("#s1-hook .s1-eyebrow", { y: 20, opacity: 0, duration: 0.45, ease: "power3.out" }, 0.1);
+      tl.from("#s1-hook .s1-line", { y: 44, opacity: 0, duration: 0.65, ease: "power3.out" }, 0.3);
+      tl.from("#s1-hook .s1-verdict", { x: 36, opacity: 0, duration: 0.6, ease: "power3.out" }, 1.15);
+      tl.from("#s1-hook .s1-railrule", { scaleX: 0, transformOrigin: "left center", duration: 0.5, ease: "power2.out" }, 1.7);
+      tl.from("#s1-hook .s1-railrow span", { y: 12, opacity: 0, duration: 0.4, ease: "power3.out", stagger: 0.18 }, 1.85);
+      tl.to("#s1-hook .content", { opacity: 0, duration: 0.4, ease: "power2.in" }, 2.6);
+      tl.set("#s1-hook .content", { opacity: 0 }, 3.0);
+
+      // SCENE 2 - Receipt: headers land one by one, questions stagger in
+      tl.from("#s2-receipt .s2-eyebrow", { x: -30, opacity: 0, duration: 0.45, ease: "power3.out" }, 3.15);
+      tl.from("#s2-receipt .s2-pill", { x: 30, opacity: 0, duration: 0.45, ease: "power3.out" }, 3.25);
+      tl.from("#s2-receipt .s2-headline", { y: 28, opacity: 0, duration: 0.55, ease: "power3.out" }, 3.4);
+      tl.from("#s2-receipt .s2-term", { y: 36, opacity: 0, duration: 0.6, ease: "power3.out" }, 3.9);
+      tl.from("#s2-receipt .s2-cmd", { opacity: 0, duration: 0.3, ease: "power2.out" }, 4.2);
+      tl.from("#s2-receipt .s2-h1", { x: -18, opacity: 0, duration: 0.35, ease: "power3.out" }, 4.6);
+      tl.from("#s2-receipt .s2-h2", { x: -18, opacity: 0, duration: 0.35, ease: "power3.out" }, 5.0);
+      tl.from("#s2-receipt .s2-h3", { x: -18, opacity: 0, duration: 0.35, ease: "power3.out" }, 5.4);
+      tl.from("#s2-receipt .s2-h4", { x: -18, opacity: 0, duration: 0.35, ease: "power3.out" }, 5.8);
+      tl.from("#s2-receipt .s2-h5", { x: -18, opacity: 0, duration: 0.35, ease: "power3.out" }, 6.2);
+      tl.from("#s2-receipt .s2-qhead", { y: 18, opacity: 0, duration: 0.4, ease: "power3.out" }, 6.7);
+      tl.from("#s2-receipt .s2-q1", { x: 22, opacity: 0, duration: 0.4, ease: "power3.out" }, 6.9);
+      tl.from("#s2-receipt .s2-q2", { x: 22, opacity: 0, duration: 0.4, ease: "power3.out" }, 7.15);
+      tl.from("#s2-receipt .s2-q3", { x: 22, opacity: 0, duration: 0.4, ease: "power3.out" }, 7.4);
+      tl.from("#s2-receipt .s2-q4", { x: 22, opacity: 0, duration: 0.4, ease: "power3.out" }, 7.65);
+      tl.from("#s2-receipt .s2-note", { y: 18, opacity: 0, duration: 0.5, ease: "power3.out" }, 8.2);
+      // Architecture strip fills the former dead zone (9–12s was blank paper)
+      tl.from("#s2-receipt .s2-archrule", { scaleX: 0, transformOrigin: "left center", duration: 0.5, ease: "power2.out" }, 8.9);
+      tl.from("#s2-receipt .s2-arch .s2-archcell", { y: 16, opacity: 0, duration: 0.45, ease: "power3.out", stagger: 0.4 }, 9.1);
+      tl.to("#s2-receipt .content", { opacity: 0, duration: 0.4, ease: "power2.in" }, 11.3);
+      tl.set("#s2-receipt .content", { opacity: 0 }, 11.8);
+
+      // SCENE 3 - Stress: rows land, bars fill to real decision times
+      tl.from("#s3-stress .s3-eyebrow", { x: -30, opacity: 0, duration: 0.45, ease: "power3.out" }, 12.15);
+      tl.from("#s3-stress .s3-pill", { x: 30, opacity: 0, duration: 0.45, ease: "power3.out" }, 12.25);
+      tl.from("#s3-stress .s3-headline", { y: 28, opacity: 0, duration: 0.55, ease: "power3.out" }, 12.4);
+      tl.from("#s3-stress .s3-hrow", { opacity: 0, duration: 0.4, ease: "power2.out" }, 12.9);
+      tl.from("#s3-stress .s3-rule", { scaleX: 0, transformOrigin: "left center", duration: 0.5, ease: "power2.out" }, 12.95);
+      tl.from("#s3-stress .s3-row1", { x: -26, opacity: 0, duration: 0.45, ease: "power3.out" }, 13.3);
+      tl.to("#s3-stress .s3-row1 .bar", { width: "34%", duration: 0.55, ease: "power3.out" }, 13.7);
+      tl.from("#s3-stress .s3-row2", { x: -26, opacity: 0, duration: 0.45, ease: "power3.out" }, 14.3);
+      tl.to("#s3-stress .s3-row2 .bar", { width: "62%", duration: 0.55, ease: "power3.out" }, 14.7);
+      tl.from("#s3-stress .s3-row3", { x: -26, opacity: 0, duration: 0.45, ease: "power3.out" }, 15.3);
+      tl.to("#s3-stress .s3-row3 .bar", { width: "33%", duration: 0.55, ease: "power3.out" }, 15.7);
+      tl.from("#s3-stress .s3-row4", { x: -26, opacity: 0, duration: 0.45, ease: "power3.out" }, 16.3);
+      tl.to("#s3-stress .s3-row4 .bar", { width: "42%", duration: 0.55, ease: "power3.out" }, 16.7);
+      tl.from("#s3-stress .s3-rule2", { scaleX: 0, transformOrigin: "left center", duration: 0.5, ease: "power2.out" }, 17.2);
+      tl.from("#s3-stress .s3-stats", { y: 18, opacity: 0, duration: 0.5, ease: "power3.out" }, 17.5);
+      // Ecosystem lines — the portability + CROO beats
+      tl.from("#s3-stress .s3-ecorule", { scaleX: 0, transformOrigin: "left center", duration: 0.45, ease: "power2.out" }, 17.9);
+      tl.from("#s3-stress .s3-ecoline", { x: -22, opacity: 0, duration: 0.45, ease: "power3.out", stagger: 0.45 }, 18.05);
+      tl.to("#s3-stress .content", { opacity: 0, duration: 0.4, ease: "power2.in" }, 19.6);
+      tl.set("#s3-stress .content", { opacity: 0 }, 20.0);
+
+      // SCENE 4 - Close
+      tl.from("#s4-close .s4-eyebrow", { y: 20, opacity: 0, duration: 0.45, ease: "power3.out" }, 20.2);
+      tl.from("#s4-close .s4-line", { y: 44, opacity: 0, duration: 0.7, ease: "power3.out" }, 20.45);
+      tl.from("#s4-close .s4-rule", { scaleX: 0, transformOrigin: "left center", duration: 0.6, ease: "power2.out" }, 21.2);
+      tl.from("#s4-close .s4-links", { y: 20, opacity: 0, duration: 0.6, ease: "power3.out" }, 21.5);
+      tl.from("#s4-close .s4-sub", { y: 22, opacity: 0, duration: 0.6, ease: "power3.out" }, 22.1);
+      // Bottom ecosystem rail — uses the static close hold
+      tl.from("#s4-close .s4-railrule", { scaleX: 0, transformOrigin: "left center", duration: 0.5, ease: "power2.out" }, 23.4);
+      tl.from("#s4-close .s4-railrow span", { y: 12, opacity: 0, duration: 0.4, ease: "power3.out", stagger: 0.16 }, 23.6);
+
+      window.__timelines["ligis-jev-reflexes"] = tl;
+    </script>
+  </body>
+</html>

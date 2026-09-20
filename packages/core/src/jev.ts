@@ -1,5 +1,5 @@
 /**
- * Jev Intent Evaluation — optional pre-settlement signal for the Trust Gate.
+ * Jev Intent Evaluation — the typed-reflex layer for any Ligis gate.
  *
  * Jev (TypeSafe's "System One" model) takes a state plus typed questions and
  * returns structured answers — Choice, Score, Noul — with probabilities and
@@ -19,7 +19,7 @@
  * Design rules (non-negotiable):
  *   - The credential check is the source of truth. Jev is a signal, not a gate.
  *   - Fail open. Missing key, timeout, non-200, or malformed response →
- *     verdict SKIPPED and the gate flow proceeds unchanged.
+ *     verdict SKIPPED and the calling flow proceeds unchanged.
  *   - Cost: the AI Gateway reports billed USD in `provider_metadata.gateway.cost`
  *     and that is used directly when present; otherwise cost is derived from
  *     `usage.input_tokens` at Jev's published input price ($0.042/MTok),
@@ -34,6 +34,10 @@
  *     2026-09-25 — after that, flip to direct or keep the gateway with billing.
  *   direct: POST https://api.typesafe.ai/v1/systemone
  *     auth TYPESAFE_API_KEY, model `jev-latest`.
+ *
+ * Consumers: the x402 Trust Gate (packages/x402-server, judges /premium
+ * payment requests) and the CROO adapter's `ligis.gate` service
+ * (packages/croo-adapter, sells the same pre-flight read on the Agent Store).
  */
 
 /** Input price published by TypeSafe at launch: $0.042 per million tokens. */
@@ -57,6 +61,10 @@ export interface JevIntentInput {
   tokenDecimals?: string;
   /** The payee the gate advertises (normalized account string). */
   advertisedPayTo: string;
+  /** Name of the gating service, shown to Jev as `service.name`. */
+  serviceName?: string;
+  /** Description of the gating service, shown to Jev as `service.description`. */
+  serviceDescription?: string;
   /** Decoded X-PAYMENT authorization, when the agent already attached one. */
   payment?: {
     scheme?: string;
@@ -197,8 +205,9 @@ function buildState(input: JevIntentInput): Record<string, unknown> {
     : 9;
   return {
     service: {
-      name: "Ligis Trust Gate",
+      name: input.serviceName,
       description:
+        input.serviceDescription ??
         "A credential-gated x402 resource server. Agents pay micropayments for premium data; the gate checks each caller's credential on-chain separately from this payment.",
       operator_note:
         "Judge the payment intent on its own merits — credential status is verified independently by the gate and is not visible here.",
