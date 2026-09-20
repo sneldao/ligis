@@ -345,9 +345,17 @@ cp -a /opt/ligis-croo/current/ releases/$TIMESTAMP/
 cd releases/$TIMESTAMP
 git fetch origin && git reset --hard origin/main
 pnpm install --frozen-lockfile --filter @ligis/croo-adapter...
+# Build the dependency chain first — the croo-adapter compiles against the
+# dist/ output of @ligis/core, the chain adapters, and agent-logic. Skipping
+# this fails with "has no exported member" errors from stale/missing dist.
+pnpm --filter @ligis/core --filter @ligis/adapter-casper --filter @ligis/adapter-evm --filter @ligis/agent-logic run build
 pnpm --filter @ligis/croo-adapter build
 ln -sfn /opt/ligis-croo/releases/$TIMESTAMP /opt/ligis-croo/current
 cd /opt/ligis-croo && pm2 restart ecosystem.config.js --update-env
+# Verify the startup banner lists all four services and the new alias:
+#   Services: ligis.risk, ligis.verify, ligis.issue, ligis.gate
+#   Service alias: <uuid> -> ligis.gate
+tail -15 /opt/ligis-croo/logs/out.log
 ```
 
 **Health check:**
@@ -356,6 +364,11 @@ cd /opt/ligis-croo && pm2 restart ecosystem.config.js --update-env
 curl http://127.0.0.1:9430/health
 # Returns: { uptime, delivered, errors, lastDeliveryAt, wsConnected, inFlight }
 ```
+
+**Release hygiene:** keep only the serving release + one rollback target.
+Prune with `rm -rf /opt/ligis-croo/releases/<old>` — never the one `current`
+resolves to or the one the PM2 process cwd points at (check
+`readlink -f /proc/$(pm2 pid ligis-croo)/cwd` first).
 
 **Required env vars in `/opt/ligis-croo/.env`:**
 
