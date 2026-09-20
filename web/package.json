@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.33.2",
   "scripts": {
     "dev": "next dev --turbopack",
+    "prebuild": "cd .. && pnpm --filter @ligis/core --filter @ligis/agent-logic --filter @ligis/zerog --filter @ligis/adapter-casper --filter @ligis/adapter-evm run build",
     "build": "next build --webpack",
     "start": "next start",
     "pretypecheck": "cd .. && pnpm --filter @ligis/zerog build",
@@ -31,7 +32,7 @@
     "framer-motion": "^13.1.1",
     "genlayer-js": "^1.1.8",
     "maath": "^0.10.8",
-    "next": "^16.2.0",
+    "next": "^16.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.185.1",
