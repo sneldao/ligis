@@ -10,6 +10,7 @@ import {
 } from "@/lib/format";
 import { readRecents, type RecentAgent } from "@/lib/recent-agents";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
+import { OPEN_PALETTE_EVENT } from "@/lib/command-palette";
 
 type Command = {
   id: string;
@@ -90,6 +91,14 @@ export function CommandPalette() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  // Pointer access: the dock (and any other chrome) opens the palette via a
+  // window event so touch users are not limited to ⌘K or /.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(OPEN_PALETTE_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_PALETTE_EVENT, onOpen);
+  }, []);
 
   useEffect(() => {
     if (open) {

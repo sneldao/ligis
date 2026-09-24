@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChainSelector } from "@/components/ChainSelector";
 import { UnifiedWalletChip } from "@/components/UnifiedWalletChip";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
+import { openCommandPalette } from "@/lib/command-palette";
 
 const NAV = [
   { href: "/gate", label: "Gate", description: "Gate a payment" },
@@ -213,6 +214,21 @@ export function GlobalDock() {
                   );
                 },
               )}
+              {onField ? null : (
+                <li>
+                  <button
+                    type="button"
+                    aria-label="More pages — open command palette"
+                    onClick={() => {
+                      closeDrawer();
+                      openCommandPalette();
+                    }}
+                    className="block font-mono text-xs uppercase tracking-[0.18em] text-paper-deep transition-colors hover:text-paper"
+                  >
+                    More
+                  </button>
+                </li>
+              )}
               <li>
                 <UnifiedWalletChip />
               </li>
@@ -222,12 +238,14 @@ export function GlobalDock() {
       </AnimatePresence>
 
       {onField ? null : (
-        <p
-          aria-hidden
-          className="pointer-events-none fixed bottom-4 right-4 hidden font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet sm:block"
+        <button
+          type="button"
+          aria-label="Open command palette"
+          onClick={openCommandPalette}
+          className="pointer-events-auto fixed bottom-4 right-4 hidden font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet transition-colors hover:text-ink sm:block"
         >
           ⌘K · /
-        </p>
+        </button>
       )}
     </div>
   );

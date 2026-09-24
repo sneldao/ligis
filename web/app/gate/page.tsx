@@ -58,14 +58,27 @@ const DEMO_SUBJECTS: Record<string, { label: string; value: string }[]> = {
   ],
 };
 
+function gateParams(
+  chain: ChainNetwork,
+  subject: string,
+  capability: string,
+  situation?: string,
+): string {
+  const params = new URLSearchParams();
+  params.set("chain", chain.id);
+  params.set("subject", subject);
+  params.set("capability", capability);
+  if (situation) params.set("situation", situation);
+  return params.toString();
+}
+
 function verifyHref(
   chain: ChainNetwork,
   subject: string,
   capability: string,
   situation?: string,
 ): string {
-  const sit = situation ? `&situation=${situation}` : "";
-  return `/gate?chain=${chain.id}&subject=${subject}&capability=${capability}${sit}`;
+  return `/gate?${gateParams(chain, subject, capability, situation)}`;
 }
 
 export default async function VerifyPage({
@@ -275,10 +288,10 @@ export default async function VerifyPage({
           </p>
           <div className="mt-5 flex flex-wrap items-baseline gap-4">
             <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
-              {`${SITE_URL}/gate?chain=${chain.id}&subject=${subjectForVerdict}&capability=${capForVerdict}${situation ? `&situation=${situation.id}` : ""}`}
+              {`${SITE_URL}/gate?${gateParams(chain, subjectForVerdict, capForVerdict, situation?.id)}`}
             </code>
             <CopyButton
-              value={`${SITE_URL}/gate?chain=${chain.id}&subject=${subjectForVerdict}&capability=${capForVerdict}${situation ? `&situation=${situation.id}` : ""}`}
+              value={`${SITE_URL}/gate?${gateParams(chain, subjectForVerdict, capForVerdict, situation?.id)}`}
               label="copy"
               className="shrink-0"
             />
