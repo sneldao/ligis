@@ -59,10 +59,10 @@ and reach for typography, whitespace, and hairlines instead.
 
 - The home page is editorial, not a dashboard. Stats appear inline as numerals
   in prose ("1,247 agents minted on Pharos Atlantic"), not as tiles.
-- **Home-page hierarchy**: lead with the trust decision and a live registry
-  check. Risk (CROO) and integration (`/compose`) are own routes linked from
-  a short “Also” row — not inline sections. Contracts and issuance stay
-  secondary on the landing, behind details. The home page is not a README.
+- **Home-page hierarchy**: short hero → interactive moment accordion (one
+  open at a time) → live gate (branch walk + verify) → field invite → Also
+  row. Moat routes (CROO, compose, issuers, steward) are links, never essays
+  on the landing. The home page is a product loop, not a manifesto.
 - **Three modes, never one scrolling page**: Ligis is landing, field, and app.
   They do not share a surface or an input model.
   - **Landing (`/`)**: editorial paper. Trust decision first. A framed
@@ -156,6 +156,9 @@ Only these compose surfaces:
 | `AddressDisplay`                                                  | mono address, optional link to explorer, optional copy                                                                               |
 | `CopyButton`                                                      | quiet tracked-uppercase action, no border                                                                                            |
 | `GateVerdict`                                                     | the GO/STOP pre-payment decision — left rule in tone, display verdict, plain-language reason, provenance line                        |
+| `SituationCast`                                                   | exclusive moment accordion — closed rows are role + check; one open shows Blind/Gated contrast and syncs or links the gate           |
+| `LandingGate`                                                     | home product loop — moment picker syncs capability into `GateStates` + `VerifyDemo`                                                  |
+| `GateStates`                                                      | three-branch x402 toggle (401 / 402 / 200) with status numeral                                                                       |
 | `SignalStack`                                                     | the trust signal ledger — Rule-delimited rows of risk/capability/identity/policy signals with verdict, confidence, and measured cost |
 | `TrustReceipt`                                                    | the final trust ledger — decision, signal stack, incumbent-vs-measured cost comparison, anchored manifest hash                       |
 | typography classes (`display`, `eyebrow`, `font-mono`, `tabular`) | hierarchy                                                                                                                            |

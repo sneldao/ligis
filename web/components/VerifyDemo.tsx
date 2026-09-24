@@ -19,14 +19,21 @@ type CapOption = { id: string; label: string };
 export function VerifyDemo({
   capabilities,
   defaultSubject,
+  defaultCapability,
   explorerUrl,
   chainId,
 }: {
   capabilities: CapOption[];
   defaultSubject: string;
+  /** Prefills the capability select (e.g. from a synced moment). */
+  defaultCapability?: string;
   explorerUrl: string;
   chainId?: string;
 }) {
+  const initialCapability =
+    defaultCapability && capabilities.some((c) => c.id === defaultCapability)
+      ? defaultCapability
+      : capabilities[0]?.id;
   const [mode, setMode] = useState<"single" | "batch">("single");
   const [singleState, singleAction, singlePending] = useActionState<
     VerifyResult | null,
@@ -118,7 +125,7 @@ export function VerifyDemo({
               <select
                 id="capability"
                 name="capability"
-                defaultValue={capabilities[0]?.id}
+                defaultValue={initialCapability}
                 className="block w-full appearance-none border-0 border-b border-rule bg-transparent pb-2 pr-6 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra"
               >
                 {capabilities.map((c) => (
@@ -243,10 +250,9 @@ export function VerifyDemo({
             <PendingState label="reading from chain…" />
           ) : singleState === null ? (
             <p className="font-serif text-sm italic text-ink-quiet">
-              A sample address is pre-filled. Run the gate:{" "}
-              <span className="text-sage">✓ GO</span> means it holds a valid
-              credential — proceed. <span className="text-revoke">✗ STOP</span>{" "}
-              means your agent should not pay.
+              Sample subject pre-filled. <span className="text-sage">✓ GO</span>{" "}
+              — proceed. <span className="text-revoke">✗ STOP</span> — do not
+              pay.
             </p>
           ) : !singleState.ok ? (
             <ErrorRetry

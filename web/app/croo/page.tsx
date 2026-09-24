@@ -55,12 +55,11 @@ export default async function CrooPage({
 
       <section className="mt-12 sm:mt-16">
         <h1 className="display text-4xl text-ink sm:text-5xl">
-          Spend cents before you send thousands.
+          Risk before pay.
         </h1>
-        <p className="mt-6 max-w-2xl font-serif text-lg leading-relaxed text-ink-soft">
-          Ask Ligis for a counterparty risk report before your agent pays. It
-          returns a score, verdict, and the reasons behind it — via CROO and
-          x402.
+        <p className="mt-5 max-w-lg font-serif text-lg leading-relaxed text-ink-soft">
+          Counterparty score, verdict, and reasons — via CROO — before your
+          agent sends funds.
         </p>
       </section>
 

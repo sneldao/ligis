@@ -14,30 +14,28 @@ export function FieldInvite({ chainId }: { chainId: string }) {
         </p>
       </header>
       <Rule className="mt-4" />
-      <div className="mt-8 max-w-2xl sm:mt-10">
-        <h2 className="display text-3xl text-ink">
-          Every agent is a stranger until you check.
-        </h2>
-        <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft">
-          The field is the live registry as a place you can fly through. Zoom in
-          and identities resolve as specimens. Zoom out and they remain a map
-          &mdash; they do not disappear.
-        </p>
+      <div className="mt-6 flex flex-wrap items-end justify-between gap-4 sm:mt-8">
+        <div className="max-w-md">
+          <h2 className="display text-2xl text-ink sm:text-3xl">
+            Fly the registry.
+          </h2>
+          <p className="mt-3 font-serif text-sm leading-relaxed text-ink-soft sm:text-base">
+            Zoom in — specimens. Zoom out — a map. Strangers until you check.
+          </p>
+        </div>
+        <Link
+          href={href}
+          className="font-mono text-[11px] uppercase tracking-[0.16em] text-terra underline decoration-rule underline-offset-4 hover:decoration-terra"
+        >
+          Enter the field →
+        </Link>
       </div>
-      <div className="relative mt-10 h-[22rem] overflow-hidden border-y border-rule sm:h-[28rem]">
+      <div className="relative mt-6 h-[16rem] overflow-hidden border-y border-rule sm:mt-8 sm:h-[22rem]">
         <QuietField />
         <div className="pointer-events-none absolute inset-0 bg-paper/25" />
-        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 py-5 sm:px-8 sm:py-6">
-          <p className="hidden max-w-sm font-serif text-sm italic leading-relaxed text-ink-soft sm:block">
-            Drag, scroll, or pinch. Esc or Ligis leaves.
-          </p>
-          <Link
-            href={href}
-            className="font-mono text-[11px] uppercase tracking-[0.16em] text-terra underline decoration-rule underline-offset-4 hover:decoration-terra"
-          >
-            Enter the field →
-          </Link>
-        </div>
+        <p className="pointer-events-none absolute inset-x-0 bottom-0 hidden px-5 py-4 font-serif text-sm italic text-ink-soft sm:block sm:px-8">
+          Drag, scroll, or pinch. Esc or Ligis leaves.
+        </p>
       </div>
     </section>
   );

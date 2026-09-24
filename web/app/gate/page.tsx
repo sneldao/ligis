@@ -118,13 +118,10 @@ export default async function VerifyPage({
           </div>
         </section>
         <section className="mt-12">
-          <h2 className="eyebrow">Share this gate</h2>
-          <p className="mt-4 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">
-            A gate link is a self-verifying URL &mdash; anyone who opens it
-            re-runs the same on-chain read and sees the same decision. No
-            account, no token, no Ligis server in the path. Hand it to an agent,
-            paste it in an audit trail, or drop it where a payment is about to
-            happen.
+          <h2 className="eyebrow">Share</h2>
+          <p className="mt-3 max-w-xl font-serif text-sm leading-relaxed text-ink-soft">
+            Anyone who opens this URL re-runs the same on-chain read. No
+            account. No Ligis server.
           </p>
           <div className="mt-5 flex flex-wrap items-baseline gap-4">
             <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
@@ -159,30 +156,26 @@ export default async function VerifyPage({
 
       <section className="mt-12 sm:mt-16">
         <h1 className="display text-4xl text-ink sm:text-5xl">
-          {situation
-            ? situation.moment.replace(/\.$/, "") + "."
-            : "The gate before the payment."}
+          {situation ? situation.moment.replace(/\.$/, "") + "." : "Gate it."}
         </h1>
-        <p className="mt-6 max-w-2xl font-serif text-lg leading-relaxed text-ink-soft">
+        <p className="mt-5 max-w-xl font-serif text-lg leading-relaxed text-ink-soft">
           {situation ? (
             <>
-              You&rsquo;re in the{" "}
-              <span className="text-ink">{situation.role.toLowerCase()}</span>{" "}
-              seat. Without Ligis: {situation.without.toLowerCase()}. With it:{" "}
-              {situation.withLigis.toLowerCase()}.
+              <span className="text-ink">{situation.role}</span>
+              <span className="mx-2 text-ink-quiet">·</span>
+              <span className="text-revoke">Blind:</span> {situation.without}{" "}
+              <span className="text-sage">Gated:</span> {situation.withLigis}
             </>
           ) : (
             <>
-              Pick a situation you recognize, then run one on-chain read. The
-              answer comes from {chain.name} state — so your agent can trust it
-              the instant before money moves.
+              One on-chain read on {chain.name}.{" "}
+              <span className="text-sage">GO</span> or{" "}
+              <span className="text-revoke">STOP</span> before money moves.
             </>
           )}
         </p>
         {situation ? (
           <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
-            {situation.integrator}
-            <span className="mx-2">·</span>
             <code className="normal-case tracking-normal text-ink-soft">
               {situation.capability}
             </code>
@@ -191,7 +184,7 @@ export default async function VerifyPage({
               href={`/gate?chain=${chain.id}`}
               className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
-              all situations
+              all moments
             </a>
           </p>
         ) : (
@@ -232,7 +225,7 @@ export default async function VerifyPage({
         </div>
       ) : (
         <div className="mt-12">
-          <p className="eyebrow">Other situations</p>
+          <p className="eyebrow">Other moments</p>
           <Rule className="mt-3" />
           <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em]">
             {SITUATIONS.map((s) => (

@@ -47,10 +47,9 @@ export default async function ComposePage({
         <h1 className="display text-4xl text-ink sm:text-5xl">
           One read. Anywhere.
         </h1>
-        <p className="mt-6 max-w-2xl font-serif text-lg leading-relaxed text-ink-soft">
+        <p className="mt-5 max-w-lg font-serif text-lg leading-relaxed text-ink-soft">
           Call <code className="font-mono text-ink">isCapable</code> from any
-          contract, agent, or script. No Ligis account, SDK, or API key — the
-          answer comes from chain state.
+          contract or agent. No Ligis account. Answer from chain state.
         </p>
         <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           viem · ethers · cast · any caller
