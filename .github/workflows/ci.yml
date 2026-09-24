@@ -51,6 +51,9 @@ jobs:
       - name: Check formatting (fail fast, before the long build)
         run: pnpm exec prettier --check 'packages/*/src/**/*.{ts,json,md}'
 
+      - name: DESIGN.md lint (web)
+        run: pnpm lint:design
+
       - name: Audit dependencies
         run: pnpm run audit:deps
 

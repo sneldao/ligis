@@ -333,7 +333,7 @@ export default async function AgentPage({
             href="/"
             className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
           >
-            ← Return to the index
+            ← Home
           </a>
           <a
             href={`${chain.explorerUrl}/${isCasper ? "account" : "address"}/${address}`}

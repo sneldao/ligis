@@ -209,7 +209,7 @@ export default async function IssuersPage({
           href={`/${chainQs}`}
           className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
         >
-          ← Return to the index
+          ← Home
         </Link>
         <span className="font-mono tabular">
           {chain.name.toLowerCase()} · chain {chain.chainId ?? chain.chainName}

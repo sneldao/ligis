@@ -18,7 +18,7 @@ export default function NotFound() {
           href="/"
           className="text-sm text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
         >
-          ← Return to the index
+          ← Home
         </Link>
         <Link
           href="/gate"

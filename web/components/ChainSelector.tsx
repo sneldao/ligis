@@ -97,14 +97,14 @@ function ChainSelectorInner({ activeId }: { activeId?: string }) {
               <span>{chain.shortName}</span>
               {!chain.live ? (
                 <span
-                  className="ml-2 inline-block rounded-sm border border-rule px-1 py-px text-xs normal-case tracking-normal text-ink-quiet"
+                  className="ml-2 inline-block border border-rule px-1 py-px text-xs normal-case tracking-normal text-ink-quiet"
                   title="Contracts not deployed yet — reads will fall through to Pharos"
                 >
                   preview
                 </span>
               ) : !chain.writeReady ? (
                 <span
-                  className="ml-2 inline-block rounded-sm border border-rule px-1 py-px text-xs normal-case tracking-normal text-ink-quiet"
+                  className="ml-2 inline-block border border-rule px-1 py-px text-xs normal-case tracking-normal text-ink-quiet"
                   title="Reads are live on this chain. Writes from the browser are not wired yet."
                 >
                   read-only

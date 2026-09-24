@@ -6,6 +6,11 @@ purple gradients, shadow chrome). Direction is **curated catalog** — agents
 and credentials presented like featured objects in a refined collection, not
 tiles on a SaaS dashboard.
 
+**Enforced in CI:** `pnpm lint:design` (`scripts/lint-design.mjs`) fails the
+build on `text-[9px]`/`text-[10px]`, box/drop shadows, `rounded-sm|md|lg|…`
+outside the dock, Tailwind arbitrary hex colours, "Return to the index", and
+an Escrow item in `GlobalDock` NAV.
+
 ## Banned
 
 The following words and patterns must not appear in component names, CSS, or

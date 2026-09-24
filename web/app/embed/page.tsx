@@ -135,7 +135,7 @@ export default function EmbedPage() {
           href="/"
           className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
         >
-          ← Return to the index
+          ← Home
         </Link>
         <span className="font-mono tabular">
           {network.name.toLowerCase()} · chain {network.chainId}

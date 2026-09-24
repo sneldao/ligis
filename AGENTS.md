@@ -666,3 +666,16 @@ the `/gate` telemetry waterfall. Tagline: "the gate has reflexes."
 and Casper deployer wallets used as the `/gate` "verified agent" samples.
 Run `LIGIS_NETWORK=atlantic-testnet npx tsx scripts/seed-demo-credentials.ts
 [pharos|casper]` when they expire (next: ~2027-09-24).
+
+**Monad fixtures** (see `web/lib/demo-subjects.ts`):
+
+| Sample             | Capability                   | Expected       |
+| ------------------ | ---------------------------- | -------------- |
+| verified agent     | `agent.commerce.escrow`      | GO             |
+| revoked credential | `demo.metropolis.revocation` | STOP · revoked |
+| unverified wallet  | `kyc.basic` on `0x…dEaD`     | STOP · none    |
+
+Do **not** re-issue `demo.metropolis.revocation` — it is the live revoked
+fixture from `pnpm demo:monad`. CI runs `pnpm smoke:demo-credentials` weekly
+(`.github/workflows/demo-credentials.yml`) so expiry / accidental re-issue
+fails the Action instead of the public demo.

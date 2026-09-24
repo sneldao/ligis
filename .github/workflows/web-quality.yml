@@ -1,0 +1,60 @@
+name: Web quality
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "web/**"
+      - "scripts/lint-design.mjs"
+      - "scripts/smoke-ssr.mjs"
+      - ".github/workflows/web-quality.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "web/**"
+      - "scripts/lint-design.mjs"
+      - "scripts/smoke-ssr.mjs"
+      - ".github/workflows/web-quality.yml"
+
+jobs:
+  design-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: DESIGN.md lint
+        run: node scripts/lint-design.mjs
+
+  ssr-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace deps + web
+        run: |
+          pnpm --filter @ligis/core --filter @ligis/agent-logic --filter @ligis/zerog --filter @ligis/adapter-casper --filter @ligis/adapter-evm run build
+          pnpm --filter @ligis/web run build
+        env:
+          # Public reads only — pages that need Casper/Envio degrade gracefully.
+          LIGIS_ENVIO_GRAPHQL_URL: http://144.202.117.160:18080/v1/graphql
+      - name: Start Next and smoke routes
+        run: |
+          pnpm --filter @ligis/web exec next start --port 3000 &
+          echo $! > /tmp/next.pid
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3000/ >/dev/null && break
+            sleep 2
+          done
+          node scripts/smoke-ssr.mjs
+          kill "$(cat /tmp/next.pid)" || true
+        env:
+          BASE_URL: http://127.0.0.1:3000
+          LIGIS_ENVIO_GRAPHQL_URL: http://144.202.117.160:18080/v1/graphql
