@@ -111,6 +111,11 @@ and reach for typography, whitespace, and hairlines instead.
   home-page background and not global chrome. It never appears behind ledger,
   reference, embed, or Steward surfaces. Landing may _picture_ the field;
   only `/field` _is_ the field.
+- **Field population**: live specimens come from `listAgents` /
+  `GET /api/field/agents` (EVM `ownerOf(1..supply)`; Casper deployer +
+  `LIGIS_FIELD_AGENTS`). Ambient phantoms add density only — they are not
+  dossiers. Click focuses in place; “Open dossier” / gate only for LIVE
+  (terra ring) agents. Seed density with `pnpm seed:field` when supply is thin.
 - **Semantic zoom**: zooming out is a map, never an erasure. Close in, agents
   are specimen documents. Pulled back, they persist as markers — the field
   answers “how big is this trust layer?” Fade and fog are LOD transitions
