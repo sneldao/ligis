@@ -1,10 +1,19 @@
+import Link from "next/link";
 import type { Address } from "viem";
 import { AddressDisplay } from "@/components/AddressDisplay";
 import { CopyButton } from "@/components/CopyButton";
+import { GateVerdict } from "@/components/GateVerdict";
 import { Rule } from "@/components/Rule";
+import { StyleguideInteractions } from "@/components/StyleguideInteractions";
 import { addresses, network, readAgentId } from "@/lib/chain";
 
 const SAMPLE_WALLET: Address = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
+
+export const metadata = {
+  title: "Design · Ligis",
+  description:
+    "Ligis design system — primitives every surface composes from. Read before inventing UI.",
+};
 
 async function ChainProbe() {
   let result: { tokenId: string; ok: true } | { error: string; ok: false };
@@ -13,8 +22,8 @@ async function ChainProbe() {
     result = { tokenId: tokenId.toString(), ok: true };
   } catch (err) {
     result = {
+      ok: false as const,
       error: err instanceof Error ? err.message : String(err),
-      ok: false,
     };
   }
 
@@ -46,10 +55,9 @@ async function ChainProbe() {
         </span>
       </div>
       <p className="max-w-prose text-xs text-ink-quiet">
-        This row proves a Server Component can reach Pharos Atlantic through the
-        shared <code className="font-mono">@ligis/adapter-evm</code> alias. If
-        the call fails, the architecture is broken — fix this before building
-        any feature that depends on it.
+        Proves a Server Component can reach the chain through{" "}
+        <code className="font-mono">@ligis/adapter-evm</code>. If this fails,
+        fix it before building features that depend on it.
       </p>
     </section>
   );
@@ -57,25 +65,36 @@ async function ChainProbe() {
 
 export default function StyleguidePage() {
   return (
-    <main className="mx-auto max-w-3xl px-8 py-24">
-      <header className="space-y-6">
-        <p className="eyebrow">Ligis · design system 00</p>
-        <h1 className="display text-5xl text-ink">A curated catalog.</h1>
-        <p className="max-w-prose text-base leading-relaxed text-ink-soft">
-          Primitives, not pages. Every surface in Ligis composes from this page.
-          If a future feature reaches for a shadow, a card, a stat tile, or
-          Inter — it is doing it wrong. Read{" "}
+    <main className="route-shell max-w-3xl">
+      <header className="route-header text-xs text-ink-quiet">
+        <p className="eyebrow">Ligis · Design</p>
+        <Link
+          href="/"
+          className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+        >
+          ← Home
+        </Link>
+      </header>
+
+      <section className="mt-12 space-y-6 sm:mt-16">
+        <h1 className="display text-4xl text-ink sm:text-5xl">
+          A curated catalog.
+        </h1>
+        <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
+          Primitives, not pages. Every surface composes from this catalog. If a
+          feature reaches for a shadow, a card, a stat tile, or a one-off
+          accordion — stop. Read{" "}
           <a
             href="https://github.com/sneldao/ligis/blob/main/web/DESIGN.md"
             className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
           >
             web/DESIGN.md
           </a>{" "}
-          first.
+          and extend a primitive here first.
         </p>
-      </header>
+      </section>
 
-      <div className="mt-20 space-y-20">
+      <div className="mt-16 space-y-20 sm:mt-20">
         <section className="space-y-6">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">01 · Typography</p>
@@ -87,8 +106,8 @@ export default function StyleguidePage() {
           <div className="space-y-10">
             <div>
               <p className="eyebrow mb-3">display · serif</p>
-              <p className="display text-6xl text-ink">
-                A trust layer for autonomous agents.
+              <p className="display text-5xl text-ink sm:text-6xl">
+                Gate the payment.
               </p>
             </div>
             <div>
@@ -96,7 +115,7 @@ export default function StyleguidePage() {
               <p className="max-w-prose text-base leading-relaxed text-ink">
                 The catalog presents each agent as a curated object. Identity is
                 portable. Credentials are issued, verified, and revoked on
-                chain. The site is the index.
+                chain.
               </p>
             </div>
             <div className="space-y-2">
@@ -143,6 +162,12 @@ export default function StyleguidePage() {
               </div>
             ))}
           </div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
+            <span className="text-sage">sage</span> GO ·{" "}
+            <span className="text-revoke">revoke</span> STOP ·{" "}
+            <span className="text-sky">sky</span> in progress ·{" "}
+            <span className="text-terra">terra</span> ceremony
+          </p>
         </section>
 
         <section className="space-y-6">
@@ -167,7 +192,7 @@ export default function StyleguidePage() {
 
         <section className="space-y-6">
           <header className="flex items-baseline justify-between">
-            <p className="eyebrow">05 · Primitives</p>
+            <p className="eyebrow">05 · Address · Copy</p>
             <span className="font-mono text-xs text-ink-quiet">
               AddressDisplay · CopyButton
             </span>
@@ -181,10 +206,6 @@ export default function StyleguidePage() {
             <div className="space-y-2">
               <p className="eyebrow">block · with copy</p>
               <AddressDisplay address={SAMPLE_WALLET} variant="block" />
-            </div>
-            <div className="space-y-2">
-              <p className="eyebrow">link off · copy on</p>
-              <AddressDisplay address={SAMPLE_WALLET} link={false} />
             </div>
             <div className="space-y-2">
               <p className="eyebrow">copy on its own</p>
@@ -228,7 +249,58 @@ export default function StyleguidePage() {
             ))}
           </div>
         </section>
+
+        <section className="space-y-6">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">07 · GateVerdict</p>
+            <span className="font-mono text-xs text-ink-quiet">
+              ✓ GO · ✗ STOP — the only verdict
+            </span>
+          </header>
+          <Rule />
+          <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
+            Every pre-payment decision renders through{" "}
+            <code className="font-mono text-ink">GateVerdict</code>. Never
+            invent capability-status labels as the decision — use ✓ GO / ✗ STOP
+            via this primitive.
+          </p>
+          <div className="space-y-10">
+            <GateVerdict
+              verdict={{
+                capable: true,
+                subject: SAMPLE_WALLET,
+                capabilityId: "kyc.basic",
+                issuer: "0xa1c4e3f0123456789abcdef0123456789abcdef0",
+                expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400 * 90),
+                revoked: false,
+              }}
+              source="styleguide specimen"
+            />
+            <GateVerdict
+              verdict={{
+                capable: false,
+                subject: SAMPLE_WALLET,
+                capabilityId: "agent.commerce.escrow",
+                issuer: null,
+                expiresAt: null,
+                revoked: false,
+              }}
+              source="styleguide specimen"
+            />
+          </div>
+        </section>
+
+        <StyleguideInteractions />
       </div>
+
+      <footer className="mt-20 border-t border-rule pt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+        <Link
+          href="/"
+          className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+        >
+          ← Home
+        </Link>
+      </footer>
     </main>
   );
 }

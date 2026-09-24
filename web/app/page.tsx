@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FieldInvite } from "@/components/catalog/FieldInvite";
 import { ChainBadge } from "@/components/ChainBadge";
 import { LandingGate } from "@/components/LandingGate";
+import { LiveDot } from "@/components/LiveDot";
 import { capabilities } from "@/lib/chain";
 import {
   readBlockNumber,
@@ -92,7 +93,7 @@ export default async function HomePage({
             <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
               {stats.ok ? (
                 <>
-                  <span className="live-dot mr-2" aria-hidden />
+                  <LiveDot className="mr-2" />
                   {Number(stats.supply) > 3 ? (
                     <>
                       <span className="tabular text-ink">
@@ -114,7 +115,7 @@ export default async function HomePage({
                 </>
               ) : stats.preview ? (
                 <>
-                  <span className="live-dot mr-2" aria-hidden />
+                  <LiveDot className="mr-2" />
                   <span className="text-ink">{chain.name}</span> · registry
                 </>
               ) : (

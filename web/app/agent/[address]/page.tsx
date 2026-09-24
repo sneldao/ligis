@@ -88,7 +88,9 @@ export default async function AgentPage({
       <main className="route-shell max-w-5xl pb-16 sm:pb-24">
         <header className="route-header text-xs text-ink-quiet">
           <p className="eyebrow">
-            {snap.exists ? "Agent · in the index" : "Agent · not in the index"}
+            {snap.exists
+              ? "Ligis · Agent · in the index"
+              : "Ligis · Agent · not in the index"}
           </p>
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 sm:gap-x-6">
             <ChainBadge chain={chain} />

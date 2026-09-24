@@ -16,6 +16,7 @@ const ROUTES = [
   "/issuers?chain=monad-testnet",
   "/croo",
   "/compose",
+  "/styleguide",
   "/field",
   "/steward",
 ];

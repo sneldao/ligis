@@ -9,6 +9,10 @@
  *   - Tailwind arbitrary hex colours (bg-[#…], text-[#…], …)
  *   - "Return to the index" footer copy (use ← Home)
  *   - Escrow as a GlobalDock NAV item
+ *   - User-facing "capable / not capable" verdict vocabulary
+ *   - App routes missing route-shell (except landing / field / redirects)
+ *   - App routes with route-shell missing "Ligis ·" room eyebrow
+ *   - Hand-rolled `live-dot` class outside LiveDot.tsx / globals.css
  *
  * Allowlisted for intentional exceptions: GlobalDock, DynamicIsland (pill),
  * and tiny status dots (rounded-full on h-1.5/w-1.5 only — not scanned as
@@ -21,6 +25,21 @@ const ROOT = new URL("../web", import.meta.url).pathname;
 const ALLOW_ROUNDED = new Set([
   "components/GlobalDock.tsx",
   "components/catalog/DynamicIsland.tsx",
+]);
+
+/** Pages that are not app-shell routes (landing, field, redirects). */
+const NO_ROUTE_SHELL = new Set([
+  "app/page.tsx",
+  "app/field/page.tsx",
+  "app/verify/page.tsx",
+  "app/verify-casper/page.tsx",
+  "app/embed/verify/page.tsx",
+]);
+
+/** Files allowed to reference the live-dot CSS class directly. */
+const ALLOW_LIVE_DOT_CLASS = new Set([
+  "components/LiveDot.tsx",
+  "app/globals.css",
 ]);
 
 const BANNED = [
@@ -49,6 +68,11 @@ const BANNED = [
     re: /Return to the index/,
     msg: 'Use "← Home" instead of "Return to the index"',
   },
+  {
+    id: "verdict-vocab",
+    re: /\bnot capable\b|capable\s*\/\s*not|Capable\s*\/\s*Not/,
+    msg: 'User-facing verdict is ✓ GO / ✗ STOP via GateVerdict — not "capable / not capable"',
+  },
 ];
 
 function walk(dir, out = []) {
@@ -72,6 +96,14 @@ for (const file of files) {
 
   for (const rule of BANNED) {
     if (rule.id === "rounded-surface" && ALLOW_ROUNDED.has(rel)) continue;
+    // Verdict vocab only on UI surfaces (app + components), not lib/tests.
+    if (
+      rule.id === "verdict-vocab" &&
+      !rel.startsWith("app/") &&
+      !rel.startsWith("components/")
+    ) {
+      continue;
+    }
     lines.forEach((line, i) => {
       if (rule.re.test(line)) {
         console.error(`${rel}:${i + 1}: ${rule.msg}`);
@@ -90,6 +122,46 @@ for (const file of files) {
       );
       failures++;
     }
+  }
+
+  // App page.tsx files must use route-shell (except landing / field / redirects).
+  if (/(^|\/)page\.tsx$/.test(rel) && rel.startsWith("app/")) {
+    if (!NO_ROUTE_SHELL.has(rel) && !src.includes("route-shell")) {
+      console.error(
+        `${rel}: app routes must use route-shell (see DESIGN.md). Landing/field/redirects are exempt.`,
+      );
+      failures++;
+    }
+    if (
+      src.includes("route-shell") &&
+      !/Ligis\s*·/.test(src) &&
+      !/Ligis\s*&middot;/.test(src)
+    ) {
+      console.error(
+        `${rel}: route-shell pages need a "Ligis · {Room}" eyebrow`,
+      );
+      failures++;
+    }
+  }
+
+  // live-dot CSS class only via <LiveDot /> (or globals definition).
+  if (
+    !ALLOW_LIVE_DOT_CLASS.has(rel) &&
+    /\blive-dot\b/.test(src) &&
+    rel.endsWith(".tsx")
+  ) {
+    lines.forEach((line, i) => {
+      if (/\blive-dot\b/.test(line) && !/from ["']@\/components\/LiveDot/.test(line)) {
+        // Import lines and className="live-dot" — fail className usage.
+        if (/className=.*live-dot|["'`]live-dot/.test(line)) {
+          console.error(
+            `${rel}:${i + 1}: use <LiveDot /> instead of className="live-dot"`,
+          );
+          console.error(`  ${line.trim()}`);
+          failures++;
+        }
+      }
+    });
   }
 }
 

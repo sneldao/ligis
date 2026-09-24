@@ -8,8 +8,10 @@ tiles on a SaaS dashboard.
 
 **Enforced in CI:** `pnpm lint:design` (`scripts/lint-design.mjs`) fails the
 build on `text-[9px]`/`text-[10px]`, box/drop shadows, `rounded-sm|md|lg|…`
-outside the dock, Tailwind arbitrary hex colours, "Return to the index", and
-an Escrow item in `GlobalDock` NAV.
+outside the dock, Tailwind arbitrary hex colours, "Return to the index",
+Escrow in `GlobalDock` NAV, user-facing "capable / not capable" copy, app
+routes missing `route-shell` / `Ligis ·` eyebrow, and hand-rolled `live-dot`
+class names (use `<LiveDot />`).
 
 ## Banned
 
@@ -158,15 +160,35 @@ Only these compose surfaces:
 | `AddressDisplay`                                                  | mono address, optional link to explorer, optional copy                                                                               |
 | `CopyButton`                                                      | quiet tracked-uppercase action, no border                                                                                            |
 | `GateVerdict`                                                     | the GO/STOP pre-payment decision — left rule in tone, display verdict, plain-language reason, provenance line                        |
-| `SituationCast`                                                   | exclusive moment accordion — closed rows are role + check; one open shows Blind/Gated contrast and syncs or links the gate           |
+| `SituationCast`                                                   | exclusive moment accordion — Blind↔Gated flip, keys 1–5; `link` or `sync` mode                                                       |
 | `LandingGate`                                                     | home product loop — moment picker syncs capability into `GateStates` + `VerifyDemo`                                                  |
-| `GateStates`                                                      | three-branch x402 toggle (401 / 402 / 200) with status numeral                                                                       |
+| `GateStates`                                                      | three-branch x402 toggle (401 / 402 / 200) with path line + status numeral                                                           |
+| `LiveDot` / `ChainBadge`                                          | living registry pulse + chain chip — the only “live” chrome                                                                          |
 | `SignalStack`                                                     | the trust signal ledger — Rule-delimited rows of risk/capability/identity/policy signals with verdict, confidence, and measured cost |
 | `TrustReceipt`                                                    | the final trust ledger — decision, signal stack, incumbent-vs-measured cost comparison, anchored manifest hash                       |
+| CSS: `landing-cascade`, `moment-panel`, `sync-flash`              | page entrance, accordion expand, cross-control sync cue                                                                              |
 | typography classes (`display`, `eyebrow`, `font-mono`, `tabular`) | hierarchy                                                                                                                            |
+| layout: `route-shell` + `route-header`                            | every app/moat page — room eyebrow `Ligis · {Room}`, back link `← Home`                                                              |
 
 New compositions extend these. If a new feature truly needs a new primitive,
-it gets added here first, with a rule for when to use it.
+it gets added here **and** as a working specimen on `/styleguide` first.
+
+## Interaction checklist (every new surface)
+
+Before shipping a route or interactive block:
+
+1. **Compose, don't invent** — verdict → `GateVerdict`; moments → `SituationCast`;
+   branch walk → `GateStates`; live pulse → `LiveDot` / `ChainBadge`.
+2. **Route shell** — app pages use `route-shell` + `route-header` with
+   `Ligis · {Room}` and `← Home` (never “Index”). Landing `/` and `/field` are
+   the only full-bleed exceptions.
+3. **Verb** — frame around “gate the payment,” not architecture tourism.
+4. **Motion** — one cascade max per load; hover = colour/underline only;
+   honour `prefers-reduced-motion`.
+5. **Keyboard** — if the control is a list of ≤9 moments, support digit keys
+   (SituationCast already does).
+6. **Styleguide** — if you added a primitive, show it on `/styleguide` in the
+   same PR.
 
 ## Tooling guardrails
 
