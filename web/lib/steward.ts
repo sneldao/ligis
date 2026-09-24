@@ -252,8 +252,14 @@ async function zeroGStore(
 // ---------- Wallet client (for write ops) ----------
 
 function getStewardAccount() {
-  const key = process.env.LIGIS_STEWARD_KEY as Hex | undefined;
-  if (!key) return null;
+  // Prefer the dedicated steward key; fall back to the deployer key so Monad
+  // (and other) testnet demos can reuse a funded wallet without a second faucet.
+  const raw =
+    process.env.LIGIS_STEWARD_KEY ||
+    process.env.PRIVATE_KEY ||
+    process.env.PHAROS_DEPLOYER_KEY;
+  if (!raw) return null;
+  const key = (raw.startsWith("0x") ? raw : `0x${raw}`) as Hex;
   return privateKeyToAccount(key);
 }
 
@@ -310,18 +316,33 @@ async function sendWriteContract(
     .catch(() => 200_000n);
   const gas = (estimated * 110n) / 100n;
 
-  const fees = await ctx.client.estimateFeesPerGas().catch(async () => {
-    const gasPrice = await ctx.client.getGasPrice();
-    return { maxFeePerGas: gasPrice, maxPriorityFeePerGas: gasPrice / 10n };
+  const nonce = await ctx.client.getTransactionCount({
+    address: wallet.account.address,
+    blockTag: "pending",
   });
+
+  // Prefer EIP-1559 when the RPC reports it; otherwise legacy gasPrice.
+  const gasPrice = await ctx.client.getGasPrice();
+  let maxFeePerGas = gasPrice;
+  let maxPriorityFeePerGas = gasPrice / 10n;
+  try {
+    const fees = await ctx.client.estimateFeesPerGas();
+    if (fees.maxFeePerGas != null) maxFeePerGas = fees.maxFeePerGas;
+    if (fees.maxPriorityFeePerGas != null) {
+      maxPriorityFeePerGas = fees.maxPriorityFeePerGas;
+    }
+  } catch {
+    // keep gasPrice-derived fees
+  }
 
   const serialized = await wallet.account.signTransaction({
     chainId: ctx.chain.id,
     to: params.address,
     data,
     gas,
-    maxFeePerGas: fees.maxFeePerGas,
-    maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+    nonce,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
   });
 
   return ctx.client.sendRawTransaction({ serializedTransaction: serialized });
@@ -560,8 +581,10 @@ export async function* stewardLoop(
           name: requiredCaps[i].id,
           txHash: issueHash,
         };
-      } catch {
+      } catch (err) {
         allGated = false;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[steward] issue failed for ${requiredCaps[i].id}:`, msg);
         await sleep(300);
       }
     } else {

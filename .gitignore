@@ -16,6 +16,7 @@ dist/
 # envio HyperIndex codegen / local docker outputs
 packages/envio-indexer/generated/
 packages/envio-indexer/.envio/
+scripts/.tmp-server-only/
 
 # casper wasm build output
 packages/contracts-casper/wasm/

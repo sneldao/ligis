@@ -4,12 +4,12 @@
 > **Track**: Trust, Identity & AI Infrastructure
 > **Prize**: $30,000 USD split evenly among 3 winners ($10,000 each) + $25,000 grand champion picked across all tracks
 > **Key dates**: registration/build window 1 Sep – 13 Oct 2026; judging 14–27 Oct; winners announced 3 Nov. (This doc previously listed "14 Oct 04:59 GMT+1" as the deadline — treat the platform's authenticated portal as authoritative for the exact cutoff and whether mainnet or testnet qualifies.)
-> **Status**: core contracts + credential lifecycle live on Monad testnet; web
-> reads work via the chain switcher; **server-custodied steward writes are on**
-> (`writeReady: true`, `LIGIS_STEWARD_KEY`). Browser wallet connect still
-> deferred. History: public RPC 100-block windows work free; full history via
-> Envio (`packages/envio-indexer`, `LIGIS_ENVIO_GRAPHQL_URL`). ERC-8004 / P256
-> still open.
+> **Status**: Monad testnet **proven live 2026-09-24** — credential lifecycle
+> (issue→GO→revoke→STOP) and server steward writes both green. Reuse
+> `PHAROS_DEPLOYER_KEY` / `PRIVATE_KEY` as `LIGIS_STEWARD_KEY` for funded demos
+> (`writeReady: true`). Browser wallet connect still deferred. History: public
+> RPC 100-block windows free; full history via Envio (`packages/envio-indexer`).
+> ERC-8004 / P256 still open.
 > **Live product today**: [ligis.vercel.app](https://ligis.vercel.app) (Casper Testnet + Pharos Atlantic + Monad testnet)
 > **Research update**: 2026-09-24, via Parallel.ai (verify claims in the rules section against the portal before submission)
 
@@ -200,10 +200,10 @@ product route. What is wired today:
 
 ### Known limitations (verify before judging)
 
-- **Browser wallet writes are deferred on Monad.** The steward API writes via
-  a server-custodied `LIGIS_STEWARD_KEY` (same pattern as Pharos);
-  `writeReady: true`. Connected MetaMask / passkey wallets are still Phase 3
-  (Dynamic/Privy bounty).
+- **Browser wallet writes are deferred on Monad.** The steward API / CLI write
+  via a server-custodied key (`LIGIS_STEWARD_KEY`, falling back to
+  `PRIVATE_KEY` / `PHAROS_DEPLOYER_KEY`); `writeReady: true`. Connected
+  MetaMask / passkey wallets are still Phase 3 (Dynamic/Privy bounty).
 - **`eth_getLogs` on Monad's public RPC is capped at 100 blocks** (measured
   2026-09-24 — not a method rejection). Web scans 60 × 100-block windows
   (~30 min at 300 ms) for free. **Full history:** deploy
@@ -217,6 +217,33 @@ product route. What is wired today:
 - No ERC-8004 integration, no P256/WebAuthn, no third-party integrator yet —
   these are the originality and traction scores, and they remain open.
 
+### Live write proof (2026-09-24, testnet)
+
+Deployer/steward: `0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec` (reuse
+`PHAROS_DEPLOYER_KEY` as `LIGIS_STEWARD_KEY` locally — gitignored).
+
+```bash
+set -a && source .env.d/deployer.env && source .env.d/steward.env && set +a
+export PRIVATE_KEY="${PRIVATE_KEY:-$PHAROS_DEPLOYER_KEY}"
+export LIGIS_STEWARD_KEY="${LIGIS_STEWARD_KEY:-$PHAROS_DEPLOYER_KEY}"
+
+pnpm demo:monad            # issue → GO → revoke → STOP
+pnpm demo:monad-steward    # full steward loop (mint/gate/issue/anchor)
+```
+
+Canonical revocation run (`scripts/monad-lifecycle-demo.lastrun.txt`):
+
+| Step   | Tx                                                                                                                           |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| issue  | [`0x5a48242c…e38eb6e4`](https://testnet.monadscan.com/tx/0x5a48242ca391f9bec1fdbe5d2985f09c49e097c2b0933c66931d4284e38eb6e4) |
+| revoke | [`0xc6423b94…c7bd8980`](https://testnet.monadscan.com/tx/0xc6423b94e2531b5a7448cbb41fbe81675cb2da5442740d3e4cf641dbc7bd8980) |
+
+Steward issue of `agent.commerce.escrow` (same day):
+[`0xce32e97f…4c923e6c`](https://testnet.monadscan.com/tx/0xce32e97f6f9b0c14ea68c0224f0a5cc15c2a57eb09c059f1d3cd6d464c923e6c).
+
+Raw-tx steward writes must set the account **nonce** explicitly — Monad
+rejects `eth_sendRawTransaction` with "nonce too low" when it is omitted.
+
 ### Intuitive UI rollout
 
 Preserve the editorial Gate / Field navigation; Monad is a network context,
@@ -227,14 +254,14 @@ not a new product or top-level route.
    Monad label.
 2. **Use the existing chain control.** Done — full labels, network context
    preserved across Gate, Field, agent pages, and explorer links.
-3. **Separate deployment from readiness.** Done — the switcher marks Monad
-   `read-only`, and write paths refuse rather than mislead.
+3. **Separate deployment from readiness.** Done — steward/server writes are
+   `writeReady: true` on Monad; browser wallet connect remains deferred.
 4. **Treat empty as empty, not an error.** Done — a fresh Monad Field says no
    agents are registered there; an unreadable history says so explicitly.
 5. **Keep proof next to the decision.** The gate names network, subject,
    capability, and links explorer evidence.
 6. **Validate wallet network before writes.** Still open — required before
-   enabling Monad writes.
+   browser-connected Monad writes (server steward does not need this).
 
 Shared capability hashes establish a shared namespace, not automatic
 cross-chain validity of signatures or replicated credential state.
@@ -245,10 +272,10 @@ cross-chain validity of signatures or replicated credential state.
    `LIGIS_ENVIO_GRAPHQL_URL`) so `/issuers` and capability timelines see full
    Monad history — doubles as the Envio bounty entry. Public-RPC recent window
    already works without this.
-2. Fund `LIGIS_STEWARD_KEY` on Monad testnet (or reuse the deployer key for
-   demos) and run a live steward revoke → gate flip for the Revocation film.
-3. Explorer source verification (testnet now; mainnet the moment the network
-   question is answered).
+2. Film the Revocation from the live txs above (CLI is enough for the 3-min
+   demo; steward path is also green).
+3. Explorer source verification (testnet now; stay on testnet until the portal
+   says otherwise).
 4. ERC-8004 registration as the Monad-native hook + P256/WebAuthn issuer —
    these two ARE the track's example bullets; missing them reads as "we also
    deployed."
@@ -292,29 +319,29 @@ A GO/STOP API read is not visceral; judges remember moments. Tag each beat
 honestly — several still depend on the write path or P256 work below. The
 spectacle is staging of real paths, not scope expansion.
 
-| Tag                 | Meaning                                                     |
-| ------------------- | ----------------------------------------------------------- |
-| **Ready**           | Can film on Monad testnet (or Casper/Pharos stand-in) today |
-| **Blocked: writes** | Needs Monad `writeReady: true` + wallet network check       |
-| **Blocked: P256**   | Needs WebAuthn/P256 issuer + sponsored gas path             |
-| **Blocked: Envio**  | Needs log-capable RPC / HyperIndex for a rich feed          |
+| Tag                | Meaning                                         |
+| ------------------ | ----------------------------------------------- |
+| **Ready**          | Can film on Monad testnet today                 |
+| **Blocked: P256**  | Needs WebAuthn/P256 issuer + sponsored gas path |
+| **Blocked: Envio** | Needs HyperIndex for a dense history feed       |
 
-1. **The Revocation (demo centerpiece, ~20s).** **Ready (CLI)** /
-   **Partial (steward API)** — server-custodied writes are wired; fund the
-   steward key on Monad and film. Mid-stream x402 kill still needs a payment
-   loop on Monad (deferred). Stage N live agents paying for services
-   (x402 loop running, ledger ticking). On stage, revoke one credential.
-   Within one Monad block the counterparty's gate flips GO → STOP and its
-   payments fail mid-stream. Cut to that agent's terminal: _"payment
-   refused — capability revoked 0.6s ago."_ (Script the stopwatch against
-   **proposed-block** receipt time, not "finality" — proposed tips arrive
-   sooner than the 600 ms deterministic number.) This is the product's
-   entire value proposition as a single act: **the kill switch is only
-   impressive because the chain is fast enough for it to be instantaneous.**
-   Time it on screen with the block explorer open beside the terminal.
-   **Placement:** put a short live revoke in the **3-min technical demo**
-   (judges who skip the optional ad must still feel the product); save the
-   cinematic edit for the ≤30s advertisement / pitch open.
+1. **The Revocation (demo centerpiece, ~20s).** **Ready** — CLI
+   (`pnpm demo:monad`) and steward (`pnpm demo:monad-steward`) both proven
+   2026-09-24 on testnet. Mid-stream x402 kill still needs a payment loop on
+   Monad (deferred); for the film, revoke + live `/gate` poll is enough.
+   Stage N live agents paying for services (x402 loop running, ledger
+   ticking). On stage, revoke one credential. Within one Monad block the
+   counterparty's gate flips GO → STOP and its payments fail mid-stream.
+   Cut to that agent's terminal: _"payment refused — capability revoked
+   0.6s ago."_ (Script the stopwatch against **proposed-block** receipt
+   time, not "finality" — proposed tips arrive sooner than the 600 ms
+   deterministic number.) This is the product's entire value proposition as
+   a single act: **the kill switch is only impressive because the chain is
+   fast enough for it to be instantaneous.** Time it on screen with the
+   block explorer open beside the terminal. **Placement:** put a short live
+   revoke in the **3-min technical demo** (judges who skip the optional ad
+   must still feel the product); save the cinematic edit for the ≤30s
+   advertisement / pitch open.
 2. **Decision-storm ledger wall.** **Blocked: Envio** for a dense history
    feed; a thin live stream of concurrent gate reads is **Ready** once a
    few agents hammer `isCapable`. Fullscreen feed where every gate read
@@ -334,14 +361,14 @@ spectacle is staging of real paths, not scope expansion.
    payment: no gate → show the loss stick; gate on → STOP at ~600 ms. One
    take each, side by side. The comparison _is_ the pitch, and it gives
    the 3-min demo video its before/after.
-4. **A rogue agent worth stopping.** **Ready** (reads + steward writes once
-   key is funded). Run a deliberately bad actor all week against **dedicated
-   demo wallets only**, labeled in the write-up as an "adversarial fixture"
-   — no spam against third-party agents or public services. Unverified
-   issuer, spinning fake reputation, trying to pay fixture counterparties.
-   The ledger accumulates real STOPs. "This week the gate refused $X from
-   strangers, all on-chain, each one reversible with one tx" — numbers you
-   can put in the write-up that no other Track 4 entry can fake.
+4. **A rogue agent worth stopping.** **Ready.** Run a deliberately bad
+   actor all week against **dedicated demo wallets only**, labeled in the
+   write-up as an "adversarial fixture" — no spam against third-party
+   agents or public services. Unverified issuer, spinning fake reputation,
+   trying to pay fixture counterparties. The ledger accumulates real STOPs.
+   "This week the gate refused $X from strangers, all on-chain, each one
+   reversible with one tx" — numbers you can put in the write-up that no
+   other Track 4 entry can fake.
 5. **Human-vs-agent scoreboard (borrowed evidence, zero build).** **Ready.**
    Sekats' audited poker-agent numbers — 6,243 advisory suggestions, 6
    promoted, 84.3% human/agent agreement — as the _problem slide_:

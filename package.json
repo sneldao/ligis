@@ -35,6 +35,7 @@
     "demo:jev": "tsx scripts/jev-stress-demo.ts",
     "smoke:jev": "tsx scripts/jev-transport-smoke.ts",
     "demo:monad": "tsx scripts/monad-lifecycle-demo.ts",
+    "demo:monad-steward": "tsx scripts/monad-steward-smoke.ts",
     "envio:codegen": "pnpm --filter @ligis/envio-indexer codegen",
     "envio:dev": "pnpm --filter @ligis/envio-indexer dev",
     "demo:monid": "pnpm start -- trust check --intent 'pay a counterparty for premium RWA data' --counterparty '${MONID_COUNTERPARTY:-0x0000000000000000000000000000000000000000}'",
