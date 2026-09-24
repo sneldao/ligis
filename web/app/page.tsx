@@ -66,56 +66,74 @@ export default async function HomePage({
         }}
       />
       <main className="mx-auto max-w-5xl px-5 pt-24 pb-12 sm:px-8 sm:pt-32 sm:pb-20">
-        <header className="flex items-baseline justify-between text-xs">
-          <p className="eyebrow">Ligis · trust gate</p>
-          <ChainBadge chain={chain} />
-        </header>
+        <div className="landing-cascade">
+          <header
+            className="flex items-baseline justify-between text-xs"
+            style={{ ["--cascade-step" as string]: 0 }}
+          >
+            <p className="eyebrow">Ligis · trust gate</p>
+            <ChainBadge
+              chain={chain}
+              live={stats.ok || Boolean(stats.preview)}
+            />
+          </header>
 
-        <section className="mt-12 sm:mt-14">
-          <h1 className="display max-w-2xl text-[2.6rem] leading-[1.05] text-ink sm:text-6xl lg:text-7xl">
-            Gate the payment.
-          </h1>
-          <p className="mt-5 max-w-md font-serif text-lg leading-relaxed text-ink-soft sm:mt-6 sm:text-xl">
-            One on-chain read. <span className="text-sage">GO</span> or{" "}
-            <span className="text-revoke">STOP</span> — before money moves.
-          </p>
-          <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
-            {stats.ok ? (
-              Number(stats.supply) > 3 ? (
+          <section
+            className="mt-12 sm:mt-14"
+            style={{ ["--cascade-step" as string]: 1 }}
+          >
+            <h1 className="display max-w-2xl text-[2.6rem] leading-[1.05] text-ink sm:text-6xl lg:text-7xl">
+              Gate the payment.
+            </h1>
+            <p className="mt-5 max-w-md font-serif text-lg leading-relaxed text-ink-soft sm:mt-6 sm:text-xl">
+              One on-chain read. <span className="text-sage">GO</span> or{" "}
+              <span className="text-revoke">STOP</span> — before money moves.
+            </p>
+            <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
+              {stats.ok ? (
                 <>
-                  <span className="tabular text-ink">
-                    {stats.supply.toLocaleString("en")}
-                  </span>{" "}
-                  agents · {chain.name} · block{" "}
-                  <span className="tabular text-ink">
-                    {Number(stats.block).toLocaleString("en")}
-                  </span>
+                  <span className="live-dot mr-2" aria-hidden />
+                  {Number(stats.supply) > 3 ? (
+                    <>
+                      <span className="tabular text-ink">
+                        {stats.supply.toLocaleString("en")}
+                      </span>{" "}
+                      agents · {chain.name} · block{" "}
+                      <span className="tabular text-ink">
+                        {Number(stats.block).toLocaleString("en")}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-ink">{chain.name}</span> · block{" "}
+                      <span className="tabular text-ink">
+                        {Number(stats.block).toLocaleString("en")}
+                      </span>
+                    </>
+                  )}
+                </>
+              ) : stats.preview ? (
+                <>
+                  <span className="live-dot mr-2" aria-hidden />
+                  <span className="text-ink">{chain.name}</span> · registry
                 </>
               ) : (
-                <>
-                  <span className="text-ink">{chain.name}</span> · live · block{" "}
-                  <span className="tabular text-ink">
-                    {Number(stats.block).toLocaleString("en")}
-                  </span>
-                </>
-              )
-            ) : stats.preview ? (
-              <>
-                <span className="text-ink">{chain.name}</span> · live registry
-              </>
-            ) : (
-              <>Live index temporarily unreachable.</>
-            )}
-          </p>
-        </section>
+                <>Live index temporarily unreachable.</>
+              )}
+            </p>
+          </section>
 
-        <div className="mt-14 sm:mt-20">
-          <LandingGate
-            chainId={chain.id}
-            capabilities={capOptions}
-            defaultSubject={sampleSubject}
-            explorerUrl={chain.explorerUrl}
-          />
+          <div
+            className="mt-14 sm:mt-20"
+            style={{ ["--cascade-step" as string]: 2 }}
+          >
+            <LandingGate
+              chainId={chain.id}
+              capabilities={capOptions}
+              defaultSubject={sampleSubject}
+              explorerUrl={chain.explorerUrl}
+            />
+          </div>
         </div>
       </main>
 

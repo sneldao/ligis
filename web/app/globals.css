@@ -243,6 +243,87 @@ summary:focus-visible {
   animation: fade-in 420ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }
 
+/* Home entrance — one staggered cascade per page load (DESIGN.md).
+   Opacity only; no hover translate. Children opt in via --cascade-step. */
+@keyframes landing-cascade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.landing-cascade > * {
+  animation: landing-cascade 560ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+  animation-delay: calc(var(--cascade-step, 0) * 90ms);
+}
+
+/* Live registry heartbeat next to chain stats. */
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.live-dot {
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--color-sage);
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot {
+    animation: live-pulse 2.4s ease-in-out infinite;
+  }
+}
+
+/* Accordion body: grid 0fr→1fr expands without hover translate. */
+.moment-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 320ms cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.moment-panel[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.moment-panel > div {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moment-panel {
+    transition: none;
+  }
+  .landing-cascade > * {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Capability sync flash when a moment updates the live demo. */
+@keyframes sync-flash {
+  0% {
+    color: var(--color-terra);
+  }
+  100% {
+    color: var(--color-ink-quiet);
+  }
+}
+
+.sync-flash {
+  animation: sync-flash 900ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+}
+
 .animate-fadeInUp {
   animation: fade-in-up 500ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
 }

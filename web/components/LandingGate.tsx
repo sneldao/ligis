@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GateStates } from "@/components/GateStates";
 import { Rule } from "@/components/Rule";
 import { SituationCast } from "@/components/SituationCast";
@@ -9,7 +9,7 @@ import { SITUATIONS, type Situation } from "@/lib/situations";
 
 /**
  * Home product loop: pick a moment → walk the branch → run the live read.
- * Selection syncs capability into the demo without a navigation.
+ * Selection syncs capability and flashes a brief “synced” cue.
  */
 export function LandingGate({
   chainId,
@@ -23,6 +23,18 @@ export function LandingGate({
   explorerUrl: string;
 }) {
   const [situation, setSituation] = useState<Situation>(SITUATIONS[0]!);
+  const [synced, setSynced] = useState(false);
+
+  function onSelect(s: Situation) {
+    setSituation(s);
+    setSynced(true);
+  }
+
+  useEffect(() => {
+    if (!synced) return;
+    const t = window.setTimeout(() => setSynced(false), 900);
+    return () => window.clearTimeout(t);
+  }, [synced, situation.id]);
 
   return (
     <div className="space-y-14 sm:space-y-16">
@@ -30,13 +42,24 @@ export function LandingGate({
         chainId={chainId}
         mode="sync"
         activeId={situation.id}
-        onSelect={setSituation}
+        onSelect={onSelect}
       />
 
       <section id="verify" className="scroll-mt-24">
         <header className="flex items-baseline justify-between gap-4">
           <p className="eyebrow">The gate</p>
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
+          <p
+            key={synced ? `sync-${situation.id}` : situation.id}
+            className={`font-mono text-[11px] uppercase tracking-[0.12em] ${
+              synced ? "sync-flash" : "text-ink-quiet"
+            }`}
+          >
+            {synced ? (
+              <>
+                <span className="text-terra">synced</span>
+                <span className="mx-2">·</span>
+              </>
+            ) : null}
             <span className="text-ink">{situation.role.split(" / ")[0]}</span>
             <span className="mx-2">·</span>
             <code className="normal-case tracking-normal">
@@ -54,6 +77,14 @@ export function LandingGate({
             <p className="mt-4 font-serif text-sm leading-relaxed text-ink-soft sm:text-base">
               Same call an agent makes the instant before money moves. Verdict
               from chain — not a Ligis server.
+            </p>
+            <p className="mt-6 hidden font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet lg:block">
+              <a
+                href="#situations"
+                className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+              >
+                ← change moment
+              </a>
             </p>
           </div>
           <div className="space-y-10">

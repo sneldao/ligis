@@ -249,11 +249,24 @@ export function VerifyDemo({
           {singlePending ? (
             <PendingState label="reading from chain…" />
           ) : singleState === null ? (
-            <p className="font-serif text-sm italic text-ink-quiet">
-              Sample subject pre-filled. <span className="text-sage">✓ GO</span>{" "}
-              — proceed. <span className="text-revoke">✗ STOP</span> — do not
-              pay.
-            </p>
+            <div className="space-y-3">
+              <p className="font-serif text-sm italic text-ink-quiet">
+                Sample subject pre-filled. Hit verify to read the chain.
+              </p>
+              <p className="flex flex-wrap items-baseline gap-x-6 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em]">
+                <span>
+                  <span className="text-sage">✓ GO</span>
+                  <span className="ml-2 text-ink-quiet">proceed</span>
+                </span>
+                <span className="text-rule" aria-hidden>
+                  ·
+                </span>
+                <span>
+                  <span className="text-revoke">✗ STOP</span>
+                  <span className="ml-2 text-ink-quiet">do not pay</span>
+                </span>
+              </p>
+            </div>
           ) : !singleState.ok ? (
             <ErrorRetry
               message={singleState.error}

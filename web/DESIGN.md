@@ -48,8 +48,10 @@ and reach for typography, whitespace, and hairlines instead.
 - **Corners**: surfaces are square. The single sanctioned exception is the
   global dock (fully-rounded pill, rounded mobile drawer) — it is floating
   chrome, not a content surface. No other component may round its corners.
-- **Motion**: at most one staggered reveal per page load. Hovers shift colour
-  or underline, never scale or translate. All transitions honour
+- **Motion**: at most one staggered reveal per page load (home uses
+  `.landing-cascade`). Hovers shift colour or underline, never scale or
+  translate. Accordion panels expand via `grid-template-rows` (not translate).
+  Live registry pulse via `.live-dot`. All transitions honour
   `prefers-reduced-motion`.
 - **Generative portraits**: deterministic, seeded by the agent address. The
   aesthetic target is risograph / art-print, not banknote / guilloché / seal.

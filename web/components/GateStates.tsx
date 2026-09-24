@@ -36,7 +36,7 @@ const BRANCHES: {
 ];
 
 /**
- * Interactive three-state gate branch. Toggle only — no scale/translate.
+ * Interactive three-state gate branch with a living path line.
  */
 export function GateStates() {
   const [branch, setBranch] = useState<Branch>("no-credential");
@@ -70,9 +70,21 @@ export function GateStates() {
         ))}
       </div>
 
+      <p
+        key={`path-${branch}`}
+        className="animate-fade-in mt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet"
+        aria-hidden
+      >
+        agent
+        <span className="mx-2 text-rule">──</span>
+        gate
+        <span className="mx-2 text-rule">──</span>
+        <span className={active.statusClass}>{active.status}</span>
+      </p>
+
       <div
-        key={branch}
-        className="animate-fade-in mt-5 flex items-baseline gap-4 border-t border-rule pt-4"
+        key={`panel-${branch}`}
+        className="animate-fade-in mt-4 flex items-baseline gap-4 border-t border-rule pt-4"
         role="tabpanel"
         aria-live="polite"
       >
