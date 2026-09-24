@@ -6,6 +6,25 @@
 > Built on 0G Compute, 0G Storage, and—via the 0G Bridge by AKINDO—the
 > 0G Chain.
 
+## Status (2026-09-23)
+
+- **Live:** 5 paid services on the CROO Agent Store (`ligis.risk` $0.75,
+  `ligis.verify` $0.50, `ligis.issue` $2.00, `ligis.gate` $1.00,
+  `ligis.qualify` $2.50), provider under PM2, idempotent delivery with retry.
+- **On-chain:** `AgentId` + `CredentialRegistry` + `GatedVault` on Casper
+  Testnet; `PharosAgentID` + `CredentialRegistry` on Pharos Atlantic;
+  GenLayer `JobEscrow` on Studio Next (61997).
+- **Mint policy:** `ligis.issue` and `ligis.qualify` both refuse to mint a
+  capability from payment alone — external evidence that passes policy, or an
+  explicit `LIGIS_SELF_ISSUABLE_CAPABILITIES` allowlist (empty by default).
+- **Intent layer:** Jev routes through the Vercel AI Gateway, **free only
+  through 2026-09-25**. `pnpm smoke:jev` proves the route answers (and fails
+  loudly when it stops) — run it after that date, then either attach
+  gateway billing or flip `LIGIS_JEV_TRANSPORT=direct` with `TYPESAFE_API_KEY`.
+- **Tests:** 41 Foundry + 22 Odra + 133 TypeScript (25 suites).
+- **Next:** Phase 3 (OKX.AI ASP + 0G Chain) is the open one; Wave 1 of the 0G
+  Bridge is a testnet deploy away.
+
 ## The problem
 
 Agent-to-agent commerce has a trust gap. When Agent A hires Agent B
@@ -249,8 +268,8 @@ unavailable (the existing `LocalReasoner` fallback already does this).
 
 ### Pricing vs. transaction value
 
-$0.50 for verify, $0.75 for risk check. For a $5 task, that's 15%
-overhead. For a $0.50 task, it's 150%.
+$0.50 for verify, $0.75 for risk check, $1.00 for the gate. For a $5 task,
+that's 15% overhead. For a $0.50 task, it's 150%.
 
 **Mitigation:** Ligis is only relevant for transactions above ~$5-10.
 Below that, the verification cost exceeds the risk. This is probably
@@ -269,6 +288,13 @@ Subscription pricing or CROO-bundled pricing could address this.
 - [x] Health endpoint, idempotent delivery, retry with backoff
 - [x] CROO listing live with deliverable schema for all three services
 - [x] End-to-end tested: issue → verify (`capable: true`) → risk (`warn`, maturing to `pass`)
+- [x] `ligis.gate` — Jev payment-intent verdict + on-chain credential check in one deliverable
+- [x] `ligis.risk` returns `pathToTrust` on `fail`, so a missing credential converts
+      into the next order instead of a dead end (missing capabilities, both routes,
+      listing UUIDs, prices, and target chain — all derived, none hardcoded)
+- [x] `ligis.qualify` collapses the funnel into one order (check → policy-gated
+      issue → re-check), with evidence required unless the operator allowlists a
+      capability as self-issuable
 
 ### Phase 2: Aggregation issuance (in progress)
 
@@ -278,6 +304,8 @@ Subscription pricing or CROO-bundled pricing could address this.
 - [x] Wire EAS-backed issuance into `ligis.issue`
 - [ ] Configure production EAS schema + attester allowlists
 - [ ] Integrate Self Protocol as the first human/controller verifier
+- [x] Both mint paths (`ligis.issue`, `ligis.qualify`) enforce evidence-or-allowlist,
+      so the policy can't be bypassed by hiring the cheaper service
 - [x] Agent can request externally backed credential issuance through CROO
 - [x] Ligis verifies the source proof and records provenance (no raw PII)
 - [x] Ligis issues unified on-chain credential on Casper/Pharos after policy passes
@@ -301,9 +329,11 @@ Subscription pricing or CROO-bundled pricing could address this.
 
 ### Phase 4: Adjudication compose (GenLayer Agent Tank → ongoing)
 
-- [ ] GenLayer `JobEscrow` Intelligent Contract on Studio Next (gate → escrow → dispute → settle)
-- [ ] Ligis pre-flight `GateReceipt` stored in job state (Casper/Pharos `isCapable` remains source of truth)
-- [ ] Demo + portal submission for Agent Tank — see [`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md)
+- [x] GenLayer `JobEscrow` Intelligent Contract on Studio Next (gate → escrow → dispute → settle) —
+      live at `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`, 5 SUCCESS txs
+- [x] Ligis pre-flight `GateReceipt` stored in job state (Casper/Pharos `isCapable` remains source of truth)
+- [x] Demo + observer UI shipped — [60s video](https://youtu.be/goACAqXjUxY), `ligis.vercel.app/genlayer`
+- [ ] Portal submission for Agent Tank — see [`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md)
 - [ ] Post-hackathon: map dispute terminal states into Ligis risk / `reputation.dispute_*` signals
 - [ ] Do **not** migrate CredentialRegistry to GenLayer; GenLayer stays a consumer + signal source
 
@@ -318,11 +348,18 @@ Subscription pricing or CROO-bundled pricing could address this.
 
 ### Current: per-check pricing on CROO
 
-| Service        | Price | Margin                                                     |
-| -------------- | ----- | ---------------------------------------------------------- |
-| `ligis.risk`   | $0.75 | High — on-chain read + computation, no external API cost   |
-| `ligis.verify` | $0.50 | High — single on-chain read                                |
-| `ligis.issue`  | TBD   | Cost depends on external verifier fees ($0.01-$0.25) + gas |
+| Service         | Price | Margin                                                                                         |
+| --------------- | ----- | ---------------------------------------------------------------------------------------------- | --- | ------------ | ----- | --------------------------------------------------------------------- |
+| `ligis.risk`    | $0.75 | High — on-chain read + computation, no external API cost                                       |
+| `ligis.verify`  | $0.50 | High — single on-chain read                                                                    |
+| `ligis.issue`   | $2.00 | Cost depends on external verifier fees ($0.01-$0.25) + gas                                     |     | `ligis.gate` | $1.00 | High — bundled intent read (Jev) + credential read in one deliverable |
+| `ligis.qualify` | $2.50 | Medium — includes an issuance write (gas), priced below risk + issue bought separately ($2.75) |
+
+Prices live in one place in code — `SERVICE_PRICE_USD` in
+`packages/croo-adapter/src/services.ts` — which builds the provider
+listings, the CROO store manifest, and any hint that quotes a price. Changing
+a price in code without changing the live CROO Dashboard listing throws away
+trust: the hint is a promise, the Dashboard is the charge.
 
 ### Future: subscription + bundling
 

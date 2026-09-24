@@ -54,17 +54,24 @@ const RPC_OVERRIDES: Record<string, string | undefined> = {
  * single `eth_getLogs` call — exceeding it is an error, not a partial result.
  * `LOG_REQUESTS` caps how many calls a page render will make, so the scan
  * window is `LOG_CHUNK * LOG_REQUESTS` blocks, newest first.
+ *
+ * Monad public RPC (Sep 2026) accepts `eth_getLogs` but caps the range at 100
+ * blocks — not a method rejection. Deeper history is free via Envio HyperIndex
+ * (`LIGIS_ENVIO_GRAPHQL_URL`); see `packages/envio-indexer/`.
  */
 const LOG_CHUNK: Record<string, bigint> = {
   // Measured limit: 1000 blocks inclusive. 200k was requested historically and
   // silently failed, which is why issuer history looked permanently empty.
   "atlantic-testnet": 1_000n,
-  "monad-testnet": 20_000n,
+  // Measured 2026-09-24: "eth_getLogs is limited to a 100 range".
+  "monad-testnet": 100n,
 };
 
 const LOG_REQUESTS: Record<string, number> = {
   "atlantic-testnet": 25,
-  "monad-testnet": 8,
+  // 100 × 60 = 6k blocks ≈ 30 min at 300 ms — recent window only. Full history
+  // needs Envio (free HyperIndex / HyperRPC with a free API token).
+  "monad-testnet": 60,
 };
 
 export type EvmReadContext = {
@@ -345,9 +352,9 @@ export type IssuanceLog = {
   issuers: IssuerActivity[];
   totalIssuances: number;
   /**
-   * True when the history read itself failed. Some RPCs (notably Monad's public
-   * endpoint) reject `eth_getLogs` outright, and "no issuers" must not be shown
-   * when the truth is "could not read".
+   * True when the history read itself failed. Some RPCs reject or mis-serve
+   * `eth_getLogs`, and "no issuers" must not be shown when the truth is
+   * "could not read". Prefer Envio GraphQL when configured.
    */
   unavailable: boolean;
 };
@@ -359,9 +366,9 @@ const CREDENTIAL_ISSUED_EVENT = {
     { name: "issuer", type: "address", indexed: true },
     { name: "subject", type: "address", indexed: true },
     { name: "capabilityHash", type: "bytes32", indexed: true },
-    { name: "nonce", type: "uint256" },
-    { name: "issuedAt", type: "uint64" },
-    { name: "expiresAt", type: "uint64" },
+    { name: "issuedAt", type: "uint64", indexed: false },
+    { name: "expiresAt", type: "uint64", indexed: false },
+    { name: "nonce", type: "uint256", indexed: false },
   ],
 } as const;
 
@@ -422,6 +429,12 @@ async function scanRegistryLogs(
 export async function readIssuerActivity(
   networkId: string = DEFAULT_EVM_NETWORK,
 ): Promise<IssuanceLog> {
+  if (networkId === "monad-testnet") {
+    const { readIssuerActivityFromEnvio } = await import("./envio");
+    const fromEnvio = await readIssuerActivityFromEnvio();
+    if (fromEnvio) return fromEnvio;
+  }
+
   const scan = await scanRegistryLogs(
     networkId,
     CREDENTIAL_ISSUED_EVENT,
@@ -511,6 +524,22 @@ export async function readCapabilityHistory(
   opts?: { fromBlock?: bigint; toBlock?: bigint; networkId?: string },
   networkId: string = opts?.networkId ?? DEFAULT_EVM_NETWORK,
 ): Promise<CapabilityChange[]> {
+  if (networkId === "monad-testnet") {
+    const { readCapabilityHistoryFromEnvio } = await import("./envio");
+    const fromEnvio = await readCapabilityHistoryFromEnvio(subject);
+    if (fromEnvio) {
+      const fromFilter = opts?.fromBlock;
+      const toFilter = opts?.toBlock;
+      return fromEnvio
+        .filter((h) =>
+          fromFilter === undefined ? true : h.blockNumber >= fromFilter,
+        )
+        .filter((h) =>
+          toFilter === undefined ? true : h.blockNumber <= toFilter,
+        );
+    }
+  }
+
   const scan = await scanRegistryLogs(
     networkId,
     AGENT_CAPABILITY_CHANGED_EVENT,

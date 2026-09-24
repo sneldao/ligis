@@ -47,16 +47,20 @@ and see the new hashes in the same file.
 **Latest run (2026-07-25):**
 
 **E2E Steward Loop (`scripts/casper-final-demo.lastrun.txt`):**
+
 - `7562e636a6512d6f426456dbaceef6cac62af3c6ec783d4444b9820210e5c5a7` — `AgentId.mint_self` (boot)
 - `a47be6e2019c99e5bf321c03915e66125930594c240e2c8cc3c92602915a94a7` — `AgentId.set_token_uri` (evidence anchor)
 
 **GatedVault credential issue (`scripts/casper-gated-vault-demo.lastrun.txt`):**
+
 - `79538c0106b66b1c1f59ab2a8162d8ca4ad80cb72bf8f35d686eaf7606fd730d` — `CredentialRegistry.issue(rwa.accredited)` (verified by `is_capable` cross-contract)
 
 **Historical x402 Payment Demo (local settlement, live CoinGecko RWA data):**
+
 - `f94490e65a53c1e4908cba34071ae4d2a563fa36b1228591a4c12cebdc8a04ee` — x402 CSPR transfer settlement (1 CSPR for premium RWA oracle feed)
 
 **Historical Multi-Agent Coordination (Risk → Issuer → Treasury):**
+
 - `a2e94ca4749ac1e5f6d52cfa98bac3faa08989340acd7171bf9b8af87340ab58` — `AgentId.mint_self` (swarm boot)
 - `9c662d177aac1732781def6ffb545e6abc69bfbd1ff136627d989266fabe20a3` — x402 settlement (Treasury Agent pays for RWA data after Risk Agent approves + Issuer Agent authorizes)
 
@@ -71,15 +75,15 @@ and see the new hashes in the same file.
 
 `https://github.com/sneldao/ligis`
 
-Public. MIT licensed. 41 Foundry tests (EVM/Solidity contracts) + 22 Odra tests (Casper contracts) + 47 TypeScript tests + Casper smoke test passing.
+Public. MIT licensed. 41 Foundry tests (EVM/Solidity contracts) + 22 Odra tests (Casper contracts) + 133 TypeScript tests (25 suites) + Casper smoke test passing.
 
 ## Deployed contracts (Casper Testnet)
 
-| Contract | Package hash |
-|----------|--------------|
-| `AgentId` (Odra, soulbound-style) | `contract-package-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1` |
+| Contract                                                                              | Package hash                                                                        |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `AgentId` (Odra, soulbound-style)                                                     | `contract-package-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1` |
 | `CredentialRegistry` (Odra, EIP-712, on-chain secp256k1 recovery, nonce-bound revoke) | `contract-package-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37` |
-| `GatedVault` (Odra, credential-gated escrow — deployed on testnet) | `contract-package-27e6637b5a442eada707dce9b2a367fd8139767f6e5d9926da0031611807269f` |
+| `GatedVault` (Odra, credential-gated escrow — deployed on testnet)                    | `contract-package-27e6637b5a442eada707dce9b2a367fd8139767f6e5d9926da0031611807269f` |
 
 Built with Odra 2.8.1 against Casper 2.0, deployed via
 `casper-client put-transaction session --install-upgrade` (Casper 2.x TransactionV1).
@@ -93,14 +97,14 @@ for `credential_registry:key` and `required_capability:byte_array_32`).
 
 ## End-to-end demo txs (executed live on Casper Testnet, 2026-07-25)
 
-| # | Action | Tx hash | Result |
-|---|--------|---------|--------|
-| 1 | `AgentId.mint_self` | `7562e636a6512d6f..10e5c5a7` | agentId 1 minted |
-| 2 | Steward self-issues `rwa.accredited` credential (EIP-712, `CredentialRegistry.issue`) | `79538c0106b66b1c..06fd730d` | `is_capable = true` |
-| 3 | `AgentId.set_token_uri` (evidence anchor) | `a47be6e2019c99e5..915a94a7` | URI = `0g://0x0` (0G Storage unavailable; in-memory fallback) |
-| 4 | x402 — `GET /premium` without credential | n/a | 401 not authorized |
-| 5 | x402 — `GET /premium` with credential | n/a | 402 Payment Required (1 CSPR) |
-| 6 | x402 — sign EIP-712 `TransferWithAuthorization`, resubmit | `f94490e65a53c1e4..dc8a04ee` (historical) | 200 OK + 4 tokenized RWA properties |
+| #   | Action                                                                                | Tx hash                                   | Result                                                        |
+| --- | ------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------- |
+| 1   | `AgentId.mint_self`                                                                   | `7562e636a6512d6f..10e5c5a7`              | agentId 1 minted                                              |
+| 2   | Steward self-issues `rwa.accredited` credential (EIP-712, `CredentialRegistry.issue`) | `79538c0106b66b1c..06fd730d`              | `is_capable = true`                                           |
+| 3   | `AgentId.set_token_uri` (evidence anchor)                                             | `a47be6e2019c99e5..915a94a7`              | URI = `0g://0x0` (0G Storage unavailable; in-memory fallback) |
+| 4   | x402 — `GET /premium` without credential                                              | n/a                                       | 401 not authorized                                            |
+| 5   | x402 — `GET /premium` with credential                                                 | n/a                                       | 402 Payment Required (1 CSPR)                                 |
+| 6   | x402 — sign EIP-712 `TransferWithAuthorization`, resubmit                             | `f94490e65a53c1e4..dc8a04ee` (historical) | 200 OK + 4 tokenized RWA properties                           |
 
 ## Category
 
@@ -265,8 +269,8 @@ in the Casper Rust test suite:
 
 - **On-chain secp256k1 issuer recovery** — `CredentialRegistry` uses the
   pure-Rust `k256` crate to recover the issuer address from EIP-712 digest
-  + 65-byte signature for both `issue` and `revoke`. No server-side custody
-  of the signing key required for verification.
+  - 65-byte signature for both `issue` and `revoke`. No server-side custody
+    of the signing key required for verification.
 - **Nonce-bound `revoke`** — `CredentialRegistry.revoke` binds the nonce
   into the typed digest; a replay of an older revoke payload for a
   different nonce is rejected. Verified by `revoke_rejects_wrong_nonce`

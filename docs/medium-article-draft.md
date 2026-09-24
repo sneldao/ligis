@@ -1,6 +1,6 @@
 # Solving the Chicken-and-Egg Problem in Agent Commerce
 
-*How we built a trust layer for AI agents on CROO, Casper, and Pharos — and what we learned along the way.*
+_How we built a trust layer for AI agents on CROO, Casper, and Pharos — and what we learned along the way._
 
 ---
 
@@ -29,7 +29,7 @@ This isn't a new idea — EIP-712 typed data and on-chain registries have been a
 
 [Ligis](https://github.com/sneldao/ligis) is a trust layer for agent-to-agent commerce. It provides three services on the CROO Agent Store:
 
-### 1. `ligis.issue` — Credential Issuance ($1.00)
+### 1. `ligis.issue` — Credential Issuance ($2.00)
 
 Ligis signs an EIP-712 attestation and submits it on-chain to a `CredentialRegistry` smart contract on Casper (or Pharos). The credential includes:
 
@@ -56,6 +56,7 @@ The full product. Checks one or more capabilities and returns:
 - **Signals:** machine-readable flags like `credential-immature`, `ttl-comfortable`, `missing-required`
 
 The verdict logic:
+
 - **pass** — all capabilities held, all TTLs healthy, all credentials mature (>7 days)
 - **warn** — all capabilities held but some have warnings (immature, short TTL, low diversity)
 - **fail** — one or more required capabilities missing
@@ -178,7 +179,7 @@ This is the 80% of the work that nobody sees but that makes the difference betwe
 
 Today, `ligis.issue` signs credentials with Ligis's own key. A `kyc.basic` credential from Ligis proves "Ligis said this address has KYC" — but Ligis didn't actually do any KYC. This is fine for a demo, but not for production trust.
 
-The real product is **aggregation issuance**: Ligis bridges external verifiers (Self Protocol, World ID, EAS) into unified on-chain credentials. Instead of "Ligis said you have KYC," it becomes "Self Protocol verified your identity, and Ligis bridged that verification on-chain." The credential is trustworthy because the *upstream* verifier is trustworthy.
+The real product is **aggregation issuance**: Ligis bridges external verifiers (Self Protocol, World ID, EAS) into unified on-chain credentials. Instead of "Ligis said you have KYC," it becomes "Self Protocol verified your identity, and Ligis bridged that verification on-chain." The credential is trustworthy because the _upstream_ verifier is trustworthy.
 
 This is the difference between a demo and a product. It's the next thing we're building.
 
@@ -203,4 +204,4 @@ Running a second issuer key (even our own, with a different identity) would make
 
 ---
 
-*Ligis is MIT-licensed and open source. We built it for the CROO Hackathon and Casper Agentic Buildathon. Feedback welcome — especially on the trust model and which aggregation integrations to prioritize.*
+_Ligis is MIT-licensed and open source. We built it for the CROO Hackathon and Casper Agentic Buildathon. Feedback welcome — especially on the trust model and which aggregation integrations to prioritize._

@@ -9,15 +9,14 @@
 
 ## Active hackathon submissions
 
-| Hackathon                          | Track                                | Demo                                                                                                                                                                     | Submission doc                                                           |
-| ---------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| **GenLayer Agent Tank 2026**       | Agent launch & commerce infra        | [60s demo (YouTube)](https://youtu.be/goACAqXjUxY) · [ligis.vercel.app/genlayer](https://ligis.vercel.app/genlayer) · JobEscrow `0x64eF9e...D0cB0F` on Studio Next 61997 | [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md)             |
-| **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure  | Live gate reads + `pnpm demo:monad` lifecycle on Monad testnet _(browser writes pending)_                                                                                | [`docs/metropolis-hackathon.md`](docs/metropolis-hackathon.md)           |
-| **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement        | _(in progress)_                                                                                                                                                          | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)                     |
-| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:05 Casper walkthrough](https://youtu.be/eoOQmAx7U7s)                                                                                                                  | [`docs/casper-buidl.md`](docs/casper-buidl.md)                           |
-| **CROO Agent Hackathon 2026**      | Data & Verification + Open A2A       | [CROO demo](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4) _(upload before deadline)_                                       | [`docs/croo-hackathon-submission.md`](docs/croo-hackathon-submission.md) |
-| **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification   | _(in progress)_                                                                                                                                                          | [`docs/okx-ai.md`](docs/okx-ai.md)                                       |
-| **0G Bridge by AKINDO 2026**       | Trust & Safety / AI Agents           | _(in progress)_                                                                                                                                                          | [`docs/strategy.md`](docs/strategy.md)                                   |
+| Hackathon                          | Track                                | Demo                                                                                                                                                                     | Submission doc                                                 |
+| ---------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- | --- | ----------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **GenLayer Agent Tank 2026**       | Agent launch & commerce infra        | [60s demo (YouTube)](https://youtu.be/goACAqXjUxY) · [ligis.vercel.app/genlayer](https://ligis.vercel.app/genlayer) · JobEscrow `0x64eF9e...D0cB0F` on Studio Next 61997 | [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md)   |
+| **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure  | Live gate reads + `pnpm demo:monad` lifecycle on Monad testnet _(browser writes pending)_                                                                                | [`docs/metropolis-hackathon.md`](docs/metropolis-hackathon.md) |
+| **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement        | _(in progress)_                                                                                                                                                          | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)           |
+| **Casper Agentic Buildathon 2026** | Casper Innovation / Agentic AI / RWA | [1:05 Casper walkthrough](https://youtu.be/eoOQmAx7U7s)                                                                                                                  | [`docs/casper-buidl.md`](docs/casper-buidl.md)                 |     | **CROO Agent Hackathon 2026** | Data & Verification + Open A2A | [CROO demo](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4) | [`docs/croo-hackathon-submission.md`](docs/croo-hackathon-submission.md) |
+| **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification   | _(in progress)_                                                                                                                                                          | [`docs/okx-ai.md`](docs/okx-ai.md)                             |
+| **0G Bridge by AKINDO 2026**       | Trust & Safety / AI Agents           | _(in progress)_                                                                                                                                                          | [`docs/strategy.md`](docs/strategy.md)                         |
 
 **One product, multiple proofs:** Casper contracts are the on-chain source of truth; CROO and OKX.AI are how other agents pay for verification before A2A commerce. GenLayer is the adjudication venue when delivery is disputed (Ligis still gates who may trade). 0G Compute, 0G Storage, and 0G Chain power the trust infrastructure. Same `CredentialRegistry` backs every marketplace.
 
@@ -95,7 +94,7 @@ every chain, which is what makes cross-chain credential portability possible.
 3. Agent resubmits with `X-PAYMENT` header → **200 OK** with tokenized real-estate market data
 4. Settlement on Casper Testnet (on-chain tx)
 
-41 Foundry tests + 22 Odra tests + 47 TypeScript tests passing. 4 on-chain Skills + 2 helpers
+41 Foundry tests + 22 Odra tests + 133 TypeScript tests (25 suites) passing. 4 on-chain Skills + 2 helpers
 
 - Trust Steward Agent. CLI. MCP server. x402 Trust Gate. MIT.
 
@@ -129,6 +128,21 @@ Every response carries the verdict in headers — `x-jev-verdict`,
 `x-jev-confidence`, `x-jev-flags`, `x-jev-latency-ms`, `x-jev-cost-usd` — and
 `/gate` renders the live telemetry waterfall. See `AGENTS.md` ("Jev Intent
 Evaluation") for the full design.
+
+The layer is fail-open, which makes a dead upstream invisible: the gate keeps
+serving and every verdict silently becomes `SKIPPED`. The AI Gateway promo that
+makes the default route free ends **2026-09-25**, so there is a one-command
+smoke test that fails loudly instead:
+
+```bash
+set -a; source .env.d/aigateway.env; set +a
+LIGIS_JEV_ENABLED=1 pnpm smoke:jev
+# → GO 0.950 / STOP 0.970 with flags, exit 0. Exits 1 when Jev stops answering,
+#   with the resolved route and the fix (gateway billing, or TYPESAFE_API_KEY
+#   + LIGIS_JEV_TRANSPORT=direct).
+```
+
+Run it in CI or a cron — it touches no chain and needs no credential.
 
 ## Skills
 
@@ -347,14 +361,31 @@ set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm d
 > back off. Without it, `pnpm croo` fails immediately with `Missing required
 environment variable: CROO_SDK_KEY`.
 
-| Service        | Price | What you get                                                                                                                                                     | Input                                                                                                |
-| -------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `ligis.risk`   | $0.75 | **Counterparty risk check** — pass/warn/fail + 0–100 score                                                                                                       | `{ subject, capabilities, issuer?, minTtlSeconds? }`                                                 |
-| `ligis.verify` | $0.50 | On-chain credential verification                                                                                                                                 | `{ subject, capability, issuer? }`                                                                   |
-| `ligis.issue`  | $1.00 | Signed capability credential issuance; optionally imports EAS provenance before issuing                                                                          | `{ subject, capability, expiresInSeconds?, externalAttestation? }`                                   |
-| `ligis.gate`   | $1.00 | **Trust Gate pre-flight** — Jev (TypeSafe System One) payment-intent verdict (GO/STOP + confidence + flags) alongside the on-chain credential check, in one call | `{ subject, capability, priceSmallestUnit, payTo, payment?, issuer?, tokenSymbol?, tokenDecimals? }` |
+| Service         | Price | What you get                                                                                                                                                     | Input                                                                                                |
+| --------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `ligis.risk`    | $0.75 | **Counterparty risk check** — pass/warn/fail + 0–100 score                                                                                                       | `{ subject, capabilities, issuer?, minTtlSeconds? }`                                                 |
+| `ligis.verify`  | $0.50 | On-chain credential verification                                                                                                                                 | `{ subject, capability, issuer? }`                                                                   |
+| `ligis.issue`   | $2.00 | Signed capability credential issuance — requires external evidence unless the capability is allowlisted                                                          | `{ subject, capability, expiresInSeconds?, externalAttestation? }`                                   |
+| `ligis.gate`    | $1.00 | **Trust Gate pre-flight** — Jev (TypeSafe System One) payment-intent verdict (GO/STOP + confidence + flags) alongside the on-chain credential check, in one call | `{ subject, capability, priceSmallestUnit, payTo, payment?, issuer?, tokenSymbol?, tokenDecimals? }` |
+| `ligis.qualify` | $2.50 | **One order from not-credentialed to credentialed** — check, issue what policy allows, re-check, and return both verdicts                                        | `{ subject, capabilities, evidence?, issuer?, minTtlSeconds?, expiresInSeconds? }`                   |
 
-All three services are live and tested end-to-end: issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass` after 7 days). `ligis.gate` runs the same reflex the x402 Trust Gate uses on `/gate` — four typed Jev questions in one parallel call, fail-open, with the credential registry staying the source of truth.
+All five services are live and tested end-to-end: issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass` after 7 days). `ligis.gate` runs the same reflex the x402 Trust Gate uses on `/gate` — four typed Jev questions in one parallel call, fail-open, with the credential registry staying the source of truth.
+
+A `fail` verdict doesn't dead-end the buyer: `ligis.risk` returns a
+`pathToTrust` block naming the missing capabilities, the recommended one-order
+route (`ligis.qualify`, cheaper than risk + issue bought separately), the
+fallback issuance route, and the chain the credential will land on — all prices
+and listing UUIDs read from the same catalog the listings are built from.
+
+`ligis.qualify` collapses that funnel into a single $2.50 order, and it does
+the work under one rule: **payment alone never mints trust.** A capability is
+issued only against external evidence that passes policy (or a capability the
+operator has explicitly allowlisted as self-issuable — empty by default, so
+`kyc.basic` is not buyable). **`ligis.issue` enforces the identical rule**, so
+the gate can't be bypassed by hiring the cheaper service — which makes qualify a
+funnel collapse rather than a toll booth beside an open door. Refusals come back
+with the evidence shape that would unlock them, and a freshly minted credential
+reports as `warn` (maturing to `pass`), never as a fake clean pass.
 
 See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/okx-ai.md`](docs/okx-ai.md), [`docs/attestation-integrations.md`](docs/attestation-integrations.md), [`docs/strategy.md`](docs/strategy.md), and [`packages/croo-adapter/`](packages/croo-adapter/).
 

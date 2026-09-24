@@ -1,0 +1,14 @@
+Ligis Risk Check — conversion flow
+========================================
+subject: 0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec
+overallVerdict: warn
+riskScore: 75
+summary: Counterparty holds all credentials but 2 have warnings (TTL or maturity). Proceed with caution.
+checkedAt: 2026-09-22T23:01:10.894Z
+pathToTrust: null
+checks:
+  agent.commerce.escrow: warn (score=80, ttl=2591928s, age=71s, issuer=0x47e9b13e467e2db34b1aa145758b253bbd9ffa40)
+  kyc.basic: warn (score=80, ttl=2591980s, age=19s, issuer=0x47e9b13e467e2db34b1aa145758b253bbd9ffa40)
+signals:
+  single-issuer-concentration: All credentials issued by the same issuer. Concentration risk if that issuer is compromised.
+breakdown: {"capabilityWeighted":80,"ttlHealth":100,"tenureMaturity":0,"issuerDiversity":50}

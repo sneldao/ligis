@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+# Ligis CredentialRegistry indexer — Monad Testnet (free Envio HyperIndex path).
+#
+# Setup (free):
+#   1. pnpm --filter @ligis/envio-indexer install
+#   2. Create a free API token at https://app.envio.dev/api-tokens
+#   3. export ENVIO_API_TOKEN=...
+#   4. pnpm --filter @ligis/envio-indexer codegen && pnpm --filter @ligis/envio-indexer dev
+#   5. Point the web app at the GraphQL endpoint:
+#        LIGIS_ENVIO_GRAPHQL_URL=http://localhost:8080/v1/graphql
+#      Or deploy to Envio Cloud and use the hosted URL (Metropolis free tier).
+name: ligis-credential-registry
+description: Indexes Ligis CredentialRegistry issue/revoke/capability events on Monad Testnet
+contracts:
+  - name: CredentialRegistry
+    handler: src/EventHandlers.ts
+    events:
+      - event: CredentialIssued(address indexed issuer, address indexed subject, bytes32 indexed capabilityHash, uint64 issuedAt, uint64 expiresAt, uint256 nonce)
+      - event: CredentialRevoked(address indexed issuer, address indexed subject, bytes32 indexed capabilityHash, uint256 nonce, uint64 revokedAt)
+      - event: AgentCapabilityChanged(address indexed subject, bytes32 indexed capabilityHash, bool capable)
+chains:
+  - id: 10143 # Monad Testnet — HyperSync-backed, no paid RPC required
+    start_block: 63359400 # just before Ligis deploy (AgentId @ 63359413)
+    contracts:
+      - name: CredentialRegistry
+        address: "0x698e1C05d34e2b6d0B6eCd71f3fC9e84e64733c5"

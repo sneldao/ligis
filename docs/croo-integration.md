@@ -32,25 +32,57 @@ Requester Agent                       CROO/CAP                      Ligis Provid
 
 Listed on the CROO Agent Store:
 
-| Service | Price | What it proves | On-chain action | Deliverable |
-|---|---|---|---|---|
-| `ligis.risk` | $0.75 | Counterparty risk check | `CredentialRegistry.isCapable` read(s) | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }` |
-| `ligis.verify` | $0.50 | On-chain credential verification | `CredentialRegistry.isCapable` read | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }` |
-| `ligis.issue` | $1.00 | Credential issuance; optional EAS import | EAS read, then `CredentialRegistry.issue` write | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt, provenance }` |
+| Service         | Price | What it proves                                              | On-chain action                                           | Deliverable                                                                                                          |
+| --------------- | ----- | ----------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `ligis.risk`    | $0.75 | Counterparty risk check                                     | `CredentialRegistry.isCapable` read(s)                    | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }`                                      |
+| `ligis.verify`  | $0.50 | On-chain credential verification                            | `CredentialRegistry.isCapable` read                       | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }`                             |
+| `ligis.issue`   | $2.00 | Credential issuance; optional EAS import                    | EAS read, then `CredentialRegistry.issue` write           | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt, provenance }`     |
+| `ligis.gate`    | $1.00 | Payment-intent verdict (Jev) alongside the credential check | `CredentialRegistry.isCapable` read (no write)            | `{ service, credential, intent: { verdict, confidence, flags, latencyMs }, proceed }`                                |
+| `ligis.qualify` | $2.50 | Check → policy-gated issuance → re-check, in one order      | `isCapable` read(s) + `CredentialRegistry.issue` write(s) | `{ service, qualified, entryVerdict, finalVerdict, issued, skipped, verificationPending, checks, pathToTrustRoute }` |
 
-All three services are live and tested end-to-end. The full loop works:
+Prices are defined once in `SERVICE_PRICE_USD`
+(`packages/croo-adapter/src/services.ts`), which builds the provider listings,
+`croo-store-manifest.json`, and any deliverable that quotes a price. Keep the
+CROO Dashboard listing equal to that constant.
+
+All five services are live and tested end-to-end. The full loop works:
 issue a credential → verify returns `capable: true` → risk check returns
 `warn` (maturing to `pass` after 7 days) instead of `fail`.
+
+A `fail` from `ligis.risk` carries a `pathToTrust` block (missing capabilities,
+both routes with their listing UUIDs and catalog prices, target chain) so the
+buyer knows exactly how to become eligible and return. `ligis.qualify` then
+does it in one order instead of three:
+
+```
+ligis.risk        $0.75   fail → pathToTrust
+ligis.qualify     $2.50   check → issue (evidence-gated) → re-check → warn
+                  ──────  one negotiation, one payment, one deliverable
+```
+
+**Trust rule for both minting services:** payment alone never mints a
+credential. A capability is issued only against external evidence that passes
+the shared attestation policy, or when it is listed in
+`LIGIS_SELF_ISSUABLE_CAPABILITIES` (empty by default; the legacy
+`LIGIS_QUALIFY_SELF_ISSUABLE` is still read as a fallback). Anything else is
+refused: `ligis.qualify` reports `reason: "evidence-required"` under `skipped`,
+and `ligis.issue` delivers `{ issued: false, reason, detail, evidenceShape }`
+without signing anything.
+
+`ligis.issue` enforcing the same rule matters: without it the gate would be
+theatre — a buyer could skip qualify and buy the same capability from the
+cheaper legacy service. Without the rule at all, a paid "make me pass" service
+turns `ligis.risk` into a purchase link and makes the credential meaningless.
 
 ## Product hardening roadmap
 
 The next CROO work is polish and operational hardening, not new protocol shape:
 
-- Keep `ligis.risk`, `ligis.verify`, and `ligis.issue` listing copy, pricing,
-  and schemas in the CROO dashboard aligned with
-  `packages/croo-adapter/croo-store-manifest.json`.
-- Add production smoke checks for all three services after each provider deploy:
-  issue → verify → risk.
+- Keep `ligis.risk`, `ligis.verify`, `ligis.issue`, `ligis.gate`, and
+  `ligis.qualify` listing copy, pricing, and schemas in the CROO dashboard
+  aligned with `packages/croo-adapter/croo-store-manifest.json`.
+- Add production smoke checks for all five services after each provider deploy:
+  issue → verify → risk, plus `pnpm smoke:jev` for the intent transport.
 - Surface provider delivery metrics (`delivered`, `errors`, `lastDeliveryAt`,
   `wsConnected`, `inFlight`) in the release checklist before marking a deploy
   healthy.
@@ -96,9 +128,9 @@ set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm c
 ```
 
 > Note the `set -a` / `set +a` around the `source` calls: plain `source
-> file.env` only sets shell-local variables, it does not export them to the
+file.env` only sets shell-local variables, it does not export them to the
 > `node` child process, so `pnpm croo` would otherwise fail with `Missing
-> required environment variable: CROO_SDK_KEY`.
+required environment variable: CROO_SDK_KEY`.
 
 See [`docs/croo-hackathon-submission.md`](croo-hackathon-submission.md) for BUIDL copy.
 

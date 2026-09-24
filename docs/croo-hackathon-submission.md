@@ -39,14 +39,33 @@ Public. MIT licensed. CAP provider + requester in `packages/croo-adapter/`.
 
 ## Services on CROO Agent Store
 
-| Service ID | Price | What it does |
-|---|---|---|
-| `ligis.risk` | $0.75 | Counterparty risk check — pass/warn/fail + 0–100 score |
-| `ligis.verify` | $0.50 | On-chain credential verification — capable boolean + credential details |
-| `ligis.issue` | $1.00 | Credential issuance — signs + submits on-chain credential to CredentialRegistry |
+| Service ID      | Price | What it does                                                                                                                      |
+| --------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `ligis.risk`    | $0.75 | Counterparty risk check — pass/warn/fail + 0–100 score                                                                            |
+| `ligis.verify`  | $0.50 | On-chain credential verification — capable boolean + credential details                                                           |
+| `ligis.issue`   | $2.00 | Credential issuance — signs + submits on-chain credential to CredentialRegistry                                                   |
+| `ligis.gate`    | $1.00 | Trust Gate pre-flight — Jev payment-intent verdict (GO/STOP + confidence + flags) plus the on-chain credential check, in one call |
+| `ligis.qualify` | $2.50 | One order from not-credentialed to credentialed — check, issue under policy, re-check                                             |
 
-All three services are live and tested end-to-end. The full loop works:
+All five services are live and tested end-to-end. The full loop works:
 issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass`).
+
+A `fail` verdict doesn't dead-end the buyer: `ligis.risk` returns a
+`pathToTrust` block naming the missing capabilities, both next-step routes with
+their listing UUIDs and catalog prices, and the chain the credential lands on —
+the check sells the next step. `ligis.qualify` ($2.50) then does that next step
+in one order rather than three, under a rule that keeps the credential
+meaningful: **payment alone never mints trust** — a capability is issued only
+against external evidence that passes policy, or when the operator has
+explicitly allowlisted it as self-issuable (empty by default, so `kyc.basic` is
+not buyable). `ligis.issue` enforces the identical rule, so the gate holds
+whichever service a buyer hires — qualify collapses the funnel instead of
+tolling an open door.
+
+Live proof (2026-09-22, Casper Testnet): risk returns `fail` with `pathToTrust`
+→ `ligis.issue` mints `agent.commerce.escrow`
+(tx `5c75859f42e68f8e820e41550878a12b9b29b50574707a4f06192f268a815f22`) → the
+re-run returns `warn` with `pathToTrust: null`.
 
 Manifest: [`packages/croo-adapter/croo-store-manifest.json`](../packages/croo-adapter/croo-store-manifest.json)
 
@@ -75,32 +94,32 @@ pnpm croo
 ```
 
 > `set -a` / `set +a` is required around `source` — a plain `source
-> file.env` only sets shell-local variables, not exported ones, so `pnpm
-> croo` fails immediately with `Missing required environment variable:
-> CROO_SDK_KEY` otherwise.
+file.env` only sets shell-local variables, not exported ones, so `pnpm
+croo` fails immediately with `Missing required environment variable:
+CROO_SDK_KEY` otherwise.
 
 Unit tests: `pnpm -r --filter @ligis/croo-adapter run test`
 
 ## CAP / SDK methods used
 
-| SDK method | Role |
-|---|---|
+| SDK method                       | Role                              |
+| -------------------------------- | --------------------------------- |
 | `AgentClient.connectWebSocket()` | Provider listens for negotiations |
-| `acceptNegotiation()` | Provider accepts `ligis.*` orders |
-| `deliverOrder()` | Provider delivers JSON verdict |
-| `negotiateOrder()` | Requester hires Ligis |
-| `payOrder()` | Requester pays USDC on Base |
-| `getDelivery()` | Requester reads fulfillment |
+| `acceptNegotiation()`            | Provider accepts `ligis.*` orders |
+| `deliverOrder()`                 | Provider delivers JSON verdict    |
+| `negotiateOrder()`               | Requester hires Ligis             |
+| `payOrder()`                     | Requester pays USDC on Base       |
+| `getDelivery()`                  | Requester reads fulfillment       |
 
 ## Why Ligis + Casper together
 
 Ligis is **one product, two hackathon proofs**:
 
-| Layer | Casper Buildathon | CROO Hackathon |
-|---|---|---|
-| **Identity** | `AgentId.mint_self` on Casper Testnet | Subject DID in CAP requirements |
-| **Credentials** | EIP-712 `CredentialRegistry.issue` + on-chain secp256k1 recovery | `ligis.risk` reads the same registry |
-| **Commerce** | x402 Trust Gate (credential + CSPR payment) | CAP hire flow (USDC on Base via CROO) |
+| Layer           | Casper Buildathon                                                | CROO Hackathon                        |
+| --------------- | ---------------------------------------------------------------- | ------------------------------------- |
+| **Identity**    | `AgentId.mint_self` on Casper Testnet                            | Subject DID in CAP requirements       |
+| **Credentials** | EIP-712 `CredentialRegistry.issue` + on-chain secp256k1 recovery | `ligis.risk` reads the same registry  |
+| **Commerce**    | x402 Trust Gate (credential + CSPR payment)                      | CAP hire flow (USDC on Base via CROO) |
 
 The Casper contracts are the **source of truth**; CROO is how other agents **pay for verification** before commerce.
 

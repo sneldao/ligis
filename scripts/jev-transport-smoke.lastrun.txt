@@ -1,0 +1,27 @@
+{
+  "ranAt": "2026-09-23T23:01:22.903Z",
+  "transport": "gateway",
+  "endpoint": "http://localhost:4099/v1/systemone",
+  "model": "jev-stub-1.0",
+  "billedUsd": 0.00004032,
+  "probes": [
+    {
+      "id": "legit",
+      "expected": "GO",
+      "verdict": "GO",
+      "confidence": 0.915,
+      "latencyMs": 53,
+      "flags": []
+    },
+    {
+      "id": "misdirected",
+      "expected": "STOP",
+      "verdict": "STOP",
+      "confidence": 0.95,
+      "latencyMs": 3,
+      "flags": [
+        "payee-mismatch"
+      ]
+    }
+  ]
+}

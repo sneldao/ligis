@@ -1,6 +1,10 @@
 import { loadLigisAdapter } from "./config.js";
 import { capabilityCriticality, capabilityWeight } from "./capability-meta.js";
 import {
+  SERVICE_ID,
+  SERVICE_PRICE_USD,
+  isSelfIssuable,
+  serviceListingId,
   type ServiceRequest,
   type ServiceResult,
   parseServiceRequirements,
@@ -61,7 +65,42 @@ interface ScoreBreakdown {
   issuerDiversity: number;
 }
 
-interface RiskReport {
+/** A hireable Ligis service: name, CROO listing UUID, and catalog price. */
+export interface ServiceRoute {
+  service: string;
+  /** Null when the listing UUID isn't configured — hire by name on the store. */
+  listingId: string | null;
+  priceUsd: string;
+}
+
+/**
+ * Path-to-trust hint — tells the buyer what to do when a capability is missing.
+ *
+ * Only populated when one or more capabilities failed the check. Turns a
+ * dead-end "fail" into a conversion step, and recommends the single-order
+ * route (`ligis.qualify`) over the two-order one (`ligis.issue` then re-check).
+ */
+export interface PathToTrust {
+  /** Capability names that were not held. */
+  failedCapabilities: string[];
+  /**
+   * Subset of `failedCapabilities` that cannot be minted from payment alone —
+   * `ligis.qualify` will only issue these against external evidence.
+   */
+  evidenceRequiredFor: string[];
+  /** Recommended: one order that issues and re-checks. */
+  recommended: ServiceRoute;
+  /** Fallback: hire issuance, then re-run the risk check (two orders). */
+  fallback: ServiceRoute;
+  /** Chain identifier the credential will be issued on (e.g. "casper-testnet"). */
+  chain: string;
+  /** Human-readable chain name (e.g. "Casper Testnet"). */
+  chainName: string;
+  /** One-sentence action hint naming the recommended route. */
+  hint: string;
+}
+
+export interface RiskReport {
   service: string;
   subject: string;
   overallVerdict: string;
@@ -75,6 +114,8 @@ interface RiskReport {
   breakdown: ScoreBreakdown;
   /** Cross-cutting signals that affect the overall verdict. */
   signals: RiskSignal[];
+  /** Next-step guidance when one or more capabilities are missing. Null when verdict is pass/warn. */
+  pathToTrust: PathToTrust | null;
 }
 
 function isRiskRequirements(req: unknown): req is RiskRequirements {
@@ -266,11 +307,66 @@ function computeOverallScore(
 }
 
 /**
- * Return a structured risk report for a counterparty agent.
+ * Build the path-to-trust pointer for a failed risk check.
  *
- * This is the primary CROO service: before one agent pays another, the buyer
- * can hire Ligis to check whether the counterparty holds the credentials
- * required for the job and whether they are close to expiry or revoked.
+ * Every field is derived, never hardcoded: the price comes from the service
+ * catalog (the same constant the `ligis.issue` listing is built from), and
+ * the chain comes from the adapter that actually performed the check — so a
+ * Pharos deployment stops advertising Casper.
+ */
+function buildPathToTrust(
+  failedCapabilities: string[],
+  adapter: ChainAdapter,
+): PathToTrust {
+  const chain = adapter.chainId ?? process.env.LIGIS_CHAIN ?? "casper";
+  const chainName = adapter.chainName ?? chain;
+  const capabilityList = failedCapabilities.join(" and ");
+  const evidenceRequiredFor = failedCapabilities.filter(
+    (capability) => !isSelfIssuable(capability),
+  );
+
+  const recommended: ServiceRoute = {
+    service: SERVICE_ID.qualify,
+    listingId: serviceListingId(SERVICE_ID.qualify),
+    priceUsd: SERVICE_PRICE_USD[SERVICE_ID.qualify],
+  };
+  const fallback: ServiceRoute = {
+    service: SERVICE_ID.issue,
+    listingId: serviceListingId(SERVICE_ID.issue),
+    priceUsd: SERVICE_PRICE_USD[SERVICE_ID.issue],
+  };
+
+  const evidenceNote =
+    evidenceRequiredFor.length > 0
+      ? ` Supply evidence for ${evidenceRequiredFor.join(" and ")} — it is issued only if that evidence passes policy.`
+      : "";
+  const fallbackNote =
+    evidenceRequiredFor.length > 0
+      ? ` Without evidence, hire ${fallback.service} ($${fallback.priceUsd}) first and re-run ${SERVICE_ID.risk}.`
+      : ` Alternatively hire ${fallback.service} ($${fallback.priceUsd}) and re-run ${SERVICE_ID.risk}.`;
+
+  return {
+    failedCapabilities,
+    evidenceRequiredFor,
+    recommended,
+    fallback,
+    chain,
+    chainName,
+    hint:
+      `Get credentialed for ${capabilityList} in one order: hire ${recommended.service} ` +
+      `($${recommended.priceUsd}) and the credential is issued and re-checked in the same call.` +
+      evidenceNote +
+      fallbackNote +
+      ` Credentials land on ${chainName}.`,
+  };
+}
+
+/**
+ * Build the structured risk report for a counterparty agent.
+ *
+ * Exported so `ligis.qualify` can run the same check before and after
+ * credentialing — the report is the product, and there is exactly one
+ * implementation of it.
  *
  * The risk score is a weighted average of per-capability sub-scores. Each
  * sub-score reflects three signals:
@@ -281,23 +377,15 @@ function computeOverallScore(
  * Capabilities are weighted by criticality: losing `kyc.basic` (weight 4)
  * impacts the score more than losing `data.premium` (weight 1).
  */
-export async function handleRisk(
-  req: ServiceRequest,
-  opts?: { adapter?: ChainAdapter },
-): Promise<ServiceResult> {
-  const parsed = parseServiceRequirements(req.requirements);
-  if (!isRiskRequirements(parsed)) {
-    throw new Error(
-      "ligis.risk requirements must include { subject, capabilities: string[] | string, issuer?, minTtlSeconds? }",
-    );
-  }
-
+export async function buildRiskReport(
+  parsed: RiskRequirements,
+  adapter: ChainAdapter,
+): Promise<RiskReport> {
   const capabilities = Array.isArray(parsed.capabilities)
     ? parsed.capabilities
     : [parsed.capabilities];
   const minTtl = parsed.minTtlSeconds ?? 24 * 60 * 60;
 
-  const adapter = opts?.adapter ?? (await loadLigisAdapter());
   const checks: CapabilityRisk[] = [];
 
   for (const capability of capabilities) {
@@ -447,8 +535,17 @@ export async function handleRisk(
   // --- Overall score ---
   const riskScore = computeOverallScore(checks, issuerDiversity);
 
-  const report: RiskReport = {
-    service: "ligis.risk",
+  // Build path-to-trust only when capabilities are missing (verdict=fail).
+  // A warn result means credentials exist but are immature/TTL-low — issuing
+  // a new one doesn't help; the buyer just needs to wait or accept the risk.
+  const failedCaps = checks
+    .filter((c) => c.verdict === "fail" && !c.capable)
+    .map((c) => c.capability);
+  const pathToTrust: PathToTrust | null =
+    failedCaps.length > 0 ? buildPathToTrust(failedCaps, adapter) : null;
+
+  return {
+    service: SERVICE_ID.risk,
     subject: parsed.subject,
     overallVerdict,
     riskScore,
@@ -457,12 +554,19 @@ export async function handleRisk(
     checkedAt: new Date().toISOString(),
     breakdown,
     signals: overallSignals,
+    pathToTrust,
   };
+}
 
-  // CROO's deliverable schema doesn't support arrays of objects.
-  // Flatten checks and signals into JSON strings for the deliverable,
-  // while keeping the full report for logging.
-  const deliverable = {
+/**
+ * Flatten a risk report into the CROO deliverable shape.
+ *
+ * CROO's deliverable schema doesn't support arrays of objects, so `checks`,
+ * `signals`, `breakdown`, and `pathToTrust` are JSON-encoded strings. Shared
+ * with `ligis.qualify`, which embeds both a before and an after report.
+ */
+export function riskDeliverable(report: RiskReport): Record<string, unknown> {
+  return {
     service: report.service,
     subject: report.subject,
     overallVerdict: report.overallVerdict,
@@ -472,14 +576,39 @@ export async function handleRisk(
     checks: JSON.stringify(report.checks),
     signals: JSON.stringify(report.signals),
     breakdown: JSON.stringify(report.breakdown),
+    ...(report.pathToTrust
+      ? { pathToTrust: JSON.stringify(report.pathToTrust) }
+      : {}),
   };
+}
+
+/**
+ * ligis.risk — the counterparty risk check (the primary CROO service).
+ *
+ * Before one agent pays another, the buyer can hire Ligis to check whether the
+ * counterparty holds the credentials required for the job, and whether they are
+ * close to expiry or revoked. See `buildRiskReport` for the scoring model.
+ */
+export async function handleRisk(
+  req: ServiceRequest,
+  opts?: { adapter?: ChainAdapter },
+): Promise<ServiceResult> {
+  const parsed = parseServiceRequirements(req.requirements);
+  if (!isRiskRequirements(parsed)) {
+    throw new Error(
+      "ligis.risk requirements must include { subject, capabilities: string[] | string, issuer?, minTtlSeconds? }",
+    );
+  }
+
+  const adapter = opts?.adapter ?? (await loadLigisAdapter());
+  const report = await buildRiskReport(parsed, adapter);
 
   console.log(
-    `[ligis-croo] risk report: verdict=${overallVerdict} score=${riskScore} checks=${checks.length}`,
+    `[ligis-croo] risk report: verdict=${report.overallVerdict} score=${report.riskScore} checks=${report.checks.length}`,
   );
 
   return {
     deliverableType: "text",
-    deliverableText: JSON.stringify(deliverable, null, 2),
+    deliverableText: JSON.stringify(riskDeliverable(report), null, 2),
   };
 }

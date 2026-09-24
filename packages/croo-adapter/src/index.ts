@@ -11,5 +11,11 @@ export {
 } from "./services.js";
 export { handleVerify } from "./verify.js";
 export { handleIssue } from "./issue.js";
-export { handleRisk } from "./risk.js";
+export { handleRisk, buildRiskReport, riskDeliverable } from "./risk.js";
 export { handleGate } from "./gate.js";
+export { handleQualify } from "./qualify.js";
+export {
+  issueCredential,
+  verifyExternalAttestation,
+  loadEasTrustPolicyFromEnv,
+} from "./credential-ops.js";

@@ -63,12 +63,12 @@ pass/warn/fail verdict with a 0–100 risk score.
 
 #### Input
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `subject` | string | yes | Agent address (EVM `0x...` or Casper `account-hash-...`) |
-| `capabilities` | string \| string[] | yes | Capability name(s) to check, e.g. `kyc.basic` |
-| `issuer` | string | no | Trusted issuer address to constrain the check |
-| `minTtlSeconds` | number | no | Minimum remaining credential lifetime (default 86400 = 24h) |
+| Field           | Type               | Required | Description                                                 |
+| --------------- | ------------------ | -------- | ----------------------------------------------------------- |
+| `subject`       | string             | yes      | Agent address (EVM `0x...` or Casper `account-hash-...`)    |
+| `capabilities`  | string \| string[] | yes      | Capability name(s) to check, e.g. `kyc.basic`               |
+| `issuer`        | string             | no       | Trusted issuer address to constrain the check               |
+| `minTtlSeconds` | number             | no       | Minimum remaining credential lifetime (default 86400 = 24h) |
 
 ```json
 {
@@ -80,35 +80,35 @@ pass/warn/fail verdict with a 0–100 risk score.
 
 #### Output
 
-| Field | Type | Description |
-|---|---|---|
-| `service` | string | Always `"ligis.risk"` |
-| `subject` | string | The checked address |
-| `overallVerdict` | string | `"pass"` \| `"warn"` \| `"fail"` |
-| `riskScore` | number | 0–100, higher is safer |
-| `checks` | array | Per-capability breakdown (see below) |
-| `summary` | string | Human-readable one-liner |
-| `breakdown` | object | Component scores: `capabilityWeighted`, `ttlHealth`, `tenureMaturity`, `issuerDiversity` |
-| `signals` | array | Cross-cutting signals (e.g. `credential-immature`, `ttl-comfortable`) |
-| `checkedAt` | string | ISO timestamp |
+| Field            | Type   | Description                                                                              |
+| ---------------- | ------ | ---------------------------------------------------------------------------------------- |
+| `service`        | string | Always `"ligis.risk"`                                                                    |
+| `subject`        | string | The checked address                                                                      |
+| `overallVerdict` | string | `"pass"` \| `"warn"` \| `"fail"`                                                         |
+| `riskScore`      | number | 0–100, higher is safer                                                                   |
+| `checks`         | array  | Per-capability breakdown (see below)                                                     |
+| `summary`        | string | Human-readable one-liner                                                                 |
+| `breakdown`      | object | Component scores: `capabilityWeighted`, `ttlHealth`, `tenureMaturity`, `issuerDiversity` |
+| `signals`        | array  | Cross-cutting signals (e.g. `credential-immature`, `ttl-comfortable`)                    |
+| `checkedAt`      | string | ISO timestamp                                                                            |
 
 **`checks[]` entry:**
 
-| Field | Type | Description |
-|---|---|---|
-| `capability` | string | Capability name |
-| `capable` | boolean | Whether the subject holds a valid credential |
-| `capabilityHash` | string | 32-byte on-chain capability hash |
-| `latestCredential` | object \| null | Credential details if held |
-| `ttlSeconds` | number | Seconds until expiry (-1 if not capable) |
-| `verdict` | string | `"pass"` \| `"warn"` \| `"fail"` |
-| `criticality` | string | Capability criticality level |
-| `weight` | number | Weight in overall score (1–4) |
-| `issuer` | string | Issuer address (zero address if none) |
-| `credentialAgeSeconds` | number | Seconds since issuance (-1 if not capable) |
-| `ttlRatio` | number | Ratio of actual TTL to requested minimum |
-| `subScore` | number | 0–100 sub-score for this capability |
-| `signals` | array | Signals contributing to the sub-score |
+| Field                  | Type           | Description                                  |
+| ---------------------- | -------------- | -------------------------------------------- |
+| `capability`           | string         | Capability name                              |
+| `capable`              | boolean        | Whether the subject holds a valid credential |
+| `capabilityHash`       | string         | 32-byte on-chain capability hash             |
+| `latestCredential`     | object \| null | Credential details if held                   |
+| `ttlSeconds`           | number         | Seconds until expiry (-1 if not capable)     |
+| `verdict`              | string         | `"pass"` \| `"warn"` \| `"fail"`             |
+| `criticality`          | string         | Capability criticality level                 |
+| `weight`               | number         | Weight in overall score (1–4)                |
+| `issuer`               | string         | Issuer address (zero address if none)        |
+| `credentialAgeSeconds` | number         | Seconds since issuance (-1 if not capable)   |
+| `ttlRatio`             | number         | Ratio of actual TTL to requested minimum     |
+| `subScore`             | number         | 0–100 sub-score for this capability          |
+| `signals`              | array          | Signals contributing to the sub-score        |
 
 ```json
 {
@@ -121,7 +121,11 @@ pass/warn/fail verdict with a 0–100 risk score.
       "capability": "kyc.basic",
       "capable": true,
       "capabilityHash": "71389c3c...",
-      "latestCredential": { "issuer": "0x47e9...", "issuedAt": "...", "expiresAt": "..." },
+      "latestCredential": {
+        "issuer": "0x47e9...",
+        "issuedAt": "...",
+        "expiresAt": "..."
+      },
       "ttlSeconds": 86300,
       "verdict": "warn",
       "criticality": "required",
@@ -130,7 +134,12 @@ pass/warn/fail verdict with a 0–100 risk score.
       "credentialAgeSeconds": 100,
       "ttlRatio": 1.0,
       "subScore": 60,
-      "signals": [{ "code": "credential-immature", "detail": "Credential issued <7 days ago" }]
+      "signals": [
+        {
+          "code": "credential-immature",
+          "detail": "Credential issued <7 days ago"
+        }
+      ]
     }
   ],
   "summary": "Counterparty holds all credentials but 1 have warnings",
@@ -140,12 +149,18 @@ pass/warn/fail verdict with a 0–100 risk score.
     "tenureMaturity": 20,
     "issuerDiversity": 100
   },
-  "signals": [{ "code": "credential-immature", "detail": "1 credential issued <7 days ago" }],
+  "signals": [
+    {
+      "code": "credential-immature",
+      "detail": "1 credential issued <7 days ago"
+    }
+  ],
   "checkedAt": "2026-07-17T15:30:00.000Z"
 }
 ```
 
 **Verdict logic:**
+
 - `pass` — all capabilities held, all TTLs healthy, all credentials mature (>7 days)
 - `warn` — all capabilities held but some have warnings (immature, short TTL, low diversity)
 - `fail` — one or more required capabilities missing
@@ -161,11 +176,11 @@ a valid credential for a given capability.
 
 #### Input
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `subject` | string | yes | Agent address |
-| `capability` | string | yes | Capability name, e.g. `kyc.basic` |
-| `issuer` | string | no | Trusted issuer address to constrain the check |
+| Field        | Type   | Required | Description                                   |
+| ------------ | ------ | -------- | --------------------------------------------- |
+| `subject`    | string | yes      | Agent address                                 |
+| `capability` | string | yes      | Capability name, e.g. `kyc.basic`             |
+| `issuer`     | string | no       | Trusted issuer address to constrain the check |
 
 ```json
 {
@@ -176,15 +191,15 @@ a valid credential for a given capability.
 
 #### Output
 
-| Field | Type | Description |
-|---|---|---|
-| `service` | string | Always `"ligis.verify"` |
-| `capable` | boolean | Whether the subject holds a valid credential |
-| `subject` | string | The checked address |
-| `capability` | string | Capability name |
-| `capabilityHash` | string | 32-byte on-chain capability hash |
-| `latestCredential` | object \| null | Credential details if held |
-| `checkedAt` | string | ISO timestamp |
+| Field              | Type           | Description                                  |
+| ------------------ | -------------- | -------------------------------------------- |
+| `service`          | string         | Always `"ligis.verify"`                      |
+| `capable`          | boolean        | Whether the subject holds a valid credential |
+| `subject`          | string         | The checked address                          |
+| `capability`       | string         | Capability name                              |
+| `capabilityHash`   | string         | 32-byte on-chain capability hash             |
+| `latestCredential` | object \| null | Credential details if held                   |
+| `checkedAt`        | string         | ISO timestamp                                |
 
 ```json
 {
@@ -206,11 +221,28 @@ a valid credential for a given capability.
 
 ### ligis.issue — Credential Issuance
 
-**Price:** $1.00
+**Price:** $2.00
 
 Issues a verifiable on-chain credential to an agent. Ligis signs an EIP-712
 attestation and submits it to the CredentialRegistry on Casper (or Pharos),
 making it instantly verifiable by any agent or contract.
+
+**Policy gate:** this service requires external evidence (`externalAttestation`,
+see below) unless the requested capability is listed in
+`LIGIS_SELF_ISSUABLE_CAPABILITIES` (empty by default). `ligis.qualify` enforces
+the same rule, so the two can't be played against each other. A refusal is
+delivered as a payload rather than an error, and nothing is signed:
+
+```json
+{
+  "service": "ligis.issue",
+  "capability": "kyc.basic",
+  "issued": false,
+  "reason": "evidence-required",
+  "detail": "Policy does not allow kyc.basic to be issued from payment alone. Supply externalAttestation evidence for it, or ask the operator to list it in LIGIS_SELF_ISSUABLE_CAPABILITIES.",
+  "evidenceShape": { "externalAttestation": { "source": "eas", "uid": "0x…" } }
+}
+```
 
 By default this is a direct Ligis-issued credential. If the request includes
 `externalAttestation.source="eas"`, Ligis first reads the EAS attestation,
@@ -219,12 +251,12 @@ revocation status, and records provenance in the deliverable.
 
 #### Input
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `subject` | string | yes | Agent address to receive the credential |
-| `capability` | string | yes | Capability name to issue, e.g. `kyc.basic` |
-| `expiresInSeconds` | number | no | Credential lifetime in seconds (default 86400 = 24h) |
-| `externalAttestation` | object | no | Optional upstream EAS evidence to verify before issuing |
+| Field                 | Type   | Required | Description                                             |
+| --------------------- | ------ | -------- | ------------------------------------------------------- |
+| `subject`             | string | yes      | Agent address to receive the credential                 |
+| `capability`          | string | yes      | Capability name to issue, e.g. `kyc.basic`              |
+| `expiresInSeconds`    | number | no       | Credential lifetime in seconds (default 86400 = 24h)    |
+| `externalAttestation` | object | no       | Optional upstream EAS evidence to verify before issuing |
 
 ```json
 {
@@ -242,18 +274,18 @@ revocation status, and records provenance in the deliverable.
 
 #### Output
 
-| Field | Type | Description |
-|---|---|---|
-| `service` | string | Always `"ligis.issue"` |
-| `subject` | string | The credential recipient |
-| `capability` | string | Capability name |
-| `capabilityHash` | string | 32-byte on-chain capability hash |
-| `issuer` | string | Issuer EVM address |
-| `issuedAt` | string | Unix timestamp of issuance |
-| `expiresAt` | string | Unix timestamp of expiry |
-| `txHash` | string | On-chain transaction hash |
-| `submittedAt` | string | ISO timestamp of submission |
-| `provenance` | object \| null | EAS source metadata when external evidence was used |
+| Field            | Type           | Description                                         |
+| ---------------- | -------------- | --------------------------------------------------- |
+| `service`        | string         | Always `"ligis.issue"`                              |
+| `subject`        | string         | The credential recipient                            |
+| `capability`     | string         | Capability name                                     |
+| `capabilityHash` | string         | 32-byte on-chain capability hash                    |
+| `issuer`         | string         | Issuer EVM address                                  |
+| `issuedAt`       | string         | Unix timestamp of issuance                          |
+| `expiresAt`      | string         | Unix timestamp of expiry                            |
+| `txHash`         | string         | On-chain transaction hash                           |
+| `submittedAt`    | string         | ISO timestamp of submission                         |
+| `provenance`     | object \| null | EAS source metadata when external evidence was used |
 
 ```json
 {
@@ -280,31 +312,89 @@ revocation status, and records provenance in the deliverable.
 }
 ```
 
+---
+
+### ligis.qualify — Credential Qualification
+
+**Price:** $2.50
+
+One order from not-credentialed to credentialed: checks the counterparty,
+issues the missing capabilities the trust policy allows, then re-checks and
+returns both verdicts.
+
+**Rule:** payment alone never mints trust. A missing capability is issued only
+when the request carries `evidence` for it that passes the attestation policy,
+or when the capability is listed in `LIGIS_SELF_ISSUABLE_CAPABILITIES` (empty
+by default). Otherwise it comes back under `skipped` with
+`reason: "evidence-required"`. `ligis.issue` applies the identical rule.
+
+**Input**
+
+| Field              | Type               | Required | Notes                                                                       |
+| ------------------ | ------------------ | -------- | --------------------------------------------------------------------------- |
+| `subject`          | string             | yes      | Agent address to qualify                                                    |
+| `capabilities`     | string \| string[] | yes      | Capabilities the counterparty must hold                                     |
+| `evidence`         | array              | no       | `[{ capability, externalAttestation: { source, uid, chainId?, schema? } }]` |
+| `issuer`           | string             | no       | Constrain the check to a trusted issuer                                     |
+| `minTtlSeconds`    | number             | no       | Default 86400                                                               |
+| `expiresInSeconds` | number             | no       | Lifetime for credentials issued in this call, default 86400                 |
+
+**Output**
+
+| Field                             | Type            | Notes                                                                                             |
+| --------------------------------- | --------------- | ------------------------------------------------------------------------------------------------- |
+| `qualified`                       | boolean         | The counterparty no longer fails the check (`warn` counts)                                        |
+| `entryVerdict` / `entryRiskScore` | string / number | State before this call                                                                            |
+| `finalVerdict` / `finalRiskScore` | string / number | State after issuance                                                                              |
+| `issuedCount` / `issued`          | number / array  | Credentials minted, with tx hashes and provenance                                                 |
+| `skipped`                         | array           | `{ capability, reason, detail }` — `evidence-required`, `evidence-rejected`, or `issuance-failed` |
+| `verificationPending`             | array           | Submitted but not yet readable on-chain; re-run `ligis.risk` shortly                              |
+| `verdictNote`                     | string          | Plain-language outcome                                                                            |
+| `pathToTrustRoute`                | object          | The routes a buyer can still act on                                                               |
+
+A freshly issued credential is immature (7-day maturity threshold), so a
+successful run reports `finalVerdict: "warn"` — accurate, not a clean `pass`.
+
+```json
+{
+  "service": "ligis.qualify",
+  "subject": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+  "issuedCount": 1,
+  "entryVerdict": "fail",
+  "finalVerdict": "warn",
+  "qualified": true,
+  "verificationPending": [],
+  "verdictNote": "Issued 1 credential(s); the check moved fail → warn. Newly issued credentials mature to pass after 7 days."
+}
+```
+
+---
+
 ## Capability names
 
 Credentials are issued against named capabilities. The capability namespace
 is open — anyone can issue any capability name, but the trust comes from
-*who* issued it.
+_who_ issued it.
 
-| Capability | Description |
-|---|---|
-| `kyc.basic` | Basic KYC verification |
-| `kyc.verified` | Full KYC verification |
-| `agent.commerce.escrow` | Authorized to act as escrow agent |
-| `agent.commerce.payment` | Authorized to handle payments |
-| `data.premium` | Access to premium data feeds |
+| Capability               | Description                       |
+| ------------------------ | --------------------------------- |
+| `kyc.basic`              | Basic KYC verification            |
+| `kyc.verified`           | Full KYC verification             |
+| `agent.commerce.escrow`  | Authorized to act as escrow agent |
+| `agent.commerce.payment` | Authorized to handle payments     |
+| `data.premium`           | Access to premium data feeds      |
 
 Use `ligis.risk` with `issuer` to constrain checks to credentials from
 trusted issuers only.
 
 ## Chains
 
-| Chain | Network | Status |
-|---|---|---|
-| Casper | Testnet | Live |
-| Pharos | Atlantic Testnet | Live (cross-chain portability) |
-| Base | Sepolia | Planned |
-| Optimism | Sepolia | Planned |
+| Chain    | Network          | Status                         |
+| -------- | ---------------- | ------------------------------ |
+| Casper   | Testnet          | Live                           |
+| Pharos   | Atlantic Testnet | Live (cross-chain portability) |
+| Base     | Sepolia          | Planned                        |
+| Optimism | Sepolia          | Planned                        |
 
 Capability hashes are deterministic across chains — the same
 `capabilityHash("kyc.basic")` is identical on Casper and Pharos.

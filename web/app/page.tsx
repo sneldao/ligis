@@ -328,6 +328,7 @@ export default async function HomePage({
                   <code className="font-mono text-ink">ligis.risk</code> $0.75 ·{" "}
                   <code className="font-mono text-ink">ligis.verify</code> $0.50
                   · <code className="font-mono text-ink">ligis.issue</code>{" "}
+                  $2.00 · <code className="font-mono text-ink">ligis.gate</code>{" "}
                   $1.00
                 </p>
                 <div className="mt-6">

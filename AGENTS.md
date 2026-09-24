@@ -353,7 +353,7 @@ pnpm --filter @ligis/croo-adapter build
 ln -sfn /opt/ligis-croo/releases/$TIMESTAMP /opt/ligis-croo/current
 cd /opt/ligis-croo && pm2 restart ecosystem.config.js --update-env
 # Verify the startup banner lists all four services and the new alias:
-#   Services: ligis.risk, ligis.verify, ligis.issue, ligis.gate
+#   Services: ligis.risk, ligis.verify, ligis.issue, ligis.gate, ligis.qualify
 #   Service alias: <uuid> -> ligis.gate
 tail -15 /opt/ligis-croo/logs/out.log
 ```
@@ -370,6 +370,15 @@ Prune with `rm -rf /opt/ligis-croo/releases/<old>` — never the one `current`
 resolves to or the one the PM2 process cwd points at (check
 `readlink -f /proc/$(pm2 pid ligis-croo)/cwd` first).
 
+**CROO key convention (two files, never mix):**
+
+- `.env.d/croo.env` + `/opt/ligis-croo/.env` → `CROO_SDK_KEY` = the **Ligis
+  provider** key. Rotating it breaks the live provider. Do not rotate.
+- `.env.d/croo-buyer.env` → `CROO_BUYER_SDK_KEY` = a **non-Ligis buyer** key
+  (e.g. "Early, Not Wrong"), used only by `scripts/croo-gate-test-order.ts`.
+  CROO rejects negotiating your own service, so test orders need a different
+  agent's funded key. Rotate freely; nothing depends on it.
+
 **Required env vars in `/opt/ligis-croo/.env`:**
 
 - `CROO_SDK_KEY` — from CROO Dashboard
@@ -377,6 +386,18 @@ resolves to or the one the PM2 process cwd points at (check
 - `CROO_SERVICE_ID_LIGIS_VERIFY` — listing UUID from CROO Dashboard
 - `CROO_SERVICE_ID_LIGIS_ISSUE` — listing UUID from CROO Dashboard
 - `CROO_SERVICE_ID_LIGIS_GATE` — listing UUID for `ligis.gate` (once registered in the Dashboard)
+- `CROO_SERVICE_ID_LIGIS_QUALIFY` — listing UUID for `ligis.qualify` (once registered in the Dashboard)
+- `LIGIS_SELF_ISSUABLE_CAPABILITIES` — optional, comma-separated capabilities
+  that `ligis.issue` and `ligis.qualify` may mint without external evidence.
+  **Leave unset in production.** It exists for demos on low-criticality
+  capabilities (e.g. `data.premium`); allowlisting `kyc.basic` makes the
+  credential meaningless because the weight-4 capability becomes buyable.
+  The legacy name `LIGIS_QUALIFY_SELF_ISSUABLE` is still read as a fallback
+  (canonical wins when both are set) so an existing deployment's allowlist
+  survives the upgrade. To keep the current live demo working while `ligis.issue`
+  requires evidence:
+  `LIGIS_SELF_ISSUABLE_CAPABILITIES=agent.commerce.escrow,data.premium` —
+  note this deliberately excludes `kyc.basic`.
 - `LIGIS_CHAIN` — `casper` or `pharos`
 - `LIGIS_ISSUER_PRIVATE_KEY` — hex private key for signing credentials (required for ligis.issue)
 - `LIGIS_CASPER_KEY_PATH` — path to PEM file for casper-client CLI (required for ligis.issue on Casper)
@@ -409,6 +430,31 @@ fs.writeFileSync('.env.d/casper-deployer.pem', pk.exportPrivateKeyInPem());
 ```
 
 **Key implementation notes:**
+
+- `ligis.qualify` is the funnel collapse: one order runs check → policy-gated
+  issue → re-check and returns `entryVerdict`, `finalVerdict`, `issued`,
+  `skipped`, and `verificationPending`. It reuses `buildRiskReport` (exported
+  from `risk.ts`) so there is exactly one scoring implementation, and
+  `credential-ops.ts` so there is exactly one mint path shared with
+  `ligis.issue`. **Payment alone never mints trust** — every issuance is
+  evidence-gated or allowlist-gated, and `ligis.issue` enforces the same rule so
+  the gate can't be bypassed by hiring the cheaper service. A fresh credential is
+  immature, so a successful run reports `warn` (maturing to `pass`), never a fake
+  `pass`.
+- A policy refusal is a **structured deliverable**, not an error: `ligis.issue`
+  returns `{ issued: false, reason: "evidence-required", detail, evidenceShape,
+note }` and signs nothing, so a refusal costs no gas. Both services word the
+  refusal via `evidenceRequiredRefusal()` in `credential-ops.ts`.
+- The re-check is bounded (`settleAttempts` x `settleDelayMs`, default of 2 x
+  1500ms) because a just-submitted credential may not be readable yet and the
+  provider kills handlers at 30s. Credentials that are submitted but not yet
+  readable come back in `verificationPending` with their tx hashes rather than
+  as a failure.
+- Service IDs and prices live in `SERVICE_PRICE_USD` / `SERVICE_ID`
+  (`packages/croo-adapter/src/services.ts`) and build the provider listings,
+  `croo-store-manifest.json`, and every hint that quotes a price. Change a price
+  there and in the CROO Dashboard together — the code is the promise, the
+  Dashboard is the charge.
 
 - CROO sends listing UUIDs as `service_id` in WebSocket events, not service
   names. The provider maps UUIDs via `CROO_SERVICE_ID_*` env vars.
@@ -444,8 +490,11 @@ else gateway so the skip reason names the key we want):
   `POST https://ai-gateway.vercel.sh/typesafe/v1/systemone`, auth
   `AI_GATEWAY_API_KEY`, model slug `typesafe-ai/jev`. Responses carry
   `provider_metadata.gateway.cost` (billed USD) — used directly for
-  `X-Jev-Cost-Usd`, so during the promo it reads 0. After the promo ends:
-  flip to direct, or keep the gateway with billing/BYOK.
+  `X-Jev-Cost-Usd`, so during the promo it reads 0. **After 2026-09-25** the
+  free window closes: either attach billing/BYOK to the gateway key, or flip
+  to the direct route (`TYPESAFE_API_KEY` + `LIGIS_JEV_TRANSPORT=direct`).
+  Because the layer is fail-open, a dead route looks like nothing at all at
+  runtime — verify with `pnpm smoke:jev` (below) rather than assuming.
 - **TypeSafe direct**: `POST https://api.typesafe.ai/v1/systemone`, auth
   `TYPESAFE_API_KEY` (console.typesafe.ai, early access), model `jev-latest`
   (response reports the versioned id — log it). Cost derived from input
@@ -482,6 +531,31 @@ Policy questions with computable answers (e.g. "is this payment redundant
 for something the subject already holds?") stay in code — in this gate's
 semantics paying while credentialed is the happy path, and a boolean doesn't
 need a model. Jev is for judgments an `=IF()` cannot make.
+
+### Transport smoke test
+
+Fail-open means a broken route is invisible: the gate keeps serving payments
+while every verdict silently becomes `SKIPPED`. `scripts/jev-transport-smoke.ts`
+(`pnpm smoke:jev`) calls `evaluatePaymentIntent` directly — no gate server, no
+chain RPC, no credential — with two probes (legit → GO, misdirected → STOP)
+and exits non-zero the moment Jev stops answering, printing the resolved route
+and the fix. Run it in CI or a cron; `scripts/jev-transport-smoke.lastrun.txt`
+records the last run, including billed USD (a non-zero cost on the real
+gateway means the promo is over).
+
+```bash
+set -a; source .env.d/aigateway.env; set +a
+LIGIS_JEV_ENABLED=1 pnpm smoke:jev
+```
+
+Against a stub, override the URL so the report isn't mistaken for gateway
+promo evidence:
+
+```bash
+npx tsx scripts/jev-stub.ts &   # :4099, model jev-stub-1.0
+LIGIS_JEV_ENABLED=1 LIGIS_JEV_API_KEY=stub \
+  LIGIS_JEV_API_URL=http://localhost:4099/v1/systemone pnpm smoke:jev
+```
 
 ### Placement (differs from the original sketch)
 
@@ -565,6 +639,16 @@ capability class, `code_checks` facts) lifted verdict confidence across the
 board on the stress demo: legit GO 0.49 → 0.93; underpay STOP 0.84 → 0.98;
 overpay STOP 0.77 → 0.93; misdirected STOP 0.92 → 0.96. Warm decisions run
 ~350–650ms.
+
+### Live verification (2026-09-23, AI Gateway — `pnpm smoke:jev`)
+
+Two days before the promo closes, the transport still answers: legit probe GO
+conf 0.950 in 1323ms (cold, first call), misdirected probe STOP conf 0.970 in
+443ms with `payee-mismatch`, `scope-mismatch`, and `abnormal-pattern` flags —
+cost reported as $0.00, so the free window was still open. Recorded in
+`scripts/jev-transport-smoke.lastrun.txt`. Re-run the smoke test on or after
+2026-09-25: a non-zero billed cost there means billing started, an exit 1 means
+the route is dead and the gate is quietly credential-only.
 
 ### Marketing notes
 

@@ -1,7 +1,12 @@
 import { NextRequest } from "next/server";
 import { stewardLoop } from "@/lib/steward";
 import { stewardLoopCasper } from "@/lib/steward-casper";
-import { CHAINS, chainById, isWriteReadyChain } from "@/lib/network";
+import {
+  CHAINS,
+  chainById,
+  evmNetworkKey,
+  isWriteReadyChain,
+} from "@/lib/network";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,14 +21,12 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   }
-  const goal = (body.goal ?? "").trim() || "Operate as a Pharos agent.";
+  const goal = (body.goal ?? "").trim() || "Operate as a Ligis agent.";
   const live = body.live === true;
   const chain = body.chain ?? "casper-testnet";
   const clientIp =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
-  // The steward loop is implemented for Casper and Pharos only. Refuse other
-  // chains rather than silently running the loop against Pharos.
   const chainConfig = chainById(chain);
   if (!chainConfig || !isWriteReadyChain(chainConfig)) {
     const writable = CHAINS.filter(isWriteReadyChain)
@@ -46,7 +49,11 @@ export async function POST(req: NextRequest) {
       try {
         const gen = isCasper
           ? stewardLoopCasper(goal, { live, clientIp })
-          : stewardLoop(goal, { live, clientIp });
+          : stewardLoop(goal, {
+              live,
+              clientIp,
+              networkId: evmNetworkKey(chainConfig),
+            });
         for await (const event of gen) {
           controller.enqueue(enc(event));
         }

@@ -17,26 +17,26 @@ The primary demo path is **self-contained**: the Steward issues itself a capabil
 
 ## 0G dependencies
 
-| Layer | Package | Notes |
-|-------|---------|-------|
-| Compute | `@0gfoundation/0g-compute-ts-sdk` | TEE-verified LLM inference. One-time setup via `setupProvider()` (deposit → acknowledge provider). |
+| Layer   | Package                                    | Notes                                                                                                                                         |
+| ------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compute | `@0gfoundation/0g-compute-ts-sdk`          | TEE-verified LLM inference. One-time setup via `setupProvider()` (deposit → acknowledge provider).                                            |
 | Storage | `@0gfoundation/0g-storage-ts-sdk` (v1.2.6) | Upload/retrieve evidence manifests. Uses `Indexer` + `MemData` for in-memory JSON; returns a Merkle root anchored on-chain via `setTokenURI`. |
 
 > The 0G Compute SDK's ESM build has a broken re-export. `compute.ts` imports via `createRequire` to use the working CJS build.
 
 ## Build phases
 
-| Phase | Work | Status |
-|-------|------|--------|
-| 0 | Consolidate CLI + MCP on-chain ops into `lib/` | ✅ DONE |
-| 1 | `zerog/compute.ts` — TEE-verified inference | ✅ DONE |
-| 2 | `zerog/storage.ts` — evidence on 0G Storage, root in `tokenURI` | ✅ DONE |
-| 3 | `agent/steward.ts` + `agent/policy.ts` — full loop | ✅ DONE |
-| 4 | `agent run` CLI + `run-steward` MCP tool + `node:test` units | ✅ DONE |
-| 5 | `LocalReasoner` — keyword-based fallback when 0G Compute is down | ✅ DONE |
-| 6 | Casper adapter integration — same loop on Casper Testnet | ✅ DONE |
-| 7 | x402 Trust Gate — credential-gated micropayment endpoint | ✅ DONE |
-| 8 | Web UI — Casper steward loop with chain-aware page | ✅ DONE |
+| Phase | Work                                                             | Status  |
+| ----- | ---------------------------------------------------------------- | ------- |
+| 0     | Consolidate CLI + MCP on-chain ops into `lib/`                   | ✅ DONE |
+| 1     | `zerog/compute.ts` — TEE-verified inference                      | ✅ DONE |
+| 2     | `zerog/storage.ts` — evidence on 0G Storage, root in `tokenURI`  | ✅ DONE |
+| 3     | `agent/steward.ts` + `agent/policy.ts` — full loop               | ✅ DONE |
+| 4     | `agent run` CLI + `run-steward` MCP tool + `node:test` units     | ✅ DONE |
+| 5     | `LocalReasoner` — keyword-based fallback when 0G Compute is down | ✅ DONE |
+| 6     | Casper adapter integration — same loop on Casper Testnet         | ✅ DONE |
+| 7     | x402 Trust Gate — credential-gated micropayment endpoint         | ✅ DONE |
+| 8     | Web UI — Casper steward loop with chain-aware page               | ✅ DONE |
 
 ## Fallback reasoning
 
@@ -55,7 +55,7 @@ the same fallback logic.
 
 - **DRY** — one implementation of each on-chain op in `lib/`; CLI, MCP, and Agent all import from it.
 - **No contract changes** — 0G Storage is anchored via the existing `setTokenURI` / `MetadataUpdated` path. The 41 Foundry tests stay green.
-- **Testable** — `Reasoner` and `EvidenceStore` are interfaces. The agent is fully testable offline with mocks (47 TypeScript tests).
+- **Testable** — `Reasoner` and `EvidenceStore` are interfaces. The agent is fully testable offline with mocks (133 TypeScript tests, 25 suites).
 - **Resilient** — if 0G Storage fails, the manifest is still returned with `storage: null`. The agent doesn't crash; it records what it can.
 
 ## Usage

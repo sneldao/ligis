@@ -6,8 +6,11 @@ import { handleVerify } from "./verify.js";
 import { handleIssue } from "./issue.js";
 import { handleRisk } from "./risk.js";
 import { handleGate } from "./gate.js";
+import { handleQualify } from "./qualify.js";
 import type { CrooClient, EventStreamLike } from "./client.js";
 import {
+  SERVICE_ID,
+  SERVICE_PRICE_USD,
   type ServiceDescriptor,
   type ServiceRequest,
   type ServiceResult,
@@ -58,11 +61,11 @@ export interface ProviderOptions {
  */
 export const defaultServices: ServiceDescriptor[] = [
   {
-    id: "ligis.risk",
+    id: SERVICE_ID.risk,
     name: "Ligis Counterparty Risk Check",
     description:
       "Verify that another AI agent holds the credentials required for a paid job before you hire or pay it. Returns a pass/warn/fail verdict and a 0–100 risk score. Cross-chain on Casper and Pharos.",
-    priceUsd: "0.75",
+    priceUsd: SERVICE_PRICE_USD[SERVICE_ID.risk],
     inputSchema: {
       type: "object",
       required: ["subject", "capabilities"],
@@ -102,11 +105,11 @@ export const defaultServices: ServiceDescriptor[] = [
     handler: handleRisk,
   },
   {
-    id: "ligis.verify",
+    id: SERVICE_ID.verify,
     name: "Ligis Credential Verification",
     description:
       "On-chain verification that an AI agent holds a valid, non-expired, non-revoked Ligis capability credential. Works on Casper and Pharos.",
-    priceUsd: "0.50",
+    priceUsd: SERVICE_PRICE_USD[SERVICE_ID.verify],
     inputSchema: {
       type: "object",
       required: ["subject", "capability"],
@@ -136,11 +139,11 @@ export const defaultServices: ServiceDescriptor[] = [
     handler: handleVerify,
   },
   {
-    id: "ligis.issue",
+    id: SERVICE_ID.issue,
     name: "Ligis Credential Issuance",
     description:
       "Issue a signed, revocable Ligis capability credential to a subject. Requires issuer key configuration.",
-    priceUsd: "2.00",
+    priceUsd: SERVICE_PRICE_USD[SERVICE_ID.issue],
     inputSchema: {
       type: "object",
       required: ["subject", "capability"],
@@ -170,11 +173,11 @@ export const defaultServices: ServiceDescriptor[] = [
     handler: handleIssue,
   },
   {
-    id: "ligis.gate",
+    id: SERVICE_ID.gate,
     name: "Ligis Trust Gate (Intent + Credential)",
     description:
       "Pre-flight trust read for an agent payment, in one call: a Jev (TypeSafe System One) intent verdict — is the amount plausible, does the payee match, is the pattern normal — alongside an on-chain credential check on Casper or Pharos. Fail-open and typed; run it before money moves.",
-    priceUsd: "1.00",
+    priceUsd: SERVICE_PRICE_USD[SERVICE_ID.gate],
     inputSchema: {
       type: "object",
       required: ["subject", "capability", "priceSmallestUnit", "payTo"],
@@ -241,6 +244,64 @@ export const defaultServices: ServiceDescriptor[] = [
       },
     },
     handler: handleGate,
+  },
+  {
+    id: SERVICE_ID.qualify,
+    name: "Ligis Credential Qualification",
+    description:
+      "One order from not-credentialed to credentialed: Ligis checks the counterparty, issues the missing capabilities the trust policy allows (external evidence required unless a capability is explicitly allowlisted as self-issuable), then re-checks and returns both verdicts. Payment alone never mints a credential.",
+    priceUsd: SERVICE_PRICE_USD[SERVICE_ID.qualify],
+    inputSchema: {
+      type: "object",
+      required: ["subject", "capabilities"],
+      properties: {
+        subject: {
+          type: "string",
+          description: "Agent DID or chain-native address to qualify",
+        },
+        capabilities: {
+          oneOf: [
+            { type: "string" },
+            { type: "array", items: { type: "string" } },
+          ],
+          description:
+            "Capability name(s) the counterparty must hold, e.g. agent.commerce.escrow",
+        },
+        evidence: {
+          type: "array",
+          description:
+            "External evidence per missing capability: [{ capability, externalAttestation: { source, uid, chainId?, schema? } }]. Required for any capability not on the self-issuable allowlist.",
+        },
+        issuer: {
+          type: "string",
+          description: "Optional trusted issuer address to constrain the check",
+        },
+        minTtlSeconds: {
+          type: "number",
+          description:
+            "Minimum remaining credential lifetime in seconds (default 86400)",
+        },
+        expiresInSeconds: {
+          type: "number",
+          description:
+            "Lifetime for credentials issued during this call (default 86400)",
+        },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        qualified: { type: "boolean" },
+        entryVerdict: { type: "string" },
+        finalVerdict: { type: "string" },
+        issuedCount: { type: "number" },
+        issued: { type: "array" },
+        skipped: { type: "array" },
+        verificationPending: { type: "array" },
+        verdictNote: { type: "string" },
+      },
+    },
+    handler: handleQualify,
   },
 ];
 

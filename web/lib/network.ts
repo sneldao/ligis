@@ -56,9 +56,9 @@ export const CASPER_TESTNET: ChainNetwork = {
 };
 
 /**
- * Monad Testnet. Contracts are deployed and public reads are wired through
- * `chain-router.ts`; the steward loop and browser write paths are still
- * Pharos/Casper-only, so `writeReady` is false until those are ported.
+ * Monad Testnet. Contracts are deployed; public reads and the server-custodied
+ * steward write path are wired. Browser wallet connect is still deferred —
+ * writes use `LIGIS_STEWARD_KEY` (same pattern as Pharos).
  */
 export const MONAD_TESTNET: ChainNetwork = {
   id: "monad-testnet",
@@ -69,7 +69,7 @@ export const MONAD_TESTNET: ChainNetwork = {
   live: true,
   shortName: "monad",
   evmNetwork: "monad-testnet",
-  writeReady: false,
+  writeReady: true,
 };
 
 /** Key into `assets/networks.json` for a chain's EVM reads. */

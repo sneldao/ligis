@@ -71,19 +71,21 @@ ambiguous subject bindings must fail closed. A source outage must produce an
 
 ## EAS operator setup
 
-EAS-backed issuance is opt-in per `ligis.issue` request. If a request includes
-`externalAttestation.source="eas"`, the CROO provider requires these
+External evidence is what makes a credential mean something: `ligis.issue` and
+`ligis.qualify` both refuse to mint a capability from payment alone unless it is
+listed in `LIGIS_SELF_ISSUABLE_CAPABILITIES` (empty by default). If a request
+includes `externalAttestation.source="eas"`, the CROO provider requires these
 environment variables:
 
-| Variable | Source |
-|---|---|
-| `LIGIS_EAS_ADDRESS` | EAS contract address for the source chain. Use the official EAS deployment artifacts: <https://github.com/ethereum-attestation-service/eas-contracts/tree/master/deployments> |
-| `LIGIS_EAS_RPC_URL` | RPC URL for the same EVM chain that hosts the attestation |
-| `LIGIS_EAS_CHAIN_ID` | Numeric chain ID for that EAS source chain |
-| `LIGIS_EAS_TRUSTED_ATTESTERS` | Comma-separated allowlist of upstream attester addresses |
-| `LIGIS_EAS_SCHEMA_CAPABILITIES` | JSON map from EAS schema keys to Ligis capability names |
-| `LIGIS_EAS_MAX_AGE_SECONDS` | Optional freshness window for the source status check; defaults to `300` |
-| `LIGIS_EAS_REQUIRE_FRESH_STATUS` | Optional; defaults to `true` and requires an expiry boundary |
+| Variable                         | Source                                                                                                                                                                        |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LIGIS_EAS_ADDRESS`              | EAS contract address for the source chain. Use the official EAS deployment artifacts: <https://github.com/ethereum-attestation-service/eas-contracts/tree/master/deployments> |
+| `LIGIS_EAS_RPC_URL`              | RPC URL for the same EVM chain that hosts the attestation                                                                                                                     |
+| `LIGIS_EAS_CHAIN_ID`             | Numeric chain ID for that EAS source chain                                                                                                                                    |
+| `LIGIS_EAS_TRUSTED_ATTESTERS`    | Comma-separated allowlist of upstream attester addresses                                                                                                                      |
+| `LIGIS_EAS_SCHEMA_CAPABILITIES`  | JSON map from EAS schema keys to Ligis capability names                                                                                                                       |
+| `LIGIS_EAS_MAX_AGE_SECONDS`      | Optional freshness window for the source status check; defaults to `300`                                                                                                      |
+| `LIGIS_EAS_REQUIRE_FRESH_STATUS` | Optional; defaults to `true` and requires an expiry boundary                                                                                                                  |
 
 Use EASScan or the EASScan GraphQL API to inspect attestation UIDs, schema IDs,
 attesters, recipients, expiry, and revocation status:
@@ -125,3 +127,4 @@ Example `ligis.issue` requirements:
 
 The existing self-issued demo path may remain available on testnet, but must
 be labelled as Ligis-issued evidence rather than external verification.
+```

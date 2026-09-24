@@ -112,7 +112,7 @@ export default async function IssuersPage({
             </p>
             <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
               {log.unavailable
-                ? "The gate still works on this chain: a direct credential read answers GO or STOP. Only the block-scanning history view needs a log-capable RPC or an indexer."
+                ? "The gate still works on this chain: a direct credential read answers GO or STOP. History needs a log-capable RPC or Envio (set LIGIS_ENVIO_GRAPHQL_URL — see packages/envio-indexer)."
                 : "An issuer is a KYC provider, compliance service, or protocol team that can attest to what an agent is allowed to do."}
             </p>
             <a

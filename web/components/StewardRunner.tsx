@@ -192,9 +192,8 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     const chainParam = searchParams.get("chain") ?? "casper-testnet";
     const activeChain = CHAINS.find((c) => c.id === chainParam) ?? CHAINS[0]!;
 
-    // Honest failure instead of a 400 from the API: the loop has no Monad
-    // implementation, and running it against Pharos under a Monad label would
-    // misreport which chain produced the transactions.
+    // Honest failure: refuse chains that are not write-ready rather than
+    // silently running the loop against another network.
     if (!activeChain.writeReady) {
       setState((s) => ({
         ...s,

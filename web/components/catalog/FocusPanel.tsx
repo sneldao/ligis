@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { truncateAddress } from "@/lib/format";
-import { useCatalogUi } from "./catalogState";
+import { chainById } from "@/lib/network";
+import { fieldChainId, useCatalogUi } from "./catalogState";
 
 type HeldCap = { id: string; label: string };
 
@@ -15,6 +16,7 @@ type Snapshot = {
   controller: string | null;
   heldCount: number;
   held: HeldCap[];
+  chain?: string;
 };
 
 const VERIFY_DEFAULT_CAP = "agent.commerce.escrow";
@@ -26,6 +28,10 @@ export function FocusPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const chainSlug = fieldChainId ?? "casper-testnet";
+  const chain = chainById(chainSlug);
+  const chainQs = `?chain=${encodeURIComponent(chainSlug)}`;
+
   useEffect(() => {
     if (!active) {
       setSnap(null);
@@ -35,7 +41,7 @@ export function FocusPanel() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`/api/agent/${active}`)
+    fetch(`/api/agent/${encodeURIComponent(active)}${chainQs}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -52,7 +58,7 @@ export function FocusPanel() {
     return () => {
       cancelled = true;
     };
-  }, [active]);
+  }, [active, chainQs]);
 
   const verifiedCap = snap?.held[0]?.id ?? VERIFY_DEFAULT_CAP;
   const isCapable = snap ? snap.held.some((h) => h.id === verifiedCap) : false;
@@ -70,7 +76,9 @@ export function FocusPanel() {
           style={{ borderLeft: "1px solid #D9D3CB" }}
         >
           <header className="flex items-baseline justify-between text-xs">
-            <p className="eyebrow">{loading ? "Reading the chain…" : "Live verification"}</p>
+            <p className="eyebrow">
+              {loading ? "Reading the chain…" : "Live verification"}
+            </p>
             <span className="font-mono text-[11px] tabular text-ink-quiet">
               isCapable
             </span>
@@ -93,10 +101,14 @@ export function FocusPanel() {
               {error ? (
                 <span className="text-revoke">{error}</span>
               ) : loading ? (
-                <span className="italic text-ink-soft">Asking the registry…</span>
+                <span className="italic text-ink-soft">
+                  Asking the registry…
+                </span>
               ) : (
                 <>
-                  <span className={`font-mono text-base tabular ${isCapable ? "text-sage" : "text-revoke"}`}>
+                  <span
+                    className={`font-mono text-base tabular ${isCapable ? "text-sage" : "text-revoke"}`}
+                  >
                     {isCapable ? "✓ GO" : "✗ STOP"}
                   </span>{" "}
                   <span className="font-mono text-base tabular text-ink">
@@ -132,7 +144,7 @@ export function FocusPanel() {
             <Fact label="credentials">
               {loading ? "…" : (snap?.heldCount ?? 0)}
             </Fact>
-            <Fact label="network">atlantic</Fact>
+            <Fact label="network">{chain?.shortName ?? chainSlug}</Fact>
           </div>
 
           {snap?.held && snap.held.length > 0 ? (
@@ -155,20 +167,20 @@ export function FocusPanel() {
           <div className="mt-auto flex flex-col gap-3 pt-10">
             {snap && !snap.exists ? (
               <Link
-                href="/steward?chain=casper-testnet"
+                href={`/steward${chainQs}`}
                 className="text-sm text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
               >
                 Bootstrap an agent with the Steward →
               </Link>
             ) : null}
             <Link
-              href={`/agent/${active}`}
+              href={`/agent/${active}${chainQs}`}
               className="text-sm text-ink underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
             >
               Open the dossier →
             </Link>
             <Link
-              href="/capabilities"
+              href={`/capabilities${chainQs}`}
               className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
             >
               Browse all capabilities
@@ -180,10 +192,18 @@ export function FocusPanel() {
   );
 }
 
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+function Fact({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-ink-quiet">{label}</p>
+      <p className="text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
+        {label}
+      </p>
       <div className="font-mono tabular text-sm text-ink">{children}</div>
     </div>
   );

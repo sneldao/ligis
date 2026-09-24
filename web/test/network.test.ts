@@ -60,15 +60,15 @@ describe("chain registry ↔ networks.json wiring", () => {
     );
   });
 
-  it("registers Monad Testnet as read-only", () => {
+  it("registers Monad Testnet as write-ready via server steward", () => {
     assert.equal(MONAD_TESTNET.chainId, 10143);
     assert.equal(MONAD_TESTNET.shortName, "monad");
     assert.equal(MONAD_TESTNET.evmNetwork, "monad-testnet");
     assert.equal(MONAD_TESTNET.live, true);
     assert.equal(
       MONAD_TESTNET.writeReady,
-      false,
-      "browser writes are not implemented for Monad; flip this only when they are",
+      true,
+      "server-custodied steward writes are wired for Monad; flip false if that regresses",
     );
   });
 

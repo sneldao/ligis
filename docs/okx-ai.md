@@ -38,11 +38,12 @@ risk scoring, and credential issuance to every other agent on OKX.AI.
 
 Mirror the CROO CAP services, adapted to OKX.AI naming:
 
-| Service ID         | Price | What it proves                           | On-chain action                                 | Deliverable                                                                                                      |
-| ------------------ | ----- | ---------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `okx.ligis.risk`   | $0.75 | Counterparty risk check                  | `CredentialRegistry.isCapable` read(s)          | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }`                                  |
-| `okx.ligis.verify` | $0.50 | On-chain credential verification         | `CredentialRegistry.isCapable` read             | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }`                         |
-| `okx.ligis.issue`  | $1.00 | Credential issuance; optional EAS import | EAS read, then `CredentialRegistry.issue` write | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt, provenance }` |
+| Service ID          | Price | What it proves                                        | On-chain action                                           | Deliverable                                                                                                      |
+| ------------------- | ----- | ----------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --- | ---------------- | ----- | ----------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `okx.ligis.risk`    | $0.75 | Counterparty risk check                               | `CredentialRegistry.isCapable` read(s)                    | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }`                                  |
+| `okx.ligis.verify`  | $0.50 | On-chain credential verification                      | `CredentialRegistry.isCapable` read                       | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }`                         |
+| `okx.ligis.issue`   | $2.00 | Credential issuance; optional EAS import              | EAS read, then `CredentialRegistry.issue` write           | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt, provenance }` |     | `okx.ligis.gate` | $1.00 | Payment-intent verdict (Jev) alongside the credential check | `CredentialRegistry.isCapable` read (no write) | `{ service, credential, intent: { verdict, confidence, flags, latencyMs }, proceed }` |
+| `okx.ligis.qualify` | $2.50 | Check → policy-gated issuance → re-check in one order | `isCapable` read(s) + `CredentialRegistry.issue` write(s) | `{ service, qualified, entryVerdict, finalVerdict, issued, skipped, verificationPending }`                       |
 
 Pricing mirrors CROO. OKX.AI may take its own fee on top; we will adjust
 once the ASP fee schedule is public.

@@ -1,15 +1,19 @@
 import { loadLigisAdapter } from "./config.js";
 import {
+  SERVICE_ID,
   type ServiceRequest,
   type ServiceResult,
   parseServiceRequirements,
 } from "./services.js";
 import {
-  evaluateAttestationPolicy,
-  type AttestationTrustPolicy,
-  type AttestationVerifier,
-} from "@ligis/core";
-import { createEasAttestationVerifierFromEnv } from "@ligis/adapter-evm";
+  evidenceRequiredRefusal,
+  issueCredential,
+  verifyExternalAttestation,
+  type AttestationDeps,
+  type ExternalAttestationRequirement,
+  type Provenance,
+} from "./credential-ops.js";
+import { isSelfIssuable } from "./services.js";
 
 interface IssueRequirements {
   subject: string;
@@ -20,18 +24,8 @@ interface IssueRequirements {
   externalAttestation?: ExternalAttestationRequirement;
 }
 
-interface ExternalAttestationRequirement {
-  source: "eas";
-  uid: string;
-  chainId?: string;
-  schema?: string;
-}
-
-interface IssueDeps {
+interface IssueDeps extends AttestationDeps {
   loadAdapter?: typeof loadLigisAdapter;
-  verifier?: AttestationVerifier;
-  policy?: AttestationTrustPolicy;
-  now?: () => Date;
 }
 
 function isIssueRequirements(req: unknown): req is IssueRequirements {
@@ -68,6 +62,15 @@ function isExternalAttestationRequirement(
  * This service requires an issuer key to be configured in the environment
  * (LIGIS_CASPER_ISSUER_PRIVATE_KEY or equivalent for the selected chain).
  * It signs an EIP-712 credential and submits it to the on-chain registry.
+ *
+ * Gated by the same trust rule as `ligis.qualify`: a capability is issued only
+ * against external evidence that passes policy, or when it is listed in
+ * `LIGIS_SELF_ISSUABLE_CAPABILITIES` (empty by default). Both services enforce
+ * it so a buyer can't bypass the gate by hiring the cheaper one.
+ *
+ * A refusal is delivered as a structured payload rather than an error: the
+ * buyer already paid, so they get the reason and the exact evidence shape that
+ * would unlock the credential instead of an opaque failure.
  */
 export async function handleIssue(
   req: ServiceRequest,
@@ -82,148 +85,64 @@ export async function handleIssue(
 
   const adapter = await (deps.loadAdapter ?? loadLigisAdapter)();
 
-  const provenance = parsed.externalAttestation
+  // Policy gate: evidence, or an explicitly allowlisted capability. Checked
+  // before any signing so a refusal costs no gas and moves no key material.
+  if (!parsed.externalAttestation && !isSelfIssuable(parsed.capability)) {
+    const refusal = evidenceRequiredRefusal(parsed.capability);
+    console.log(
+      `[ligis-croo] issue refused: ${parsed.capability} (${refusal.reason})`,
+    );
+    return {
+      deliverableType: "text",
+      deliverableText: JSON.stringify(
+        {
+          service: SERVICE_ID.issue,
+          subject: parsed.subject,
+          capability: parsed.capability,
+          issued: false,
+          ...refusal,
+          /** The exact shape that would satisfy policy on a retry. */
+          evidenceShape: {
+            externalAttestation: {
+              source: "eas",
+              uid: "0x…",
+              chainId: "<source chain id, optional>",
+              schema: "<source schema, optional>",
+            },
+          },
+          note: `Nothing was signed or submitted, so this order cost no gas. Re-hire ${SERVICE_ID.issue} with evidence, or hire ${SERVICE_ID.qualify} to have the check and the issuance handled in one order.`,
+        },
+        null,
+        2,
+      ),
+    };
+  }
+
+  const provenance: Provenance | null = parsed.externalAttestation
     ? await verifyExternalAttestation(
-        { ...parsed, externalAttestation: parsed.externalAttestation },
+        {
+          subject: parsed.subject,
+          capability: parsed.capability,
+          externalAttestation: parsed.externalAttestation,
+        },
         deps,
       )
     : null;
 
-  // Cast is safe: adapters share the ChainAdapter contract.
-  // Bind methods to preserve `this` context (CasperAdapter methods
-  // reference this.ctx internally).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const anyAdapter = adapter as any;
-  const signCredential = anyAdapter.signCredential?.bind(adapter);
-  const submitCredential = anyAdapter.submitCredential?.bind(adapter);
-
-  if (
-    typeof signCredential !== "function" ||
-    typeof submitCredential !== "function"
-  ) {
-    throw new Error(
-      "Selected Ligis adapter does not support credential issuance",
-    );
-  }
-
-  const issuerKey = process.env.LIGIS_ISSUER_PRIVATE_KEY;
-  if (!issuerKey) {
-    throw new Error("LIGIS_ISSUER_PRIVATE_KEY is required for ligis.issue");
-  }
-
-  const signed = await signCredential({
-    issuerKey,
+  const issued = await issueCredential({
+    adapter,
     subject: parsed.subject,
     capability: parsed.capability,
     expiresInSeconds: parsed.expiresInSeconds ?? 24 * 60 * 60,
+    provenance,
   });
-
-  const { tx } = await submitCredential(signed);
 
   return {
     deliverableType: "text",
     deliverableText: JSON.stringify(
-      {
-        service: "ligis.issue",
-        subject: signed.subject,
-        capability: parsed.capability,
-        capabilityHash: signed.capabilityHash,
-        issuer: signed.issuer,
-        issuedAt: signed.issuedAt,
-        expiresAt: signed.expiresAt,
-        txHash: tx.hash,
-        submittedAt: new Date().toISOString(),
-        provenance,
-      },
+      { service: SERVICE_ID.issue, ...issued },
       null,
       2,
     ),
   };
-}
-
-async function verifyExternalAttestation(
-  req: IssueRequirements & {
-    externalAttestation: ExternalAttestationRequirement;
-  },
-  deps: IssueDeps,
-) {
-  const verifier =
-    deps.verifier ?? createEasAttestationVerifierFromEnv(process.env);
-  const policy = deps.policy ?? loadEasTrustPolicyFromEnv();
-  const now = deps.now?.() ?? new Date();
-  const attestation = await verifier.verify({
-    source: req.externalAttestation.source,
-    subject: req.subject,
-    reference: {
-      source: req.externalAttestation.source,
-      uid: req.externalAttestation.uid,
-      chainId: req.externalAttestation.chainId,
-      schema: req.externalAttestation.schema,
-    },
-  });
-  const decision = evaluateAttestationPolicy(
-    attestation,
-    policy,
-    now.getTime(),
-  );
-
-  if (!decision.accepted || decision.capability !== req.capability) {
-    throw new Error(`External attestation rejected: ${decision.reason}`);
-  }
-
-  return {
-    source: attestation.evidence.source,
-    uid: attestation.evidence.uid,
-    chainId: attestation.evidence.chainId,
-    schema: attestation.evidence.schema,
-    attester: attestation.attester,
-    checkedAt: attestation.checkedAt,
-    expiresAt: attestation.expiresAt,
-    capability: decision.capability,
-    signals: decision.signals,
-  };
-}
-
-function loadEasTrustPolicyFromEnv(): AttestationTrustPolicy {
-  const trustedAttesters = parseCsvEnv("LIGIS_EAS_TRUSTED_ATTESTERS");
-  const capabilityMappings = parseJsonEnv<Record<string, string>>(
-    "LIGIS_EAS_SCHEMA_CAPABILITIES",
-  );
-  const maxAgeSeconds = Number(process.env.LIGIS_EAS_MAX_AGE_SECONDS ?? 300);
-
-  if (trustedAttesters.length === 0) {
-    throw new Error(
-      "LIGIS_EAS_TRUSTED_ATTESTERS is required for EAS-backed issuance",
-    );
-  }
-  if (Object.keys(capabilityMappings).length === 0) {
-    throw new Error(
-      "LIGIS_EAS_SCHEMA_CAPABILITIES is required for EAS-backed issuance",
-    );
-  }
-
-  return {
-    acceptedSources: ["eas"],
-    trustedAttesters: { eas: trustedAttesters },
-    capabilityMappings,
-    maxAgeSeconds,
-    requireFreshStatus: process.env.LIGIS_EAS_REQUIRE_FRESH_STATUS !== "false",
-  };
-}
-
-function parseCsvEnv(name: string): string[] {
-  return (process.env[name] ?? "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function parseJsonEnv<T extends object>(name: string): T {
-  const raw = process.env[name];
-  if (!raw) return {} as T;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    throw new Error(`${name} must be valid JSON`);
-  }
 }

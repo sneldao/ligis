@@ -1,0 +1,34 @@
+type CredentialIssued {
+  id: ID!
+  issuer: String!
+  subject: String!
+  capabilityHash: String!
+  issuedAt: BigInt!
+  expiresAt: BigInt!
+  nonce: BigInt!
+  blockNumber: BigInt!
+  txHash: String!
+  logIndex: Int!
+}
+
+type CredentialRevoked {
+  id: ID!
+  issuer: String!
+  subject: String!
+  capabilityHash: String!
+  nonce: BigInt!
+  revokedAt: BigInt!
+  blockNumber: BigInt!
+  txHash: String!
+  logIndex: Int!
+}
+
+type AgentCapabilityChanged {
+  id: ID!
+  subject: String!
+  capabilityHash: String!
+  capable: Boolean!
+  blockNumber: BigInt!
+  txHash: String!
+  logIndex: Int!
+}

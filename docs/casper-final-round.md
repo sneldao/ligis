@@ -8,13 +8,13 @@
 
 Deployed on Casper Testnet (block ~8,429,998):
 
-| Contract | Source | Testnet package hash | Status |
-|---|---|---|---|
-| `AgentId` | `packages/contracts-casper/src/agent_id.rs` | `contract-package-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1` | live, smoke-tested |
-| `CredentialRegistry` | `packages/contracts-casper/src/credential_registry.rs` | `contract-package-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37` | live, smoke-tested |
-| `GatedVault` | `packages/contracts-casper/src/gated_vault.rs` | `contract-package-27e6637b5a442eada707dce9b2a367fd8139767f6e5d9926da0031611807269f` | **live** (block ~8,615,526), deployed via `put-transaction session --install-upgrade` |
+| Contract             | Source                                                 | Testnet package hash                                                                | Status                                                                                |
+| -------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `AgentId`            | `packages/contracts-casper/src/agent_id.rs`            | `contract-package-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1` | live, smoke-tested                                                                    |
+| `CredentialRegistry` | `packages/contracts-casper/src/credential_registry.rs` | `contract-package-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37` | live, smoke-tested                                                                    |
+| `GatedVault`         | `packages/contracts-casper/src/gated_vault.rs`         | `contract-package-27e6637b5a442eada707dce9b2a367fd8139767f6e5d9926da0031611807269f` | **live** (block ~8,615,526), deployed via `put-transaction session --install-upgrade` |
 
-22 Odra tests pass (the `pnpm test:all` headline number is 13; the corrected total after tightening the controller check + the nonce-binding + the GatedVault coverage is 22). 41 Foundry + 47 TypeScript tests pass.
+22 Odra tests pass (the `pnpm test:all` headline number is 13; the corrected total after tightening the controller check + the nonce-binding + the GatedVault coverage is 22). 41 Foundry + 133 TypeScript tests (25 suites) pass.
 
 Verification on-the-fly: visit **`https://ligis.vercel.app/gate?chain=casper-testnet`** — queries the live chain, no Ligis server-mediated trust.
 
@@ -57,11 +57,11 @@ Live verification: open **`https://ligis.vercel.app/gate?chain=casper-testnet&su
 
 The fresh-deploy tx hashes printed by `scripts/casper-final-demo.ts` are committed to `scripts/casper-final-demo.lastrun.txt`; the README / BUIDL link to those. The structure is:
 
-| Step | Entry-point | Tx hash (live) |
-|---|---|---|
-| 1 | `AgentId.mint_self` | `scripts/casper-final-demo.lastrun.txt` |
-| 2 | `CredentialRegistry.issue` (rwa.accredited, self-attested) | `scripts/casper-final-demo.lastrun.txt` |
-| 3 | `AgentId.set_token_uri` (0G Storage root anchor) | `scripts/casper-final-demo.lastrun.txt` |
+| Step | Entry-point                                                | Tx hash (live)                          |
+| ---- | ---------------------------------------------------------- | --------------------------------------- |
+| 1    | `AgentId.mint_self`                                        | `scripts/casper-final-demo.lastrun.txt` |
+| 2    | `CredentialRegistry.issue` (rwa.accredited, self-attested) | `scripts/casper-final-demo.lastrun.txt` |
+| 3    | `AgentId.set_token_uri` (0G Storage root anchor)           | `scripts/casper-final-demo.lastrun.txt` |
 
 GatedVault tx hashes, once deployed, are recorded in `scripts/casper-gated-vault-demo.lastrun.txt`.
 
@@ -84,11 +84,11 @@ The script never prints the private keys — only the public addresses and accou
 
 ## 5. Test summary
 
-| Suite | Tests | Status |
-|---|---|---|
-| Odra (Casper contracts) | 22 | green |
-| Foundry (EVM contracts) | 41 | green |
-| TypeScript (agent-logic, x402, CROO, eas, etc.) | 47 | green |
+| Suite                                           | Tests | Status |
+| ----------------------------------------------- | ----- | ------ |
+| Odra (Casper contracts)                         | 22    | green  |
+| Foundry (EVM contracts)                         | 41    | green  |
+| TypeScript (agent-logic, x402, CROO, eas, etc.) | 47    | green  |
 
 Run all three locally:
 

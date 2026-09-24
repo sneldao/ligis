@@ -13,8 +13,9 @@ dist/
 # typescript incremental build cache
 *.tsbuildinfo
 
-# next.js auto-generated
-web/next-env.d.ts
+# envio HyperIndex codegen / local docker outputs
+packages/envio-indexer/generated/
+packages/envio-indexer/.envio/
 
 # casper wasm build output
 packages/contracts-casper/wasm/
@@ -134,4 +135,8 @@ __pycache__/
 *.pyo
 /packages/contracts-genlayer/artifacts/
 /packages/contracts-genlayer/.env
+
+# Ad-hoc run captures from manual shell sessions (non-standard naming).
+# Canonical receipts — scripts/*.lastrun.txt — stay committable as evidence.
+/scripts/*-laun.txt
 

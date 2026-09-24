@@ -66,7 +66,20 @@
               "issuerDiversity": { "type": "number" }
             }
           },
-          "signals": { "type": "array" }
+          "signals": { "type": "array" },
+          "pathToTrust": {
+            "type": "object",
+            "description": "Present only when a capability is missing: which service to hire next, its price, and the chain to issue on.",
+            "properties": {
+              "failedCapabilities": { "type": "array" },
+              "issueService": { "type": "string" },
+              "issueListingId": { "type": "string" },
+              "issuePriceUsd": { "type": "string" },
+              "chain": { "type": "string" },
+              "chainName": { "type": "string" },
+              "hint": { "type": "string" }
+            }
+          }
         }
       }
     },
@@ -110,7 +123,7 @@
       "id": "ligis.issue",
       "name": "Ligis Credential Issuance",
       "description": "Issue a verifiable on-chain credential to any agent. Ligis signs an EIP-712 attestation and submits it to the CredentialRegistry on Casper or Pharos, making it instantly verifiable by any agent or contract.",
-      "priceUsd": "1.00",
+      "priceUsd": "2.00",
       "inputSchema": {
         "type": "object",
         "required": ["subject", "capability"],
@@ -141,6 +154,127 @@
           "expiresAt": { "type": "string" },
           "txHash": { "type": "string" },
           "submittedAt": { "type": "string" }
+        }
+      }
+    },
+    {
+      "id": "ligis.gate",
+      "name": "Ligis Trust Gate (Intent + Credential)",
+      "description": "Pre-flight trust read for an agent payment, in one call: a Jev (TypeSafe System One) intent verdict — is the amount plausible, does the payee match, is the pattern normal — alongside an on-chain credential check on Casper or Pharos. Fail-open and typed; run it before money moves.",
+      "priceUsd": "1.00",
+      "inputSchema": {
+        "type": "object",
+        "required": ["subject", "capability", "priceSmallestUnit", "payTo"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Agent DID or chain-native address of the payer (or the counterparty whose payment you are judging)"
+          },
+          "capability": {
+            "type": "string",
+            "description": "Capability the payment targets, e.g. data.premium or agent.commerce.escrow"
+          },
+          "priceSmallestUnit": {
+            "type": "string",
+            "description": "Advertised price in smallest units (motes/wei) for the capability"
+          },
+          "payTo": {
+            "type": "string",
+            "description": "Account the payment is headed to (the collector advertised by the service)"
+          },
+          "payment": {
+            "type": "object",
+            "description": "Optional payment about to be sent: { scheme?, amountSmallestUnit?, payTo? }"
+          },
+          "tokenSymbol": {
+            "type": "string",
+            "description": "Token symbol for the price, e.g. CSPR (default)"
+          },
+          "tokenDecimals": {
+            "type": "string",
+            "description": "Token decimals, e.g. 9 for CSPR (default)"
+          },
+          "issuer": {
+            "type": "string",
+            "description": "Optional trusted issuer to constrain the credential check"
+          },
+          "capabilityDescription": {
+            "type": "string",
+            "description": "Optional human description of what the capability grants"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "credential": { "type": "object" },
+          "intent": {
+            "type": "object",
+            "properties": {
+              "verdict": { "type": "string" },
+              "confidence": { "type": "number" },
+              "flags": { "type": "array" },
+              "latencyMs": { "type": "number" }
+            }
+          },
+          "proceed": { "type": "boolean" }
+        }
+      }
+    },
+    {
+      "id": "ligis.qualify",
+      "name": "Ligis Credential Qualification",
+      "description": "One order from not-credentialed to credentialed: Ligis checks the counterparty, issues the missing capabilities the trust policy allows, then re-checks and returns both verdicts. External evidence is required unless a capability is explicitly allowlisted as self-issuable — payment alone never mints a credential.",
+      "priceUsd": "2.50",
+      "inputSchema": {
+        "type": "object",
+        "required": ["subject", "capabilities"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Agent DID or chain-native address to qualify"
+          },
+          "capabilities": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ],
+            "description": "Capability name(s) the counterparty must hold"
+          },
+          "evidence": {
+            "type": "array",
+            "description": "External evidence per missing capability: [{ capability, externalAttestation: { source, uid, chainId?, schema? } }]"
+          },
+          "issuer": {
+            "type": "string",
+            "description": "Optional trusted issuer address to constrain the check"
+          },
+          "minTtlSeconds": {
+            "type": "number",
+            "description": "Minimum remaining credential lifetime in seconds (default 86400)"
+          },
+          "expiresInSeconds": {
+            "type": "number",
+            "description": "Lifetime for credentials issued during this call (default 86400)"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "qualified": { "type": "boolean" },
+          "entryVerdict": { "type": "string" },
+          "finalVerdict": { "type": "string" },
+          "issuedCount": { "type": "number" },
+          "issued": { "type": "array" },
+          "skipped": { "type": "array" },
+          "verificationPending": { "type": "array" },
+          "verdictNote": { "type": "string" },
+          "checks": { "type": "string" },
+          "breakdown": { "type": "object" },
+          "signals": { "type": "string" },
+          "pathToTrust": { "type": "object" },
+          "pathToTrustRoute": { "type": "object" }
         }
       }
     }

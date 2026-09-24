@@ -1,0 +1,14 @@
+{
+  "name": "@ligis/envio-indexer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Free Envio HyperIndex for Ligis CredentialRegistry on Monad Testnet",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "codegen": "envio codegen",
+    "dev": "envio dev",
+    "start": "envio start",
+    "build": "echo 'envio-indexer: install with pnpm add -D envio (see README), then pnpm codegen && pnpm start'"
+  }
+}
