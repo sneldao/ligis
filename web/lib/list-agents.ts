@@ -2,10 +2,11 @@ import "server-only";
 import type { Address } from "viem";
 import {
   isCasperChain,
+  readAgentId,
   readOwnerOf,
   readTotalSupply,
 } from "@/lib/chain-router";
-import { readAgentId as casperReadAgentId } from "@/lib/chain-casper";
+import { DEMO_GATE_SAMPLES } from "@/lib/demo-subjects";
 import { evmNetworkKey, type ChainNetwork } from "@/lib/network";
 
 export type ListedAgent = {
@@ -18,17 +19,47 @@ const EVM_BATCH = 24;
 
 /**
  * Enumerate minted AgentId controllers for the field.
- * EVM: ownerOf(1..totalSupply). Casper: deployer + optional LIGIS_FIELD_AGENTS.
+ * EVM: ownerOf(1..totalSupply). Casper: deployer + LIGIS_FIELD_AGENTS.
+ * Always merges DEMO_GATE_SAMPLES subjects that actually hold an AgentId
+ * (so Casper default field has at least the verified demo hash).
  */
 export async function listAgents(
   chain: ChainNetwork,
   opts?: { max?: number },
 ): Promise<ListedAgent[]> {
   const max = opts?.max ?? DEFAULT_MAX;
-  if (isCasperChain(chain)) {
-    return listCasperAgents(max);
+  const primary = isCasperChain(chain)
+    ? await listCasperCandidates(chain, max)
+    : await listEvmAgents(chain, max);
+
+  return mergeDemoSubjects(chain, primary, max);
+}
+
+async function mergeDemoSubjects(
+  chain: ChainNetwork,
+  primary: ListedAgent[],
+  max: number,
+): Promise<ListedAgent[]> {
+  const out = [...primary];
+  const seen = new Set(primary.map((a) => a.address.toLowerCase()));
+  const samples = DEMO_GATE_SAMPLES[chain.id] ?? [];
+
+  for (const sample of samples) {
+    if (out.length >= max) break;
+    if (sample.expect === "none") continue;
+    const key = sample.subject.toLowerCase();
+    if (seen.has(key)) continue;
+    try {
+      const id = await readAgentId(chain, sample.subject);
+      if (id > 0n) {
+        seen.add(key);
+        out.push({ address: sample.subject, tokenId: id.toString() });
+      }
+    } catch {
+      /* skip */
+    }
   }
-  return listEvmAgents(chain, max);
+  return out;
 }
 
 async function listEvmAgents(
@@ -79,10 +110,13 @@ async function listEvmAgents(
 }
 
 /**
- * Casper AgentId has no totalSupply. Probe known controllers:
- * deployer env + comma-separated LIGIS_FIELD_AGENTS.
+ * Casper AgentId has no totalSupply. Probe known controllers;
+ * DEMO_GATE_SAMPLES are merged afterward.
  */
-async function listCasperAgents(max: number): Promise<ListedAgent[]> {
+async function listCasperCandidates(
+  chain: ChainNetwork,
+  max: number,
+): Promise<ListedAgent[]> {
   const candidates: string[] = [];
   const deployer =
     process.env.LIGIS_CASPER_DEPLOYER_ACCOUNT_HASH ??
@@ -103,7 +137,7 @@ async function listCasperAgents(max: number): Promise<ListedAgent[]> {
     if (seen.has(key)) continue;
     seen.add(key);
     try {
-      const id = await casperReadAgentId(raw);
+      const id = await readAgentId(chain, raw);
       if (id > 0n) {
         out.push({ address: raw, tokenId: id.toString() });
       }
