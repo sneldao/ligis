@@ -35,7 +35,7 @@ function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
 /** Resolve a capability by id ("kyc.basic") or 0x hash. */
 export function resolveCapability(ref: string) {
   return capabilities.find(
-    (c) => c.id === ref || c.hash.toLowerCase() === ref.toLowerCase()
+    (c) => c.id === ref || c.hash.toLowerCase() === ref.toLowerCase(),
   );
 }
 
@@ -55,7 +55,7 @@ export async function verifySubject(
   chain: ChainNetwork,
   subjectRaw: string,
   capabilityRef: string,
-  opts?: { timeoutMs?: number }
+  opts?: { timeoutMs?: number },
 ): Promise<VerificationOutcome> {
   const timeoutMs = opts?.timeoutMs ?? 6_000;
 
@@ -74,7 +74,22 @@ export async function verifySubject(
   }
 
   try {
-    const capable = await withTimeout(isCapable(chain, subject, cap.hash), timeoutMs);
+    const capable = await withTimeout(
+      isCapable(chain, subject, cap.hash),
+      timeoutMs,
+    );
+    // Read the credential view in both branches: a false verdict may still
+    // mean a credential exists — revoked or expired — and the STOP reason
+    // depends on which it is.
+    const view = await withTimeout(
+      readCredential(chain, subject, cap.hash),
+      timeoutMs,
+    ).catch(() => null);
+    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+    const hasCredential =
+      view != null &&
+      view.issuer != null &&
+      view.issuer.toLowerCase() !== ZERO_ADDRESS;
     if (!capable) {
       return {
         ok: true,
@@ -82,15 +97,11 @@ export async function verifySubject(
         capabilityId: cap.id,
         capabilityHash: cap.hash,
         capable: false,
-        issuer: null,
-        expiresAt: null,
-        revoked: false,
+        issuer: hasCredential ? (view!.issuer as `0x${string}`) : null,
+        expiresAt: hasCredential ? view!.expiresAt : null,
+        revoked: hasCredential ? view!.revoked : false,
       };
     }
-    const view = await withTimeout(
-      readCredential(chain, subject, cap.hash),
-      timeoutMs
-    ).catch(() => null);
     return {
       ok: true,
       subject,

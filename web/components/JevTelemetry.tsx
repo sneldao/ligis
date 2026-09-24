@@ -13,8 +13,8 @@ import { truncateAddress } from "@/lib/format";
  * intent read cost. The point is the speed — visitors can see ~100ms
  * decisions land in real time.
  *
- * Reads the gate at NEXT_PUBLIC_LIGIS_GATE_URL (default http://localhost:4040)
- * and degrades to an offline hint when no gate is running.
+ * Reads the gate at NEXT_PUBLIC_LIGIS_GATE_URL; when the env var is unset the
+ * component renders nothing and never polls.
  */
 
 type VerdictRecord = {
@@ -31,8 +31,7 @@ type VerdictRecord = {
   skippedReason?: string;
 };
 
-const GATE_URL =
-  process.env.NEXT_PUBLIC_LIGIS_GATE_URL ?? "http://localhost:4040";
+const GATE_URL = process.env.NEXT_PUBLIC_LIGIS_GATE_URL;
 const POLL_MS = 2500;
 const ROWS = 10;
 
@@ -53,6 +52,11 @@ const STATUS_TONE: Record<number, string> = {
 };
 
 export function JevTelemetry() {
+  if (!GATE_URL) return null;
+  return <JevTelemetryLive gateUrl={GATE_URL} />;
+}
+
+function JevTelemetryLive({ gateUrl }: { gateUrl: string }) {
   const [records, setRecords] = useState<VerdictRecord[]>([]);
   const [online, setOnline] = useState(false);
   const [jev, setJev] = useState<{ enabled: boolean; model?: string } | null>(
@@ -64,8 +68,8 @@ export function JevTelemetry() {
     const poll = async () => {
       try {
         const [vRes, hRes] = await Promise.all([
-          fetch(`${GATE_URL}/verdicts?limit=${ROWS}`, { cache: "no-store" }),
-          fetch(`${GATE_URL}/health`, { cache: "no-store" }),
+          fetch(`${gateUrl}/verdicts?limit=${ROWS}`, { cache: "no-store" }),
+          fetch(`${gateUrl}/health`, { cache: "no-store" }),
         ]);
         if (!vRes.ok) throw new Error(`verdicts HTTP ${vRes.status}`);
         const v = (await vRes.json()) as { verdicts?: VerdictRecord[] };
@@ -96,18 +100,18 @@ export function JevTelemetry() {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [gateUrl]);
 
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <p className="eyebrow">Gate telemetry · Jev intent</p>
-        <span className="font-mono text-[10px] tabular uppercase tracking-[0.16em] text-ink-quiet">
+        <span className="font-mono text-[11px] tabular uppercase tracking-[0.16em] text-ink-quiet">
           {online
             ? jev?.enabled
               ? `live · jev ${jev.model ?? "on"}`
               : "gate live · jev off"
-            : `gate offline · ${GATE_URL.replace(/^https?:\/\//, "")}`}
+            : `gate offline · ${gateUrl.replace(/^https?:\/\//, "")}`}
         </span>
       </div>
       <Rule className="mt-3" />
@@ -115,9 +119,9 @@ export function JevTelemetry() {
       {!online ? (
         <p className="mt-4 font-serif text-base italic leading-relaxed text-ink-quiet">
           No gate is answering at{" "}
-          <code className="font-mono not-italic text-ink-soft">{GATE_URL}</code>
-          . Run the Trust Gate with the intent layer on and this panel fills
-          with live verdicts as payments are judged:
+          <code className="font-mono not-italic text-ink-soft">{gateUrl}</code>.
+          Run the Trust Gate with the intent layer on and this panel fills with
+          live verdicts as payments are judged:
         </p>
       ) : records.length === 0 ? (
         <p className="mt-4 font-serif text-base italic leading-relaxed text-ink-quiet">
@@ -168,7 +172,7 @@ function SummaryStrip({
   const stops = records.filter((r) => r.verdict === "STOP").length;
 
   return (
-    <div className="mt-4 flex flex-wrap items-baseline gap-x-8 gap-y-2 font-mono text-[11px] tabular text-ink-soft">
+    <div className="mt-4 flex flex-wrap items-baseline gap-x-8 gap-y-2 font-mono text-xs tabular text-ink-soft">
       <span>
         <span className="text-ink">{records.length}</span> decisions
       </span>
@@ -212,7 +216,7 @@ function VerdictRow({
     <div className={`border-l-2 ${tone.border} py-3 pl-5`}>
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span
-          className={`font-mono text-[11px] tabular ${status != null ? (STATUS_TONE[status] ?? "text-ink-quiet") : "text-ink-quiet"}`}
+          className={`font-mono text-xs tabular ${status != null ? (STATUS_TONE[status] ?? "text-ink-quiet") : "text-ink-quiet"}`}
         >
           {status ?? "—"}
         </span>
@@ -224,18 +228,18 @@ function VerdictRow({
             ? ` ${(record.confidence * 100).toFixed(0)}%`
             : ""}
         </span>
-        <span className="font-mono text-[11px] tabular text-ink-soft">
+        <span className="font-mono text-xs tabular text-ink-soft">
           {truncateAddress(record.subject, 8, 4)}
         </span>
-        <span className="font-mono text-[10px] tabular text-ink-quiet">
+        <span className="font-mono text-xs tabular text-ink-quiet">
           {record.capability}
         </span>
         {record.flags.length > 0 ? (
-          <span className="font-mono text-[10px] tabular text-revoke/80">
+          <span className="font-mono text-xs tabular text-revoke/80">
             {record.flags.join(" · ")}
           </span>
         ) : null}
-        <span className="ml-auto font-mono text-[10px] tabular text-ink-quiet">
+        <span className="ml-auto font-mono text-xs tabular text-ink-quiet">
           {record.verdict === "SKIPPED" && record.skippedReason
             ? record.skippedReason
             : `$${(record.costUsd ?? 0).toFixed(6)}`}
@@ -248,7 +252,7 @@ function VerdictRow({
             style={{ width: `${width}%` }}
           />
         </div>
-        <span className="w-16 shrink-0 text-right font-mono text-[11px] tabular text-ink">
+        <span className="w-16 shrink-0 text-right font-mono text-xs tabular text-ink">
           {record.latencyMs}ms
         </span>
       </div>

@@ -27,8 +27,14 @@ import { CASPER_TESTNET } from "@/lib/network";
 
 type Eip1193 = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on?: (event: "accountsChanged" | "chainChanged", listener: (...args: unknown[]) => void) => void;
-  removeListener?: (event: "accountsChanged" | "chainChanged", listener: (...args: unknown[]) => void) => void;
+  on?: (
+    event: "accountsChanged" | "chainChanged",
+    listener: (...args: unknown[]) => void,
+  ) => void;
+  removeListener?: (
+    event: "accountsChanged" | "chainChanged",
+    listener: (...args: unknown[]) => void,
+  ) => void;
 };
 
 declare global {
@@ -59,18 +65,31 @@ function errorMessage(error: unknown): string {
 
 async function switchToPharos(provider: Eip1193): Promise<void> {
   try {
-    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: PHAROS.chainIdHex }] });
+    await provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: PHAROS.chainIdHex }],
+    });
   } catch (error) {
-    if (!(error && typeof error === "object" && "code" in error && error.code === 4902)) throw error;
+    if (
+      !(
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === 4902
+      )
+    )
+      throw error;
     await provider.request({
       method: "wallet_addEthereumChain",
-      params: [{
-        chainId: PHAROS.chainIdHex,
-        chainName: PHAROS.chainName,
-        nativeCurrency: PHAROS.nativeCurrency,
-        rpcUrls: [...PHAROS.rpcUrls],
-        blockExplorerUrls: [...PHAROS.blockExplorerUrls],
-      }],
+      params: [
+        {
+          chainId: PHAROS.chainIdHex,
+          chainName: PHAROS.chainName,
+          nativeCurrency: PHAROS.nativeCurrency,
+          rpcUrls: [...PHAROS.rpcUrls],
+          blockExplorerUrls: [...PHAROS.blockExplorerUrls],
+        },
+      ],
     });
   }
 }
@@ -85,9 +104,12 @@ export function UnifiedWalletChip() {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null);
+  const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(
+    null,
+  );
 
-  const isCasper = (searchParams.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
+  const isCasper =
+    (searchParams.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
   const searchKey = searchParams.toString();
   const casperWallet = useWallet();
 
@@ -119,7 +141,11 @@ export function UnifiedWalletChip() {
     };
     void sync();
     const onAccounts = (accounts: unknown) => {
-      setPharosAccount(Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null);
+      setPharosAccount(
+        Array.isArray(accounts) && typeof accounts[0] === "string"
+          ? accounts[0]
+          : null,
+      );
       setPharosError(null);
     };
     const onChain = (next: unknown) => {
@@ -143,7 +169,10 @@ export function UnifiedWalletChip() {
     // Left edge of panel, clamped to stay within viewport margins.
     const left = Math.max(
       12,
-      Math.min(buttonCenter - panelWidth / 2, window.innerWidth - panelWidth - 12),
+      Math.min(
+        buttonCenter - panelWidth / 2,
+        window.innerWidth - panelWidth - 12,
+      ),
     );
     setAnchor({ left, top: rect.bottom + 8 });
   }, []);
@@ -166,7 +195,8 @@ export function UnifiedWalletChip() {
       const target = e.target;
       if (
         target instanceof Node &&
-        (rootRef.current?.contains(target) || panelRef.current?.contains(target))
+        (rootRef.current?.contains(target) ||
+          panelRef.current?.contains(target))
       ) {
         return;
       }
@@ -193,19 +223,27 @@ export function UnifiedWalletChip() {
   const pharosConnect = async () => {
     const provider = window.ethereum;
     if (!provider) {
-      setPharosError("No browser wallet found. Install or enable an EVM wallet to use Pharos.");
+      setPharosError(
+        "No browser wallet found. Install or enable an EVM wallet to use Pharos.",
+      );
       return;
     }
     setPharosBusy(true);
     setPharosError(null);
     try {
-      const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
+      const accounts = (await provider.request({
+        method: "eth_requestAccounts",
+      })) as string[];
       setPharosAccount(accounts[0] ?? null);
-      const activeChain = (await provider.request({ method: "eth_chainId" })) as string;
+      const activeChain = (await provider.request({
+        method: "eth_chainId",
+      })) as string;
       setPharosChainId(activeChain);
       if (activeChain !== PHAROS.chainIdHex) {
         await switchToPharos(provider);
-        setPharosChainId((await provider.request({ method: "eth_chainId" })) as string);
+        setPharosChainId(
+          (await provider.request({ method: "eth_chainId" })) as string,
+        );
       }
     } catch (nextError) {
       setPharosError(errorMessage(nextError));
@@ -221,7 +259,9 @@ export function UnifiedWalletChip() {
     setPharosError(null);
     try {
       await switchToPharos(provider);
-      setPharosChainId((await provider.request({ method: "eth_chainId" })) as string);
+      setPharosChainId(
+        (await provider.request({ method: "eth_chainId" })) as string,
+      );
     } catch (nextError) {
       setPharosError(errorMessage(nextError));
     } finally {
@@ -237,7 +277,8 @@ export function UnifiedWalletChip() {
 
   if (isCasper) {
     const connected = casperWallet.pair !== null;
-    const funded = casperWallet.balanceMotes !== null && casperWallet.balanceMotes !== "0";
+    const funded =
+      casperWallet.balanceMotes !== null && casperWallet.balanceMotes !== "0";
     const isHydrating = !casperWallet.hydrated;
 
     dot = isHydrating
@@ -266,7 +307,13 @@ export function UnifiedWalletChip() {
   } else {
     dot = !pharosAccount ? "bg-terra" : onPharos ? "bg-sage" : "bg-sky";
 
-    label = pharosBusy ? "…" : !pharosAccount ? "connect" : !onPharos ? "switch network" : shortAddress(pharosAccount);
+    label = pharosBusy
+      ? "…"
+      : !pharosAccount
+        ? "connect"
+        : !onPharos
+          ? "switch network"
+          : shortAddress(pharosAccount);
 
     ariaLabel = !pharosAccount
       ? "Connect a Pharos wallet"
@@ -276,7 +323,11 @@ export function UnifiedWalletChip() {
   }
 
   return (
-    <div ref={rootRef} data-unified-wallet-root className="relative flex items-center">
+    <div
+      ref={rootRef}
+      data-unified-wallet-root
+      className="relative flex items-center"
+    >
       <button
         ref={buttonRef}
         type="button"
@@ -290,7 +341,10 @@ export function UnifiedWalletChip() {
           aria-hidden
         />
         <span className="tabular">{label}</span>
-        <span aria-hidden className="text-paper-deep/50 transition-colors group-hover:text-paper/80">
+        <span
+          aria-hidden
+          className="text-paper-deep/50 transition-colors group-hover:text-paper/80"
+        >
           {open ? "▴" : "▾"}
         </span>
       </button>
@@ -355,10 +409,14 @@ function PharosPanelContent({
   onSwitchNetwork: () => void;
 }) {
   return (
-    <div className="border border-rule bg-paper p-5 text-ink" role="dialog" aria-label="Pharos wallet">
+    <div
+      className="border border-rule bg-paper p-5 text-ink"
+      role="dialog"
+      aria-label="Pharos wallet"
+    >
       <header className="flex items-baseline justify-between gap-4">
         <p className="eyebrow text-terra">Wallet · Pharos Atlantic</p>
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           {PHAROS.nativeCurrency.symbol} · {PHAROS.chainId}
         </span>
       </header>
@@ -384,12 +442,15 @@ function PharosPanelContent({
         <>
           <div className="mt-4 border-y border-rule py-3">
             <span className="eyebrow block">Connected account</span>
-            <span className="mt-1 block break-all font-mono text-xs tabular text-ink">{account}</span>
+            <span className="mt-1 block break-all font-mono text-xs tabular text-ink">
+              {account}
+            </span>
           </div>
           {!onPharos ? (
             <>
               <p className="mt-3 font-serif text-sm leading-relaxed text-ink-soft">
-                This account is connected on another network. Switch before using Pharos-specific actions.
+                This account is connected on another network. Switch before
+                using Pharos-specific actions.
               </p>
               <button
                 type="button"
@@ -403,12 +464,20 @@ function PharosPanelContent({
             </>
           ) : (
             <p className="mt-3 font-serif text-sm leading-relaxed text-ink-soft">
-              Connected to Pharos Atlantic. Ligis reads remain public; any signature is always requested by your wallet.
+              Connected to Pharos Atlantic. Ligis reads remain public; any
+              signature is always requested by your wallet.
             </p>
           )}
         </>
       )}
-      {error ? <p className="mt-3 font-serif text-xs leading-relaxed text-revoke" role="alert">{error}</p> : null}
+      {error ? (
+        <p
+          className="mt-3 font-serif text-xs leading-relaxed text-revoke"
+          role="alert"
+        >
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

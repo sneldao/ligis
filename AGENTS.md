@@ -658,3 +658,11 @@ intent read in ~100ms for fractions of a cent_ — and the evidence is one
 curl away (`curl -i` any gate response, read the Jev headers). Visual-first
 surfaces that exist today: the header capture, `pnpm demo:jev` table, and
 the `/gate` telemetry waterfall. Tagline: "the gate has reflexes."
+
+### Web demo sample credentials
+
+`scripts/seed-demo-credentials.ts` idempotently re-issues `kyc.basic`,
+`agent.commerce.escrow`, and `rwa.accredited` (1-year expiry) to the Pharos
+and Casper deployer wallets used as the `/gate` "verified agent" samples.
+Run `LIGIS_NETWORK=atlantic-testnet npx tsx scripts/seed-demo-credentials.ts
+[pharos|casper]` when they expire (next: ~2027-09-24).

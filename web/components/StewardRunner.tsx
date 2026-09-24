@@ -4,11 +4,12 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PHASES, type Phase, type StewardEvent } from "@/lib/steward-events";
-import { network, CHAINS, CASPER_TESTNET } from "@/lib/network";
+import { CHAINS, CASPER_TESTNET, DEFAULT_CHAIN } from "@/lib/network";
 import { useWallet } from "@/lib/casper-browser/store";
 import { Rule } from "./Rule";
 import { StewardDiagram } from "./StewardDiagram";
 import { truncateAddress, truncateHash } from "@/lib/format";
+import { copyToClipboard } from "@/lib/clipboard";
 
 type PhaseStatus = "idle" | "running" | "done" | "error";
 
@@ -151,15 +152,28 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
   const abortRef = useRef<AbortController | null>(null);
   const searchParams = useSearchParams();
   const wallet = useWallet();
-  const isCasperChain =
-    (searchParams.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
+  const activeChain =
+    CHAINS.find((c) => c.id === searchParams.get("chain")) ?? DEFAULT_CHAIN;
+  const isCasperChain = activeChain.id === CASPER_TESTNET.id;
   const walletReadyForLive = isCasperChain && live && !!wallet.pair;
 
-  const GOAL_PRESETS = [
-    "I need to open an escrow with a counterparty and swap tokens on an approved venue.",
-    "I need to bridge assets cross-chain and pay for premium data feeds via x402.",
-    "I need to manage recurring payment mandates for subscription services.",
-    "I need to verify my identity (KYC) and prove accredited investor status for RWA trading.",
+  const GOAL_PRESETS: { label: string; goal: string }[] = [
+    {
+      label: "Escrow + swap",
+      goal: "I need to open an escrow with a counterparty and swap tokens on an approved venue.",
+    },
+    {
+      label: "Bridge + paid data",
+      goal: "I need to bridge assets cross-chain and pay for premium data feeds via x402.",
+    },
+    {
+      label: "Payment mandates",
+      goal: "I need to manage recurring payment mandates for subscription services.",
+    },
+    {
+      label: "KYC + accredited",
+      goal: "I need to verify my identity (KYC) and prove accredited investor status for RWA trading.",
+    },
   ];
 
   const readiness = useMemo(() => {
@@ -187,10 +201,6 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     abortRef.current = controller;
     setState(EMPTY);
     setRunning(true);
-
-    // Resolve chain from URL query param
-    const chainParam = searchParams.get("chain") ?? "casper-testnet";
-    const activeChain = CHAINS.find((c) => c.id === chainParam) ?? CHAINS[0]!;
 
     // Honest failure: refuse chains that are not write-ready rather than
     // silently running the loop against another network.
@@ -292,7 +302,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     } finally {
       setRunning(false);
     }
-  }, [goal, live, wallet.pair, isCasperChain]);
+  }, [goal, live, wallet.pair, isCasperChain, activeChain]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -330,9 +340,11 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
       if (state.manifest.storageTxHash)
         lines.push(`  0G Upload: ${state.manifest.storageTxHash}`);
     }
-    navigator.clipboard.writeText(lines.join("\n"));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copyToClipboard(lines.join("\n")).then((ok) => {
+      if (!ok) return;
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   }, [state.summary, state.capabilities, state.txs, state.manifest]);
 
   const eventCount = state.events.length;
@@ -398,7 +410,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <span className="eyebrow">agent readiness</span>
-            <span className="font-mono text-[11px] tabular text-ink-soft">
+            <span className="font-mono text-xs tabular text-ink-soft">
               {readiness}%
             </span>
           </div>
@@ -412,9 +424,12 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
       ) : null}
 
       {thought ? (
-        <section className="space-y-4" key={thought}>
+        <section className="space-y-4" aria-live="polite">
           <p className="eyebrow">self · thought</p>
-          <blockquote className="animate-fadeInUp border-l-2 border-terra pl-6 font-serif text-2xl italic leading-snug text-ink transition-[border-color,color] duration-500">
+          <blockquote
+            key={thought}
+            className="animate-fadeInUp border-l-2 border-terra pl-6 font-serif text-2xl italic leading-snug text-ink transition-[border-color,color] duration-500"
+          >
             {thought}
           </blockquote>
         </section>
@@ -434,35 +449,46 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
           />
         </div>
         {/* Goal presets */}
-        <div className="flex flex-wrap gap-2">
-          {GOAL_PRESETS.map((preset, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setGoal(preset)}
-              className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-            >
-              {preset.split(" ").slice(0, 4).join(" ")}…
-            </button>
-          ))}
+        <div
+          role="group"
+          aria-label="Example goals"
+          className="flex flex-wrap gap-2"
+        >
+          {GOAL_PRESETS.map((preset) => {
+            const selected = goal === preset.goal;
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setGoal(preset.goal)}
+                className={`font-mono text-[11px] uppercase tracking-[0.12em] underline decoration-1 underline-offset-4 transition-colors ${
+                  selected
+                    ? "text-ink decoration-terra"
+                    : "text-ink-quiet decoration-rule hover:text-ink hover:decoration-terra"
+                }`}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <button
               type="button"
+              role="switch"
+              aria-checked={live}
+              disabled={running}
               onClick={() => setLive((v) => !v)}
-              className={`font-mono text-[11px] tabular transition-colors ${
+              className={`font-mono text-xs tabular transition-colors disabled:opacity-50 ${
                 live ? "text-sage" : "text-ink-quiet"
               }`}
             >
-              {running
-                ? "○ running…"
-                : live
-                  ? "● live · on-chain"
-                  : "○ simulated · no writes"}
+              {live ? "● live · on-chain writes" : "○ simulated · no writes"}
             </button>
             {live && state.summary?.subject ? (
-              <span className="font-mono text-[10px] tabular text-ink-soft">
+              <span className="font-mono text-xs tabular text-ink-soft">
                 steward ·{" "}
                 <Link
                   href={`/agent/${state.summary.subject}`}
@@ -513,6 +539,23 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
             </button>
           </div>
         </div>
+        {state.error ? (
+          <div role="alert" className="space-y-3">
+            <Rule />
+            <p className="font-serif text-base italic text-revoke">
+              {state.error}
+            </p>
+            {!running ? (
+              <button
+                type="button"
+                onClick={run}
+                className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+              >
+                retry →
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <section className="space-y-12">
@@ -536,17 +579,17 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                 <div className="space-y-3">
                   {state.reasonSource === "0g" ? (
                     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-terra">
+                      <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-terra">
                         0G Compute · {state.reasonModel ?? "unknown model"}
                       </span>
                       {state.reasonVerified ? (
-                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-sage">
+                        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-sage">
                           TEE-verified ✓
                         </span>
                       ) : null}
                     </div>
                   ) : state.reasonSource === "local" && status === "done" ? (
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
                       local keyword match
                     </span>
                   ) : null}
@@ -563,21 +606,21 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                 <CapabilityLedger
                   capabilities={state.capabilities}
                   gateDone={state.phaseStatus.GATE === "done"}
-                  explorerUrl={network.explorerUrl}
+                  explorerUrl={activeChain.explorerUrl}
                 />
               ) : null}
 
               {p.key === "ACT" && state.txs.length > 0 ? (
                 <TransactionLog
                   txs={state.txs}
-                  explorerUrl={network.explorerUrl}
+                  explorerUrl={activeChain.explorerUrl}
                 />
               ) : null}
 
               {p.key === "RECORD" && state.manifest ? (
                 <ManifestSummary
                   manifest={state.manifest}
-                  explorerUrl={network.explorerUrl}
+                  explorerUrl={activeChain.explorerUrl}
                 />
               ) : null}
             </PhaseRow>
@@ -590,26 +633,8 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
         running={running}
         copied={copied}
         onCopyProof={copyAsProof}
+        explorerUrl={activeChain.explorerUrl}
       />
-
-      {state.error ? (
-        <section className="space-y-3">
-          <p className="eyebrow">error</p>
-          <Rule />
-          <p className="font-serif text-base italic text-revoke">
-            {state.error}
-          </p>
-          {!running ? (
-            <button
-              type="button"
-              onClick={run}
-              className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-            >
-              retry →
-            </button>
-          ) : null}
-        </section>
-      ) : null}
 
       <StewardDeveloperChrome
         state={state}
@@ -636,7 +661,7 @@ function PhaseCommand({
   return (
     <div className="space-y-2">
       <div className="flex items-baseline gap-3">
-        <span className="font-mono text-[11px] tabular text-ink-quiet">
+        <span className="font-mono text-xs tabular text-ink-quiet">
           {String(index).padStart(2, "0")}
         </span>
         <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft">
@@ -658,11 +683,13 @@ function StewardSummary({
   running,
   copied,
   onCopyProof,
+  explorerUrl,
 }: {
   state: State;
   running: boolean;
   copied: boolean;
   onCopyProof: () => void;
+  explorerUrl: string;
 }) {
   if (!state.summary?.ok) return null;
 
@@ -670,7 +697,7 @@ function StewardSummary({
     <section className="space-y-5 border-l-2 border-sage pl-6">
       <p className="eyebrow text-sage">what just happened</p>
       <dl className="grid grid-cols-[6.5rem_1fr] gap-x-6 border-t border-rule divide-y divide-rule">
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           subject
         </dt>
         <dd className="pt-3 font-mono tabular text-ink">
@@ -685,14 +712,14 @@ function StewardSummary({
             "unknown"
           )}
         </dd>
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           token
         </dt>
         <dd className="pt-3 font-mono tabular text-ink">
           #{state.summary.tokenId ?? "?"} ·{" "}
           {state.summary.minted ? "minted" : "found"}
         </dd>
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           reasoning
         </dt>
         <dd className="pt-3 font-mono tabular text-ink">
@@ -701,7 +728,7 @@ function StewardSummary({
             ? "0G Compute · TEE-verified"
             : "local keyword match"}
         </dd>
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           capabilities
         </dt>
         <dd className="pt-3 font-mono tabular text-ink">
@@ -709,7 +736,7 @@ function StewardSummary({
           {state.capabilities.filter((c) => c.capable).length} held ·{" "}
           {state.txs.length} self-issued
         </dd>
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           gated
         </dt>
         <dd className="pt-3 font-mono tabular text-ink">
@@ -717,7 +744,7 @@ function StewardSummary({
         </dd>
         {state.manifest ? (
           <>
-            <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+            <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
               evidence
             </dt>
             <dd className="pt-3 font-mono tabular text-ink">
@@ -728,7 +755,7 @@ function StewardSummary({
             </dd>
           </>
         ) : null}
-        <dt className="pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           txs
         </dt>
         <dd className="pt-3 font-mono tabular text-ink">
@@ -740,7 +767,7 @@ function StewardSummary({
         <button
           type="button"
           onClick={onCopyProof}
-          className="font-mono text-[11px] tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+          className="font-mono text-xs tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
         >
           {copied ? "✓ copied to clipboard" : "copy as proof"}
         </button>
@@ -748,17 +775,17 @@ function StewardSummary({
           <>
             <Link
               href={`/agent/${state.summary.subject}`}
-              className="font-mono text-[11px] tabular text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+              className="font-mono text-xs tabular text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
             >
               View agent profile →
             </Link>
             <a
-              href={`${network.explorerUrl}/address/${state.summary.subject}`}
+              href={`${explorerUrl}/address/${state.summary.subject}`}
               target="_blank"
               rel="noreferrer"
-              className="font-mono text-[11px] tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+              className="font-mono text-xs tabular text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
             >
-              On PharosScan ↗
+              View on explorer ↗
             </a>
           </>
         ) : null}
@@ -866,13 +893,13 @@ function StewardDeveloperChrome({
           <span>{showEvents ? "▾" : "▸"}</span>
           <span>Raw event stream</span>
           {eventCount > 0 ? (
-            <span className="font-mono text-[10px] tabular text-ink-quiet">
+            <span className="font-mono text-xs tabular text-ink-quiet">
               {eventCount} events
             </span>
           ) : null}
         </button>
         {showEvents ? (
-          <pre className="max-h-72 overflow-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink">
+          <pre className="max-h-72 overflow-auto bg-paper-deep px-5 py-4 font-mono text-xs leading-relaxed tabular text-ink">
             {eventCount === 0
               ? "// Run the loop to populate the stream."
               : jsonPanel}
@@ -906,7 +933,7 @@ function CapabilityLedger({
             <div className="space-y-0.5">
               <span className="font-mono tabular text-ink">{c.name}</span>
               {c.selfIssued ? (
-                <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.12em] text-terra">
+                <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.12em] text-terra">
                   self-issued
                 </span>
               ) : null}
@@ -916,7 +943,7 @@ function CapabilityLedger({
             >
               {c.capable ? "held" : "not held"}
             </span>
-            <span className="w-28 text-right font-mono text-[10px] tabular text-ink-soft">
+            <span className="w-28 text-right font-mono text-xs tabular text-ink-soft">
               {c.issueTxHash ? (
                 <a
                   href={`${explorerUrl}/tx/${c.issueTxHash}`}
@@ -935,7 +962,7 @@ function CapabilityLedger({
         </div>
       ))}
       {gateDone ? (
-        <p className="pt-3 font-mono text-[11px] tabular text-ink-quiet">
+        <p className="pt-3 font-mono text-xs tabular text-ink-quiet">
           {capabilities.filter((c) => c.capable).length} held ·{" "}
           {capabilities.filter((c) => !c.capable).length} missing
         </p>
@@ -1076,7 +1103,7 @@ function PhaseRow({
           >
             {String(index).padStart(2, "0")} · {phase.label}
           </p>
-          <span className="font-mono text-[11px] tabular text-ink-quiet">
+          <span className="font-mono text-xs tabular text-ink-quiet">
             {status === "idle" ? "—" : status}
           </span>
         </header>

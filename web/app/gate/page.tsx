@@ -2,7 +2,6 @@ import { CHAINS, getChain, type ChainNetwork } from "@/lib/network";
 import { capabilities } from "@/lib/chain";
 import { isCasperChain } from "@/lib/chain-router";
 import { verifySubject } from "@/lib/verify";
-import { truncateAddress } from "@/lib/format";
 import { GateVerdict } from "@/components/GateVerdict";
 import { GateStates } from "@/components/GateStates";
 import { JevTelemetry } from "@/components/JevTelemetry";
@@ -31,20 +30,24 @@ export const metadata = {
 const DEMO_SUBJECTS: Record<string, { label: string; value: string }[]> = {
   "casper-testnet": [
     {
-      label: "deployer account",
+      label: "verified agent",
       value:
-        "account-hash-d8b79439bf227b255f478242c3398dd8a8dbd2ad8a8d47ef6281fc8f3c634ac1",
+        "account-hash-c76927ed08eb9a3a2cca7ee0b730fb4cefa22551d3e5914e4d44d693762a8326",
     },
     {
-      label: "issuer account",
+      label: "unverified wallet",
       value:
-        "account-hash-6edde3cf38a6ff3f74c3fb1f7512b36c641a911d1494742efc10ef711262aa37",
+        "account-hash-0000000000000000000000000000000000000000000000000000000000000001",
     },
   ],
   "pharos-atlantic": [
     {
-      label: "sample agent",
+      label: "verified agent",
       value: "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+    },
+    {
+      label: "unverified wallet",
+      value: "0x000000000000000000000000000000000000dEaD",
     },
   ],
   "monad-testnet": [
@@ -54,22 +57,6 @@ const DEMO_SUBJECTS: Record<string, { label: string; value: string }[]> = {
     },
   ],
 };
-
-/**
- * Demo capabilities, restricted to ids that actually exist in the registry.
- * A link to an id the registry does not know resolves to "Unknown capability",
- * which reads as a broken demo — so unknown ids are dropped rather than shown.
- */
-const DEMO_CAPABILITY_IDS = [
-  "kyc.basic",
-  "rwa.accredited",
-  "agent.commerce.escrow",
-  "agent.commerce.swap",
-];
-
-const DEMO_CAPABILITIES = DEMO_CAPABILITY_IDS.filter((id) =>
-  capabilities.some((c) => c.id === id),
-);
 
 function verifyHref(
   chain: ChainNetwork,
@@ -172,6 +159,133 @@ export default async function VerifyPage({
         )}
       </section>
 
+      <section className="mt-14">
+        <form
+          method="get"
+          action="/gate"
+          className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+        >
+          <input type="hidden" name="chain" value={chain.id} />
+          {situation ? (
+            <input type="hidden" name="situation" value={situation.id} />
+          ) : null}
+          <label htmlFor="subject" className="block space-y-2">
+            <span className="eyebrow">subject · wallet</span>
+            <input
+              id="subject"
+              name="subject"
+              defaultValue={rawSubject ?? defaultSubject}
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
+              className="block w-full border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra"
+            />
+          </label>
+          <label htmlFor="capability" className="block space-y-2">
+            <span className="eyebrow">capability</span>
+            <span className="relative block">
+              <select
+                id="capability"
+                name="capability"
+                defaultValue={rawCap ?? situation?.capability ?? "kyc.basic"}
+                className="block w-full appearance-none border-0 border-b border-rule bg-transparent pb-2 pr-6 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra"
+              >
+                {capabilities.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id}
+                  </option>
+                ))}
+              </select>
+              <svg
+                width="9"
+                height="9"
+                viewBox="0 0 9 9"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                aria-hidden
+                className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-ink-quiet"
+              >
+                <path d="M1.5 3 L4.5 6 L7.5 3" />
+              </svg>
+            </span>
+          </label>
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 justify-center border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper"
+            style={{ borderRadius: 0 }}
+          >
+            gate →
+          </button>
+        </form>
+        {demoSubjects.length > 0 ? (
+          <p className="mt-4 font-mono text-xs text-ink-quiet">
+            or try:{" "}
+            {demoSubjects.map((s, i) => (
+              <span key={s.value}>
+                {i > 0 ? " · " : ""}
+                <a
+                  className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+                  href={verifyHref(
+                    chain,
+                    s.value,
+                    rawCap ?? situation?.capability ?? "kyc.basic",
+                    situation?.id,
+                  )}
+                >
+                  {s.label}
+                </a>
+              </span>
+            ))}
+          </p>
+        ) : null}
+      </section>
+
+      {showVerdict && subjectForVerdict && capForVerdict ? (
+        <section className="mt-16">
+          <h2 className="eyebrow">Verdict</h2>
+          <div className="mt-6">
+            <Result
+              chain={chain}
+              subject={subjectForVerdict}
+              capability={capForVerdict}
+            />
+          </div>
+        </section>
+      ) : (
+        <section className="mt-16">
+          <h2 className="eyebrow">Verdict</h2>
+          <p className="mt-4 font-serif text-base italic text-ink-quiet">
+            Run the gate above — or pick a situation below — to see the
+            decision.
+          </p>
+        </section>
+      )}
+
+      {showVerdict && subjectForVerdict && capForVerdict ? (
+        <section className="mt-12">
+          <h2 className="eyebrow">Share this gate</h2>
+          <p className="mt-4 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">
+            A gate link is a self-verifying URL &mdash; anyone who opens it
+            re-runs the same on-chain read and sees the same decision. No
+            account, no token, no Ligis server in the path. Hand it to an agent,
+            paste it in an audit trail, or drop it where a payment is about to
+            happen.
+          </p>
+          <div className="mt-5 flex flex-wrap items-baseline gap-4">
+            <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+              {`${SITE_URL}/gate?chain=${chain.id}&subject=${subjectForVerdict}&capability=${capForVerdict}${situation ? `&situation=${situation.id}` : ""}`}
+            </code>
+            <CopyButton
+              value={`${SITE_URL}/gate?chain=${chain.id}&subject=${subjectForVerdict}&capability=${capForVerdict}${situation ? `&situation=${situation.id}` : ""}`}
+              label="copy"
+              className="shrink-0"
+            />
+          </div>
+        </section>
+      ) : null}
+
       {!situation ? (
         <div className="mt-14">
           <SituationCast chainId={chain.id} />
@@ -206,119 +320,6 @@ export default async function VerifyPage({
       <section className="mt-14">
         <JevTelemetry />
       </section>
-
-      <section className="mt-14">
-        <h2 className="eyebrow">Subject &amp; capability</h2>
-        <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
-          {situation
-            ? "Capability is set from your situation. Swap the subject to see GO vs STOP on a real wallet."
-            : "Or skip the cast and pick a subject and capability directly."}
-        </p>
-        <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2">
-          <div>
-            <p className="eyebrow">Subject</p>
-            <Rule className="mt-3" />
-            <ul className="mt-4 space-y-2 font-mono text-xs">
-              {demoSubjects.map((s) => (
-                <li key={s.value}>
-                  <a
-                    className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-                    href={verifyHref(
-                      chain,
-                      s.value,
-                      rawCap ?? situation?.capability ?? "kyc.basic",
-                      situation?.id,
-                    )}
-                  >
-                    {s.label}
-                  </a>
-                  <p className="mt-1 pl-2 text-[11px] text-ink-quiet">
-                    {truncateAddress(s.value, 12, 6)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="eyebrow">Capability</p>
-            <Rule className="mt-3" />
-            <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 font-mono text-xs">
-              {DEMO_CAPABILITIES.map((c) => {
-                const subjectForCap =
-                  subjectForVerdict ?? demoSubjects[0]?.value;
-                const selected = (rawCap ?? situation?.capability) === c;
-                return (
-                  <li key={c}>
-                    {subjectForCap ? (
-                      <a
-                        className={`underline decoration-1 underline-offset-4 ${
-                          selected
-                            ? "text-ink decoration-terra"
-                            : "text-ink-soft decoration-rule hover:text-ink hover:decoration-terra"
-                        }`}
-                        href={verifyHref(
-                          chain,
-                          subjectForCap,
-                          c,
-                          situation?.id,
-                        )}
-                      >
-                        {c}
-                      </a>
-                    ) : (
-                      <span className="text-ink-quiet">{c}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {showVerdict && subjectForVerdict && capForVerdict ? (
-        <section className="mt-16">
-          <h2 className="eyebrow">Verdict</h2>
-          <div className="mt-6">
-            <Result
-              chain={chain}
-              subject={subjectForVerdict}
-              capability={capForVerdict}
-            />
-          </div>
-        </section>
-      ) : (
-        <section className="mt-16">
-          <h2 className="eyebrow">Verdict</h2>
-          <p className="mt-4 font-serif text-base italic text-ink-quiet">
-            Pick a situation above — or a subject and capability — to run the
-            gate.
-          </p>
-        </section>
-      )}
-
-      {showVerdict && subjectForVerdict && capForVerdict ? (
-        <section className="mt-12">
-          <h2 className="eyebrow">Share this gate</h2>
-          <p className="mt-4 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">
-            A gate link is a self-verifying URL &mdash; anyone who opens it
-            re-runs the same on-chain read and sees the same decision. No
-            account, no token, no Ligis server in the path. Hand it to an agent,
-            paste it in an audit trail, or drop it where a payment is about to
-            happen.
-          </p>
-          <div className="mt-5 flex flex-wrap items-baseline gap-4">
-            <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
-              {`${SITE_URL}/gate?chain=${chain.id}&subject=${subjectForVerdict}&capability=${capForVerdict}${situation ? `&situation=${situation.id}` : ""}`}
-            </code>
-            <CopyButton
-              value={`${SITE_URL}/gate?chain=${chain.id}&subject=${subjectForVerdict}&capability=${capForVerdict}${situation ? `&situation=${situation.id}` : ""}`}
-              label="copy"
-              className="shrink-0"
-            />
-          </div>
-        </section>
-      ) : null}
 
       <section className="mt-16">
         <h2 className="eyebrow">API</h2>
@@ -365,7 +366,11 @@ async function Result({
   const outcome = await verifySubject(chain, subject, capability);
 
   if (!outcome.ok) {
-    return <p className="font-serif text-base text-revoke">{outcome.error}</p>;
+    return (
+      <p role="alert" className="font-serif text-base text-revoke">
+        {outcome.error}
+      </p>
+    );
   }
 
   return (

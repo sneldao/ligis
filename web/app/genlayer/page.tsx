@@ -101,7 +101,7 @@ export default async function GenLayerPage({
             {result.error}
           </p>
           {result.lastrun && (
-            <p className="mt-2 font-mono text-[11px] text-ink-quiet">
+            <p className="mt-2 font-mono text-xs text-ink-quiet">
               last run: {result.lastrun.runAt ?? "unknown"}
             </p>
           )}
@@ -299,7 +299,7 @@ pnpm demo:genlayer --dry-run       # Ligis gate only`}
                           {s.replace(/_/g, " ")}
                         </span>
                         <span
-                          className={`font-mono text-[11px] tabular ${
+                          className={`font-mono text-xs tabular ${
                             active
                               ? (STATUS_TONE[s] ?? "text-ink")
                               : "text-ink-quiet"
@@ -458,7 +458,7 @@ pnpm demo:genlayer --dry-run       # Ligis gate only`}
               <div className="mt-6 pb-4">
                 <ol className="space-y-4 font-serif text-base leading-relaxed text-ink-soft">
                   <li>
-                    <span className="font-mono text-[11px] text-ink-quiet">
+                    <span className="font-mono text-xs text-ink-quiet">
                       1.{" "}
                     </span>
                     <Link
@@ -471,7 +471,7 @@ pnpm demo:genlayer --dry-run       # Ligis gate only`}
                     from chain state, not a Ligis server.
                   </li>
                   <li>
-                    <span className="font-mono text-[11px] text-ink-quiet">
+                    <span className="font-mono text-xs text-ink-quiet">
                       2.{" "}
                     </span>
                     The gate receipt is passed to{" "}
@@ -485,7 +485,7 @@ pnpm demo:genlayer --dry-run       # Ligis gate only`}
                     and stores the receipt on-chain.
                   </li>
                   <li>
-                    <span className="font-mono text-[11px] text-ink-quiet">
+                    <span className="font-mono text-xs text-ink-quiet">
                       3.{" "}
                     </span>
                     Seller submits a deliverable. Buyer disputes. GenLayer
@@ -493,7 +493,7 @@ pnpm demo:genlayer --dry-run       # Ligis gate only`}
                     to judge it against the brief.
                   </li>
                   <li>
-                    <span className="font-mono text-[11px] text-ink-quiet">
+                    <span className="font-mono text-xs text-ink-quiet">
                       4.{" "}
                     </span>
                     Consensus on the binary verdict (APPROVED / REJECTED).{" "}

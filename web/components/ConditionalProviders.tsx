@@ -1,42 +1,25 @@
 "use client";
 
 /**
- * ConditionalProviders — gates the wallet tree on `?chain=casper-testnet`.
+ * ConditionalProviders — mounts the wallet context around the app.
  *
- * Why this is needed: `WalletProvider` lives in `web/lib/casper-browser/store`
- * which imports casper-js-sdk + @noble/curves at module load. If we put it
- * in the root layout, the heavy crypto bundle lands on EVERY page
- * (home, agent profiles, capabilities, etc.) — even Pharos-only pages
- * where no wallet feature is reachable.
+ * The name is historical: this used to gate `WalletProvider` on
+ * `?chain=casper-testnet` via `next/dynamic({ ssr: false })`. That made the
+ * entire page bail out of server rendering on the default (Casper) chain —
+ * every URL without an explicit EVM `?chain=` shipped no HTML at all.
  *
- * Conditional mounting via `next/dynamic({ ssr: false })`:
- *   - Server render: returns the children unmodified. No casper-js-sdk
- *     module evaluates server-side either.
- *   - Client hydration: a tiny client check on `?chain=...` decides
- *     whether to dynamically import the WalletTree. The dynamic import
- *     only fires when the URL actually requests Casper — on Pharos
- *     pages the wallet chunk is never fetched.
- *
- * The trade-off is a small client-side flicker (~16ms) when toggling
- * chains, but that's invisible against the page navigation.
+ * It is unconditional now because:
+ *   - `WalletProvider` is SSR-safe: it renders `INITIAL` state on the server
+ *     and hydrates the persisted wallet inside an effect, so server markup
+ *     and first client render agree.
+ *   - The store is already in the shared bundle: `UnifiedWalletChip` in the
+ *     dock statically imports `@/lib/casper-browser/store` on every page, so
+ *     lazy-loading the provider bought nothing.
  */
 
-import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
-import { CASPER_TESTNET } from "@/lib/network";
-
-/** Lazy-loaded wallet subtree. Only resolves when the URL is Casper. */
-const WalletTree = dynamic(
-  () => import("./WalletTree").then((m) => m.WalletTree),
-  { ssr: false, loading: () => null },
-);
+import { WalletProvider } from "@/lib/casper-browser/store";
 
 export function ConditionalProviders({ children }: { children: ReactNode }) {
-  const params = useSearchParams();
-  const isCasper =
-    (params.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
-
-  if (!isCasper) return <>{children}</>;
-  return <WalletTree>{children}</WalletTree>;
+  return <WalletProvider>{children}</WalletProvider>;
 }

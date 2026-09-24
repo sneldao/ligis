@@ -40,9 +40,14 @@ export function VerifyDemo({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-baseline gap-6">
+      <div
+        role="group"
+        aria-label="Check mode"
+        className="flex items-baseline gap-6"
+      >
         <button
           type="button"
+          aria-pressed={mode === "single"}
           onClick={() => setMode("single")}
           className={`py-1.5 text-sm transition-colors ${mode === "single" ? "text-ink underline decoration-terra decoration-1 underline-offset-4" : "text-ink-quiet hover:text-ink"}`}
         >
@@ -50,17 +55,18 @@ export function VerifyDemo({
         </button>
         <button
           type="button"
+          aria-pressed={mode === "batch"}
           onClick={() => setMode("batch")}
           className={`py-1.5 text-sm transition-colors ${mode === "batch" ? "text-ink underline decoration-terra decoration-1 underline-offset-4" : "text-ink-quiet hover:text-ink"}`}
         >
           batch
         </button>
         {mode === "batch" ? (
-          <span className="font-mono text-[11px] text-ink-quiet">
+          <span className="font-mono text-xs text-ink-quiet">
             isCapableMulti · 1 rpc call
           </span>
         ) : (
-          <span className="font-mono text-[11px] text-ink-quiet">
+          <span className="font-mono text-xs text-ink-quiet">
             isCapable · 1 rpc call
           </span>
         )}
@@ -72,7 +78,9 @@ export function VerifyDemo({
           action={singleAction}
           className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
         >
-          {chainId ? <input type="hidden" name="chainId" value={chainId} /> : null}
+          {chainId ? (
+            <input type="hidden" name="chainId" value={chainId} />
+          ) : null}
           <label htmlFor="subject" className="block space-y-2">
             <span className="eyebrow">subject · wallet</span>
             <input
@@ -87,18 +95,33 @@ export function VerifyDemo({
           </label>
           <label htmlFor="capability" className="block space-y-2">
             <span className="eyebrow">capability</span>
-            <select
-              id="capability"
-              name="capability"
-              defaultValue={capabilities[0]?.id}
-              className="block w-full appearance-none border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra"
-            >
-              {capabilities.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.id} — {c.label}
-                </option>
-              ))}
-            </select>
+            <span className="relative block">
+              <select
+                id="capability"
+                name="capability"
+                defaultValue={capabilities[0]?.id}
+                className="block w-full appearance-none border-0 border-b border-rule bg-transparent pb-2 pr-6 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra"
+              >
+                {capabilities.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id} — {c.label}
+                  </option>
+                ))}
+              </select>
+              <svg
+                width="9"
+                height="9"
+                viewBox="0 0 9 9"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                aria-hidden
+                className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-ink-quiet"
+              >
+                <path d="M1.5 3 L4.5 6 L7.5 3" />
+              </svg>
+            </span>
           </label>
           <button
             type="submit"
@@ -108,7 +131,17 @@ export function VerifyDemo({
           >
             {singlePending ? (
               <>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="spinner">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  aria-hidden
+                  className="spinner"
+                >
                   <path d="M6 1.5 A4.5 4.5 0 0 1 10.5 6" />
                 </svg>
                 verifying…
@@ -124,7 +157,9 @@ export function VerifyDemo({
           action={batchAction}
           className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[1fr_auto] sm:items-end"
         >
-          {chainId ? <input type="hidden" name="chainId" value={chainId} /> : null}
+          {chainId ? (
+            <input type="hidden" name="chainId" value={chainId} />
+          ) : null}
           <label htmlFor="subject-batch" className="block space-y-2">
             <span className="eyebrow">subject · wallet</span>
             <input
@@ -145,7 +180,17 @@ export function VerifyDemo({
           >
             {batchPending ? (
               <>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden className="spinner">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  aria-hidden
+                  className="spinner"
+                >
                   <path d="M6 1.5 A4.5 4.5 0 0 1 10.5 6" />
                 </svg>
                 checking all…
@@ -167,28 +212,14 @@ export function VerifyDemo({
           {singlePending ? (
             <PendingState label="reading from chain…" />
           ) : singleState === null ? (
-            <>
-              <p className="font-serif text-sm italic text-ink-quiet">
-                The address below is pre-filled as a sample. Run the gate to see
-                whether your agent may proceed with this counterparty.
-              </p>
-              <p className="mt-3 font-serif text-sm italic text-ink-quiet">
-                <span className="text-sage">✓ GO</span> means the agent holds a
-                valid credential — proceed.{" "}
-                <span className="text-revoke">✗ STOP</span> means it
-                doesn&rsquo;t — your agent should not pay.
-              </p>
-              <p className="mt-3 font-serif text-base italic text-ink-quiet">
-                The verdict of{" "}
-                <code className="font-mono not-italic">isCapable</code> appears
-                here. One on-chain read, no SDK.
-              </p>
-            </>
+            <p className="font-serif text-sm italic text-ink-quiet">
+              A sample address is pre-filled. Run the gate:{" "}
+              <span className="text-sage">✓ GO</span> means it holds a valid
+              credential — proceed. <span className="text-revoke">✗ STOP</span>{" "}
+              means your agent should not pay.
+            </p>
           ) : !singleState.ok ? (
-            <ErrorRetry
-              message={singleState.error}
-              formRef={singleFormRef}
-            />
+            <ErrorRetry message={singleState.error} formRef={singleFormRef} />
           ) : (
             <SingleGate result={singleState} explorerUrl={explorerUrl} />
           )}
@@ -207,10 +238,7 @@ export function VerifyDemo({
               appears here. All capabilities, one on-chain read.
             </p>
           ) : !batchState.ok ? (
-            <ErrorRetry
-              message={batchState.error}
-              formRef={batchFormRef}
-            />
+            <ErrorRetry message={batchState.error} formRef={batchFormRef} />
           ) : (
             <BatchGate result={batchState} explorerUrl={explorerUrl} />
           )}
@@ -269,7 +297,7 @@ function BatchGate({
           — {heldCount} of {result.results.length} capabilities pass the gate.
         </p>
       </div>
-      <p className="pl-[1.5rem] font-mono text-[11px] text-ink-quiet">
+      <p className="pl-[1.5rem] font-mono text-xs text-ink-quiet">
         {result.rpcCalls} rpc call · isCapableMulti(subject, bytes32[])
       </p>
       <div className="space-y-0">
@@ -332,4 +360,3 @@ function PendingState({ label }: { label: string }) {
     </div>
   );
 }
-

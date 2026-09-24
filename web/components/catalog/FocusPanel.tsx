@@ -79,7 +79,7 @@ export function FocusPanel() {
             <p className="eyebrow">
               {loading ? "Reading the chain…" : "Live verification"}
             </p>
-            <span className="font-mono text-[11px] tabular text-ink-quiet">
+            <span className="font-mono text-xs tabular text-ink-quiet">
               isCapable
             </span>
           </header>

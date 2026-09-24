@@ -138,7 +138,7 @@ export default async function IssuersPage({
                     head={6}
                     tail={4}
                   />
-                  <p className="mt-1 font-mono text-[10px] tabular text-ink-quiet sm:hidden">
+                  <p className="mt-1 font-mono text-xs tabular text-ink-quiet sm:hidden">
                     last seen · {entry.lastSeen.toString()}
                   </p>
                 </div>

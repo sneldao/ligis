@@ -54,7 +54,7 @@ export default function EmbedPage() {
       <section className="mt-16 max-w-5xl sm:mt-20">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Live preview</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
+          <p className="font-mono text-xs tabular text-ink-quiet">
             {network.name.toLowerCase()}
           </p>
         </header>
@@ -114,7 +114,7 @@ export default function EmbedPage() {
       <section className="mt-12 max-w-3xl sm:mt-16">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Available capabilities</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
+          <p className="font-mono text-xs tabular text-ink-quiet">
             {capabilities.length} total
           </p>
         </header>
@@ -123,7 +123,7 @@ export default function EmbedPage() {
           {capabilities.map((cap) => (
             <code
               key={cap.id}
-              className="font-mono text-[11px] tabular text-ink-soft bg-paper-deep px-2 py-1"
+              className="font-mono text-xs tabular text-ink-soft bg-paper-deep px-2 py-1"
             >
               {cap.id}
             </code>

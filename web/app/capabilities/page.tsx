@@ -170,7 +170,7 @@ export default function CapabilitiesPage() {
                 >
                   {cat.name}
                 </h2>
-                <span className="font-mono text-[11px] tabular text-ink-quiet">
+                <span className="font-mono text-xs tabular text-ink-quiet">
                   {caps.length}{" "}
                   {caps.length === 1 ? "capability" : "capabilities"}
                 </span>
@@ -200,11 +200,11 @@ export default function CapabilitiesPage() {
                             {cap.description}
                           </p>
                           <div className="flex flex-wrap items-baseline gap-3">
-                            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-terra">
+                            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-terra">
                               {criticality} &middot; w{weight}
                             </span>
                             <details className="group">
-                              <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.14em] text-ink-quiet marker:hidden hover:text-ink">
+                              <summary className="cursor-pointer list-none font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet marker:hidden hover:text-ink">
                                 <span className="group-open:hidden">
                                   hash +
                                 </span>
@@ -238,9 +238,7 @@ export default function CapabilitiesPage() {
       <section className="mt-20 max-w-3xl sm:mt-24">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Define a new capability</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
-            keccak256
-          </p>
+          <p className="font-mono text-xs tabular text-ink-quiet">keccak256</p>
         </header>
         <Rule className="mt-4" />
         <details className="group mt-6 border-y border-rule">

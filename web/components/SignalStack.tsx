@@ -46,7 +46,9 @@ export function SignalStack({ signals }: { signals: TrustSignal[] }) {
               </div>
               <div className="space-y-1.5 text-right">
                 {signal.verdict === "go" ? (
-                  <span className="font-mono text-sm tabular text-sage">✓ GO</span>
+                  <span className="font-mono text-sm tabular text-sage">
+                    ✓ GO
+                  </span>
                 ) : signal.verdict === "stop" ? (
                   <span className="font-mono text-sm tabular text-revoke">
                     ✗ STOP
@@ -56,7 +58,7 @@ export function SignalStack({ signals }: { signals: TrustSignal[] }) {
                     ? UNKNOWN
                   </span>
                 )}
-                <div className="font-mono text-[11px] tabular text-ink-quiet">
+                <div className="font-mono text-xs tabular text-ink-quiet">
                   confidence {signal.confidence}
                   {costUsd !== undefined ? ` · $${costUsd}/check` : ""}
                 </div>

@@ -5,7 +5,7 @@ export default function AgentLoading() {
     <main className="mx-auto max-w-5xl px-8 py-16 sm:py-24">
       <header className="flex items-baseline justify-between text-xs">
         <p className="eyebrow">Agent · reading from chain…</p>
-        <span className="font-mono text-[11px] tabular text-ink-quiet">
+        <span className="font-mono text-xs tabular text-ink-quiet">
           waiting on the rpc
         </span>
       </header>
@@ -16,7 +16,7 @@ export default function AgentLoading() {
             className="skeleton aspect-[4/5] w-full max-w-[14rem]"
             aria-hidden
           />
-          <p className="mt-3 font-mono text-[11px] tabular text-ink-quiet">
+          <p className="mt-3 font-mono text-xs tabular text-ink-quiet">
             portrait pending
           </p>
         </div>
@@ -48,9 +48,7 @@ export default function AgentLoading() {
       <section className="mt-24">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Credentials</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
-            scanning…
-          </p>
+          <p className="font-mono text-xs tabular text-ink-quiet">scanning…</p>
         </header>
         <div className="mt-6">
           <Rule />

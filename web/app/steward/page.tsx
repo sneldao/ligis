@@ -87,7 +87,7 @@ export default async function StewardPage({
           </summary>
           <ol className="grid grid-cols-1 divide-y divide-rule border-t border-rule sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <li className="space-y-2 py-4 sm:pr-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
                 01 · simulated
               </p>
               <p className="font-serif text-sm leading-relaxed text-ink-soft">
@@ -95,7 +95,7 @@ export default async function StewardPage({
               </p>
             </li>
             <li className="space-y-2 py-4 sm:px-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
                 02 · live reads
               </p>
               <p className="font-serif text-sm leading-relaxed text-ink-soft">
@@ -107,7 +107,7 @@ export default async function StewardPage({
               </p>
             </li>
             <li className="space-y-2 py-4 sm:pl-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
                 03 · live writes
               </p>
               <p className="font-serif text-sm leading-relaxed text-ink-soft">
@@ -206,7 +206,7 @@ export default async function StewardPage({
           href="/"
           className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
         >
-          ← Return to the index
+          ← Home
         </Link>
         <span className="font-mono tabular">
           {chain.name.toLowerCase()}

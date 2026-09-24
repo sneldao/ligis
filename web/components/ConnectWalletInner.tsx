@@ -29,7 +29,13 @@ export function ConnectWalletInner() {
 
 function ConnectPanel() {
   const wallet = useWallet();
-  const { refreshBalance, connectExtension, connectSandbox, connectPaste, disconnect } = wallet;
+  const {
+    refreshBalance,
+    connectExtension,
+    connectSandbox,
+    connectPaste,
+    disconnect,
+  } = wallet;
   const [pasteValue, setPasteValue] = useState("");
   const [poll, setPoll] = useState(false);
   const [consecutiveErrors, setConsecutiveErrors] = useState(0);
@@ -47,7 +53,10 @@ function ConnectPanel() {
   // Detect whether the Casper Wallet extension is installed.
   const [hasExtension, setHasExtension] = useState(false);
   useEffect(() => {
-    setHasExtension(typeof window !== "undefined" && Boolean((window as any).CasperWalletProvider));
+    setHasExtension(
+      typeof window !== "undefined" &&
+        Boolean((window as any).CasperWalletProvider),
+    );
   }, []);
 
   // Progressive backoff polling.
@@ -92,7 +101,8 @@ function ConnectPanel() {
     void tick();
     const scheduleNext = () => {
       if (cancelled || pollPausedRef.current) return;
-      const delay = POLL_INTERVALS[Math.min(attempt, POLL_INTERVALS.length - 1)];
+      const delay =
+        POLL_INTERVALS[Math.min(attempt, POLL_INTERVALS.length - 1)];
       attempt++;
       const timeoutId = setTimeout(async () => {
         if (cancelled || pollPausedRef.current) return;
@@ -161,7 +171,7 @@ function ConnectPanel() {
     >
       <header className="flex items-baseline justify-between">
         <p className="eyebrow">Connect · Casper Testnet</p>
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           secp256k1 · ephemeral
         </span>
       </header>
@@ -183,8 +193,8 @@ function ConnectPanel() {
           ● Generate sandbox key
         </span>
         <span className="block pt-1 font-serif text-xs leading-relaxed text-ink-soft">
-          A secp256k1 key generated in this browser. Zero install. Fund
-          it at the faucet once generated.
+          A secp256k1 key generated in this browser. Zero install. Fund it at
+          the faucet once generated.
         </span>
       </button>
 
@@ -200,7 +210,9 @@ function ConnectPanel() {
         style={{ borderRadius: 0 }}
       >
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink">
-          {wallet.connecting ? "○ Connecting…" : "○ Connect Casper Wallet extension"}
+          {wallet.connecting
+            ? "○ Connecting…"
+            : "○ Connect Casper Wallet extension"}
         </span>
         <span className="block pt-1 font-serif text-xs leading-relaxed text-ink-soft">
           {!hasExtension
@@ -220,7 +232,7 @@ function ConnectPanel() {
               hex private key · 64 chars
             </label>
             {pasteValue.length > 0 ? (
-              <span className="font-mono text-[10px] tabular text-ink-quiet">
+              <span className="font-mono text-xs tabular text-ink-quiet">
                 {pasteValue.replace(/^0x/, "").length}/64
               </span>
             ) : null}
@@ -298,7 +310,7 @@ function ConnectedPanel({
       </header>
 
       <div className="grid grid-cols-[8rem_1fr] items-baseline gap-x-4 border-t border-rule pt-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           public key
         </span>
         <div className="flex flex-wrap items-baseline gap-3">
@@ -319,7 +331,7 @@ function ConnectedPanel({
       />
 
       <details className="border-t border-rule pt-3">
-        <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet transition-colors hover:text-ink">
+        <summary className="cursor-pointer list-none font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet transition-colors hover:text-ink">
           account hash + key kind
         </summary>
         <div className="mt-3 space-y-2">
@@ -333,8 +345,8 @@ function ConnectedPanel({
             {wallet.kind === "sandbox"
               ? "ephemeral session key"
               : wallet.kind === "paste"
-              ? "imported · 64-hex secp256k1"
-              : "Casper Wallet extension · read-only"}
+                ? "imported · 64-hex secp256k1"
+                : "Casper Wallet extension · read-only"}
           </p>
         </div>
       </details>
@@ -374,13 +386,17 @@ function FaucetPanel({
     >
       <header className="flex items-baseline justify-between">
         <span className="eyebrow">
-          {funded ? "✓ funded" : pollPaused ? "⚠ connection issue" : "awaiting funding"}
+          {funded
+            ? "✓ funded"
+            : pollPaused
+              ? "⚠ connection issue"
+              : "awaiting funding"}
         </span>
         <span className="font-mono tabular text-ink">
           {balanceLabel}
           {funded ? " cspr" : ""}
           {balanceStatus === "polling" && !pollPaused ? (
-            <span className="ml-2 flex items-center gap-1 text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+            <span className="ml-2 flex items-center gap-1 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-terra" />
               polling
             </span>
@@ -392,13 +408,13 @@ function FaucetPanel({
         <div className="space-y-2">
           {pollPaused ? (
             <p className="font-serif text-sm leading-relaxed text-revoke">
-              Balance check failed {consecutiveErrors} times. The RPC
-              endpoint may be temporarily unavailable.
+              Balance check failed {consecutiveErrors} times. The RPC endpoint
+              may be temporarily unavailable.
             </p>
           ) : (
             <p className="font-serif text-sm leading-relaxed text-ink-soft">
-              Copy the public key, paste it into the Casper Testnet Faucet,
-              and click refresh once CSPR lands. Usually under 30 seconds.
+              Copy the public key, paste it into the Casper Testnet Faucet, and
+              click refresh once CSPR lands. Usually under 30 seconds.
             </p>
           )}
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -414,7 +430,7 @@ function FaucetPanel({
             <button
               type="button"
               onClick={() => void onPoll()}
-              className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+              className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
             >
               {pollPaused ? "retry →" : "refresh"}
             </button>
@@ -422,8 +438,8 @@ function FaucetPanel({
         </div>
       ) : (
         <p className="font-serif text-sm italic leading-relaxed text-sage">
-          The Steward loop will sign and submit every transaction from
-          this browser wallet — no server custodian.
+          The Steward loop will sign and submit every transaction from this
+          browser wallet — no server custodian.
         </p>
       )}
     </div>

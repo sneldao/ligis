@@ -10,11 +10,6 @@ import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 
 const NAV = [
   { href: "/gate", label: "Gate", description: "Gate a payment" },
-  {
-    href: "/genlayer",
-    label: "Escrow",
-    description: "GenLayer JobEscrow · Agent Tank",
-  },
   { href: "/field", label: "Field", description: "Field · live registry" },
 ];
 
@@ -102,10 +97,9 @@ export function GlobalDock() {
         <Link
           href={withChain("/", chain)}
           aria-label={onField ? "Ligis · leave the field" : "Ligis · home"}
-          className="flex items-center gap-x-2 font-mono text-[11px] uppercase tracking-[0.18em] text-paper hover:text-terra"
+          className="flex items-center gap-x-2 font-mono text-[11px] uppercase tracking-[0.18em] text-paper transition-colors hover:text-terra-soft"
         >
-          <span aria-hidden>🪪</span>
-          <span className="hidden sm:inline">Ligis</span>
+          Ligis
         </Link>
 
         {/* Single hairline divider between brand zone and nav zone */}
@@ -128,7 +122,7 @@ export function GlobalDock() {
                 aria-label={n.description}
                 className={`font-mono text-[11px] uppercase tracking-[0.18em] transition-colors relative ${
                   isActive
-                    ? "text-terra"
+                    ? "text-paper"
                     : "text-paper-deep/80 hover:text-paper"
                 }`}
               >
@@ -162,7 +156,7 @@ export function GlobalDock() {
           onClick={() => setNavOpen((v) => !v)}
           aria-label={navOpen ? "Close menu" : "Open menu"}
           aria-expanded={navOpen}
-          className="flex items-center justify-center text-paper-deep/80 transition-colors hover:text-paper lg:hidden"
+          className="-my-2 -mr-2 flex h-10 w-10 items-center justify-center text-paper-deep/80 transition-colors hover:text-paper lg:hidden"
         >
           <MenuIcon open={navOpen} />
         </button>
@@ -209,7 +203,7 @@ export function GlobalDock() {
                         aria-label={n.description}
                         className={`block font-mono text-xs uppercase tracking-[0.18em] transition-colors ${
                           isActive
-                            ? "text-terra"
+                            ? "text-paper"
                             : "text-paper-deep hover:text-paper"
                         }`}
                       >

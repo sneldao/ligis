@@ -5,7 +5,7 @@ export default function IssuersLoading() {
     <main className="mx-auto max-w-3xl px-8 pt-12 pb-32 sm:pt-20">
       <header className="flex items-baseline justify-between text-xs">
         <p className="eyebrow">Ligis · scanning logs…</p>
-        <span className="font-mono text-[11px] tabular text-ink-quiet">
+        <span className="font-mono text-xs tabular text-ink-quiet">
           getLogs
         </span>
       </header>
@@ -29,10 +29,7 @@ export default function IssuersLoading() {
               <div className="skeleton h-3 w-6" aria-hidden />
               <div className="skeleton h-3 w-48" aria-hidden />
               <div className="skeleton h-3 w-10" aria-hidden />
-              <div
-                className="skeleton hidden h-3 w-16 sm:block"
-                aria-hidden
-              />
+              <div className="skeleton hidden h-3 w-16 sm:block" aria-hidden />
             </div>
             <Rule tone="soft" />
           </div>

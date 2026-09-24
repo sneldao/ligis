@@ -43,7 +43,7 @@ export function StewardTeaser() {
     >
       <header className="flex items-baseline justify-between">
         <p className="eyebrow">Watch an agent boot itself</p>
-        <p className="font-mono text-[11px] tabular text-ink-quiet">
+        <p className="font-mono text-xs tabular text-ink-quiet">
           0G compute + 0G storage
         </p>
       </header>
@@ -54,9 +54,10 @@ export function StewardTeaser() {
           <h2 className="display text-3xl text-ink">The autonomous loop.</h2>
           <p className="mt-6 max-w-prose font-serif text-base leading-relaxed text-ink-soft">
             Given a goal, the Trust Steward ensures its own identity, reasons
-            about which capabilities the goal needs (via 0G Compute, TEE-verified),
-            gates on the credential registry, self-issues anything missing, and
-            anchors a manifest of the evidence into 0G Storage. End to end.
+            about which capabilities the goal needs (via 0G Compute,
+            TEE-verified), gates on the credential registry, self-issues
+            anything missing, and anchors a manifest of the evidence into 0G
+            Storage. End to end.
           </p>
           {activeIndex > 0 && activeIndex <= PHASES.length ? (
             <blockquote
@@ -127,17 +128,26 @@ function PhasePill({
       <motion.div
         layout
         className="grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-x-6 py-4"
-        animate={status === "running" && !reducedMotion ? { x: [0, 2, 0] } : { x: 0 }}
+        animate={
+          status === "running" && !reducedMotion ? { x: [0, 2, 0] } : { x: 0 }
+        }
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <div className="flex items-center gap-3">
-          <span className={`block h-1.5 w-1.5 rounded-full ${dotColor}`} aria-hidden />
-          <span className="font-mono text-[11px] tabular text-ink-quiet">
+          <span
+            className={`block h-1.5 w-1.5 rounded-full ${dotColor}`}
+            aria-hidden
+          />
+          <span className="font-mono text-xs tabular text-ink-quiet">
             {String(index).padStart(2, "0")}
           </span>
         </div>
-        <span className={`font-mono text-sm tabular ${labelColor}`}>{label}</span>
-        <span className="font-serif text-xs italic text-ink-quiet">{gloss}</span>
+        <span className={`font-mono text-sm tabular ${labelColor}`}>
+          {label}
+        </span>
+        <span className="font-serif text-xs italic text-ink-quiet">
+          {gloss}
+        </span>
       </motion.div>
       <Rule tone="soft" />
     </li>

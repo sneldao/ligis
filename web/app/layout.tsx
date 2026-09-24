@@ -7,8 +7,8 @@ import { GlobalDock } from "@/components/GlobalDock";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
-const EMOJI_FAVICON = `data:image/svg+xml;utf8,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="88">🪪</text></svg>',
+const LIGIS_FAVICON = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f4f1ec"/><text x="50" y="68" text-anchor="middle" font-family="Georgia, serif" font-size="62" fill="#9f4c2f">L</text></svg>',
 )}`;
 
 const hanken = localFont({
@@ -95,9 +95,9 @@ export const metadata: Metadata = {
   },
   category: "technology",
   icons: {
-    icon: [{ url: EMOJI_FAVICON, type: "image/svg+xml" }],
-    shortcut: [{ url: EMOJI_FAVICON, type: "image/svg+xml" }],
-    apple: [{ url: EMOJI_FAVICON, type: "image/svg+xml" }],
+    icon: [{ url: LIGIS_FAVICON, type: "image/svg+xml" }],
+    shortcut: [{ url: LIGIS_FAVICON, type: "image/svg+xml" }],
+    apple: [{ url: LIGIS_FAVICON, type: "image/svg+xml" }],
   },
 };
 
@@ -128,13 +128,13 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <Suspense fallback={null}>
-          <ConditionalProviders>
-            <div id="main-content">{children}</div>
+        <ConditionalProviders>
+          <div id="main-content">{children}</div>
+          <Suspense fallback={null}>
             <GlobalDock />
-            <CommandPalette />
-          </ConditionalProviders>
-        </Suspense>
+          </Suspense>
+          <CommandPalette />
+        </ConditionalProviders>
       </body>
     </html>
   );

@@ -136,7 +136,7 @@ export default async function AgentPage({
         <section className="mt-16 sm:mt-24">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">Credentials</p>
-            <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
+            <p className="hidden font-mono text-xs tabular text-ink-quiet sm:block">
               scanned against {chain.name.toLowerCase()} reference set
             </p>
           </header>
@@ -177,7 +177,7 @@ export default async function AgentPage({
                       </p>
                     </div>
                     <span className="col-span-2 font-mono tabular text-ink-soft sm:col-span-1">
-                      <span className="mr-2 text-[10px] uppercase tracking-[0.14em] text-ink-quiet sm:hidden">
+                      <span className="mr-2 text-[11px] uppercase tracking-[0.14em] text-ink-quiet sm:hidden">
                         issuer
                       </span>
                       {truncateAddress(view.issuer, 5, 3)}
@@ -201,7 +201,7 @@ export default async function AgentPage({
           <section className="mt-16 sm:mt-24">
             <header className="flex items-baseline justify-between">
               <p className="eyebrow">Capability history</p>
-              <p className="font-mono text-[11px] tabular text-ink-quiet">
+              <p className="font-mono text-xs tabular text-ink-quiet">
                 {history.length} {history.length === 1 ? "event" : "events"} ·
                 AgentCapabilityChanged
               </p>
@@ -232,13 +232,13 @@ export default async function AgentPage({
                           {h.capable ? "gained" : "lost"}
                         </span>
                         <span className="col-span-2 font-mono tabular text-ink-soft sm:col-span-1 sm:w-20 sm:text-right">
-                          <span className="mr-2 text-[10px] uppercase tracking-[0.14em] text-ink-quiet sm:hidden">
+                          <span className="mr-2 text-[11px] uppercase tracking-[0.14em] text-ink-quiet sm:hidden">
                             block
                           </span>
                           {h.blockNumber.toString()}
                         </span>
                         <span className="col-span-2 font-mono tabular text-ink-soft sm:col-span-1 sm:w-32 sm:text-right">
-                          <span className="mr-2 text-[10px] uppercase tracking-[0.14em] text-ink-quiet sm:hidden">
+                          <span className="mr-2 text-[11px] uppercase tracking-[0.14em] text-ink-quiet sm:hidden">
                             tx
                           </span>
                           <a
@@ -363,7 +363,7 @@ function ShareSection({
       <section className="mt-16 sm:mt-24">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Share this agent</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
+          <p className="font-mono text-xs tabular text-ink-quiet">
             opengraph card included
           </p>
         </header>
@@ -380,7 +380,7 @@ function ShareSection({
       <section className="mt-12 sm:mt-16">
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Embed verification</p>
-          <p className="font-mono text-[11px] tabular text-ink-quiet">
+          <p className="font-mono text-xs tabular text-ink-quiet">
             iframe · no JS
           </p>
         </header>

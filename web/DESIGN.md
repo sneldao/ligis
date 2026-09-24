@@ -38,7 +38,8 @@ and reach for typography, whitespace, and hairlines instead.
   - `revoke` — loss and attention: revoked, errors, hard stops
   - `ink-quiet` — inactive: not held, expired, secondary metadata
     Terra is tuned to pass WCAG AA (≥4.5:1) on paper at body sizes; do not
-    lighten it without re-checking contrast.
+    lighten it without re-checking contrast. Sage, ink-quiet, sky and terra
+    are tuned to ≥4.5:1 on both paper and paper-deep.
 - **Corners**: surfaces are square. The single sanctioned exception is the
   global dock (fully-rounded pill, rounded mobile drawer) — it is floating
   chrome, not a content surface. No other component may round its corners.

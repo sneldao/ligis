@@ -15,12 +15,12 @@ export type PortraitParams = {
 };
 
 const DECKS: PortraitDeck[] = [
-  { paper: "#ECE7DF", primary: "#B85D3E", secondary: "#6F8267" },
+  { paper: "#ECE7DF", primary: "#B85D3E", secondary: "#5A6D53" },
   { paper: "#F4F1EC", primary: "#1C1B1A", secondary: "#B85D3E" },
-  { paper: "#F4F1EC", primary: "#6F8267", secondary: "#1C1B1A" },
+  { paper: "#F4F1EC", primary: "#5A6D53", secondary: "#1C1B1A" },
   { paper: "#ECE7DF", primary: "#E8C9BD", secondary: "#1C1B1A" },
   { paper: "#F4F1EC", primary: "#B85D3E", secondary: "#1C1B1A" },
-  { paper: "#ECE7DF", primary: "#1C1B1A", secondary: "#6F8267" },
+  { paper: "#ECE7DF", primary: "#1C1B1A", secondary: "#5A6D53" },
 ];
 
 function bytesFromAddress(address: string): number[] {
@@ -67,7 +67,7 @@ export type PortraitSize = { width: number; height: number };
 
 export function portraitSvgInner(
   address: string,
-  size: PortraitSize = { width: 800, height: 1000 }
+  size: PortraitSize = { width: 800, height: 1000 },
 ): string {
   const p = portraitParams(address);
   const W = size.width;

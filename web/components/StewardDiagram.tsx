@@ -32,7 +32,7 @@ export function StewardDiagram({
   const color = (phase: string): string => {
     const s = phaseStatus[phase];
     if (s === "running") return "#B85D3E";
-    if (s === "done") return "#6f8267";
+    if (s === "done") return "#5A6D53";
     if (s === "error") return "#a13a2a";
     return "#d9d3cb";
   };
@@ -52,8 +52,12 @@ export function StewardDiagram({
     <div className="w-full">
       <div className="mb-4 flex items-baseline justify-between">
         <p className="eyebrow">the loop</p>
-        <p className="font-mono text-[11px] tabular text-ink-quiet">
-          {allDone ? "✓ complete" : currentPhaseIdx >= 0 ? `phase ${currentPhaseIdx + 1} / ${NODES.length}` : "—"}
+        <p className="font-mono text-xs tabular text-ink-quiet">
+          {allDone
+            ? "✓ complete"
+            : currentPhaseIdx >= 0
+              ? `phase ${currentPhaseIdx + 1} / ${NODES.length}`
+              : "—"}
         </p>
       </div>
       <svg
@@ -77,7 +81,11 @@ export function StewardDiagram({
               >
                 <stop
                   offset="0%"
-                  stopColor={isDone(n.phase) || isActive(n.phase) ? color(n.phase) : "#d9d3cb"}
+                  stopColor={
+                    isDone(n.phase) || isActive(n.phase)
+                      ? color(n.phase)
+                      : "#d9d3cb"
+                  }
                 />
                 <stop
                   offset="100%"
@@ -90,7 +98,6 @@ export function StewardDiagram({
               </linearGradient>
             );
           })}
-
         </defs>
 
         {NODES.map((n, i) => {
@@ -99,7 +106,11 @@ export function StewardDiagram({
           const nx = spacing * (i + 1.5);
           const cur = phaseStatus[n.phase] || "idle";
           const next = phaseStatus[NODES[i + 1].phase] || "idle";
-          const flowing = cur === "running" || cur === "done" || next === "running" || next === "done";
+          const flowing =
+            cur === "running" ||
+            cur === "done" ||
+            next === "running" ||
+            next === "done";
           return (
             <g key={`l-${i}`}>
               <line
@@ -152,7 +163,8 @@ export function StewardDiagram({
                     strokeWidth={1}
                     opacity={0.3}
                     style={{
-                      animation: "node-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
+                      animation:
+                        "node-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
                       transformBox: "fill-box",
                       transformOrigin: "center",
                     }}
@@ -167,7 +179,8 @@ export function StewardDiagram({
                     strokeWidth={1}
                     opacity={0.5}
                     style={{
-                      animation: "node-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
+                      animation:
+                        "node-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
                       animationDelay: "0.4s",
                       transformBox: "fill-box",
                       transformOrigin: "center",
@@ -190,7 +203,7 @@ export function StewardDiagram({
                 y={nodeY + 1}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fill={done || active ? "#f4f1ec" : "#6f6a62"}
+                fill={done || active ? "#f4f1ec" : "#67625A"}
                 fontSize="11"
                 fontFamily="JetBrains Mono, ui-monospace, monospace"
                 style={{
@@ -204,7 +217,7 @@ export function StewardDiagram({
                 x={cx}
                 y={labelY}
                 textAnchor="middle"
-                fill={isIdle(n.phase) ? "#6f6a62" : "#1c1b1a"}
+                fill={isIdle(n.phase) ? "#67625A" : "#1c1b1a"}
                 fontSize="10"
                 fontFamily="Hanken Grotesk, ui-sans-serif, system-ui, sans-serif"
                 fontWeight="500"
@@ -220,7 +233,7 @@ export function StewardDiagram({
                 x={cx}
                 y={descY}
                 textAnchor="middle"
-                fill="#6f6a62"
+                fill="#67625A"
                 fontSize="8.5"
                 fontFamily="Hanken Grotesk, ui-sans-serif, system-ui, sans-serif"
                 style={{
@@ -247,10 +260,11 @@ export function StewardDiagram({
           y={barY}
           width={width * progress}
           height={barH}
-          fill={allDone ? "#6f8267" : "#B85D3E"}
+          fill={allDone ? "#5A6D53" : "#B85D3E"}
           rx={1}
           style={{
-            transition: "width 0.6s cubic-bezier(0.215, 0.61, 0.355, 1), fill 0.4s ease",
+            transition:
+              "width 0.6s cubic-bezier(0.215, 0.61, 0.355, 1), fill 0.4s ease",
           }}
         />
       </svg>

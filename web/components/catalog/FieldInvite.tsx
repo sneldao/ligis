@@ -9,7 +9,7 @@ export function FieldInvite({ chainId }: { chainId: string }) {
     <section id="field" className="scroll-mt-24">
       <header className="flex items-baseline justify-between">
         <p className="eyebrow">Field</p>
-        <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
+        <p className="hidden font-mono text-xs tabular text-ink-quiet sm:block">
           live registry
         </p>
       </header>

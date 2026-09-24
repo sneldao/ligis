@@ -96,8 +96,8 @@ export function StewardTriptych({
       gloss: "anchored · immutable",
       mono: `0G Storage · ${anchorName}`,
       delayMs: 280,
-      titleFill: "#6f8267",
-      markFill: "#6f8267",
+      titleFill: "#5A6D53",
+      markFill: "#5A6D53",
       markStroke: 0.75,
     },
   ];
@@ -112,7 +112,7 @@ export function StewardTriptych({
     <div className="w-full">
       <header className="mb-3 flex items-baseline justify-between">
         <p className="eyebrow">three acts</p>
-        <p className="font-mono text-[11px] tabular text-ink-quiet">—</p>
+        <p className="font-mono text-xs tabular text-ink-quiet">—</p>
       </header>
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -174,7 +174,7 @@ export function StewardTriptych({
                 fontSize="10"
                 letterSpacing="0.18em"
                 textAnchor="middle"
-                fill="#6f6a62"
+                fill="#67625A"
               >
                 {p.roman} · {p.eyebrow}
               </text>
@@ -240,12 +240,7 @@ export function StewardTriptych({
                     stroke={p.markFill}
                     strokeWidth={p.markStroke}
                   />
-                  <circle
-                    cx={cx}
-                    cy={top + 36}
-                    r={1.6}
-                    fill={p.markFill}
-                  />
+                  <circle cx={cx} cy={top + 36} r={1.6} fill={p.markFill} />
                   <line
                     x1={cx}
                     y1={top + 37.5}
@@ -272,12 +267,7 @@ export function StewardTriptych({
                     stroke={p.markFill}
                     strokeWidth={p.markStroke}
                   />
-                  <circle
-                    cx={cx}
-                    cy={top + 36}
-                    r={2.2}
-                    fill={p.markFill}
-                  />
+                  <circle cx={cx} cy={top + 36} r={2.2} fill={p.markFill} />
                 </g>
               ) : null}
 

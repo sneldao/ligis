@@ -12,14 +12,17 @@ async function ChainProbe() {
     const tokenId = await readAgentId(SAMPLE_WALLET);
     result = { tokenId: tokenId.toString(), ok: true };
   } catch (err) {
-    result = { error: err instanceof Error ? err.message : String(err), ok: false };
+    result = {
+      error: err instanceof Error ? err.message : String(err),
+      ok: false,
+    };
   }
 
   return (
     <section className="space-y-6">
       <header className="flex items-baseline justify-between">
         <p className="eyebrow">04 · Chain probe</p>
-        <span className="font-mono text-[11px] tabular text-ink-quiet">
+        <span className="font-mono text-xs tabular text-ink-quiet">
           {network.name.toLowerCase()} · chain {network.chainId}
         </span>
       </header>
@@ -43,10 +46,10 @@ async function ChainProbe() {
         </span>
       </div>
       <p className="max-w-prose text-xs text-ink-quiet">
-        This row proves a Server Component can reach Pharos Atlantic through
-        the shared <code className="font-mono">@ligis/adapter-evm</code> alias. If the
-        call fails, the architecture is broken — fix this before building any
-        feature that depends on it.
+        This row proves a Server Component can reach Pharos Atlantic through the
+        shared <code className="font-mono">@ligis/adapter-evm</code> alias. If
+        the call fails, the architecture is broken — fix this before building
+        any feature that depends on it.
       </p>
     </section>
   );
@@ -76,7 +79,7 @@ export default function StyleguidePage() {
         <section className="space-y-6">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">01 · Typography</p>
-            <span className="font-mono text-[11px] text-ink-quiet">
+            <span className="font-mono text-xs text-ink-quiet">
               Hanken · Fraunces · JetBrains Mono
             </span>
           </header>
@@ -111,7 +114,9 @@ export default function StyleguidePage() {
         <section className="space-y-6">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">02 · Tones</p>
-            <span className="font-mono text-[11px] text-ink-quiet">no gradients · no shadows</span>
+            <span className="font-mono text-xs text-ink-quiet">
+              no gradients · no shadows
+            </span>
           </header>
           <Rule />
           <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
@@ -120,19 +125,21 @@ export default function StyleguidePage() {
               { name: "paper-deep", hex: "#ECE7DF", bg: "bg-paper-deep" },
               { name: "ink", hex: "#1C1B1A", bg: "bg-ink" },
               { name: "ink-soft", hex: "#5C5852", bg: "bg-ink-soft" },
-              { name: "ink-quiet", hex: "#6F6A62", bg: "bg-ink-quiet" },
+              { name: "ink-quiet", hex: "#67625A", bg: "bg-ink-quiet" },
               { name: "rule", hex: "#D9D3CB", bg: "bg-rule" },
               { name: "rule-soft", hex: "#E7E2D9", bg: "bg-rule-soft" },
-              { name: "terra", hex: "#A85234", bg: "bg-terra" },
+              { name: "terra", hex: "#9F4C2F", bg: "bg-terra" },
               { name: "terra-soft", hex: "#E8C9BD", bg: "bg-terra-soft" },
-              { name: "sage", hex: "#6F8267", bg: "bg-sage" },
+              { name: "sage", hex: "#5A6D53", bg: "bg-sage" },
               { name: "revoke", hex: "#A13A2A", bg: "bg-revoke" },
-              { name: "sky", hex: "#3B6E8F", bg: "bg-sky" },
+              { name: "sky", hex: "#356584", bg: "bg-sky" },
             ].map((t) => (
               <div key={t.name} className="space-y-2">
                 <div className={`h-20 w-full ${t.bg}`} aria-hidden />
-                <p className="font-mono text-[11px] tabular text-ink">{t.name}</p>
-                <p className="font-mono text-[11px] tabular text-ink-quiet">{t.hex}</p>
+                <p className="font-mono text-xs tabular text-ink">{t.name}</p>
+                <p className="font-mono text-xs tabular text-ink-quiet">
+                  {t.hex}
+                </p>
               </div>
             ))}
           </div>
@@ -141,7 +148,7 @@ export default function StyleguidePage() {
         <section className="space-y-6">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">03 · Containment</p>
-            <span className="font-mono text-[11px] text-ink-quiet">
+            <span className="font-mono text-xs text-ink-quiet">
               hairlines + whitespace
             </span>
           </header>
@@ -161,7 +168,7 @@ export default function StyleguidePage() {
         <section className="space-y-6">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">05 · Primitives</p>
-            <span className="font-mono text-[11px] text-ink-quiet">
+            <span className="font-mono text-xs text-ink-quiet">
               AddressDisplay · CopyButton
             </span>
           </header>
@@ -189,7 +196,7 @@ export default function StyleguidePage() {
         <section className="space-y-6">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">06 · Ledger row</p>
-            <span className="font-mono text-[11px] text-ink-quiet">
+            <span className="font-mono text-xs text-ink-quiet">
               the only credential layout
             </span>
           </header>
@@ -209,7 +216,9 @@ export default function StyleguidePage() {
               <div key={c.cap}>
                 <div className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-8 py-4 text-sm">
                   <span className="font-mono tabular text-ink">{c.cap}</span>
-                  <span className="font-mono tabular text-ink-soft">{c.iss}</span>
+                  <span className="font-mono tabular text-ink-soft">
+                    {c.iss}
+                  </span>
                   <span className="w-24 text-right font-mono tabular text-ink-soft">
                     {c.exp}
                   </span>

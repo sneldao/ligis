@@ -28,7 +28,14 @@ export function Diagram({ className = "" }: { className?: string }) {
           }
         `}
       </style>
-      <line x1={leftX} y1={top} x2={leftX + boxW} y2={top} stroke="#1C1B1A" strokeWidth="0.5" />
+      <line
+        x1={leftX}
+        y1={top}
+        x2={leftX + boxW}
+        y2={top}
+        stroke="#1C1B1A"
+        strokeWidth="0.5"
+      />
       <line
         x1={leftX}
         y1={top + boxH}
@@ -37,7 +44,14 @@ export function Diagram({ className = "" }: { className?: string }) {
         stroke="#1C1B1A"
         strokeWidth="0.5"
       />
-      <line x1={rightX} y1={top} x2={rightX + boxW} y2={top} stroke="#1C1B1A" strokeWidth="0.5" />
+      <line
+        x1={rightX}
+        y1={top}
+        x2={rightX + boxW}
+        y2={top}
+        stroke="#1C1B1A"
+        strokeWidth="0.5"
+      />
       <line
         x1={rightX}
         y1={top + boxH}
@@ -53,7 +67,7 @@ export function Diagram({ className = "" }: { className?: string }) {
         fontFamily="JetBrains Mono, monospace"
         fontSize="11"
         letterSpacing="2"
-        fill="#6f6a62"
+        fill="#67625A"
       >
         01 · IDENTITY
       </text>
@@ -101,7 +115,7 @@ export function Diagram({ className = "" }: { className?: string }) {
         fontFamily="JetBrains Mono, monospace"
         fontSize="11"
         letterSpacing="2"
-        fill="#6f6a62"
+        fill="#67625A"
       >
         02 · CREDENTIALS
       </text>
@@ -181,7 +195,8 @@ export function Diagram({ className = "" }: { className?: string }) {
         fontStyle="italic"
         fill="#5C5852"
       >
-        Two contracts. No admin. The credentials side never depends on the identity side.
+        Two contracts. No admin. The credentials side never depends on the
+        identity side.
       </text>
     </svg>
   );

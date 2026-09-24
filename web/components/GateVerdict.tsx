@@ -1,4 +1,5 @@
 import { truncateAddress } from "@/lib/format";
+import { gateReason } from "@/lib/gate-reason";
 
 /**
  * GateVerdict — the product's wedge, made tactile.
@@ -56,11 +57,7 @@ export function GateVerdict({
   // the collection understands the decision without reading a capability spec.
   // Three distinct STOP reasons so the user knows whether to re-check, wait,
   // or walk away — not just "something is wrong."
-  const reason = go
-    ? "Authorized on-chain. Your agent may proceed with this counterparty."
-    : verdict.revoked
-      ? "Authorization was revoked by its issuer. Do not proceed — the credential is explicitly invalidated."
-      : "No verifiable authorization found on-chain. Your agent should not proceed.";
+  const reason = gateReason(verdict, BigInt(Math.floor(Date.now() / 1000)));
 
   return (
     <div className={`border-l-2 pl-6 ${tone}`}>
@@ -68,9 +65,9 @@ export function GateVerdict({
 
       <p className="mt-3 display text-3xl sm:text-4xl">
         <span className={verdictColor}>{go ? "✓ GO" : "✗ STOP"}</span>
-        {!go && verdict.revoked ? (
+        {!go && (reason.kind === "revoked" || reason.kind === "expired") ? (
           <span className="ml-3 align-middle font-mono text-[11px] uppercase tracking-[0.16em] text-revoke/80 border border-revoke/30 px-2 py-0.5">
-            revoked
+            {reason.kind}
           </span>
         ) : null}
       </p>
@@ -84,10 +81,11 @@ export function GateVerdict({
       </p>
 
       <p className="mt-2 font-serif text-base leading-relaxed text-ink-soft">
-        {reason}
+        {reason.text}
       </p>
 
-      {go && verdict.issuer ? (
+      {verdict.issuer &&
+      (go || reason.kind === "revoked" || reason.kind === "expired") ? (
         <p className="mt-3 font-serif text-sm italic leading-relaxed text-ink-soft">
           Issued by{" "}
           {explorerUrl ? (
@@ -105,7 +103,9 @@ export function GateVerdict({
             </code>
           )}
           {verdict.expiresAt && verdict.expiresAt > 0n
-            ? `, expires ${new Date(Number(verdict.expiresAt) * 1000)
+            ? `, ${reason.kind === "expired" ? "expired" : "expires"} ${new Date(
+                Number(verdict.expiresAt) * 1000,
+              )
                 .toLocaleDateString("en", {
                   month: "short",
                   year: "numeric",

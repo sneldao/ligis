@@ -238,7 +238,7 @@ export function CommandPalette() {
                   }`}
                 >
                   <span className="text-sm">{c.label}</span>
-                  <span className="font-mono text-[11px] tabular text-ink-quiet">
+                  <span className="font-mono text-xs tabular text-ink-quiet">
                     {c.hint}
                   </span>
                 </button>

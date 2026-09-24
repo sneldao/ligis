@@ -41,9 +41,9 @@ export function WalletGate() {
             Casper Buildathon · wallet unlocks in Casper mode
           </p>
           <p className="font-serif text-sm leading-relaxed text-ink-soft">
-            Ligis credentials are signed with secp256k1 keys generated in
-            your browser, then funded via the testnet faucet. Switch to
-            Casper to connect and run the live loop.
+            Ligis credentials are signed with secp256k1 keys generated in your
+            browser, then funded via the testnet faucet. Switch to Casper to
+            connect and run the live loop.
           </p>
         </div>
         <Link
@@ -60,25 +60,26 @@ export function WalletGate() {
   const connected = wallet.pair !== null;
   const funded = wallet.balanceMotes !== null && wallet.balanceMotes !== "0";
   const isHydrating = !wallet.hydrated;
-  const balanceLabel = wallet.balanceMotes ? formatMotes(wallet.balanceMotes) : "—";
+  const balanceLabel = wallet.balanceMotes
+    ? formatMotes(wallet.balanceMotes)
+    : "—";
 
   return (
     <div className="relative space-y-4" data-wallet-gate-root>
       <header className="flex items-baseline justify-between">
         <p className="eyebrow">Wallet · Casper Testnet</p>
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           secp256k1 · you sign
         </span>
       </header>
 
       <p className="max-w-prose font-serif text-base leading-relaxed text-ink-soft">
-        The Steward loop signs every transaction with a secp256k1 key
-        generated in this browser — no server custodian, no signing
-        relayer.{" "}
+        The Steward loop signs every transaction with a secp256k1 key generated
+        in this browser — no server custodian, no signing relayer.{" "}
         {!connected ? (
           <>
-            Connect below to generate a key, fund it once at the testnet
-            faucet, then run the loop.
+            Connect below to generate a key, fund it once at the testnet faucet,
+            then run the loop.
           </>
         ) : funded ? (
           <>Funded. Run the loop below — the wallet signs every step.</>
@@ -101,12 +102,16 @@ export function WalletGate() {
             className="border border-terra bg-paper px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:opacity-50"
             style={{ borderRadius: 0 }}
           >
-            {isHydrating ? "reading state…" : open ? "close" : "Connect wallet →"}
+            {isHydrating
+              ? "reading state…"
+              : open
+                ? "close"
+                : "Connect wallet →"}
           </button>
         ) : (
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
             <span
-              className={`font-mono text-[10px] uppercase tracking-[0.16em] ${funded ? "text-sage" : "text-sky"}`}
+              className={`font-mono text-[11px] uppercase tracking-[0.16em] ${funded ? "text-sage" : "text-sky"}`}
               aria-live="polite"
             >
               {funded ? `● ready · ${balanceLabel} cspr` : "○ awaiting funding"}
@@ -115,7 +120,7 @@ export function WalletGate() {
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-expanded={open}
-              className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+              className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
             >
               {open ? "hide wallet" : "manage wallet"}
             </button>

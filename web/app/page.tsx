@@ -85,7 +85,7 @@ export default async function HomePage({
   const capOptions = capabilities.map((c) => ({ id: c.id, label: c.label }));
   const isCasper = isCasperChain(chain);
   const sampleSubject = isCasper
-    ? "account-hash-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b"
+    ? "account-hash-c76927ed08eb9a3a2cca7ee0b730fb4cefa22551d3e5914e4d44d693762a8326"
     : "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
 
   return (
@@ -173,7 +173,7 @@ export default async function HomePage({
         <section id="verify" className="mt-16 scroll-mt-24 sm:mt-28">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">01 · The gate</p>
-            <p className="font-mono text-[11px] tabular text-ink-quiet">
+            <p className="font-mono text-xs tabular text-ink-quiet">
               live · {chain.name.toLowerCase()}
             </p>
           </header>
@@ -227,7 +227,7 @@ export default async function HomePage({
         <section id="compound" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">02 · Why it compounds</p>
-            <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
+            <p className="hidden font-mono text-xs tabular text-ink-quiet sm:block">
               network effect · the moat
             </p>
           </header>
@@ -244,50 +244,62 @@ export default async function HomePage({
               the gate. Issuers, agents, and payments pull one another toward a
               single standard.
             </p>
-            <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft">
-              That is the design intent: own the instant before money moves, and
-              the rest of agent identity &mdash; minting, rotation, revocation,
-              cross-chain portability &mdash; becomes the infrastructure that
-              feeds the gate rather than a product that competes on its own.
-            </p>
-            <ol className="mt-8 space-y-3 font-serif text-base leading-relaxed text-ink-soft">
-              <li className="flex gap-4">
-                <span className="font-mono text-[11px] tabular text-terra pt-1.5">
-                  01
+            <details className="group mt-6 border-t border-rule">
+              <summary className="cursor-pointer list-none py-4 font-mono text-xs uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+                <span className="group-open:hidden">Read the loop +</span>
+                <span className="hidden group-open:inline">
+                  Hide the loop −
                 </span>
-                <span>
-                  An agent calls the gate before paying a stranger. The read is
-                  free and stateless &mdash; no Ligis server in the path.
-                </span>
-              </li>
-              <li className="flex gap-4">
-                <span className="font-mono text-[11px] tabular text-terra pt-1.5">
-                  02
-                </span>
-                <span>
-                  Merchants and protocols require a credential to pass the gate,
-                  so they issue one. The capability set grows with the economy,
-                  not with Ligis&rsquo;s roadmap.
-                </span>
-              </li>
-              <li className="flex gap-4">
-                <span className="font-mono text-[11px] tabular text-terra pt-1.5">
-                  03
-                </span>
-                <span>
-                  More credentials mean a stranger is more likely to already be
-                  verifiable, so more agents gate by default. The loop closes
-                  &mdash; the gate becomes the standard the moment money moves.
-                </span>
-              </li>
-            </ol>
+              </summary>
+              <div className="border-t border-rule-soft pt-5">
+                <p className="font-serif text-base leading-relaxed text-ink-soft">
+                  That is the design intent: own the instant before money moves,
+                  and the rest of agent identity &mdash; minting, rotation,
+                  revocation, cross-chain portability &mdash; becomes the
+                  infrastructure that feeds the gate rather than a product that
+                  competes on its own.
+                </p>
+                <ol className="mt-8 space-y-3 font-serif text-base leading-relaxed text-ink-soft">
+                  <li className="flex gap-4">
+                    <span className="font-mono text-xs tabular text-terra pt-1.5">
+                      01
+                    </span>
+                    <span>
+                      An agent calls the gate before paying a stranger. The read
+                      is free and stateless &mdash; no Ligis server in the path.
+                    </span>
+                  </li>
+                  <li className="flex gap-4">
+                    <span className="font-mono text-xs tabular text-terra pt-1.5">
+                      02
+                    </span>
+                    <span>
+                      Merchants and protocols require a credential to pass the
+                      gate, so they issue one. The capability set grows with the
+                      economy, not with Ligis&rsquo;s roadmap.
+                    </span>
+                  </li>
+                  <li className="flex gap-4">
+                    <span className="font-mono text-xs tabular text-terra pt-1.5">
+                      03
+                    </span>
+                    <span>
+                      More credentials mean a stranger is more likely to already
+                      be verifiable, so more agents gate by default. The loop
+                      closes &mdash; the gate becomes the standard the moment
+                      money moves.
+                    </span>
+                  </li>
+                </ol>
+              </div>
+            </details>
           </div>
         </section>
 
         <section id="croo" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">03 · Check the stranger before you pay</p>
-            <p className="hidden font-mono text-[11px] tabular text-ink-quiet sm:block">
+            <p className="hidden font-mono text-xs tabular text-ink-quiet sm:block">
               CROO Agent Store · x402
             </p>
           </header>
@@ -344,13 +356,13 @@ export default async function HomePage({
           </div>
         </section>
 
-        {/* 03 — One read. Anywhere. The composability story for
+        {/* 04 — One read. Anywhere. The composability story for
             developers who want to build the check into their own
             contracts or agents. */}
         <section id="compose" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">04 · Build the check in</p>
-            <p className="font-mono text-[11px] tabular text-ink-quiet">
+            <p className="font-mono text-xs tabular text-ink-quiet">
               viem · ethers · cast · any caller
             </p>
           </header>
@@ -377,13 +389,13 @@ export default async function HomePage({
           </div>
         </section>
 
-        {/* 04 — The infrastructure. Demoted from section 03 to section 04.
+        {/* 05 — The infrastructure. Demoted from section 03 to section 05.
             This is for developers who want to understand the architecture,
             not for buyers who want to solve a problem. */}
         <section id="system" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">05 · The infrastructure</p>
-            <p className="font-mono text-[11px] tabular text-ink-quiet">
+            <p className="font-mono text-xs tabular text-ink-quiet">
               no admin · no upgrade key · no off-chain dependency
             </p>
           </header>
@@ -465,12 +477,12 @@ export default async function HomePage({
           </details>
         </section>
 
-        {/* 05 — Issue credentials. For issuers — a secondary audience.
+        {/* 06 — Issue credentials. For issuers — a secondary audience.
             Demoted to the last section. */}
         <section id="issue" className="mt-24 scroll-mt-24 sm:mt-36">
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">06 · Issue credentials</p>
-            <p className="font-mono text-[11px] tabular text-ink-quiet">
+            <p className="font-mono text-xs tabular text-ink-quiet">
               for issuers · cli · private key required
             </p>
           </header>

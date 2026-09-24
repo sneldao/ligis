@@ -20,7 +20,13 @@ function HeroTile({ address }: { address: string }) {
     const t = state.clock.elapsedTime;
     const bob = Math.sin(t * 0.5) * 0.08;
     easing.damp(group.current.position, "y", bob, 0.25, delta);
-    easing.damp(group.current.rotation, "y", Math.sin(t * 0.18) * 0.12, 0.4, delta);
+    easing.damp(
+      group.current.rotation,
+      "y",
+      Math.sin(t * 0.18) * 0.12,
+      0.4,
+      delta,
+    );
   });
 
   const px = (params.primary.cx - 0.5) * TILE_W;
@@ -38,11 +44,20 @@ function HeroTile({ address }: { address: string }) {
     <group ref={group}>
       <mesh castShadow receiveShadow position={[0, 0, -TILE_DEPTH / 2]}>
         <boxGeometry args={[TILE_W, TILE_H, TILE_DEPTH]} />
-        <meshStandardMaterial color={params.deck.paper} roughness={0.92} metalness={0} />
+        <meshStandardMaterial
+          color={params.deck.paper}
+          roughness={0.92}
+          metalness={0}
+        />
       </mesh>
       <mesh position={[gx, gy, 0.003]}>
         <circleGeometry args={[pr, 96]} />
-        <meshStandardMaterial color={params.deck.secondary} transparent opacity={0.42} roughness={1} />
+        <meshStandardMaterial
+          color={params.deck.secondary}
+          transparent
+          opacity={0.42}
+          roughness={1}
+        />
       </mesh>
       <mesh position={[px, py, 0.006]}>
         <circleGeometry args={[pr, 96]} />
@@ -50,7 +65,12 @@ function HeroTile({ address }: { address: string }) {
       </mesh>
       <mesh position={[0, bandY, 0.009]}>
         <planeGeometry args={[TILE_W, bandH]} />
-        <meshStandardMaterial color={params.deck.secondary} transparent opacity={0.88} roughness={0.9} />
+        <meshStandardMaterial
+          color={params.deck.secondary}
+          transparent
+          opacity={0.88}
+          roughness={0.9}
+        />
       </mesh>
       <mesh position={[sx, sy, 0.012]}>
         <circleGeometry args={[sr, 48]} />
@@ -98,7 +118,7 @@ function Marker({ x, y, index }: { x: number; y: number; index: number }) {
   return (
     <mesh ref={ref} position={[x, y, 0]}>
       <ringGeometry args={[0.18, 0.26, 48]} />
-      <meshBasicMaterial color="#6F8267" transparent opacity={0.85} />
+      <meshBasicMaterial color="#5A6D53" transparent opacity={0.85} />
     </mesh>
   );
 }
@@ -134,7 +154,11 @@ export function HeroScene({
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       />
-      <directionalLight position={[-5, -3, 5]} intensity={0.3} color="#d6e0d2" />
+      <directionalLight
+        position={[-5, -3, 5]}
+        intensity={0.3}
+        color="#d6e0d2"
+      />
 
       <HeroTile address={address} />
       <CredentialOrbit count={heldCount} />

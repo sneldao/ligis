@@ -61,7 +61,7 @@ function SituationRow({
     <li className="border-t border-rule py-6 first:border-t-0 sm:py-7">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[11rem_1fr_auto] lg:gap-8 lg:items-baseline">
         <div className="flex items-baseline gap-3">
-          <span className="font-mono text-[11px] tabular text-terra">
+          <span className="font-mono text-xs tabular text-terra">
             {String(index).padStart(2, "0")}
           </span>
           <div>
@@ -69,7 +69,7 @@ function SituationRow({
               {s.role}
             </p>
             {active ? (
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-sage">
+              <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-sage">
                 active
               </p>
             ) : null}
@@ -86,7 +86,7 @@ function SituationRow({
           </p>
           <dl className="mt-4 grid gap-3 sm:grid-cols-2">
             <div>
-              <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-revoke">
+              <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-revoke">
                 Without Ligis
               </dt>
               <dd className="mt-1 font-serif text-sm leading-relaxed text-ink-soft">
@@ -94,7 +94,7 @@ function SituationRow({
               </dd>
             </div>
             <div>
-              <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-sage">
+              <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-sage">
                 With Ligis
               </dt>
               <dd className="mt-1 font-serif text-sm leading-relaxed text-ink-soft">
@@ -102,7 +102,7 @@ function SituationRow({
               </dd>
             </div>
           </dl>
-          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-quiet">
+          <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
             {s.integrator}
             <span className="mx-2 text-rule">·</span>
             <code className="normal-case tracking-normal text-ink-soft">
