@@ -3,15 +3,20 @@ import type { Address, Hex } from "viem";
 import type { CapabilityChange, IssuanceLog } from "./chain";
 
 /**
- * Optional free Envio HyperIndex GraphQL endpoint.
+ * Free Envio HyperIndex GraphQL endpoint for Monad CredentialRegistry history.
  *
- * Set `LIGIS_ENVIO_GRAPHQL_URL` after deploying `packages/envio-indexer` to
- * Envio Cloud (free for Metropolis) or running `pnpm envio:dev` locally.
- * When unset, callers fall back to chunked public-RPC `eth_getLogs`.
+ * Production: HyperIndex on nuncio-vultr (see `packages/envio-indexer`).
+ * Set `LIGIS_ENVIO_GRAPHQL_URL` on Vercel / local. When unset, Monad callers
+ * fall back to chunked public-RPC `eth_getLogs` (100-block windows).
  */
 export function envioGraphqlUrl(): string | undefined {
   const url = process.env.LIGIS_ENVIO_GRAPHQL_URL?.trim();
   return url || undefined;
+}
+
+/** True when the web app will prefer Envio for Monad history reads. */
+export function envioConfigured(): boolean {
+  return Boolean(envioGraphqlUrl());
 }
 
 type GraphqlResponse<T> = {
@@ -111,6 +116,7 @@ export async function readIssuerActivityFromEnvio(): Promise<IssuanceLog | null>
     issuers,
     totalIssuances: rows.length,
     unavailable: false,
+    source: "envio",
   };
 }
 

@@ -7,9 +7,9 @@
 > **Status**: Monad testnet **proven live 2026-09-24** — credential lifecycle
 > (issue→GO→revoke→STOP) and server steward writes both green. Reuse
 > `PHAROS_DEPLOYER_KEY` / `PRIVATE_KEY` as `LIGIS_STEWARD_KEY` for funded demos
-> (`writeReady: true`). Browser wallet connect still deferred. History: public
-> RPC 100-block windows free; full history via Envio (`packages/envio-indexer`).
-> ERC-8004 / P256 still open.
+> (`writeReady: true`). Browser wallet connect still deferred. **Envio
+> HyperIndex live** for full issuer / capability history (`LIGIS_ENVIO_GRAPHQL_URL`
+> on Vercel → VPS Hasura). ERC-8004 / P256 still open.
 > **Live product today**: [ligis.vercel.app](https://ligis.vercel.app) (Casper Testnet + Pharos Atlantic + Monad testnet)
 > **Research update**: 2026-09-24, via Parallel.ai (verify claims in the rules section against the portal before submission)
 
@@ -205,11 +205,12 @@ product route. What is wired today:
   `PRIVATE_KEY` / `PHAROS_DEPLOYER_KEY`); `writeReady: true`. Connected
   MetaMask / passkey wallets are still Phase 3 (Dynamic/Privy bounty).
 - **`eth_getLogs` on Monad's public RPC is capped at 100 blocks** (measured
-  2026-09-24 — not a method rejection). Web scans 60 × 100-block windows
-  (~30 min at 300 ms) for free. **Full history:** deploy
-  `packages/envio-indexer` (HyperSync-backed, free API token) and set
-  `LIGIS_ENVIO_GRAPHQL_URL` — also the $1k Envio bounty entry. Alchemy/QuickNode
-  participant plans remain a free alternative if Envio is slow to stand up.
+  2026-09-24 — not a method rejection). Web falls back to 60 × 100-block
+  windows (~30 min at 300 ms) only when Envio is unset. **Full history is
+  live:** HyperIndex on nuncio-vultr
+  (`http://144.202.117.160:18080/v1/graphql`), wired via
+  `LIGIS_ENVIO_GRAPHQL_URL` on Vercel — also the $1k Envio bounty entry.
+  Alchemy/QuickNode participant plans remain a free alternative.
 - **The same cap broke Pharos history silently.** The Pharos RPC rejects ranges
   above 1000 blocks and the previous code requested 200,000, so issuer history
   always failed and was reported as "no issuances". The scanner is now chunked
@@ -268,10 +269,12 @@ cross-chain validity of signatures or replicated credential state.
 
 ### Next, in order
 
-1. **Stand up Envio** (`pnpm envio:dev` + free `ENVIO_API_TOKEN`, set
-   `LIGIS_ENVIO_GRAPHQL_URL`) so `/issuers` and capability timelines see full
-   Monad history — doubles as the Envio bounty entry. Public-RPC recent window
-   already works without this.
+1. **Envio HyperIndex — shipped** (2026-09-24). Indexer at `/opt/ligis-envio`
+   on nuncio-vultr; public GraphQL
+   `http://144.202.117.160:18080/v1/graphql`; Vercel
+   `LIGIS_ENVIO_GRAPHQL_URL` set so `/issuers` and agent capability history
+   read full Monad history. Token stays in `.env.d/envio.env` /
+   `/opt/ligis-envio/.env`.
 2. Film the Revocation from the live txs above (CLI is enough for the 3-min
    demo; steward path is also green).
 3. Explorer source verification (testnet now; stay on testnet until the portal
@@ -319,11 +322,11 @@ A GO/STOP API read is not visceral; judges remember moments. Tag each beat
 honestly — several still depend on the write path or P256 work below. The
 spectacle is staging of real paths, not scope expansion.
 
-| Tag                | Meaning                                         |
-| ------------------ | ----------------------------------------------- |
-| **Ready**          | Can film on Monad testnet today                 |
-| **Blocked: P256**  | Needs WebAuthn/P256 issuer + sponsored gas path |
-| **Blocked: Envio** | Needs HyperIndex for a dense history feed       |
+| Tag               | Meaning                                         |
+| ----------------- | ----------------------------------------------- |
+| **Ready**         | Can film on Monad testnet today                 |
+| **Blocked: P256** | Needs WebAuthn/P256 issuer + sponsored gas path |
+| **Ready: Envio**  | HyperIndex live + Vercel GraphQL URL wired      |
 
 1. **The Revocation (demo centerpiece, ~20s).** **Ready** — CLI
    (`pnpm demo:monad`) and steward (`pnpm demo:monad-steward`) both proven
@@ -342,17 +345,18 @@ spectacle is staging of real paths, not scope expansion.
    revoke in the **3-min technical demo** (judges who skip the optional ad
    must still feel the product); save the cinematic edit for the ≤30s
    advertisement / pitch open.
-2. **Decision-storm ledger wall.** **Blocked: Envio** for a dense history
-   feed; a thin live stream of concurrent gate reads is **Ready** once a
-   few agents hammer `isCapable`. Fullscreen feed where every gate read
+2. **Decision-storm ledger wall.** **Ready (Envio)** — dense Monad history
+   is queryable via HyperIndex; a thin live stream of concurrent gate reads
+   is also **Ready** once a few agents hammer `isCapable`. Fullscreen feed
+   where every gate read
    that has _consequences_ writes an append-only decision record — one
    storage slot per record, so a burst of parallel agents lights it up
    without contention. That is Monad's slot-level optimistic execution
    made visible. Do **not** claim "~3 decisions/sec" until a measured
    multi-writer load proves it (300 ms blocks alone are tip updates, not
    parallel throughput). Works as ambient background in the pitch video
-   and as a booth/lounge monitor. Cheap once Envio lands: same events
-   `/field` already renders, unzoomed, auto-scrolling.
+   and as a booth/lounge monitor. Cheap: same events `/issuers` and agent
+   history already render from Envio — unzoom `/field`, auto-scroll.
 3. **Stranger-pay drill, stopwatch on screen.** **Ready** for the gated
    STOP half (live `/gate` reads on Monad today). The "no gate → paid a
    scammer" loss stick is staged narrative — label it as a contrast demo,

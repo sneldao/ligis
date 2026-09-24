@@ -71,6 +71,7 @@ export type IssuanceLog = {
   totalIssuances: number;
   /** True when the history read failed, as opposed to finding no issuances. */
   unavailable: boolean;
+  source: "envio" | "rpc" | "none";
 };
 
 export type CapabilityChange = {
@@ -344,6 +345,7 @@ export async function readIssuerActivity(): Promise<IssuanceLog> {
       issuers,
       totalIssuances: issuers.reduce((s, i) => s + i.count, 0),
       unavailable: false,
+      source: "rpc",
     };
   } catch {
     return emptyIssuanceLog(true);
@@ -357,6 +359,7 @@ function emptyIssuanceLog(unavailable = false): IssuanceLog {
     issuers: [],
     totalIssuances: 0,
     unavailable,
+    source: "none",
   };
 }
 

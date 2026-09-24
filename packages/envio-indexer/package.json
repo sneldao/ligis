@@ -9,6 +9,17 @@
     "codegen": "envio codegen",
     "dev": "envio dev",
     "start": "envio start",
-    "build": "echo 'envio-indexer: install with pnpm add -D envio (see README), then pnpm codegen && pnpm start'"
+    "smoke:hypersync": "tsx scripts/smoke-hypersync.ts",
+    "build": "echo 'envio-indexer: pnpm codegen && pnpm start (needs ENVIO_API_TOKEN + Docker for local)'"
+  },
+  "devDependencies": {
+    "envio": "3.12.1",
+    "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "envio"
+    ]
   }
 }

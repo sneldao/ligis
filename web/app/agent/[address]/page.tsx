@@ -13,6 +13,7 @@ import {
   readCapabilityHistory,
   isCasperChain,
 } from "@/lib/chain-router";
+import { envioConfigured } from "@/lib/envio";
 import { getChain, type ChainNetwork } from "@/lib/network";
 import { isCasperAddress } from "@/lib/chain-casper";
 import { monthYear, truncateAddress, truncateHash } from "@/lib/format";
@@ -73,6 +74,8 @@ export default async function AgentPage({
   const history = snap.exists
     ? await readCapabilityHistory(chain, address)
     : [];
+  const historyViaEnvio = chain.id === "monad-testnet" && envioConfigured();
+  const chainQs = `?chain=${chain.id}`;
 
   return (
     <>
@@ -199,11 +202,13 @@ export default async function AgentPage({
 
         {snap.exists ? (
           <section className="mt-16 sm:mt-24">
-            <header className="flex items-baseline justify-between">
+            <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
               <p className="eyebrow">Capability history</p>
               <p className="font-mono text-xs tabular text-ink-quiet">
-                {history.length} {history.length === 1 ? "event" : "events"} ·
-                AgentCapabilityChanged
+                {history.length} {history.length === 1 ? "event" : "events"}
+                {historyViaEnvio
+                  ? " · Envio HyperIndex"
+                  : " · AgentCapabilityChanged"}
               </p>
             </header>
             <Rule className="mt-4" />
@@ -262,10 +267,22 @@ export default async function AgentPage({
                 ) : null}
               </div>
             ) : (
-              <p className="mt-6 font-serif text-base italic text-ink-quiet">
-                No capability changes recorded yet. Run the Steward loop or
-                issue credentials via the CLI to populate this history.
-              </p>
+              <div className="mt-6 max-w-xl">
+                <p className="font-serif text-base italic text-ink-quiet">
+                  No capability changes recorded yet.
+                </p>
+                <p className="mt-3 font-serif text-sm leading-relaxed text-ink-soft">
+                  {historyViaEnvio
+                    ? "Envio is indexing this chain from deploy — new issue and revoke events will appear here once they land."
+                    : "Run the Steward loop or issue credentials via the CLI to populate this history."}
+                </p>
+                <Link
+                  href={`/steward${chainQs}`}
+                  className="mt-5 inline-block text-sm text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+                >
+                  Open the steward →
+                </Link>
+              </div>
             )}
           </section>
         ) : null}
@@ -279,12 +296,12 @@ export default async function AgentPage({
               agent token, then issue the credentials its reasoning calls for.
             </p>
             <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 text-sm">
-              <a
-                href="/steward?chain=casper-testnet"
+              <Link
+                href={`/steward${chainQs}`}
                 className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
               >
-                Watch the simulation →
-              </a>
+                Watch the steward →
+              </Link>
               <a
                 href="https://github.com/sneldao/ligis#trust-steward-agent"
                 target="_blank"

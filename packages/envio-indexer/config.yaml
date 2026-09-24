@@ -11,11 +11,13 @@
 #      Or deploy to Envio Cloud and use the hosted URL (Metropolis free tier).
 name: ligis-credential-registry
 description: Indexes Ligis CredentialRegistry issue/revoke/capability events on Monad Testnet
+# Match web/lib/envio.ts subject/issuer filters (lowercase hex).
+address_format: lowercase
 contracts:
   - name: CredentialRegistry
     handler: src/EventHandlers.ts
     events:
-      - event: CredentialIssued(address indexed issuer, address indexed subject, bytes32 indexed capabilityHash, uint64 issuedAt, uint64 expiresAt, uint256 nonce)
+      - event: CredentialIssued(address indexed issuer, address indexed subject, bytes32 indexed capabilityHash, uint256 nonce, uint64 issuedAt, uint64 expiresAt)
       - event: CredentialRevoked(address indexed issuer, address indexed subject, bytes32 indexed capabilityHash, uint256 nonce, uint64 revokedAt)
       - event: AgentCapabilityChanged(address indexed subject, bytes32 indexed capabilityHash, bool capable)
 chains:

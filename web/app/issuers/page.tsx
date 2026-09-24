@@ -16,6 +16,42 @@ export const metadata = {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+function historyMeta(log: Awaited<ReturnType<typeof readIssuerActivity>>): {
+  lead: string;
+  range: string | null;
+} {
+  if (log.unavailable) {
+    return {
+      lead: `History could not be read on ${log.source === "none" ? "this chain" : "the configured indexer"} — this list is unknown, not empty.`,
+      range: null,
+    };
+  }
+
+  const countLead =
+    log.issuers.length === 0
+      ? "No issuances detected yet."
+      : `${log.issuers.length} ${log.issuers.length === 1 ? "issuer has" : "issuers have"} vouched, ${log.totalIssuances} ${log.totalIssuances === 1 ? "credential" : "credentials"} signed.`;
+
+  if (log.source === "envio") {
+    return {
+      lead: `${countLead} Full history via Envio HyperIndex.`,
+      range:
+        log.blockRange.from > 0n
+          ? `Blocks ${log.blockRange.from.toString()} → ${log.blockRange.to.toString()}${log.truncated ? " · latest 500 issuances" : ""}.`
+          : null,
+    };
+  }
+
+  return {
+    lead: countLead,
+    range: log.truncated
+      ? `Recent public-RPC window · blocks ${log.blockRange.from.toString()} → ${log.blockRange.to.toString()}.`
+      : log.blockRange.from > 0n
+        ? `Blocks ${log.blockRange.from.toString()} → ${log.blockRange.to.toString()}.`
+        : null,
+  };
+}
+
 export default async function IssuersPage({
   searchParams,
 }: {
@@ -34,7 +70,7 @@ export default async function IssuersPage({
           <div className="flex items-baseline gap-6">
             <ChainBadge chain={chain} />
             <Link
-              href="/"
+              href={`/?chain=${chain.id}`}
               className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
               ← Home
@@ -57,6 +93,8 @@ export default async function IssuersPage({
     );
   }
   const top = log.issuers.slice(0, 50);
+  const meta = historyMeta(log);
+  const chainQs = `?chain=${chain.id}`;
 
   return (
     <main className="route-shell max-w-5xl">
@@ -65,7 +103,7 @@ export default async function IssuersPage({
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
           <Link
-            href="/"
+            href={`/${chainQs}`}
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
             ← Home
@@ -84,14 +122,8 @@ export default async function IssuersPage({
           signatures make a claim independently verifiable by any caller.
         </p>
         <p className="mt-4 max-w-prose font-serif text-sm italic leading-relaxed text-ink-quiet">
-          {log.unavailable
-            ? `History is unavailable on this chain's public RPC (${chain.name}), so this list is unknown rather than empty.`
-            : log.issuers.length === 0
-              ? "No issuances detected in the scanned range yet."
-              : `${log.issuers.length} ${log.issuers.length === 1 ? "issuer has" : "issuers have"} vouched, ${log.totalIssuances} ${log.totalIssuances === 1 ? "credential" : "credentials"} signed.`}{" "}
-          {log.truncated
-            ? `Scanned blocks ${log.blockRange.from.toString()} -> ${log.blockRange.to.toString()}.`
-            : null}
+          {meta.lead}
+          {meta.range ? ` ${meta.range}` : null}
         </p>
       </section>
 
@@ -112,17 +144,27 @@ export default async function IssuersPage({
             </p>
             <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
               {log.unavailable
-                ? "The gate still works on this chain: a direct credential read answers GO or STOP. History needs a log-capable RPC or Envio (set LIGIS_ENVIO_GRAPHQL_URL — see packages/envio-indexer)."
+                ? chain.id === "monad-testnet"
+                  ? "The gate still works: a direct credential read answers GO or STOP. History needs Envio HyperIndex — confirm LIGIS_ENVIO_GRAPHQL_URL is set for this deployment."
+                  : "The gate still works on this chain: a direct credential read answers GO or STOP. History needs a log-capable RPC."
                 : "An issuer is a KYC provider, compliance service, or protocol team that can attest to what an agent is allowed to do."}
             </p>
-            <a
-              href="https://github.com/sneldao/ligis?tab=readme-ov-file#quickstart"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-5 inline-block font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline decoration-rule underline-offset-4 hover:decoration-terra"
-            >
-              Read the issuer quickstart ↗
-            </a>
+            <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 text-sm">
+              <Link
+                href={`/steward${chainQs}`}
+                className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+              >
+                Run the steward →
+              </Link>
+              <a
+                href="https://github.com/sneldao/ligis/tree/main/packages/envio-indexer"
+                target="_blank"
+                rel="noreferrer"
+                className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+              >
+                Envio indexer ↗
+              </a>
+            </div>
           </div>
         ) : (
           top.map((entry, i) => (
@@ -132,12 +174,19 @@ export default async function IssuersPage({
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="min-w-0">
-                  <AddressDisplay
-                    address={entry.issuer}
-                    copy={false}
-                    head={6}
-                    tail={4}
-                  />
+                  <a
+                    href={`${chain.explorerUrl}/address/${entry.issuer}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block transition-colors hover:text-terra"
+                  >
+                    <AddressDisplay
+                      address={entry.issuer}
+                      copy={false}
+                      head={6}
+                      tail={4}
+                    />
+                  </a>
                   <p className="mt-1 font-mono text-xs tabular text-ink-quiet sm:hidden">
                     last seen · {entry.lastSeen.toString()}
                   </p>
@@ -157,13 +206,14 @@ export default async function IssuersPage({
 
       <footer className="route-footer mt-20 text-xs text-ink-quiet sm:mt-32">
         <Link
-          href="/"
+          href={`/${chainQs}`}
           className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
         >
           ← Return to the index
         </Link>
         <span className="font-mono tabular">
           {chain.name.toLowerCase()} · chain {chain.chainId ?? chain.chainName}
+          {log.source === "envio" ? " · envio" : null}
         </span>
       </footer>
     </main>

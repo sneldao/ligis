@@ -57,7 +57,8 @@ const RPC_OVERRIDES: Record<string, string | undefined> = {
  *
  * Monad public RPC (Sep 2026) accepts `eth_getLogs` but caps the range at 100
  * blocks — not a method rejection. Deeper history is free via Envio HyperIndex
- * (`LIGIS_ENVIO_GRAPHQL_URL`); see `packages/envio-indexer/`.
+ * (`LIGIS_ENVIO_GRAPHQL_URL`); see `packages/envio-indexer/`. When Envio is
+ * configured, Monad issuer / capability history skips this RPC path entirely.
  */
 const LOG_CHUNK: Record<string, bigint> = {
   // Measured limit: 1000 blocks inclusive. 200k was requested historically and
@@ -357,6 +358,8 @@ export type IssuanceLog = {
    * "could not read". Prefer Envio GraphQL when configured.
    */
   unavailable: boolean;
+  /** Where the rows came from — drives copy on `/issuers`. */
+  source: "envio" | "rpc" | "none";
 };
 
 const CREDENTIAL_ISSUED_EVENT = {
@@ -366,9 +369,10 @@ const CREDENTIAL_ISSUED_EVENT = {
     { name: "issuer", type: "address", indexed: true },
     { name: "subject", type: "address", indexed: true },
     { name: "capabilityHash", type: "bytes32", indexed: true },
+    // Order must match CredentialRegistry.sol (topic0 depends on it).
+    { name: "nonce", type: "uint256", indexed: false },
     { name: "issuedAt", type: "uint64", indexed: false },
     { name: "expiresAt", type: "uint64", indexed: false },
-    { name: "nonce", type: "uint256", indexed: false },
   ],
 } as const;
 
@@ -447,6 +451,7 @@ export async function readIssuerActivity(
       issuers: [],
       totalIssuances: 0,
       unavailable: true,
+      source: "none",
     };
   }
 
@@ -474,6 +479,7 @@ export async function readIssuerActivity(
     issuers,
     totalIssuances: scan.logs.length,
     unavailable: false,
+    source: "rpc",
   };
 }
 
