@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useActionState, useRef } from "react";
+import { useState, useActionState, useRef, useMemo } from "react";
 import {
   verifyAction,
   batchVerifyAction,
@@ -9,7 +9,10 @@ import {
 } from "@/app/actions";
 import { GateVerdict } from "./GateVerdict";
 import { Rule } from "./Rule";
+import { ChainSwitchHint } from "./ChainSwitchHint";
 import { truncateAddress } from "@/lib/format";
+import { chainSwitchHref, subjectChainMismatch } from "@/lib/subject-format";
+import { chainById } from "@/lib/network";
 
 type CapOption = { id: string; label: string };
 
@@ -37,6 +40,21 @@ export function VerifyDemo({
   const pending = singlePending || batchPending;
   const singleFormRef = useRef<HTMLFormElement>(null);
   const batchFormRef = useRef<HTMLFormElement>(null);
+  const [subjectDraft, setSubjectDraft] = useState(defaultSubject);
+
+  const chain = chainId ? chainById(chainId) : undefined;
+  const liveMismatch = useMemo(() => {
+    if (!chain || !subjectDraft.trim()) return null;
+    return subjectChainMismatch(chain, subjectDraft);
+  }, [chain, subjectDraft]);
+
+  const switchHref = liveMismatch
+    ? chainSwitchHref({
+        path: "/",
+        chainId: liveMismatch.suggestedChainId,
+        subject: subjectDraft,
+      }) + "#verify"
+    : null;
 
   return (
     <div className="space-y-8">
@@ -86,7 +104,8 @@ export function VerifyDemo({
             <input
               id="subject"
               name="subject"
-              defaultValue={defaultSubject}
+              value={subjectDraft}
+              onChange={(e) => setSubjectDraft(e.target.value)}
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"
@@ -150,6 +169,11 @@ export function VerifyDemo({
               "verify →"
             )}
           </button>
+          {liveMismatch && switchHref ? (
+            <div className="sm:col-span-3">
+              <ChainSwitchHint mismatch={liveMismatch} href={switchHref} />
+            </div>
+          ) : null}
         </form>
       ) : (
         <form
@@ -165,7 +189,8 @@ export function VerifyDemo({
             <input
               id="subject-batch"
               name="subject"
-              defaultValue={defaultSubject}
+              value={subjectDraft}
+              onChange={(e) => setSubjectDraft(e.target.value)}
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"
@@ -199,6 +224,11 @@ export function VerifyDemo({
               "check all →"
             )}
           </button>
+          {liveMismatch && switchHref ? (
+            <div className="sm:col-span-2">
+              <ChainSwitchHint mismatch={liveMismatch} href={switchHref} />
+            </div>
+          ) : null}
         </form>
       )}
 
@@ -219,7 +249,12 @@ export function VerifyDemo({
               means your agent should not pay.
             </p>
           ) : !singleState.ok ? (
-            <ErrorRetry message={singleState.error} formRef={singleFormRef} />
+            <ErrorRetry
+              message={singleState.error}
+              formRef={singleFormRef}
+              mismatch={singleState.mismatch}
+              subject={subjectDraft}
+            />
           ) : (
             <SingleGate result={singleState} explorerUrl={explorerUrl} />
           )}
@@ -238,7 +273,12 @@ export function VerifyDemo({
               appears here. All capabilities, one on-chain read.
             </p>
           ) : !batchState.ok ? (
-            <ErrorRetry message={batchState.error} formRef={batchFormRef} />
+            <ErrorRetry
+              message={batchState.error}
+              formRef={batchFormRef}
+              mismatch={batchState.mismatch}
+              subject={subjectDraft}
+            />
           ) : (
             <BatchGate result={batchState} explorerUrl={explorerUrl} />
           )}
@@ -322,20 +362,40 @@ function BatchGate({
 function ErrorRetry({
   message,
   formRef,
+  mismatch,
+  subject,
 }: {
   message: string;
   formRef: React.RefObject<HTMLFormElement | null>;
+  mismatch?: {
+    suggestedChainId: string;
+    suggestedChainName: string;
+    message: string;
+  };
+  subject?: string;
 }) {
+  const href = mismatch
+    ? chainSwitchHref({
+        path: "/",
+        chainId: mismatch.suggestedChainId,
+        subject: subject ?? "",
+      }) + "#verify"
+    : null;
+
   return (
     <div className="space-y-3">
       <p className="font-serif text-base text-revoke">{message}</p>
-      <button
-        type="button"
-        onClick={() => formRef.current?.requestSubmit()}
-        className="inline-block py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
-      >
-        retry →
-      </button>
+      {mismatch && href ? (
+        <ChainSwitchHint mismatch={mismatch} href={href} />
+      ) : (
+        <button
+          type="button"
+          onClick={() => formRef.current?.requestSubmit()}
+          className="inline-block py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+        >
+          retry →
+        </button>
+      )}
     </div>
   );
 }

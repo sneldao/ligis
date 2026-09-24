@@ -7,12 +7,14 @@ import { DEMO_GATE_SAMPLES } from "@/lib/demo-subjects";
 import { GateVerdict } from "@/components/GateVerdict";
 import { GateStates } from "@/components/GateStates";
 import { GateFormShell } from "@/components/GateFormShell";
+import { ChainSwitchHint } from "@/components/ChainSwitchHint";
 import { JevTelemetry } from "@/components/JevTelemetry";
 import { CopyButton } from "@/components/CopyButton";
 import { Rule } from "@/components/Rule";
 import { SituationCast } from "@/components/SituationCast";
 import { SITE_URL } from "@/lib/site";
 import { getSituation, SITUATIONS } from "@/lib/situations";
+import { chainSwitchHref } from "@/lib/subject-format";
 
 export const dynamic = "force-dynamic";
 
@@ -304,10 +306,23 @@ async function Result({
   const outcome = await verifySubject(chain, subject, capability);
 
   if (!outcome.ok) {
+    const href = outcome.mismatch
+      ? chainSwitchHref({
+          path: "/gate",
+          chainId: outcome.mismatch.suggestedChainId,
+          subject,
+          capability,
+        })
+      : null;
     return (
-      <p role="alert" className="font-serif text-base text-revoke">
-        {outcome.error}
-      </p>
+      <div className="space-y-3">
+        <p role="alert" className="font-serif text-base text-revoke">
+          {outcome.error}
+        </p>
+        {outcome.mismatch && href ? (
+          <ChainSwitchHint mismatch={outcome.mismatch} href={href} />
+        ) : null}
+      </div>
     );
   }
 

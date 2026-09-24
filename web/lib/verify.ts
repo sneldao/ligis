@@ -9,9 +9,13 @@ import {
   isValidAddress,
   isCasperChain,
 } from "./chain-router";
+import {
+  subjectChainMismatch,
+  type SubjectChainMismatch,
+} from "./subject-format";
 
 export type VerificationOutcome =
-  | { ok: false; error: string }
+  | { ok: false; error: string; mismatch?: SubjectChainMismatch }
   | {
       ok: true;
       subject: string;
@@ -61,7 +65,12 @@ export async function verifySubject(
 
   const trimmed = subjectRaw.trim();
   if (!isValidAddress(chain, trimmed)) {
-    return { ok: false, error: subjectFormatError(chain) };
+    const mismatch = subjectChainMismatch(chain, trimmed);
+    return {
+      ok: false,
+      error: mismatch ? mismatch.message : subjectFormatError(chain),
+      mismatch: mismatch ?? undefined,
+    };
   }
   const subject = isCasperChain(chain) ? trimmed : getAddress(trimmed);
 

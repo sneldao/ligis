@@ -10,6 +10,7 @@ import {
 } from "@/lib/chain-router";
 import { verifySubject } from "@/lib/verify";
 import { getChain, type ChainNetwork } from "@/lib/network";
+import { subjectChainMismatch } from "@/lib/subject-format";
 
 export type CapabilityResult = {
   id: string;
@@ -31,7 +32,15 @@ export type VerifyResult =
       expiresAt: bigint | null;
       revoked: boolean;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      mismatch?: {
+        suggestedChainId: string;
+        suggestedChainName: string;
+        message: string;
+      };
+    };
 
 export type BatchVerifyResult =
   | {
@@ -40,7 +49,15 @@ export type BatchVerifyResult =
       results: CapabilityResult[];
       rpcCalls: number;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      mismatch?: {
+        suggestedChainId: string;
+        suggestedChainName: string;
+        message: string;
+      };
+    };
 
 function resolveChain(form: FormData): ChainNetwork {
   const chainId = String(form.get("chainId") ?? "").trim();
@@ -49,16 +66,20 @@ function resolveChain(form: FormData): ChainNetwork {
 
 export async function verifyAction(
   _prev: VerifyResult | null,
-  form: FormData
+  form: FormData,
 ): Promise<VerifyResult> {
   const chain = resolveChain(form);
   const subjectRaw = String(form.get("subject") ?? "").trim();
   const capabilityId = String(form.get("capability") ?? "").trim();
 
   if (!isValidAddress(chain, subjectRaw)) {
+    const mismatch = subjectChainMismatch(chain, subjectRaw);
     return {
       ok: false,
-      error: `Subject must be a valid ${isCasperChain(chain) ? "Casper account hash (account-hash-...)" : "0x-prefixed 20-byte address"}.`,
+      error: mismatch
+        ? mismatch.message
+        : `Subject must be a valid ${isCasperChain(chain) ? "Casper account hash (account-hash-...)" : "0x-prefixed 20-byte address"}.`,
+      mismatch: mismatch ?? undefined,
     };
   }
 
@@ -67,15 +88,19 @@ export async function verifyAction(
 
 export async function batchVerifyAction(
   _prev: BatchVerifyResult | null,
-  form: FormData
+  form: FormData,
 ): Promise<BatchVerifyResult> {
   const chain = resolveChain(form);
   const subjectRaw = String(form.get("subject") ?? "").trim();
 
   if (!isValidAddress(chain, subjectRaw)) {
+    const mismatch = subjectChainMismatch(chain, subjectRaw);
     return {
       ok: false,
-      error: `Subject must be a valid ${isCasperChain(chain) ? "Casper account hash (account-hash-...)" : "0x-prefixed 20-byte address"}.`,
+      error: mismatch
+        ? mismatch.message
+        : `Subject must be a valid ${isCasperChain(chain) ? "Casper account hash (account-hash-...)" : "0x-prefixed 20-byte address"}.`,
+      mismatch: mismatch ?? undefined,
     };
   }
 
@@ -97,7 +122,9 @@ export async function batchVerifyAction(
             expiresAt: null,
           };
         }
-        const view = await routerReadCredential(chain, subject, cap.hash).catch(() => null);
+        const view = await routerReadCredential(chain, subject, cap.hash).catch(
+          () => null,
+        );
         return {
           id: cap.id,
           label: cap.label,
@@ -106,7 +133,7 @@ export async function batchVerifyAction(
           issuer: view?.issuer ?? null,
           expiresAt: view?.expiresAt ?? null,
         };
-      })
+      }),
     );
 
     return {

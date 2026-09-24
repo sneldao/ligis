@@ -5,7 +5,6 @@ import { Diagram } from "@/components/Diagram";
 import { GateStates } from "@/components/GateStates";
 import { Rule } from "@/components/Rule";
 import { SituationCast } from "@/components/SituationCast";
-import { Snippet } from "@/components/Snippet";
 import { VerifyDemo } from "@/components/VerifyDemo";
 import { capabilities } from "@/lib/chain";
 import {
@@ -17,40 +16,6 @@ import {
 import { getChain, type ChainNetwork } from "@/lib/network";
 
 export const dynamic = "force-dynamic";
-
-const SNIPPET = `import { readContract } from "viem";
-
-// One on-chain read. No SDK. Any contract or agent can do this.
-const ok = await readContract({
-  address: credentialRegistry,
-  abi: CREDENTIAL_REGISTRY_ABI,
-  functionName: "isCapable",
-  args: [subject, capabilityHash],
-});
-
-if (!ok) throw new Error("Counterparty not authorized. Aborting.");`;
-
-const CROO_SNIPPET = [
-  'import { LigisCrooRequester } from "@ligis/croo-adapter";',
-  "",
-  "// Before your agent pays a stranger, ask Ligis if it's safe.",
-  'const ligis = new LigisCrooRequester({ sdkKey: "croo_sk_..." });',
-  "",
-  'const report = await ligis.request("ligis.risk", {',
-  '  subject: "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",',
-  '  capabilities: ["kyc.basic", "agent.commerce.escrow"],',
-  "  minTtlSeconds: 86400, // require 24h remaining",
-  "});",
-  "",
-  'if (report.overallVerdict === "fail") {',
-  "  // Hard stop. The counterparty can't prove it's authorized.",
-  '  throw new Error("Counterparty failed risk check: " + report.summary);',
-  "}",
-  "",
-  "// report.riskScore      -> 0-100 (higher is safer)",
-  "// report.breakdown      -> { capabilityWeighted, ttlHealth, ... }",
-  "// report.signals        -> [{ code, detail }, ...]",
-].join("\n");
 
 async function liveStats(chain: ChainNetwork) {
   if (!chain.live) {
@@ -296,105 +261,32 @@ export default async function HomePage({
           </div>
         </section>
 
-        <section id="croo" className="mt-24 scroll-mt-24 sm:mt-36">
-          <header className="flex items-baseline justify-between">
-            <p className="eyebrow">03 · Check the stranger before you pay</p>
-            <p className="hidden font-mono text-xs tabular text-ink-quiet sm:block">
-              CROO Agent Store · x402
-            </p>
-          </header>
-          <Rule className="mt-4" />
-          <div className="mt-8 sm:mt-10">
-            <h2 className="display max-w-xl text-3xl text-ink">
-              Spend cents before you send thousands.
-            </h2>
-            <div className="mt-8 grid gap-4 border-y border-rule py-5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet sm:grid-cols-3 sm:gap-8">
-              <span>
-                <b className="mr-2 font-mono font-normal text-terra">01</b>find
-                a counterparty
-              </span>
-              <span>
-                <b className="mr-2 font-mono font-normal text-terra">02</b>check
-                its credentials
-              </span>
-              <span>
-                <b className="mr-2 font-mono font-normal text-terra">03</b>pay
-                or stop
-              </span>
-            </div>
-            <p className="mt-6 max-w-2xl font-serif text-base leading-relaxed text-ink-soft">
-              Ask Ligis for a counterparty risk report before your agent pays.
-              It returns a score, verdict, and the reasons behind it.
-            </p>
-            <details className="group mt-6 border-t border-rule">
-              <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
-                <span className="group-open:hidden">
-                  See CROO services, pricing &amp; integration +
-                </span>
-                <span className="hidden group-open:inline">
-                  Close integration details −
-                </span>
-              </summary>
-              <div className="border-t border-rule-soft pb-6 pt-5">
-                <p className="font-serif text-sm leading-relaxed text-ink-soft">
-                  <code className="font-mono text-ink">ligis.risk</code> $0.75 ·{" "}
-                  <code className="font-mono text-ink">ligis.verify</code> $0.50
-                  · <code className="font-mono text-ink">ligis.issue</code>{" "}
-                  $2.00 · <code className="font-mono text-ink">ligis.gate</code>{" "}
-                  $1.00
-                </p>
-                <div className="mt-6">
-                  <Snippet code={CROO_SNIPPET} lang="ts" />
-                </div>
-                <p className="mt-5 max-w-2xl font-serif text-sm italic leading-relaxed text-ink-quiet">
-                  Critical capabilities count more heavily; short-lived or newly
-                  issued credentials lower confidence. A critical credential
-                  below the required TTL is a hard stop.
-                </p>
-              </div>
-            </details>
-          </div>
-        </section>
+        {/* Secondary paths — full CROO / compose write-ups live on their own
+            routes so the landing stays within ~two screens past the gate. */}
+        <nav
+          aria-label="Also"
+          className="mt-20 flex flex-wrap items-baseline gap-x-8 gap-y-3 border-t border-rule pt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet sm:mt-28"
+        >
+          <span className="text-ink-quiet">Also</span>
+          <Link
+            href={`/croo?chain=${chain.id}`}
+            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+          >
+            CROO · risk before you pay →
+          </Link>
+          <Link
+            href={`/compose?chain=${chain.id}`}
+            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+          >
+            Build the check in →
+          </Link>
+        </nav>
 
-        {/* 04 — One read. Anywhere. The composability story for
-            developers who want to build the check into their own
-            contracts or agents. */}
-        <section id="compose" className="mt-24 scroll-mt-24 sm:mt-36">
+        {/* 03 — The infrastructure. Demoted; for developers who want the
+            architecture, not buyers solving a payment moment. */}
+        <section id="system" className="mt-20 scroll-mt-24 sm:mt-28">
           <header className="flex items-baseline justify-between">
-            <p className="eyebrow">04 · Build the check in</p>
-            <p className="font-mono text-xs tabular text-ink-quiet">
-              viem · ethers · cast · any caller
-            </p>
-          </header>
-          <Rule className="mt-4" />
-          <div className="mt-8 max-w-2xl sm:mt-10">
-            <h2 className="display text-3xl text-ink">One read. Anywhere.</h2>
-            <p className="mt-5 font-serif text-base leading-relaxed text-ink">
-              Call <code className="font-mono">isCapable</code> from any
-              contract, agent, or script. No Ligis account, SDK, or API key.
-            </p>
-            <details className="group mt-6 border-y border-rule">
-              <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
-                <span className="group-open:hidden">
-                  Show the viem example +
-                </span>
-                <span className="hidden group-open:inline">
-                  Hide the viem example −
-                </span>
-              </summary>
-              <div className="border-t border-rule-soft py-5">
-                <Snippet code={SNIPPET} />
-              </div>
-            </details>
-          </div>
-        </section>
-
-        {/* 05 — The infrastructure. Demoted from section 03 to section 05.
-            This is for developers who want to understand the architecture,
-            not for buyers who want to solve a problem. */}
-        <section id="system" className="mt-24 scroll-mt-24 sm:mt-36">
-          <header className="flex items-baseline justify-between">
-            <p className="eyebrow">05 · The infrastructure</p>
+            <p className="eyebrow">03 · The infrastructure</p>
             <p className="font-mono text-xs tabular text-ink-quiet">
               no admin · no upgrade key · no off-chain dependency
             </p>
@@ -477,11 +369,10 @@ export default async function HomePage({
           </details>
         </section>
 
-        {/* 06 — Issue credentials. For issuers — a secondary audience.
-            Demoted to the last section. */}
-        <section id="issue" className="mt-24 scroll-mt-24 sm:mt-36">
+        {/* 04 — Issue credentials. For issuers — secondary audience. */}
+        <section id="issue" className="mt-20 scroll-mt-24 sm:mt-28">
           <header className="flex items-baseline justify-between">
-            <p className="eyebrow">06 · Issue credentials</p>
+            <p className="eyebrow">04 · Issue credentials</p>
             <p className="font-mono text-xs tabular text-ink-quiet">
               for issuers · cli · private key required
             </p>
@@ -497,7 +388,7 @@ export default async function HomePage({
                 the CLI because only a controller or authorized issuer can sign.
               </p>
               <Link
-                href="/issuers"
+                href={`/issuers?chain=${chain.id}`}
                 className="mt-5 inline-block font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline decoration-rule underline-offset-4 hover:decoration-terra"
               >
                 Open issuer guide →
@@ -543,22 +434,34 @@ ligis sign \\
         <footer className="mt-24 flex flex-col gap-4 border-t border-rule pt-5 text-xs text-ink-quiet sm:mt-32 sm:flex-row sm:items-baseline sm:justify-between">
           <span className="flex flex-wrap items-baseline gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em]">
             <Link
-              href="/steward"
+              href={`/steward?chain=${chain.id}`}
               className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
               Steward
             </Link>
             <Link
-              href="/capabilities"
+              href={`/capabilities?chain=${chain.id}`}
               className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
               Capabilities
             </Link>
             <Link
-              href="/issuers"
+              href={`/issuers?chain=${chain.id}`}
               className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
               Issuers
+            </Link>
+            <Link
+              href={`/croo?chain=${chain.id}`}
+              className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              CROO
+            </Link>
+            <Link
+              href={`/compose?chain=${chain.id}`}
+              className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              Compose
             </Link>
             <Link
               href="/embed"

@@ -193,10 +193,14 @@ product route. What is wired today:
   (the Public id `pharos-atlantic` does not match the config key
   `atlantic-testnet`). This mismatch silently served Pharos data under a Monad
   label before it was fixed, and is now covered by `web/test/network.test.ts`.
-- Verified live: `/gate` returns `✓ GO` on Monad for `rwa.accredited` and
-  `✗ STOP` for an unheld `kyc.basic`; the landing page shows Monad's own
-  contract addresses; `/agent/…?chain=monad-testnet` shows token #1 and the held
-  credential. Pharos and Casper were regression-checked and unchanged.
+- Verified live: `/gate?chain=monad-testnet` — **verified agent**
+  (`agent.commerce.escrow` → `✓ GO`), **revoked credential**
+  (`demo.metropolis.revocation` → `✗ STOP` with revoked reason), **unverified
+  wallet** → STOP with no credential. Samples are listed under "or try:" and
+  guarded by `pnpm smoke:demo-credentials` (weekly CI). `/issuers` and agent
+  capability history read full Monad history via Envio when
+  `LIGIS_ENVIO_GRAPHQL_URL` is set. Pharos and Casper were regression-checked
+  and unchanged.
 
 ### Known limitations (verify before judging)
 
@@ -274,9 +278,13 @@ cross-chain validity of signatures or replicated credential state.
    `http://144.202.117.160:18080/v1/graphql`; Vercel
    `LIGIS_ENVIO_GRAPHQL_URL` set so `/issuers` and agent capability history
    read full Monad history. Token stays in `.env.d/envio.env` /
-   `/opt/ligis-envio/.env`.
+   `/opt/ligis-envio/.env`. Live revoked STOP fixture on `/gate`
+   (`demo.metropolis.revocation`); design lint + SSR smoke + weekly credential
+   smoke in CI (`pnpm lint:design`, `pnpm smoke:ssr`,
+   `pnpm smoke:demo-credentials`).
 2. Film the Revocation from the live txs above (CLI is enough for the 3-min
-   demo; steward path is also green).
+   demo; steward path is also green — or click **revoked credential** on
+   `/gate?chain=monad-testnet`).
 3. Explorer source verification (testnet now; stay on testnet until the portal
    says otherwise).
 4. ERC-8004 registration as the Monad-native hook + P256/WebAuthn issuer —

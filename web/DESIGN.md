@@ -60,9 +60,9 @@ and reach for typography, whitespace, and hairlines instead.
 - The home page is editorial, not a dashboard. Stats appear inline as numerals
   in prose ("1,247 agents minted on Pharos Atlantic"), not as tiles.
 - **Home-page hierarchy**: lead with the trust decision and a live registry
-  check. Risk, integration, contracts, and issuance are secondary paths:
-  reveal code samples, price lists, addresses, and CLI walkthroughs only when
-  a visitor explicitly opens their detail. The home page is not a README.
+  check. Risk (CROO) and integration (`/compose`) are own routes linked from
+  a short “Also” row — not inline sections. Contracts and issuance stay
+  secondary on the landing, behind details. The home page is not a README.
 - **Three modes, never one scrolling page**: Ligis is landing, field, and app.
   They do not share a surface or an input model.
   - **Landing (`/`)**: editorial paper. Trust decision first. A framed

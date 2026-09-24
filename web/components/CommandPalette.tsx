@@ -47,7 +47,13 @@ const STATIC: Command[] = [
   { id: "issuers", label: "Issuers", hint: "/issuers", href: "/issuers" },
   { id: "steward", label: "Steward", hint: "/steward", href: "/steward" },
   { id: "embed", label: "Embed", hint: "/embed", href: "/embed" },
-  { id: "croo", label: "CROO Agent Store", hint: "/#croo", href: "/#croo" },
+  { id: "croo", label: "CROO Agent Store", hint: "/croo", href: "/croo" },
+  {
+    id: "compose",
+    label: "Build the check in",
+    hint: "/compose",
+    href: "/compose",
+  },
   {
     id: "design",
     label: "Design system",

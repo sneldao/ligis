@@ -4,18 +4,20 @@ import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
   useTransition,
   type FormEvent,
   type ReactNode,
 } from "react";
+import { ChainSwitchHint } from "@/components/ChainSwitchHint";
 import { capabilities } from "@/lib/capabilities-client";
+import { chainById } from "@/lib/network";
+import { chainSwitchHref, subjectChainMismatch } from "@/lib/subject-format";
 
 /**
- * Client shell for /gate: immediate "reading chain…" feedback on submit.
- * Server `loading.tsx` still covers cold navigations; this covers the form
- * path where the previous verdict would otherwise sit still while the next
- * RSC payload waits on RPC.
+ * Client shell for /gate: immediate "reading chain…" feedback on submit,
+ * plus a live wrong-chain hint when the pasted subject belongs elsewhere.
  */
 export function GateFormShell({
   chainId,
@@ -30,19 +32,40 @@ export function GateFormShell({
   situationId?: string;
   defaultSubject: string;
   defaultCapability: string;
-  /** Pre-rendered sample "or try:" links from the server. */
   sampleLinks: ReactNode;
-  /** Optional override; defaults to the shared catalog. */
   capabilityOptions?: ReadonlyArray<{ id: string }>;
   children: ReactNode;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [reading, setReading] = useState(false);
+  const [subjectDraft, setSubjectDraft] = useState(defaultSubject);
+  const [capabilityDraft, setCapabilityDraft] = useState(defaultCapability);
 
   useEffect(() => {
     setReading(false);
   }, [children]);
+
+  useEffect(() => {
+    setSubjectDraft(defaultSubject);
+    setCapabilityDraft(defaultCapability);
+  }, [defaultSubject, defaultCapability]);
+
+  const chain = chainById(chainId);
+  const liveMismatch = useMemo(() => {
+    if (!chain || !subjectDraft.trim()) return null;
+    return subjectChainMismatch(chain, subjectDraft);
+  }, [chain, subjectDraft]);
+
+  const switchHref = liveMismatch
+    ? chainSwitchHref({
+        path: "/gate",
+        chainId: liveMismatch.suggestedChainId,
+        subject: subjectDraft,
+        capability: capabilityDraft,
+        situation: situationId,
+      })
+    : null;
 
   const navigate = useCallback(
     (subject: string, capability: string) => {
@@ -94,8 +117,8 @@ export function GateFormShell({
             <input
               id="subject"
               name="subject"
-              key={`subject-${defaultSubject}`}
-              defaultValue={defaultSubject}
+              value={subjectDraft}
+              onChange={(e) => setSubjectDraft(e.target.value)}
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"
@@ -109,8 +132,8 @@ export function GateFormShell({
               <select
                 id="capability"
                 name="capability"
-                key={`cap-${defaultCapability}`}
-                defaultValue={defaultCapability}
+                value={capabilityDraft}
+                onChange={(e) => setCapabilityDraft(e.target.value)}
                 disabled={busy}
                 className="block w-full appearance-none border-0 border-b border-rule bg-transparent pb-2 pr-6 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
               >
@@ -143,6 +166,11 @@ export function GateFormShell({
           >
             {busy ? "reading…" : "gate →"}
           </button>
+          {liveMismatch && switchHref ? (
+            <div className="sm:col-span-3">
+              <ChainSwitchHint mismatch={liveMismatch} href={switchHref} />
+            </div>
+          ) : null}
         </form>
         {sampleLinks}
       </section>
