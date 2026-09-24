@@ -43,6 +43,13 @@ export async function readTotalSupply(chain: ChainNetwork): Promise<bigint> {
   return evm.readTotalSupply(evmNetworkKey(chain));
 }
 
+export async function readOwnerOf(
+  tokenId: bigint,
+  networkId: string,
+): Promise<`0x${string}`> {
+  return evm.readOwnerOf(tokenId, networkId);
+}
+
 export async function isCapable(
   chain: ChainNetwork,
   subject: string,

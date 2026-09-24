@@ -37,6 +37,7 @@
     "demo:monad": "tsx scripts/monad-lifecycle-demo.ts",
     "demo:monad-steward": "tsx scripts/monad-steward-smoke.ts",
     "smoke:demo-credentials": "tsx scripts/smoke-demo-credentials.ts",
+    "seed:field": "tsx scripts/seed-field-agents.ts",
     "lint:design": "node scripts/lint-design.mjs",
     "smoke:ssr": "node scripts/smoke-ssr.mjs",
     "envio:codegen": "pnpm --filter @ligis/envio-indexer codegen",

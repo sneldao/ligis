@@ -25,14 +25,14 @@ export function FieldChrome() {
       <div className="absolute inset-x-0 bottom-6 flex flex-col items-center px-5 text-center sm:bottom-10">
         {far ? (
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet">
-            zoom in to resolve identities · esc leaves
+            zoom in · terra rings are live · esc leaves
           </p>
         ) : hint ? (
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet">
             <span className="hidden sm:inline">
-              drag · scroll · pinch · esc leaves
+              click a LIVE specimen · esc clears · esc again leaves
             </span>
-            <span className="sm:hidden">drag · pinch · esc leaves</span>
+            <span className="sm:hidden">tap LIVE · esc leaves</span>
           </p>
         ) : (
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-quiet">

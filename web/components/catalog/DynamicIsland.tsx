@@ -2,12 +2,30 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { rigState, setActiveId, useCatalogUi, CATALOG_CONFIG } from "./catalogState";
+import {
+  CATALOG_CONFIG,
+  fieldChainId,
+  rigState,
+  setActiveId,
+  useCatalogUi,
+} from "./catalogState";
+import { getFieldLiveAgents } from "./catalogState";
+import { isInteractiveAgent } from "./agentSeed";
 import { truncateAddress } from "@/lib/format";
 
-export function DynamicIsland({ totalCount }: { totalCount: number }) {
+export function DynamicIsland() {
   const ui = useCatalogUi();
   const active = ui.activeId;
+  const liveCount = ui.liveCount;
+  const chainQs = fieldChainId
+    ? `?chain=${encodeURIComponent(fieldChainId)}`
+    : "";
+  const liveAgent = active
+    ? getFieldLiveAgents().find(
+        (a) => a.address.toLowerCase() === active.toLowerCase(),
+      )
+    : undefined;
+  const canOpen = Boolean(liveAgent && isInteractiveAgent(liveAgent));
 
   return (
     <div className="pointer-events-none fixed inset-x-0 top-6 z-30 flex justify-center px-4">
@@ -22,24 +40,30 @@ export function DynamicIsland({ totalCount }: { totalCount: number }) {
             <motion.div
               key="focused"
               layout
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               className="flex items-center gap-x-6"
             >
               <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/80">
-                focused
+                {canOpen ? "focused" : "ghost"}
               </span>
               <span className="font-mono text-sm tabular text-paper">
                 {truncateAddress(active, 6, 4)}
               </span>
-              <a
-                href={`/agent/${active}`}
-                className="font-mono text-[11px] uppercase tracking-[0.18em] text-terra hover:text-paper"
-              >
-                open ↗
-              </a>
+              {canOpen ? (
+                <a
+                  href={`/agent/${encodeURIComponent(active)}${chainQs}`}
+                  className="font-mono text-[11px] uppercase tracking-[0.18em] text-terra hover:text-paper"
+                >
+                  open ↗
+                </a>
+              ) : (
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/70">
+                  not minted
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -57,23 +81,20 @@ export function DynamicIsland({ totalCount }: { totalCount: number }) {
             <motion.div
               key="idle"
               layout
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               className="flex items-center gap-x-6"
             >
               <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/80">
-                Ligis · catalog
+                Ligis · field
               </span>
               <span className="font-mono text-sm tabular text-paper">
-                {totalCount.toString().padStart(2, "0")} agents
+                {liveCount.toString().padStart(2, "0")} live
               </span>
               <span className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/70 sm:inline">
-                drag · scroll · WASD · click
-              </span>
-              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper-deep/70 sm:hidden">
-                drag · pinch · tap
+                drag · scroll · click a live specimen
               </span>
             </motion.div>
           )}
@@ -89,35 +110,14 @@ export function EscListener() {
     if (!ui.activeId) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
         setActiveId(null);
         rigState.target.set(0, 0, 0);
-        rigState.zoom = CATALOG_CONFIG.zoomOut;
+        rigState.zoom = CATALOG_CONFIG.zoomDefault;
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [ui.activeId]);
   return null;
-}
-
-export function ScrollHint() {
-  const [hidden, setHidden] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setHidden(window.scrollY > 80);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-  if (hidden) return null;
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.8, duration: 0.6 }}
-      className="pointer-events-none fixed inset-x-0 bottom-8 z-20 hidden justify-center sm:flex"
-    >
-      <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-quiet">
-        scroll for the spec sheet ↓
-      </span>
-    </motion.div>
-  );
 }

@@ -5,10 +5,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
+import type { CatalogAgent } from "./agentSeed";
+import { DynamicIsland, EscListener } from "./DynamicIsland";
 import { FieldChrome } from "./FieldChrome";
+import { FocusPanel } from "./FocusPanel";
 import { QuietField } from "./QuietField";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
-import { resetRig, setFieldChainId } from "./catalogState";
+import {
+  resetRig,
+  setFieldChainId,
+  setFieldLiveAgents,
+  ui,
+} from "./catalogState";
 
 const CatalogScene = dynamic(
   () => import("./CatalogScene").then((module) => module.CatalogScene),
@@ -46,8 +54,40 @@ export function FieldExperience({
   useEffect(() => {
     setFieldChainId(chainId);
     if (fresh) resetRig();
-    return () => setFieldChainId(null);
+    return () => {
+      setFieldChainId(null);
+      setFieldLiveAgents([]);
+    };
   }, [chainId, fresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/field/agents?chain=${encodeURIComponent(chainId)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const agents: CatalogAgent[] = Array.isArray(data.agents)
+          ? data.agents.map(
+              (
+                a: { address: string; tokenId?: string; origin?: string },
+                i: number,
+              ) => ({
+                address: a.address,
+                tokenId: a.tokenId,
+                origin: "live" as const,
+                index: i,
+              }),
+            )
+          : [];
+        setFieldLiveAgents(agents);
+      })
+      .catch(() => {
+        if (!cancelled) setFieldLiveAgents([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [chainId]);
 
   useEffect(() => {
     setWebglOk(checkWebGL());
@@ -61,6 +101,7 @@ export function FieldExperience({
       if (e.defaultPrevented) return;
       if (document.querySelector('[role="dialog"]')) return;
       if (document.querySelector('[aria-expanded="true"]')) return;
+      if (ui.activeId) return;
       e.preventDefault();
       router.push(leaveHref);
     };
@@ -92,6 +133,9 @@ export function FieldExperience({
           </p>
         </div>
       )}
+      <DynamicIsland />
+      <EscListener />
+      <FocusPanel />
       <FieldChrome />
     </div>
   );

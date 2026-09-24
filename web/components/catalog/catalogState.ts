@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { Vector3 } from "three";
+import type { CatalogAgent } from "./agentSeed";
 
 export type CatalogState = {
   target: Vector3;
@@ -27,13 +28,27 @@ export const ui = {
   activeId: null as string | null,
   hoveredId: null as string | null,
   filter: "all" as "all" | "real",
+  liveCount: 0,
 };
 
 /** Chain id for field → agent navigation. Set by FieldExperience. */
 export let fieldChainId: string | null = null;
 
+/** Live minted agents for the current chain. */
+let fieldLiveAgents: CatalogAgent[] = [];
+
 export function setFieldChainId(id: string | null) {
   fieldChainId = id;
+}
+
+export function getFieldLiveAgents(): CatalogAgent[] {
+  return fieldLiveAgents;
+}
+
+export function setFieldLiveAgents(agents: CatalogAgent[]) {
+  fieldLiveAgents = agents;
+  ui.liveCount = agents.length;
+  notify();
 }
 
 function notify() {
@@ -53,6 +68,12 @@ export function setActiveId(id: string | null) {
   ui.activeId = id;
   rigState.activeId = id;
   notify();
+}
+
+export function focusAgent(id: string, pos: [number, number, number]) {
+  setActiveId(id);
+  rigState.target.set(pos[0], pos[1], 0);
+  rigState.zoom = CATALOG_CONFIG.zoomIn;
 }
 
 export function setHoveredId(id: string | null) {

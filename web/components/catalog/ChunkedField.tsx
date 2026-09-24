@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { AgentTile } from "./AgentTile";
+import { useCatalogUi } from "./catalogState";
 import {
   CHUNK_SIZE,
   chunkContents,
@@ -12,6 +13,7 @@ import {
 
 export function ChunkedField() {
   const { camera } = useThree();
+  const ui = useCatalogUi();
   const [center, setCenter] = useState({ cx: 0, cy: 0, radius: 1 });
   const lastCheck = useRef(0);
 
@@ -33,11 +35,17 @@ export function ChunkedField() {
   );
 
   const far = center.radius > 1;
+  const liveKey = ui.liveCount;
 
   return (
     <>
       {chunks.map((c) => (
-        <Chunk key={`${c.cx},${c.cy}`} cx={c.cx} cy={c.cy} stagger={!far} />
+        <Chunk
+          key={`${c.cx},${c.cy},${liveKey}`}
+          cx={c.cx}
+          cy={c.cy}
+          stagger={!far}
+        />
       ))}
     </>
   );

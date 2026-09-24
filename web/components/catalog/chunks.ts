@@ -1,12 +1,11 @@
 import { keccak256, toBytes, type Address } from "viem";
-import type { CatalogAgent } from "./agentSeed";
+import { type CatalogAgent } from "./agentSeed";
 import type { CatalogPosition } from "./positions";
+import { getFieldLiveAgents } from "./catalogState";
 
 export const CHUNK_SIZE = 16;
 export const AGENTS_PER_CHUNK = 6;
 export const RENDER_RADIUS = 1;
-
-const PINNED_REAL: Address = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
 
 export type ChunkAgent = {
   agent: CatalogAgent;
@@ -47,17 +46,55 @@ function placeInChunk(
   return { pos: [x, y, z], bobPhase, bobAmp, rotZ, rotX };
 }
 
-export function chunkContents(cx: number, cy: number): ChunkAgent[] {
-  const out: ChunkAgent[] = [];
+/** Deterministic spiral around origin for live agents. */
+export function layoutLiveAgent(
+  agent: CatalogAgent,
+  index: number,
+  total: number,
+): CatalogPosition {
+  const b = hashBytes(`live:${agent.address.toLowerCase()}`);
+  const ring = Math.floor(Math.sqrt(index));
+  const ringIndex = index - ring * ring;
+  const ringCount = Math.max(1, 2 * ring + 1);
+  const angle =
+    (ringIndex / ringCount) * Math.PI * 2 + ((b[0]! - 128) / 255) * 0.2;
+  const radius = ring * 3.4 + (total <= 1 ? 0 : 1.2);
+  const x = Math.cos(angle) * radius + ((b[1]! - 128) / 255) * 0.6;
+  const y = Math.sin(angle) * radius + ((b[2]! - 128) / 255) * 0.6;
+  const z = ((b[3]! - 128) / 255) * 4;
+  return {
+    pos: [x, y, z],
+    bobPhase: (b[4]! / 255) * Math.PI * 2,
+    bobAmp: 0.06 + (b[5]! / 255) * 0.1,
+    rotZ: ((b[6]! - 128) / 255) * 0.05,
+    rotX: ((b[7]! - 128) / 255) * 0.03,
+  };
+}
 
+export function chunkContents(cx: number, cy: number): ChunkAgent[] {
+  const live = getFieldLiveAgents();
+  const out: ChunkAgent[] = [];
   const isOrigin = cx === 0 && cy === 0;
-  if (isOrigin) {
-    const realBytes = hashBytes(`pin:real:${PINNED_REAL.toLowerCase()}`);
+
+  if (isOrigin && live.length > 0) {
+    live.forEach((agent, i) => {
+      out.push({
+        agent,
+        layout: layoutLiveAgent(agent, i, live.length),
+      });
+    });
+    return out;
+  }
+
+  // Ambient density — phantoms only, never deep-linked as dossiers.
+  if (isOrigin && live.length === 0) {
+    // Empty registry: one quiet hint marker at origin (still phantom).
+    const hintAddr = addressFromSeed("ligis:empty-field-hint");
     out.push({
-      agent: { address: PINNED_REAL, origin: "deployer", index: 0 },
+      agent: { address: hintAddr, origin: "phantom", index: 0 },
       layout: {
         pos: [0, 0, 0],
-        bobPhase: (realBytes[3]! / 255) * Math.PI * 2,
+        bobPhase: 0,
         bobAmp: 0.08,
         rotZ: 0,
         rotX: 0,
@@ -65,8 +102,8 @@ export function chunkContents(cx: number, cy: number): ChunkAgent[] {
     });
   }
 
-  const startIndex = isOrigin ? 1 : 0;
-  for (let i = startIndex; i < AGENTS_PER_CHUNK; i++) {
+  for (let i = 0; i < AGENTS_PER_CHUNK; i++) {
+    if (isOrigin && live.length === 0 && i === 0) continue;
     const seed = `ligis:chunk:${cx}:${cy}:agent:${i}`;
     const address = addressFromSeed(seed);
     const bytes = hashBytes(seed);

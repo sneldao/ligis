@@ -5,15 +5,15 @@ import { useFrame } from "@react-three/fiber";
 import type { Group, Material, Mesh } from "three";
 import { easing } from "maath";
 import { Text } from "@react-three/drei";
-import { useRouter } from "next/navigation";
 import { portraitParams } from "@/lib/portrait";
 import {
   CATALOG_CONFIG,
-  fieldChainId,
+  focusAgent,
   rigState,
+  setActiveId,
   setHoveredId,
 } from "./catalogState";
-import type { CatalogAgent } from "./agentSeed";
+import { isInteractiveAgent, type CatalogAgent } from "./agentSeed";
 import type { CatalogPosition } from "./positions";
 
 const PORTRAIT_W = 2.6;
@@ -32,7 +32,6 @@ function clamp01(n: number) {
 }
 
 export function AgentTile({ agent, layout, enterDelay }: Props) {
-  const router = useRouter();
   const group = useRef<Group>(null);
   const specimen = useRef<Group>(null);
   const marker = useRef<Mesh>(null);
@@ -42,6 +41,7 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
 
   const params = useMemo(() => portraitParams(agent.address), [agent.address]);
   const id = agent.address;
+  const interactive = isInteractiveAgent(agent);
 
   useFrame((state, delta) => {
     if (!group.current) return;
@@ -124,12 +124,18 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
     (0.5 - params.band.y) * PORTRAIT_H - (params.band.h * PORTRAIT_H) / 2;
   const bandH = params.band.h * PORTRAIT_H;
   const markerColor =
-    agent.origin === "deployer" ? "#B85D3E" : params.deck.primary;
+    agent.origin === "live" || agent.origin === "deployer"
+      ? "#B85D3E"
+      : params.deck.primary;
 
-  function openAgent() {
+  function onSelect() {
     if (rigState.isDragging) return;
-    const qs = fieldChainId ? `?chain=${encodeURIComponent(fieldChainId)}` : "";
-    router.push(`/agent/${agent.address}${qs}`);
+    if (!interactive) {
+      // Ambient ghost — focus briefly with no dossier path.
+      setActiveId(id);
+      return;
+    }
+    focusAgent(id, [layout.pos[0], layout.pos[1], layout.pos[2]]);
   }
 
   return (
@@ -139,7 +145,7 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
       onPointerOver={(e) => {
         e.stopPropagation();
         setHoveredId(id);
-        document.body.style.cursor = "pointer";
+        document.body.style.cursor = interactive ? "pointer" : "default";
       }}
       onPointerOut={() => {
         setHoveredId(null);
@@ -147,7 +153,7 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
       }}
       onClick={(e) => {
         e.stopPropagation();
-        openAgent();
+        onSelect();
       }}
     >
       <mesh ref={marker} position={[0, 0, 0.04]} userData={{ baseOpacity: 1 }}>
@@ -156,7 +162,7 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
       </mesh>
 
       <group ref={specimen}>
-        {agent.origin === "deployer" ? (
+        {interactive ? (
           <>
             <mesh
               position={[0, 0, -TILE_DEPTH - 0.02]}
@@ -173,7 +179,7 @@ export function AgentTile({ agent, layout, enterDelay }: Props) {
               anchorY="bottom"
               letterSpacing={0.18}
             >
-              LIVE · DEPLOYER
+              {agent.origin === "deployer" ? "LIVE · DEPLOYER" : "LIVE"}
             </Text>
           </>
         ) : null}
