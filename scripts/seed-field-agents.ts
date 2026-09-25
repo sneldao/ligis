@@ -13,8 +13,7 @@
  *   LIGIS_FIELD_TARGET=24 npx tsx scripts/seed-field-agents.ts pharos
  */
 import { existsSync, readFileSync } from "node:fs";
-import { keccak256, toBytes, type Address, type Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { capabilityHash } from "@ligis/core";
 import { EvmAdapter, PHAROS_AGENT_ID_ABI } from "@ligis/adapter-evm";
 
 const TARGET = Number(process.env.LIGIS_FIELD_TARGET ?? 24);
@@ -39,19 +38,20 @@ function loadEnvFiles(...files: string[]): void {
 }
 
 /** Deterministic demo controller — not a key we hold; mint-for-others path. */
-function demoController(i: number): Address {
-  const hash = keccak256(
-    toBytes(`ligis:field-seed:${i.toString().padStart(3, "0")}`),
+function demoController(i: number): `0x${string}` {
+  const hash = capabilityHash(
+    `ligis:field-seed:${i.toString().padStart(3, "0")}`,
   );
-  return `0x${hash.slice(-40)}` as Address;
+  return `0x${hash.slice(-40)}` as `0x${string}`;
 }
 
-async function seedNetwork(network: string, privateKey: Hex) {
+async function seedNetwork(network: string, privateKey: string) {
   process.env.LIGIS_NETWORK = network;
   process.env.PRIVATE_KEY = privateKey;
   const adapter = new EvmAdapter();
   const { publicClient, deployment } = adapter.ctx;
-  const account = privateKeyToAccount(privateKey);
+  const self = adapter.walletAddress();
+  if (!self) throw new Error(`${network}: adapter has no wallet`);
 
   const supply = (await publicClient.readContract({
     address: deployment.pharosAgentId,
@@ -69,8 +69,7 @@ async function seedNetwork(network: string, privateKey: Hex) {
     return;
   }
 
-  // Ensure deployer has an ID.
-  const selfId = await adapter.getAgentId(account.address);
+  const selfId = await adapter.getAgentId(self);
   if (!selfId) {
     const minted = await adapter.issueAgentId({
       tokenUri: "ligis://field/deployer",
@@ -81,17 +80,30 @@ async function seedNetwork(network: string, privateKey: Hex) {
   }
 
   let minted = 0;
-  for (let i = 1; supply + BigInt(minted) < BigInt(TARGET); i++) {
+  let i = 1;
+  while (true) {
+    const current = (await publicClient.readContract({
+      address: deployment.pharosAgentId,
+      abi: PHAROS_AGENT_ID_ABI,
+      functionName: "totalSupply",
+      args: [],
+    })) as bigint;
+    if (current >= BigInt(TARGET)) break;
+    if (i > TARGET * 3) {
+      console.log(`  stopping after ${i} probes (gaps / already minted)`);
+      break;
+    }
     const controller = demoController(i);
+    i++;
     const existing = await adapter.getAgentId(controller);
     if (existing) continue;
     const res = await adapter.issueAgentId({
       controller,
-      tokenUri: `ligis://field/demo/${i}`,
+      tokenUri: `ligis://field/demo/${i - 1}`,
     });
     minted++;
     console.log(
-      `  mint ${i} → ${controller.slice(0, 10)}… #${res.agentId} · ${res.tx.hash}`,
+      `  mint ${i - 1} → ${controller.slice(0, 10)}… #${res.agentId} · ${res.tx.hash}`,
     );
   }
 
@@ -106,9 +118,7 @@ async function seedNetwork(network: string, privateKey: Hex) {
 
 async function main() {
   loadEnvFiles(".env.d/deployer.env", ".env.d/casper.env");
-  const key = (process.env.PHAROS_DEPLOYER_KEY ?? process.env.PRIVATE_KEY) as
-    | Hex
-    | undefined;
+  const key = process.env.PHAROS_DEPLOYER_KEY ?? process.env.PRIVATE_KEY;
   if (!key)
     throw new Error("PHAROS_DEPLOYER_KEY not set (.env.d/deployer.env)");
 

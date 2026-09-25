@@ -284,7 +284,9 @@ cross-chain validity of signatures or replicated credential state.
    `pnpm smoke:demo-credentials`).
 2. Film the Revocation from the live txs above (CLI is enough for the 3-min
    demo; steward path is also green — or click **revoked credential** on
-   `/gate?chain=monad-testnet`).
+   `/gate?chain=monad-testnet`). Shot list: [`scripts/metropolis-film-shots.md`](../scripts/metropolis-film-shots.md).
+   Field density seeded 2026-09-25 (`pnpm seed:field` → supply 24 on Pharos +
+   Monad). Jev gateway still $0 as of the same day (`pnpm smoke:jev`).
 3. Explorer source verification (testnet now; stay on testnet until the portal
    says otherwise).
 4. ERC-8004 registration as the Monad-native hook + P256/WebAuthn issuer —
