@@ -115,49 +115,17 @@ Only the distribution channel changes.
 | Low initial OKX agent volume              | Treat as strategic positioning; credentials and provider code are reusable for other marketplaces |
 | ASP review rejects Ligis                  | Position as general infrastructure, not a narrow trading tool; highlight live CROO track record   |
 
-## 0G Bridge by AKINDO: a better-aligned accelerator
+## Relationship to 0G
 
-While OKX.AI Genesis is a valuable distribution channel, the **0G Bridge by
-AKINDO** is an even stronger strategic fit for Ligis. Ligis already uses
-0G Compute for the Trust Steward's reasoning step and 0G Storage for
-evidence manifests. The 0G Bridge provides a structured 10-week path to
-add **0G Chain** as the third 0G pillar.
-
-### Why 0G Bridge comes first
-
-| Factor                   | OKX.AI Genesis           | 0G Bridge by AKINDO                        |
-| ------------------------ | ------------------------ | ------------------------------------------ |
-| **Core alignment**       | Medium (general ASP)     | Very high (Trust & Safety / AI Agents)     |
-| **Existing integration** | None                     | 0G Compute + Storage already live          |
-| **New engineering**      | OKX SDK adapter          | 0G Chain adapter (EVM-compatible)          |
-| **Time horizon**         | 1–2 weeks                | 10 weeks, wave-by-wave                     |
-| **Rewards**              | Prizes TBD               | Up to $50k 0G credits + Token2049 Demo Day |
-| **Strategic value**      | Marketplace distribution | Ecosystem + infrastructure + distribution  |
-
-### 10-week wave plan
-
-| Wave       | Focus                 | Deliverable                                                                        |
-| ---------- | --------------------- | ---------------------------------------------------------------------------------- |
-| **Wave 1** | 0G Chain deployment   | `PharosAgentID` + `CredentialRegistry` on 0G Chain; `@ligis/adapter-0g` scaffolded |
-| **Wave 2** | Steward on 0G         | Full boot→reason→gate→act→record loop on 0G Chain                                  |
-| **Wave 3** | Marketplace traction  | CROO risk checks read from 0G Chain; real transaction volume                       |
-| **Wave 4** | External attestations | EAS/Self Protocol provenance verified inside 0G Compute TEE                        |
-| **Wave 5** | Demo Day              | Token2049 pitch: cross-marketplace trust gated by 0G                               |
-
-### Relationship to OKX.AI
-
-The 0G Bridge and OKX.AI are **complementary**, not competing:
-
-- **0G Bridge** provides the _infrastructure_ (0G Chain, Compute, Storage).
-- **OKX.AI** provides _distribution_ (Agent Service Provider marketplace).
-- A credential issued on 0G Chain during the Bridge program is
-  verifiable by OKX.AI agents, and vice versa.
-
-Ligis should pursue **both**, but prioritise the 0G Bridge for the
-10-week accelerator because it is the highest-leverage next step.
+The **0G Bridge by AKINDO** accelerator was evaluated but **never
+submitted — dropped 2026-09-25**. Ligis keeps running on 0G Compute
+(reasoning) and 0G Storage (evidence); a 0G Chain deployment stays a
+deadline-free Phase 3 option via `@ligis/adapter-0g`. With the Bridge out of
+the picture, **OKX.AI Genesis is the active Phase 3 priority** for
+distribution. See [`docs/strategy.md`](strategy.md).
 
 ## See also
 
 - [`docs/croo-integration.md`](croo-integration.md) — the CROO integration that OKX mirrors
-- [`docs/strategy.md`](strategy.md) — roadmap, 0G Bridge plan, and business model
+- [`docs/strategy.md`](strategy.md) — roadmap and business model
 - [`packages/croo-adapter/`](../packages/croo-adapter/) — reference implementation

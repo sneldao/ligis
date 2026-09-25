@@ -3,10 +3,9 @@
 > The trust layer for agent-to-agent commerce. Ligis aggregates external
 > verification signals into portable on-chain credentials, then sells
 > counterparty risk checks on the CROO Agent Store and OKX.AI Agent Store.
-> Built on 0G Compute, 0G Storage, and—via the 0G Bridge by AKINDO—the
-> 0G Chain.
+> Built on 0G Compute and 0G Storage.
 
-## Status (2026-09-23)
+## Status (2026-09-25)
 
 - **Live:** 5 paid services on the CROO Agent Store (`ligis.risk` $0.75,
   `ligis.verify` $0.50, `ligis.issue` $2.00, `ligis.gate` $1.00,
@@ -22,8 +21,12 @@
   loudly when it stops) — run it after that date, then either attach
   gateway billing or flip `LIGIS_JEV_TRANSPORT=direct` with `TYPESAFE_API_KEY`.
 - **Tests:** 41 Foundry + 22 Odra + 133 TypeScript (25 suites).
-- **Next:** Phase 3 (OKX.AI ASP + 0G Chain) is the open one; Wave 1 of the 0G
-  Bridge is a testnet deploy away.
+- **Next:** Phase 3 (OKX.AI ASP) is the open one. The 0G Bridge by AKINDO
+  program was **never submitted and is dropped** (2026-09-25); deploying the
+  contracts on 0G Chain stays a future option via `@ligis/adapter-0g`, not a
+  deadline-driven milestone. Replacement 0G channel identified: **0G Apollo
+  Accelerator Cohort 2** (applications opening soon, program Nov–Feb) —
+  see "0G: Apollo Cohort 2" for the deploy-prep checklist.
 
 ## The problem
 
@@ -196,8 +199,6 @@ The product is the distribution channel:
   valuable, driving more credential issuance (network effect)
 - Cross-marketplace portability means a credential issued via CROO is
   instantly verifiable on OKX.AI, and vice versa
-- 0G Bridge exposure puts Ligis in front of the 0G ecosystem, Apollo
-  Accelerator, and Token2049 investors
 
 ### 5. Cross-chain portability
 
@@ -240,31 +241,6 @@ model — weighted by capability criticality, TTL, maturity, issuer
 diversity — is the value on top of raw attestations. But this only holds
 if the scoring is genuinely better than what a competitor could build on
 the same EAS data.
-
-### 0G Bridge-specific risks
-
-**Mainnet deployment delays.** 0G Bridge requires 0G Chain mainnet
-integration from Wave 3 onwards. If mainnet is unstable or deployment
-is delayed, Wave 3–5 milestones slip.
-
-**Mitigation:** Deploy to testnet in Wave 1, run the Steward on testnet
-in Wave 2, and treat mainnet as the Wave 3 goal with a testnet fallback
-for demo purposes.
-
-**0G Chain EVM compatibility edge cases.** 0G Chain is EVM-compatible,
-but subtle differences in opcode behavior, gas metering, or RPC
-responses could break existing Solidity contracts or the viem client.
-
-**Mitigation:** Run the full Foundry test suite against a 0G testnet
-fork before mainnet deployment; keep a testnet fallback.
-
-**Credit disbursement timing.** Credits are distributed wave-by-wave
-based on progress. A delay in disbursement could slow down 0G Compute
-or Storage usage.
-
-**Mitigation:** Maintain a small reserve of 0G tokens outside the
-program; design the provider to degrade gracefully if 0G Compute is
-unavailable (the existing `LocalReasoner` fallback already does this).
 
 ### Pricing vs. transaction value
 
@@ -312,20 +288,20 @@ Subscription pricing or CROO-bundled pricing could address this.
 - [ ] Agent now has a credential that any CROO risk check can verify
 - [ ] Demo: agent gets credentialed → another agent runs risk check → gets `pass`
 
-### Phase 3: Cross-platform portability (OKX.AI Genesis + 0G Bridge)
+### Phase 3: Cross-platform portability (OKX.AI Genesis)
 
 - [ ] Launch Ligis as an Agent Service Provider (ASP) on OKX.AI Genesis
 - [ ] Offer `okx.ligis.risk`, `okx.ligis.verify`, and `okx.ligis.issue`
       services, mirroring the CROO CAP integration
-- [ ] Deploy `CredentialRegistry` and `AgentId` to 0G Chain via the
-      0G Bridge by AKINDO program
 - [ ] Prove cross-marketplace utility: credentials issued via CROO are
       verifiable by OKX.AI agents, and vice versa
 - [ ] Other agent marketplaces read Ligis credentials (they're on-chain, anyone can read)
 - [ ] Ligis becomes the standard trust layer, not a CROO plugin
-- [ ] CROO is the first distribution channel; OKX.AI is the second;
-      0G Bridge is the ecosystem accelerator
+- [ ] CROO is the first distribution channel; OKX.AI is the second
 - [ ] SDK for third-party platforms to verify Ligis credentials
+- [ ] (Deferred, no deadline) Deploy `CredentialRegistry` and `AgentId` to
+      0G Chain via `@ligis/adapter-0g` — now re-anchored as the Apollo
+      Cohort 2 application prep, see "0G: Apollo Cohort 2" below
 
 ### Phase 4: Adjudication compose (GenLayer Agent Tank → ongoing)
 
@@ -367,82 +343,73 @@ trust: the hint is a promise, the Dashboard is the charge.
 - **OKX.AI-bundled:** OKX.AI pays Ligis, includes verification in agent fees
 - **Subscription:** $X/month for unlimited checks (high-volume agents)
 - **Issuer certification:** Third-party issuers pay to be in the Ligis registry
-- **0G Bridge credits:** $50k in 0G credits offset Compute/Storage/Chain costs
 - **Enterprise:** Custom integrations for agent platforms beyond CROO and OKX.AI
 
-## 0G Bridge by AKINDO opportunity
+## 0G Bridge by AKINDO (dropped)
 
-The [0G Bridge by AKINDO](https://build.0g.ai) is a 10-week, 5-wave
-buildathon for AI × Onchain applications on 0G. See the official
-[0G docs](https://docs.0g.ai/) for the full program details. It is the
-most aligned accelerator program for Ligis because Ligis already runs on
-0G Compute and 0G Storage. The missing piece is 0G Chain, where Ligis can
-deploy its EVM contracts natively.
+The [0G Bridge by AKINDO](https://build.0g.ai) 10-week program was evaluated
+as the highest-leverage accelerator for Ligis but **never submitted**
+(closed 2026-09-25). Ligis still runs on 0G Compute (reasoning) and 0G
+Storage (evidence); the 0G Chain contract deployment lives in Phase 3 as a
+deadline-free option via `@ligis/adapter-0g`. If a future 0G program or
+ecosystem partnership materializes, the wave plan can be revived from git
+history.
 
-### Why 0G Bridge fits Ligis
+### 0G: Apollo Cohort 2 (the re-dock, researched 2026-09-25)
 
-| Fit dimension         | Assessment                                                    |
-| --------------------- | ------------------------------------------------------------- |
-| **Mission**           | Perfect — Ligis is trust infrastructure for AI agents         |
-| **Track**             | Trust & Safety + AI Agents                                    |
-| **Existing 0G usage** | 0G Compute (reasoning) and 0G Storage (evidence) already live |
-| **Gap to close**      | Deploy contracts on 0G Chain (EVM-compatible)                 |
-| **Effort**            | Low — reuse `@ligis/adapter-evm` with 0G network config       |
-| **Prize**             | Up to $50k in 0G credits + Token2049 Demo Day exposure        |
+One week after dropping the Bridge, the same ecosystem upside reappeared in a
+better-fitting vehicle: the **0G Apollo Accelerator** (xBuilders + Stanford
+veterans) opens **Cohort 2 applications soon** — a 4-month program
+(November → February), up to 10 startups building on the 0G protocol, up to
+$2M investment per project headline, Demo Day on Stanford campus.
 
-### 10-week wave plan
+Why Ligis fits, from the program's own evidence:
 
-| Wave       | Dates (approx) | Focus                               | Deliverable                                                                                   | Judging criterion addressed |
-| ---------- | -------------- | ----------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------- |
-| **Wave 1** | Week 1–2       | 0G Chain testnet deployment         | `PharosAgentID` + `CredentialRegistry` deployed on 0G testnet; `@ligis/adapter-0g` scaffolded | 0G Integration              |
-| **Wave 2** | Week 3–4       | Steward on 0G testnet               | Trust Steward runs full loop on 0G testnet; web UI chain selector updated                     | Technical Quality           |
-| **Wave 3** | Week 5–6       | 0G Chain mainnet + marketplace read | Contracts deployed on 0G Chain mainnet; CROO provider reads credentials from 0G Chain         | Progress & Momentum         |
-| **Wave 4** | Week 7–8       | External attestation design         | Initial integration of EAS/Self Protocol provenance checks inside 0G Compute TEE              | 0G Integration              |
-| **Wave 5** | Week 9–10      | Demo + metrics                      | Demo Day pitch: OKX agent → CROO agent → trust gated by 0G Chain + Compute + Storage          | Traction & Communication    |
+- Cohort 1 alumni are described as "live on 0G Storage, Compute, **and
+  Chain**" — Chain is the third pillar Ligis doesn't have yet, and the only
+  gap in an otherwise perfect fit (we already run Compute + Storage in
+  production).
+- Cohort 1 included Walnut AI, "a professional network for agents" — the
+  same buyer persona Ligis sells verification to.
+- Cohort 1 outcomes validate the effort: 220+ applications for 10 spots,
+  10/10 teams at Demo Day, $1.5M raised by alumni within 30 days.
+- Timing is clean: Metropolis closes 13 Oct; Apollo runs Nov–Feb, so prep
+  slots between the two.
 
-### Wave-by-wave credit allocation
+Secondary 0G channels, same research:
 
-0G Bridge distributes credits based on progress. Ligis should aim for the
-full 5-wave participation to unlock the Multi-Wave Completion Bonus:
+- **TOKEN2049 Singapore, 7–8 Oct 2026** — 0G had a major presence at
+  Token2049 Dubai and side events are open during TOKEN2049 Week; this is the
+  in-person substitute for the Bridge's promised BD/investor exposure.
+  Decide by early October whether a presence is worth it.
+- **ETHGlobal prize tracks** — 0G sponsored $15k at Lisbon (Jul 2026) with
+  repo-level integration review + mandatory live demo: judging rewards real
+  integration depth, which is our strength. Enter the next stop once 0G
+  Chain integration exists.
+- **Zero Cup** (Arena tournament, $17k) concluded Jul 2026 — watch for a
+  second edition. The site footer also lists an **Ecosystem Growth Fund** —
+  worth one DevRel email to qualify the standing-grants path.
 
-| Wave   | Allocation   | Target use of credits                            |
-| ------ | ------------ | ------------------------------------------------ |
-| Wave 1 | 10% ($5k)    | 0G Chain testnet/mainnet deployment gas          |
-| Wave 2 | 15% ($7.5k)  | 0G Compute inference for Steward reasoning       |
-| Wave 3 | 30% ($15k)   | 0G Storage for evidence manifests at scale       |
-| Wave 4 | 20% ($10k)   | 0G Compute for external attestation verification |
-| Wave 5 | 25% ($12.5k) | Mainnet operations and Demo Day infrastructure   |
+**The application story we want to be able to tell:** "Ligis is live on 0G
+Compute + Storage today; here is the 0G Chain deploy proving the third
+pillar." That makes the adapter-0g checkpoint the critical path:
 
-### Why this advances the monopoly
+- [ ] Point `@ligis/adapter-0g` at the 0G Chain testnet RPC + chain config
+- [ ] Deploy `PharosAgentID` + `CredentialRegistry` to 0G Chain testnet
+      (standard EIP-712 / ERC-721 — verify no opcode/gas-metering surprises)
+- [ ] Run the full Foundry suite against a 0G testnet fork
+- [ ] Confirm viem reads/writes/event logs work against 0G Chain RPC
+- [ ] Wire 0G Chain into the web chain selector as a read target
+- [ ] One credential issued on 0G Chain verified from Casper (the portability
+      demo, now with a third chain)
+- [ ] Submit Apollo Cohort 2 application when it opens + prepare a
+      TOKEN2049 Week presence decision
 
-- **0G-native trust layer:** Most teams bolt 0G Storage onto a chatbot.
-  Ligis uses 0G Compute + Storage for mission-critical trust decisions.
-- **Chain-agnostic credentials:** A credential issued on 0G Chain is
-  verifiable on CROO/OKX.AI because `capabilityHash()` is chain-neutral.
-- **Ecosystem distribution:** 0G Bridge exposes Ligis to Apollo
-  Accelerator, 0G BD, and Token2049 investors.
-
-### Sequencing with OKX.AI and CROO
-
-The 10-week 0G Bridge sprint takes priority because it is the
-highest-leverage next step and is already funded by credits. OKX.AI
-preparation continues in parallel where it does not block 0G work
-(e.g., ASP registration, schema design). CROO operations remain live and
-serve as the traction proof point for Wave 3.
-
-### What we need to validate for 0G Bridge
-
-1. **Can we deploy existing Solidity contracts to 0G Chain without
-   changes?** The contracts are standard EIP-712 / ERC-721, but a testnet
-   deployment is the only way to be sure.
-2. **Does the viem client work against 0G Chain RPC?** We need to
-   confirm RPC compatibility for reads, writes, and event logs.
-3. **Will 0G Bridge judges value trust infrastructure?** The program is
-   open-ended, so we must clearly frame Ligis under the Trust & Safety
-   and AI Agents categories.
-4. **Can we generate real traction in 10 weeks?** We need at least one
-   marketplace integration (CROO or OKX.AI) reading credentials from 0G
-   Chain to demonstrate Progress & Momentum.
+- Sources: [apollo.0g.ai](https://apollo.0g.ai/),
+  [Apollo 2026 recap](https://0g.ai/blog/apollo-graduation-2026),
+  [ETHGlobal Lisbon recap](https://0g.ai/blog/ethglobal-lisbon-2026-recap),
+  [Zero Cup](https://0g.ai/arena/zero-cup),
+  [TOKEN2049 Singapore](https://www.token2049.com/singapore)
 
 ## What we need to validate
 
