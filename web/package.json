@@ -5,6 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.33.2",
   "scripts": {
+    "predev": "cd .. && pnpm --filter @ligis/core --filter @ligis/agent-logic --filter @ligis/zerog --filter @ligis/adapter-casper --filter @ligis/adapter-evm run build",
     "dev": "next dev --turbopack",
     "prebuild": "cd .. && pnpm --filter @ligis/core --filter @ligis/agent-logic --filter @ligis/zerog --filter @ligis/adapter-casper --filter @ligis/adapter-evm run build",
     "build": "next build --webpack",
