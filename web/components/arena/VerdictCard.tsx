@@ -187,7 +187,10 @@ export function VerdictCard({
           ) : null}
           <div className="flex flex-col gap-1.5 border-t border-night-rule pt-3">
             <JudgeRow name="Jev · TypeSafe" outcome={result.jev} />
-            <JudgeRow name="Judge · Vultr Inference" outcome={result.vultr} />
+            <JudgeRow
+              name={`Judge · ${result.vultr.provider ?? "Vultr Inference"}`}
+              outcome={result.vultr}
+            />
           </div>
         </>
       )}

@@ -181,12 +181,19 @@ export type JudgeOutcome =
       reasons: string[];
       latencyMs: number;
       model?: string;
+      /** Which inference provider answered (LLM judge slot only). */
+      provider?: string;
       /** True when served from the verdict cache instead of a fresh call. */
       cached?: boolean;
       /** When the verdict was originally produced (ISO). */
       judgedAt?: string;
     }
-  | { status: "skipped"; reason: string; latencyMs?: number };
+  | {
+      status: "skipped";
+      reason: string;
+      latencyMs?: number;
+      provider?: string;
+    };
 
 export interface JudgeResponse {
   payment: PaymentId | "custom";

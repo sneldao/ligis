@@ -195,26 +195,74 @@ async function callJev(c: JudgeCase): Promise<JudgeOutcome> {
   };
 }
 
-// ---------- Vultr (reads the untrusted page text) ----------
+// ---------- LLM judge (reads the untrusted page text) ----------
+// Tried in order; the first provider that returns a usable verdict wins.
+// Both speak the OpenAI chat-completions shape, so one caller serves both.
 
-const VULTR_BASE = "https://api.vultrinference.com/v1";
-// Cheapest non-reasoning chat model on Vultr ($0.09 in / $0.18 out per 1M).
-// Pinned so we never pay for a /models lookup or land on a pricier model.
-const VULTR_MODEL = process.env.VULTR_INFERENCE_MODEL ?? "laguna-s-2.1";
+interface LlmProvider {
+  name: string;
+  base: string;
+  keyEnv: string;
+  model: string;
+}
+
+const LLM_PROVIDERS: LlmProvider[] = [
+  {
+    name: "Vultr Inference",
+    base: "https://api.vultrinference.com/v1",
+    keyEnv: "VULTR_INFERENCE_API_KEY",
+    // Cheapest non-reasoning chat model on Vultr ($0.09 in / $0.18 out per 1M).
+    model: process.env.VULTR_INFERENCE_MODEL ?? "laguna-s-2.1",
+  },
+  {
+    name: "Featherless",
+    base: "https://api.featherless.ai/v1",
+    keyEnv: "FEATHERLESS_API_KEY",
+    // Small, ungated, non-reasoning: no hidden thinking tokens to pay for.
+    model: process.env.FEATHERLESS_MODEL ?? "Qwen/Qwen2.5-7B-Instruct",
+  },
+];
+
 const PAGE_TEXT_MAX = 700;
 const AUTH_BACKOFF_MS = 10 * 60_000;
-let vultrAuthFailedUntil = 0;
+// Featherless limits concurrent requests per plan; back off briefly on 429.
+const BUSY_BACKOFF_MS = 30_000;
+const providerBlockedUntil = new Map<
+  string,
+  { until: number; reason: string }
+>();
 
-async function callVultr(c: JudgeCase): Promise<JudgeOutcome> {
-  const key = process.env.VULTR_INFERENCE_API_KEY;
-  if (!key)
-    return { status: "skipped", reason: "VULTR_INFERENCE_API_KEY not set" };
+function llmConfigured(): boolean {
+  return LLM_PROVIDERS.some((p) => !!process.env[p.keyEnv]);
+}
+
+async function callLlmJudge(c: JudgeCase): Promise<JudgeOutcome> {
+  const misses: string[] = [];
+  for (const p of LLM_PROVIDERS) {
+    const out = await callProvider(p, c);
+    if (out.status === "ok") return out;
+    misses.push(`${p.name}: ${out.reason}`);
+  }
+  return {
+    status: "skipped",
+    reason: misses.join(" · "),
+    provider: "LLM judge",
+  };
+}
+
+async function callProvider(
+  p: LlmProvider,
+  c: JudgeCase,
+): Promise<JudgeOutcome> {
+  const key = process.env[p.keyEnv];
+  if (!key) return { status: "skipped", reason: "not configured" };
   // A rejected key won't start working on retry; stop hammering the API.
-  if (Date.now() < vultrAuthFailedUntil)
-    return { status: "skipped", reason: "Vultr key rejected" };
+  const blocked = providerBlockedUntil.get(p.name);
+  if (blocked && Date.now() < blocked.until)
+    return { status: "skipped", reason: blocked.reason };
 
   const t0 = Date.now();
-  const model = VULTR_MODEL;
+  const model = p.model;
   try {
     const facts = {
       contract: {
@@ -231,7 +279,7 @@ async function callVultr(c: JudgeCase): Promise<JudgeOutcome> {
       contentAgentReadBeforePaying: c.pageText?.slice(0, PAGE_TEXT_MAX) ?? null,
     };
 
-    const res = await fetch(`${VULTR_BASE}/chat/completions`, {
+    const res = await fetch(`${p.base}/chat/completions`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -250,20 +298,29 @@ async function callVultr(c: JudgeCase): Promise<JudgeOutcome> {
           { role: "user", content: JSON.stringify(facts) },
         ],
       }),
-      signal: AbortSignal.timeout(15000),
+      // Short so a slow primary doesn't eat the fallback's time budget.
+      signal: AbortSignal.timeout(9000),
     });
     if (res.status === 401 || res.status === 403 || res.status === 422) {
-      vultrAuthFailedUntil = Date.now() + AUTH_BACKOFF_MS;
-      return {
-        status: "skipped",
-        reason: "Vultr key rejected",
-        latencyMs: Date.now() - t0,
-      };
+      const reason = "key rejected";
+      providerBlockedUntil.set(p.name, {
+        until: Date.now() + AUTH_BACKOFF_MS,
+        reason,
+      });
+      return { status: "skipped", reason, latencyMs: Date.now() - t0 };
+    }
+    if (res.status === 429) {
+      const reason = "busy (rate limited)";
+      providerBlockedUntil.set(p.name, {
+        until: Date.now() + BUSY_BACKOFF_MS,
+        reason,
+      });
+      return { status: "skipped", reason, latencyMs: Date.now() - t0 };
     }
     if (!res.ok) {
       return {
         status: "skipped",
-        reason: `Vultr HTTP ${res.status}`,
+        reason: `HTTP ${res.status}`,
         latencyMs: Date.now() - t0,
       };
     }
@@ -275,7 +332,7 @@ async function callVultr(c: JudgeCase): Promise<JudgeOutcome> {
     if (!match)
       return {
         status: "skipped",
-        reason: "Vultr reply not JSON",
+        reason: "reply not JSON",
         latencyMs: Date.now() - t0,
       };
     const parsed = JSON.parse(match[0]) as {
@@ -294,6 +351,7 @@ async function callVultr(c: JudgeCase): Promise<JudgeOutcome> {
         : [],
       latencyMs: Date.now() - t0,
       model,
+      provider: p.name,
     };
   } catch (err) {
     return {
@@ -324,13 +382,8 @@ export async function judgePayment(
     cachedVerdict("jev", jevKey, JEV_TTL_S, ip, jc.enabled && !!jc.apiKey, () =>
       callJev(c),
     ),
-    cachedVerdict(
-      "vultr",
-      vultrKey,
-      VULTR_TTL_S,
-      ip,
-      !!process.env.VULTR_INFERENCE_API_KEY,
-      () => callVultr(c),
+    cachedVerdict("vultr", vultrKey, VULTR_TTL_S, ip, llmConfigured(), () =>
+      callLlmJudge(c),
     ),
   ]);
 
