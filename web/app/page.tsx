@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FieldInvite } from "@/components/catalog/FieldInvite";
 import { ChainBadge } from "@/components/ChainBadge";
 import { LandingGate } from "@/components/LandingGate";
+import { HeroStage } from "@/components/landing/HeroStage";
 import { LiveDot } from "@/components/LiveDot";
 import { capabilities } from "@/lib/chain";
 import {
@@ -66,30 +67,21 @@ export default async function HomePage({
           }),
         }}
       />
-      <main className="mx-auto max-w-5xl px-5 pt-24 pb-12 sm:px-8 sm:pt-32 sm:pb-20">
-        <div className="landing-cascade">
-          <header
-            className="flex items-baseline justify-between text-xs"
-            style={{ ["--cascade-step" as string]: 0 }}
-          >
-            <p className="eyebrow">Ligis · trust gate</p>
+      <HeroStage />
+      <main className="mx-auto max-w-5xl px-5 pt-16 pb-12 sm:px-8 sm:pt-24 sm:pb-20">
+        <div>
+          <header className="flex items-baseline justify-between text-xs">
+            <p className="eyebrow">Try it on a live registry</p>
             <ChainBadge
               chain={chain}
               live={stats.ok || Boolean(stats.preview)}
             />
           </header>
 
-          <section
-            className="mt-12 sm:mt-14"
-            style={{ ["--cascade-step" as string]: 1 }}
-          >
-            <h1 className="display max-w-2xl text-[2.6rem] leading-[1.05] text-ink sm:text-6xl lg:text-7xl">
+          <section id="gate" className="mt-8 scroll-mt-28">
+            <h2 className="display max-w-2xl text-4xl leading-[1.05] text-ink sm:text-5xl">
               Gate the payment.
-            </h1>
-            <p className="mt-5 max-w-md font-serif text-lg leading-relaxed text-ink-soft sm:mt-6 sm:text-xl">
-              One on-chain read. <span className="text-sage">GO</span> or{" "}
-              <span className="text-revoke">STOP</span> — before money moves.
-            </p>
+            </h2>
             <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
               {stats.ok ? (
                 <>
@@ -124,10 +116,7 @@ export default async function HomePage({
             </p>
           </section>
 
-          <div
-            className="mt-14 sm:mt-20"
-            style={{ ["--cascade-step" as string]: 2 }}
-          >
+          <div className="mt-10 sm:mt-14">
             <LandingGate
               chainId={chain.id}
               capabilities={capOptions}

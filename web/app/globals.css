@@ -15,6 +15,16 @@
   --color-sky: #356584;
   --color-sky-soft: #c5dae6;
 
+  /* Night stage: the landing hero and the /arena demo. */
+  --color-night: #0a0d12;
+  --color-night-raise: #121720;
+  --color-night-rule: #232b37;
+  --color-fog: #e7eaef;
+  --color-fog-quiet: #8c96a6;
+  --color-signal: #4d8dff;
+  --color-go: #3ddc97;
+  --color-stop: #ff5d4f;
+
   --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
@@ -391,5 +401,132 @@ summary:focus-visible {
   .skeleton {
     animation: none !important;
     background: var(--color-paper-deep) !important;
+  }
+}
+
+/* ---------- Night stage ---------- */
+
+.night-grid {
+  background-color: var(--color-night);
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--color-fog) 14%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+}
+
+.night-grid-fade {
+  mask-image: radial-gradient(
+    ellipse 80% 70% at 50% 35%,
+    #000 40%,
+    transparent 100%
+  );
+}
+
+/* Animated border beam. Colour follows data-state so the frame itself
+   reads as the verdict: blue while judging, green on GO, red on STOP. */
+@property --beam-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.beam {
+  --beam-color: var(--color-signal);
+  position: relative;
+  isolation: isolate;
+  border-radius: 1rem;
+  border: 1px solid var(--color-night-rule);
+  background: var(--color-night-raise);
+}
+
+.beam[data-state="go"] {
+  --beam-color: var(--color-go);
+}
+
+.beam[data-state="stop"] {
+  --beam-color: var(--color-stop);
+}
+
+.beam::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0 62%,
+    var(--beam-color) 78%,
+    color-mix(in oklab, var(--beam-color) 40%, var(--color-fog)) 84%,
+    transparent 92%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: beam-spin 5s linear infinite;
+  transition: opacity 400ms ease;
+}
+
+.beam[data-state="idle"]::before {
+  opacity: 0.55;
+}
+
+.beam::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  border-radius: inherit;
+  box-shadow: 0 0 60px -20px var(--beam-color);
+  opacity: 0.5;
+  transition: box-shadow 400ms ease;
+}
+
+@keyframes beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+
+.stop-flash {
+  animation: stop-flash 900ms ease-out;
+}
+
+@keyframes stop-flash {
+  0% {
+    box-shadow: inset 0 0 0 200px
+      color-mix(in oklab, var(--color-stop) 22%, transparent);
+  }
+  100% {
+    box-shadow: inset 0 0 0 200px transparent;
+  }
+}
+
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 0.5ch;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: currentColor;
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam::before,
+  .caret::after,
+  .stop-flash {
+    animation: none;
   }
 }

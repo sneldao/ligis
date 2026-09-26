@@ -10,6 +10,11 @@ import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 import { openCommandPalette } from "@/lib/command-palette";
 
 const NAV = [
+  {
+    href: "/arena",
+    label: "Arena",
+    description: "Watch a prompt-injection attack get stopped",
+  },
   { href: "/gate", label: "Gate", description: "Gate a payment" },
   { href: "/field", label: "Field", description: "Field · live registry" },
 ];
