@@ -121,7 +121,7 @@ export default function RootLayout({
       lang="en"
       className={`${hanken.variable} ${fraunces.variable} ${jetbrains.variable}`}
     >
-      <body className="min-h-dvh">
+      <body className="page-enter min-h-dvh">
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-paper focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:text-ink focus:underline focus:decoration-terra focus:underline-offset-4"

@@ -530,3 +530,269 @@ summary:focus-visible {
     animation: none;
   }
 }
+
+/* ---------- Motion system ----------
+   One choreography for every route: the page settles in top-down, the
+   headline rises out of its baseline, later sections reveal as they
+   scroll into view, and terra buttons fill like ink. Opt-in by structure
+   (.route-shell, h1.display, uppercase terra buttons), so pages get it
+   without per-page wiring. */
+
+@keyframes page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ink-rise {
+  from {
+    clip-path: inset(-0.1em -0.1em 100% -0.1em);
+    transform: translateY(0.4em);
+  }
+  to {
+    clip-path: inset(-0.1em -0.1em -0.3em -0.1em);
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter .route-shell > * {
+    animation: page-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .page-enter .route-shell > :nth-child(2) {
+    animation-delay: 90ms;
+  }
+  .page-enter .route-shell > :nth-child(3) {
+    animation-delay: 180ms;
+  }
+  .page-enter .route-shell > :nth-child(n + 4) {
+    animation-delay: 260ms;
+  }
+
+  @supports (animation-timeline: view()) {
+    .page-enter .route-shell > :nth-child(n + 4) {
+      animation: page-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+
+  .page-enter h1.display {
+    animation: ink-rise 950ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms both;
+  }
+
+  /* Ink-fill buttons. Unlayered, so it wins over the hover:bg-terra
+     utility and turns the flat swap into a left-to-right fill. */
+  :is(button, a).border-terra.uppercase:not(:disabled) {
+    background-image: linear-gradient(var(--color-terra), var(--color-terra));
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 0% 100%;
+    transition:
+      background-size 420ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      color 220ms ease,
+      transform 140ms ease;
+  }
+  :is(button, a).border-terra.uppercase:not(:disabled):hover {
+    background-color: var(--color-paper);
+    background-size: 100% 100%;
+  }
+  :is(button, a).border-terra.uppercase:not(:disabled):active {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  a.underline {
+    transition:
+      color 200ms ease,
+      text-decoration-color 200ms ease,
+      text-underline-offset 200ms ease;
+  }
+  a.underline:hover {
+    text-underline-offset: 6px;
+  }
+}
+
+/* ---------- Specimen plate ----------
+   The Field's portraits, carried into every place a subject appears. */
+
+.specimen-plate {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--color-paper-deep);
+  border: 1px solid var(--color-rule);
+  transform: rotate(-1.4deg);
+  box-shadow: 0 18px 30px -22px
+    color-mix(in oklab, var(--color-ink) 55%, transparent);
+  transition:
+    transform 450ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 450ms ease;
+}
+
+.specimen:hover .specimen-plate {
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow: 0 26px 36px -22px
+    color-mix(in oklab, var(--color-ink) 60%, transparent);
+}
+
+.specimen-chip {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.9rem;
+  height: 1.125rem;
+  overflow: hidden;
+  vertical-align: -0.2em;
+  border: 0.5px solid var(--color-rule);
+  background: var(--color-paper-deep);
+  transition: transform 250ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.specimen-chip svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+:hover > .specimen-chip,
+.specimen-chip:hover {
+  transform: rotate(-6deg) scale(1.25);
+}
+
+.specimen-scan {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 35%;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklab, var(--color-terra-soft) 85%, transparent) 70%,
+    var(--color-terra) 71%,
+    transparent 73%
+  );
+}
+
+.specimen[data-state="reading"] .specimen-scan {
+  opacity: 1;
+}
+
+.specimen-stamp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  rotate: -12deg;
+  padding: 0.2rem 0.6rem;
+  border: 2.5px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  background: color-mix(in oklab, var(--color-paper) 72%, transparent);
+  mix-blend-mode: multiply;
+}
+
+.specimen[data-state="go"] .specimen-stamp {
+  color: var(--color-sage);
+}
+
+.specimen[data-state="stop"] .specimen-stamp {
+  color: var(--color-revoke);
+}
+
+.specimen[data-state="stop"] .specimen-art {
+  filter: grayscale(0.85) contrast(0.9);
+}
+
+@keyframes specimen-develop {
+  from {
+    filter: grayscale(1) contrast(0.5) brightness(1.2) blur(6px);
+    opacity: 0.4;
+  }
+  to {
+    filter: none;
+    opacity: 1;
+  }
+}
+
+@keyframes specimen-develop-stop {
+  from {
+    filter: grayscale(1) contrast(0.5) brightness(1.2) blur(6px);
+    opacity: 0.4;
+  }
+  to {
+    filter: grayscale(0.85) contrast(0.9);
+    opacity: 1;
+  }
+}
+
+@keyframes specimen-scan {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(290%);
+  }
+}
+
+@keyframes specimen-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes stamp-down {
+  0% {
+    opacity: 0;
+    scale: 2.2;
+    rotate: -2deg;
+  }
+  60% {
+    opacity: 1;
+    scale: 0.94;
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+    rotate: -12deg;
+  }
+}
+
+@keyframes plate-thud {
+  0%,
+  100% {
+    transform: rotate(-1.4deg);
+  }
+  30% {
+    transform: rotate(-1.4deg) translateY(3px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .specimen-art {
+    animation: specimen-develop 1100ms ease-out both;
+  }
+  .specimen[data-state="stop"] .specimen-art {
+    animation-name: specimen-develop-stop;
+  }
+  .specimen[data-state="reading"] .specimen-art {
+    animation: specimen-breathe 1.4s ease-in-out infinite;
+  }
+  .specimen[data-state="reading"] .specimen-scan {
+    animation: specimen-scan 1.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+  .specimen-stamp {
+    animation: stamp-down 520ms cubic-bezier(0.2, 1.2, 0.4, 1) 650ms both;
+  }
+  .specimen[data-state="go"] .specimen-plate,
+  .specimen[data-state="stop"] .specimen-plate {
+    animation: plate-thud 320ms ease-out 900ms;
+  }
+}

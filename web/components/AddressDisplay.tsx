@@ -4,6 +4,8 @@ import { CopyButton } from "./CopyButton";
 
 type Variant = "inline" | "block";
 
+import { SubjectSpecimen } from "@/components/SubjectSpecimen";
+
 export function AddressDisplay({
   address,
   variant = "inline",
@@ -38,7 +40,10 @@ export function AddressDisplay({
   if (variant === "block") {
     return (
       <div className="flex items-baseline justify-between gap-6">
-        {body}
+        <span className="inline-flex items-baseline gap-2">
+          <SubjectSpecimen subject={address} size="chip" />
+          {body}
+        </span>
         {copy ? <CopyButton value={address} /> : null}
       </div>
     );
@@ -46,7 +51,10 @@ export function AddressDisplay({
 
   return (
     <span className="inline-flex items-baseline gap-3">
-      {body}
+      <span className="inline-flex items-baseline gap-2">
+        <SubjectSpecimen subject={address} size="chip" />
+        {body}
+      </span>
       {copy ? <CopyButton value={address} /> : null}
     </span>
   );

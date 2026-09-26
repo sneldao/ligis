@@ -254,15 +254,15 @@ export default function StyleguidePage() {
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">07 · GateVerdict</p>
             <span className="font-mono text-xs text-ink-quiet">
-              ✓ GO · ✗ STOP — the only verdict
+              GO · STOP — the only verdict
             </span>
           </header>
           <Rule />
           <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
             Every pre-payment decision renders through{" "}
             <code className="font-mono text-ink">GateVerdict</code>. Never
-            invent capability-status labels as the decision — use ✓ GO / ✗ STOP
-            via this primitive.
+            invent capability-status labels as the decision — use GO / STOP via
+            this primitive.
           </p>
           <div className="space-y-10">
             <GateVerdict

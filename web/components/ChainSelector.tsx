@@ -2,7 +2,12 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useTransition } from "react";
-import { CHAINS, chainAccent, type ChainNetwork } from "@/lib/network";
+import {
+  CHAINS,
+  DEFAULT_CHAIN,
+  chainAccent,
+  type ChainNetwork,
+} from "@/lib/network";
 
 /**
  * Chain selector — a small client-side switcher that updates the `?chain=`
@@ -48,7 +53,7 @@ function ChainSelectorInner({ activeId }: { activeId?: string }) {
 
   // If activeId is not passed, derive from the URL ?chain= param.
   const resolvedActiveId =
-    activeId ?? searchParams.get("chain") ?? chains[0]!.id;
+    activeId ?? searchParams.get("chain") ?? DEFAULT_CHAIN.id;
 
   const onSelect = useCallback(
     (chainId: string) => {
