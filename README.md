@@ -5,7 +5,7 @@
 
 [![CI](https://github.com/sneldao/ligis/actions/workflows/ci.yml/badge.svg)](https://github.com/sneldao/ligis/actions/workflows/ci.yml)
 
-**Casper Judge repro (1 command):** `npx tsx scripts/casper-final-demo.ts` — see [docs/casper-final-round.md](docs/casper-final-round.md).
+**Casper Judge repro (1 command):** `npx tsx scripts/casper-final-demo.ts` — see [docs/archive/casper-final-round.md](docs/archive/casper-final-round.md).
 
 ## Active hackathon submissions
 
@@ -16,7 +16,7 @@
 | **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement       | _(in progress)_                                                                                                                                                          | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)           |
 | **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification  | _(in progress)_                                                                                                                                                          | [`docs/okx-ai.md`](docs/okx-ai.md)                             |
 
-**Completed (submitted, not winning):** Casper Agentic Buildathon 2026 — final round, see [`docs/casper-final-round.md`](docs/casper-final-round.md); CROO Agent Hackathon 2026 — provider still live on the Agent Store, see [`docs/croo-hackathon-submission.md`](docs/croo-hackathon-submission.md). 0G Bridge by AKINDO 2026 was never submitted — dropped.
+**Completed (submitted, not winning):** Casper Agentic Buildathon 2026 — final round, see [`docs/archive/casper-final-round.md`](docs/archive/casper-final-round.md); CROO Agent Hackathon 2026 — provider still live on the Agent Store, see [`docs/archive/croo-hackathon-submission.md`](docs/archive/croo-hackathon-submission.md). 0G Bridge by AKINDO 2026 was never submitted — dropped.
 
 **One product, multiple proofs:** Casper contracts are the on-chain source of truth; CROO and OKX.AI are how other agents pay for verification before A2A commerce. GenLayer is the adjudication venue when delivery is disputed (Ligis still gates who may trade). 0G Compute and 0G Storage power the trust infrastructure. Same `CredentialRegistry` backs every marketplace.
 
@@ -104,7 +104,7 @@ every chain, which is what makes cross-chain credential portability possible.
 
 Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgentID` ERC-721 on EVM, `AgentId` Odra contract on Casper) and EIP-712 capability credentials (`CredentialRegistry`). Credentials are signed off-chain with secp256k1; the EVM contracts verify signatures on-chain, and the Casper port now recovers the issuer address on-chain for both `issue` and `revoke` using the pure-Rust `k256` crate. Any contract can gate access in one line: `require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed")`.
 
-It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter (`@ligis/adapter-casper`) is fully implemented and **live on Casper Testnet** — all 8 `ChainAdapter` operations talk to Odra contracts via `casper-client`, the WASM contracts are deployed (AgentId + CredentialRegistry + GatedVault), and the smoke test passes end-to-end (mint → sign → submit → verify → revoke). The web frontend is chain-aware on all pages (`?chain=casper-testnet` is live). See [`docs/casper-buildathon.md`](docs/casper-buildathon.md) for the submission plan.
+It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter (`@ligis/adapter-casper`) is fully implemented and **live on Casper Testnet** — all 8 `ChainAdapter` operations talk to Odra contracts via `casper-client`, the WASM contracts are deployed (AgentId + CredentialRegistry + GatedVault), and the smoke test passes end-to-end (mint → sign → submit → verify → revoke). The web frontend is chain-aware on all pages (`?chain=casper-testnet` is live). See [`docs/archive/casper-buildathon.md`](docs/archive/casper-buildathon.md) for the submission plan.
 
 ### Jev intent layer — the gate has reflexes
 
@@ -391,22 +391,21 @@ See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/okx-ai.md`](d
 
 ## Documentation
 
-| Doc                                                            | What's in it                                                                          |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [Strategy](docs/strategy.md)                                   | Product strategy, competitive landscape, differentiation, roadmap, business model     |
-| [Architecture](docs/architecture.md)                           | Contract design, module structure, repository layout                                  |
-| [Attestation integrations](docs/attestation-integrations.md)   | Self Protocol and EAS provenance, privacy boundaries, and rollout                     |
-| [Monorepo structure](MONOREPO_STRUCTURE.md)                    | Package layout, dependency graph, ChainAdapter interface, adding a new chain          |
-| [CROO Integration](docs/croo-integration.md)                   | CAP adapter, Agent Store listing, provider/requester usage                            |
-| [OKX.AI Integration](docs/okx-ai.md)                           | ASP strategy, services, demo plan, and submission checklist                           |
-| [API Reference](docs/api.md)                                   | Service schemas, input/output examples, capability names, chains                      |
-| [CROO Hackathon submission](docs/croo-hackathon-submission.md) | BUIDL copy, judge repro, track alignment                                              |
-| [Casper Buildathon](docs/casper-buildathon.md)                 | Submission plan, product story, day-by-day roadmap, demo storyboard                   |
-| [Trust Steward Agent](docs/trust-steward-agent.md)             | The autonomous loop, 0G integration, build phases                                     |
-| [Security](docs/security.md)                                   | Non-custodial design, EIP-712 replay protection                                       |
-| [Setup](docs/setup.md)                                         | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify |
-| [SKILL.md](SKILL.md)                                           | Director entry point for AI agents                                                    |
-| [References](references/)                                      | Per-skill command specs (issue, verify, revoke, rotate, hash, sign, composability)    |
+| Doc                                                          | What's in it                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| [Strategy](docs/strategy.md)                                 | Product strategy, competitive landscape, differentiation, roadmap, business model     |
+| [Architecture](docs/architecture.md)                         | Contract design, module structure, repository layout                                  |
+| [Attestation integrations](docs/attestation-integrations.md) | Self Protocol and EAS provenance, privacy boundaries, and rollout                     |
+| [Monorepo structure](MONOREPO_STRUCTURE.md)                  | Package layout, dependency graph, ChainAdapter interface, adding a new chain          |
+| [CROO Integration](docs/croo-integration.md)                 | CAP adapter, Agent Store listing, provider/requester usage                            |
+| [OKX.AI Integration](docs/okx-ai.md)                         | ASP strategy, services, demo plan, and submission checklist                           |
+| [API Reference](docs/api.md)                                 | Service schemas, input/output examples, capability names, chains                      |
+| [Archive](docs/archive/)                                     | Completed hackathon submissions + unpublished drafts                                  |
+| [Trust Steward Agent](docs/trust-steward-agent.md)           | The autonomous loop, 0G integration, build phases                                     |
+| [Security](docs/security.md)                                 | Non-custodial design, EIP-712 replay protection                                       |
+| [Setup](docs/setup.md)                                       | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify |
+| [SKILL.md](SKILL.md)                                         | Director entry point for AI agents                                                    |
+| [References](references/)                                    | Per-skill command specs (issue, verify, revoke, rotate, hash, sign, composability)    |
 
 ## License
 

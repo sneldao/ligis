@@ -3,7 +3,7 @@
  *
  * The web/ app today reads Pharos Atlantic live; the Casper entry is shown
  * in the UI but its on-chain reads are gated on the Casper contracts being
- * deployed. See `docs/casper-buildathon.md` for the rollout plan.
+ * deployed. See `docs/archive/casper-buildathon.md` for the rollout plan.
  */
 
 export interface ChainNetwork {

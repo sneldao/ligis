@@ -108,7 +108,7 @@ pnpm --dir packages/contracts-casper test     # Odra
 - **Fail-closed on settlement** — `x402-server` returns 402 + a clear error when settlement is unavailable; the previous "fake tx hash" fallback has been removed.
 - **Self-attested steward** — the testnet demo self-issues; production deploys use external issuers (CROO provider, `agent.commerce.x402` capability for the gate).
 
-Full audit notes (revoke nonce binding, shell-injection path, GatedVault tests, controller check) live in `docs/casper-buidl.md` Section "Internal hardening pass".
+Full audit notes (revoke nonce binding, shell-injection path, GatedVault tests, controller check) live in `docs/archive/casper-buidl.md` Section "Internal hardening pass".
 
 ---
 
@@ -135,9 +135,9 @@ The CROO provider is already running 24/7 (`pm2` managed, idempotency DB at `~/.
 ## 9. Documentation map
 
 - `README.md` — 1-minute overview + setup.
-- `docs/casper-final-round.md` — **this document**.
-- `docs/casper-buidl.md` — the long-form BUIDL submission (used in the DoraHacks form).
-- `docs/casper-buildathon.md` — historical day-by-day build log.
+- `docs/archive/casper-final-round.md` — **this document**.
+- `docs/archive/casper-buidl.md` — the long-form BUIDL submission (used in the DoraHacks form).
+- `docs/archive/casper-buildathon.md` — historical day-by-day build log.
 - `docs/architecture.md` — contract design + monorepo layout.
 - `docs/security.md` — security posture + role-gated mint roadmap.
 - `references/` — per-skill command specs (issue, verify, revoke, rotate, hash, sign, composability).

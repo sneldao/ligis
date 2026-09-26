@@ -42,7 +42,7 @@ Unit tests (mock CAP lifecycle + idempotent `OrderPaid`):
 pnpm -r --filter @ligis/croo-adapter run test
 ```
 
-BUIDL copy: [`docs/croo-hackathon-submission.md`](../../docs/croo-hackathon-submission.md)
+BUIDL copy: [`docs/archive/croo-hackathon-submission.md`](../../docs/archive/croo-hackathon-submission.md)
 
 ## The one-sentence pitch
 

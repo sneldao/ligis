@@ -69,17 +69,18 @@ The identity lifecycle is fully autonomous: the agent's Trust Steward mints its 
 
 Agents hold **EIP-712 signed attestations** that prove capabilities — not identity documents, but machine-verifiable claims:
 
-| Capability | Meaning | Regulatory Relevance |
-|---|---|---|
-| `kyc.basic` | Human principal KYC'd | Consumer protection |
-| `trade.cex-retail` | Authorized for retail trading | Market integrity |
-| `agent.commerce.escrow` | Can hold escrow | Payment oversight |
-| `agent.commerce.x402` | Can execute pay-per-call | Payment oversight |
-| `rwa.accredited` | Verified accredited investor | Securities regulation |
-| `compliance.aml` | AML screening passed | Financial crime |
-| `data.premium` | Access to premium data | Data governance |
+| Capability              | Meaning                       | Regulatory Relevance  |
+| ----------------------- | ----------------------------- | --------------------- |
+| `kyc.basic`             | Human principal KYC'd         | Consumer protection   |
+| `trade.cex-retail`      | Authorized for retail trading | Market integrity      |
+| `agent.commerce.escrow` | Can hold escrow               | Payment oversight     |
+| `agent.commerce.x402`   | Can execute pay-per-call      | Payment oversight     |
+| `rwa.accredited`        | Verified accredited investor  | Securities regulation |
+| `compliance.aml`        | AML screening passed          | Financial crime       |
+| `data.premium`          | Access to premium data        | Data governance       |
 
 Credentials are:
+
 - **Self-issued** (agent proves its own capability by signing off-chain and recording on-chain)
 - **Third-party attested** (a regulator or authorized issuer signs for the agent)
 - **Revocable** by the issuer at any time
@@ -115,23 +116,23 @@ A web-based dashboard that gives regulators:
 
 This directly addresses **Track 4: Know Your Agent (KY-A), Digital Verification & Digital Public Infrastructure**:
 
-| Requirement | Our Solution |
-|---|---|
-| Authenticate & verify AI agents | `AgentID` (soulbound NFT) + `CredentialRegistry` (EIP-712 attestations) |
+| Requirement                                  | Our Solution                                                                     |
+| -------------------------------------------- | -------------------------------------------------------------------------------- |
+| Authenticate & verify AI agents              | `AgentID` (soulbound NFT) + `CredentialRegistry` (EIP-712 attestations)          |
 | Detect autonomous exploitation of DPI layers | Credential gating on digital ID/data sharing — `isCapable()` check before access |
-| Agentic solutions for accountability | Tamper-evident on-chain audit trail linking actions to verified identity |
-| Cross-jurisdiction portability | Chain-agnostic adapters (EVM + Casper live, more via `ChainAdapter` interface) |
+| Agentic solutions for accountability         | Tamper-evident on-chain audit trail linking actions to verified identity         |
+| Cross-jurisdiction portability               | Chain-agnostic adapters (EVM + Casper live, more via `ChainAdapter` interface)   |
 
 It also contributes to **Track 3: Agentic Payments & Commerce** via the x402 payment gating, and **Track 5: DeFi Market Infrastructure** via the existing credential composability with smart contracts.
 
 ## Guardrails
 
-| Required Guardrail | How We Address It |
-|---|---|
-| **Human-in-the-loop** | Regulator dashboard requires human confirmation for: critical alerts, bulk revocation, investigation holds. Agent can self-issue low-risk credentials but high-risk capabilities (escrow, accredited investor) require third-party issuer signature |
-| **Auditability & Traceability** | Every identity action is on-chain: mint, rotate, revoke, credential issue, credential revoke. Evidence manifests anchored to 0G Storage with on-chain Merkle root. Verifiable independently without our infrastructure |
-| **Safety & governance controls** | Capability-based access control — fine-grained, revocable, time-bound. Credential registry supports programmable gating (e.g., require 2-of-3 multi-sig for escrow credentials) |
-| **Cyber risk** | Key rotation preserves identity across compromised keys. Revocation is instant and on-chain. Soulbound design prevents identity theft (token cannot be transferred to attacker). EIP-712 domain binding prevents cross-chain credential replay |
+| Required Guardrail               | How We Address It                                                                                                                                                                                                                                   |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Human-in-the-loop**            | Regulator dashboard requires human confirmation for: critical alerts, bulk revocation, investigation holds. Agent can self-issue low-risk credentials but high-risk capabilities (escrow, accredited investor) require third-party issuer signature |
+| **Auditability & Traceability**  | Every identity action is on-chain: mint, rotate, revoke, credential issue, credential revoke. Evidence manifests anchored to 0G Storage with on-chain Merkle root. Verifiable independently without our infrastructure                              |
+| **Safety & governance controls** | Capability-based access control — fine-grained, revocable, time-bound. Credential registry supports programmable gating (e.g., require 2-of-3 multi-sig for escrow credentials)                                                                     |
+| **Cyber risk**                   | Key rotation preserves identity across compromised keys. Revocation is instant and on-chain. Soulbound design prevents identity theft (token cannot be transferred to attacker). EIP-712 domain binding prevents cross-chain credential replay      |
 
 ## Scalability & Transferability
 

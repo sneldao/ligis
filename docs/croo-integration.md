@@ -132,7 +132,7 @@ file.env` only sets shell-local variables, it does not export them to the
 > `node` child process, so `pnpm croo` would otherwise fail with `Missing
 required environment variable: CROO_SDK_KEY`.
 
-See [`docs/croo-hackathon-submission.md`](croo-hackathon-submission.md) for BUIDL copy.
+See [`docs/archive/croo-hackathon-submission.md`](archive/croo-hackathon-submission.md) for BUIDL copy.
 
 ## Setup
 

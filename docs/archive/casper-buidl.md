@@ -4,7 +4,7 @@
 > **Casper Agentic Buildathon 2026 — Final Round**.
 > Submission portal: https://dorahacks.io
 >
-> See [`docs/casper-final-round.md`](casper-final-round.md) for the canonical
+> See [`docs/archive/casper-final-round.md`](casper-final-round.md) for the canonical
 > one-page summary of what ships, what the live verification path is, and
 > what the known limitations are. This document is the long-form BUIDL copy.
 
@@ -307,12 +307,12 @@ in the Casper Rust test suite:
 - Repo: github.com/sneldao/ligis (MIT)
 - Web: ligis.vercel.app (live, chain-aware)
 - Demo video: https://youtu.be/eoOQmAx7U7s
-- **CROO Hackathon** (parallel submission): same Casper contracts power CAP services on [agent.croo.network](https://agent.croo.network) — see [`docs/croo-hackathon-submission.md`](croo-hackathon-submission.md)
+- **CROO Hackathon** (parallel submission): same Casper contracts power CAP services on [agent.croo.network](https://agent.croo.network) — see [`docs/archive/croo-hackathon-submission.md`](croo-hackathon-submission.md)
 
 ## Documentation
 
 - README: setup, demos, deployed contracts
-- `docs/casper-buildathon.md` — submission plan + day-by-day
+- `docs/archive/casper-buildathon.md` — submission plan + day-by-day
   roadmap + demo storyboard
 - `docs/architecture.md` — contract design
 - `docs/trust-steward-agent.md` — the autonomous loop

@@ -13,14 +13,14 @@ paid HTTP endpoint.
 
 This composes the three pillars of the Casper AI Toolkit into one product:
 
-| Pillar           | Role in Ligis Trust Gate                                        |
-| ---------------- | --------------------------------------------------------------- |
-| **Agent ID**     | Each agent has a Casper-native `AgentId` (Odra contract).       |
-| **Credentials**  | Capabilities are EIP-712 credentials signed off-chain and verified on-chain via secp256k1 recovery in the Odra registry. |
-| **x402**         | The service requires payment + a valid credential per request.  |
-| **MCP**          | The MCP server exposes the gate as a discoverable agent tool.   |
-| **0G Compute**   | The Trust Steward decides which credentials to self-issue.      |
-| **0G Storage**   | Decisions are persisted as verifiable evidence manifests.       |
+| Pillar          | Role in Ligis Trust Gate                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Agent ID**    | Each agent has a Casper-native `AgentId` (Odra contract).                                                                |
+| **Credentials** | Capabilities are EIP-712 credentials signed off-chain and verified on-chain via secp256k1 recovery in the Odra registry. |
+| **x402**        | The service requires payment + a valid credential per request.                                                           |
+| **MCP**         | The MCP server exposes the gate as a discoverable agent tool.                                                            |
+| **0G Compute**  | The Trust Steward decides which credentials to self-issue.                                                               |
+| **0G Storage**  | Decisions are persisted as verifiable evidence manifests.                                                                |
 
 The narrative: **portable trust across chains, with Casper as the trust
 layer for the agent economy.** The demo leads with the credential layer
@@ -181,6 +181,7 @@ web/
 ## Roadmap (5 days, day-by-day)
 
 ### Day 1 — TODAY (Jun 25)
+
 - [x] Scaffold `adapter-casper`, `contracts-casper`, CLI/MCP wiring, docs.
 - [x] `x402-server` scaffolded (pulled forward from Day 4).
 - [x] Multi-chain UI shell on home page (ChainSelector + getChain).
@@ -203,6 +204,7 @@ web/
       live across the entire frontend.
 
 ### Day 2 (Jun 26)
+
 - [x] Fund deployer wallet from faucet, transfer CSPR to agent + issuer.
 - [x] `pnpm deploy:casper` — install WASM contracts to Casper Testnet.
       Record package hashes in `.env.d/casper.env`.
@@ -210,14 +212,16 @@ web/
 - [x] Verify on cspr.live explorer.
 
 ### Day 3 (Jun 27)
+
 - [x] Smoke test passes end-to-end on Casper Testnet:
-  `npx tsx scripts/casper-smoke-test.ts`
+      `npx tsx scripts/casper-smoke-test.ts`
   - mint_self → sign credential → submit on-chain → verify → revoke → verify revoked
 - [x] `signCredential` + `submitCredential` produce valid on-chain credentials.
 - [x] `verifyCapability` reads them back correctly via Odra dictionary queries.
 - [x] `CASPER_TESTNET.live` flipped to `true` in `web/lib/network.ts`.
 
 ### Day 4 (Jun 28)
+
 - [x] Wire `x402-server` credential check + 402 + payment settlement.
   - x402 v2 protocol implemented (PaymentRequirements, X-PAYMENT header).
   - EIP-712 `TransferWithAuthorization` signing via `@casper-ecosystem/casper-eip-712`.
@@ -227,11 +231,12 @@ web/
   - `casper-x402-demo.ts` runs the full 402→sign→pay→200 flow with RWA data.
 - [x] Local settlement mode works end-to-end (on-chain CSPR transfer).
 - [x] Facilitator mode wired to `https://x402-facilitator.cspr.cloud` (requires
-  `CSPR_CLOUD_TOKEN` for production use).
+      `CSPR_CLOUD_TOKEN` for production use).
 
 ### Day 5 (Jun 29)
+
 - [x] End-to-end demo run: agent → Steward → Casper credential → x402 paid
-  call → 0G evidence anchor.
+      call → 0G evidence anchor.
   - `scripts/casper-e2e-demo.ts` — rich console output, 3-4 on-chain txs.
   - `scripts/casper-x402-demo.ts` — full x402 payment flow with RWA data.
 - [x] LocalReasoner fallback when 0G Compute is unavailable.
@@ -243,6 +248,7 @@ web/
 - [x] README polished with Casper-first framing + demo commands.
 
 ### Day 6 (Jun 30) — recording + buffer
+
 - [ ] **Morning**: record + edit demo video (3–5 minutes). Budget 4–8 hours
       for a non-pro recording + edit.
 - [ ] **Afternoon**: buffer for whatever broke on Day 5. Do not commit new
@@ -259,25 +265,25 @@ web/
 |        | 32 bytes on Pharos and Casper. Show the code.                       |
 | 1:30   | Demo: agent boots on Casper Testnet (live tx on cspr.live).         |
 | 2:00   | Demo: Steward self-issues `data.premium` + `agent.commerce.x402`    |
-|        | credentials on Casper (live txs).                                    |
+|        | credentials on Casper (live txs).                                   |
 | 2:30   | Demo: agent hits paid endpoint — 402 + x402 payment settles on      |
-|        | Casper (live tx). Payload returned.                                  |
+|        | Casper (live tx). Payload returned.                                 |
 | 3:30   | Show the 0G evidence manifest with all tx hashes anchored.          |
 | 4:00   | The cross-chain pitch: same credential, two chains, one hash.       |
 | 4:30   | Vision: Casper as the trust layer for the agent economy.            |
 
 ## Risks + mitigations
 
-| Risk                                                          | Mitigation                                                                                |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Odra toolchain issues.                                        | **Resolved** — contracts built, deployed, and smoke-tested on Casper Testnet.             |
-| Casper 2.0 `TransactionV1` `is_install_upgrade` not recognized. | **Resolved** — use legacy `put-deploy` format for contract installation and stored contract calls. TransactionV1's `is_install_upgrade` flag is rejected by the testnet node with `NotAllowedToAddContractVersion [48]`. |
-| Casper Testnet faucet rate limits (single-use per account).   | **Resolved** — deployer funded via Casper Wallet faucet. Failed deployments with `standardPayment=false` only cost actual gas consumed. |
-| Odra dictionary storage key computation.                      | **Resolved** — `verifyCapability` and `signCredential` correctly compute `blake2b(index_bytes ++ mapping_data)` for the dictionary item key (separate from the keccak256 capability hash). Field indices: `issuer_nonce`=1, `latest`=2. |
-| x402 Facilitator on testnet is finicky.                       | **Resolved** — implemented local settlement mode (direct CSPR transfer) as fallback. Facilitator mode wired to CSPR.cloud but requires auth token. Local mode produces real on-chain txs. |
-| 0G Compute inference endpoint unreachable.                    | **Resolved** — `LocalReasoner` (keyword-based fallback) implemented in `packages/agent-logic/src/local-reasoner.ts`. CLI tries 0G Compute first (15s timeout), falls back to local. Web steward has the same fallback. |
-| On-chain signature recovery.                  | **Resolved** — `CredentialRegistry` now recovers the secp256k1 issuer on-chain for both `issue` and `revoke` using the pure-Rust `k256` crate. |
-| Run out of time on Day 5.                                     | Day 5 is run-through + script lock only. Recording is Day 6 morning. Submit at end of Day 6 even if rough. |
+| Risk                                                            | Mitigation                                                                                                                                                                                                                              |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Odra toolchain issues.                                          | **Resolved** — contracts built, deployed, and smoke-tested on Casper Testnet.                                                                                                                                                           |
+| Casper 2.0 `TransactionV1` `is_install_upgrade` not recognized. | **Resolved** — use legacy `put-deploy` format for contract installation and stored contract calls. TransactionV1's `is_install_upgrade` flag is rejected by the testnet node with `NotAllowedToAddContractVersion [48]`.                |
+| Casper Testnet faucet rate limits (single-use per account).     | **Resolved** — deployer funded via Casper Wallet faucet. Failed deployments with `standardPayment=false` only cost actual gas consumed.                                                                                                 |
+| Odra dictionary storage key computation.                        | **Resolved** — `verifyCapability` and `signCredential` correctly compute `blake2b(index_bytes ++ mapping_data)` for the dictionary item key (separate from the keccak256 capability hash). Field indices: `issuer_nonce`=1, `latest`=2. |
+| x402 Facilitator on testnet is finicky.                         | **Resolved** — implemented local settlement mode (direct CSPR transfer) as fallback. Facilitator mode wired to CSPR.cloud but requires auth token. Local mode produces real on-chain txs.                                               |
+| 0G Compute inference endpoint unreachable.                      | **Resolved** — `LocalReasoner` (keyword-based fallback) implemented in `packages/agent-logic/src/local-reasoner.ts`. CLI tries 0G Compute first (15s timeout), falls back to local. Web steward has the same fallback.                  |
+| On-chain signature recovery.                                    | **Resolved** — `CredentialRegistry` now recovers the secp256k1 issuer on-chain for both `issue` and `revoke` using the pure-Rust `k256` crate.                                                                                          |
+| Run out of time on Day 5.                                       | Day 5 is run-through + script lock only. Recording is Day 6 morning. Submit at end of Day 6 even if rough.                                                                                                                              |
 
 ## Out of scope (deliberately not building)
 

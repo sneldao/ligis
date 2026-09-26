@@ -81,8 +81,20 @@ web/package-lock.json
 /videos/*/assets/
 /videos/*/audio/
 /videos/*/capture/
+/videos/*/plates/
+/videos/*/probe/
+/videos/*/snapshots/
+/videos/*/.venv/
+/videos/*/.hyperframes/
+/videos/*/.thumbnails/
 /videos/*/node_modules/
 /videos/*/package-lock.json
+# hyperframes local browser profile / secrets — never commit
+/videos/.hyperframes-browser.env
+# WIP film projects — keep entirely local (not shipping source either)
+/videos/metropolis-*/
+# Operator film shot lists (paths into ignored video dirs)
+/scripts/metropolis-film-shots.md
 # media binaries anywhere in a video project
 /videos/**/*.png
 /videos/**/*.jpg
