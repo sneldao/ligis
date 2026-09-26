@@ -51,7 +51,7 @@ export function VerdictCard({
 
   return (
     <article
-      className={`flex flex-col gap-4 rounded-xl border bg-night/70 p-4 sm:p-5 ${
+      className={`flex flex-col gap-4 border bg-night/70 p-4 sm:p-5 ${
         stop
           ? "stop-flash border-stop/50"
           : final === "GO"

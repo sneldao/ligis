@@ -48,7 +48,7 @@ export function SubjectSpecimen({
             className="specimen-art block h-full w-full"
           />
         ) : (
-          <span className="flex h-full items-center justify-center font-mono text-[10px] uppercase tracking-[0.16em] text-ink-quiet">
+          <span className="flex h-full items-center justify-center font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
             no subject
           </span>
         )}
@@ -60,7 +60,7 @@ export function SubjectSpecimen({
         ) : null}
       </div>
       {caption ? (
-        <figcaption className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-quiet">
+        <figcaption className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
           {state === "reading" ? "reading chain" : "specimen"}
           {subject.trim() ? (
             <span className="mt-0.5 block normal-case tracking-normal tabular text-ink-soft">

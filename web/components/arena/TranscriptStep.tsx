@@ -5,7 +5,7 @@ import {
   type Step,
 } from "@/lib/arena/scenario";
 
-const LABEL = "font-mono text-[10px] uppercase tracking-[0.16em]";
+const LABEL = "font-mono text-[11px] uppercase tracking-[0.16em]";
 
 export function TranscriptStep({ step }: { step: Step }) {
   switch (step.kind) {
@@ -29,13 +29,13 @@ export function TranscriptStep({ step }: { step: Step }) {
       );
     case "tool":
       return (
-        <div className="flex flex-col gap-2 rounded-lg border border-night-rule bg-night/60 p-3 font-mono text-xs leading-relaxed">
+        <div className="flex flex-col gap-2 border border-night-rule bg-night/60 p-3 font-mono text-xs leading-relaxed">
           <span className="text-fog-quiet">
             <span className="text-signal">{step.tool}</span>({step.target})
           </span>
           <span className="text-fog">{step.result}</span>
           {step.injected ? (
-            <div className="flex flex-col gap-1.5 rounded-md border border-dashed border-stop/60 bg-stop/10 p-2.5">
+            <div className="flex flex-col gap-1.5 border border-dashed border-stop/60 bg-stop/10 p-2.5">
               <span className={`${LABEL} text-stop`}>Hidden text in page</span>
               <span className="text-pretty text-fog">{step.injected}</span>
             </div>
@@ -57,7 +57,7 @@ export function TranscriptStep({ step }: { step: Step }) {
     }
     case "halt":
       return (
-        <div className="flex flex-col gap-1.5 rounded-lg border border-stop/40 bg-stop/10 p-3">
+        <div className="flex flex-col gap-1.5 border border-stop/40 bg-stop/10 p-3">
           <span className={`${LABEL} text-stop`}>Halted</span>
           <p className="text-pretty text-[15px] leading-relaxed text-fog">
             {step.text}

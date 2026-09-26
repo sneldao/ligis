@@ -151,13 +151,13 @@ export function ArenaRunner() {
         <section
           ref={transcriptRef}
           aria-label="Agent transcript"
-          className="flex min-h-[28rem] flex-col gap-4 overflow-y-auto rounded-2xl border border-night-rule bg-night-raise/80 p-5 lg:min-h-0"
+          className="flex min-h-[28rem] flex-col gap-4 overflow-y-auto border border-night-rule bg-night-raise/80 p-5 lg:min-h-0"
         >
           <header className="flex items-baseline justify-between border-b border-night-rule pb-3">
             <span className="font-sans text-sm font-medium text-fog">
               {AGENT.name}
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fog-quiet">
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-fog-quiet">
               {AGENT.role}
             </span>
           </header>
@@ -196,7 +196,7 @@ export function ArenaRunner() {
             <span className="font-sans text-sm font-medium text-fog">
               Ligis gate
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fog-quiet">
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-fog-quiet">
               Checked before money moves
             </span>
           </header>

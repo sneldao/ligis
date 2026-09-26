@@ -17,11 +17,19 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useWallet, formatMotes } from "@/lib/casper-browser/store";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { CASPER_TESTNET } from "@/lib/network";
+
+const noopSubscribe = () => () => {};
 
 // ── Pharos (EVM) wallet logic ──────────────────────────────────────
 
@@ -112,6 +120,14 @@ export function UnifiedWalletChip() {
     (searchParams.get("chain") ?? "casper-testnet") === CASPER_TESTNET.id;
   const searchKey = searchParams.toString();
   const casperWallet = useWallet();
+  // The dock hydrates inside a Suspense boundary, after WalletProvider's
+  // mount effect has already flipped `hydrated`. Gate on our own hydration so
+  // the first client render matches the server HTML.
+  const selfHydrated = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
 
   // Pharos EVM state
   const [pharosAccount, setPharosAccount] = useState<string | null>(null);
@@ -279,7 +295,7 @@ export function UnifiedWalletChip() {
     const connected = casperWallet.pair !== null;
     const funded =
       casperWallet.balanceMotes !== null && casperWallet.balanceMotes !== "0";
-    const isHydrating = !casperWallet.hydrated;
+    const isHydrating = !selfHydrated || !casperWallet.hydrated;
 
     dot = isHydrating
       ? "bg-paper-deep/60"

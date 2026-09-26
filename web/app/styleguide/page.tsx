@@ -9,6 +9,10 @@ import { addresses, network, readAgentId } from "@/lib/chain";
 
 const SAMPLE_WALLET: Address = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
 
+// The layout's GlobalDock reads useSearchParams; unless the page itself awaits
+// searchParams (as every other room does), that boundary bails out to client
+// rendering, which scripts/smoke-ssr.mjs rejects.
+
 export const metadata = {
   title: "Design · Ligis",
   description:
@@ -63,7 +67,12 @@ async function ChainProbe() {
   );
 }
 
-export default function StyleguidePage() {
+export default async function StyleguidePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  await searchParams;
   return (
     <main className="route-shell max-w-3xl">
       <header className="route-header text-xs text-ink-quiet">
