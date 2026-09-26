@@ -1,4 +1,5 @@
 import { Rule } from "@/components/Rule";
+import { VerdictMark } from "@/components/VerdictMark";
 import { signalCostUsd, type TrustSignal } from "@ligis/core";
 
 /**
@@ -47,11 +48,11 @@ export function SignalStack({ signals }: { signals: TrustSignal[] }) {
               <div className="space-y-1.5 text-right">
                 {signal.verdict === "go" ? (
                   <span className="font-mono text-sm tabular text-sage">
-                    ✓ GO
+                    <VerdictMark ok /> GO
                   </span>
                 ) : signal.verdict === "stop" ? (
                   <span className="font-mono text-sm tabular text-revoke">
-                    ✗ STOP
+                    <VerdictMark ok={false} /> STOP
                   </span>
                 ) : (
                   <span className="font-mono text-sm tabular text-ink-quiet">

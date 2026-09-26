@@ -1,23 +1,152 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import { unstable_cache } from "next/cache";
 import { evaluatePaymentIntent, loadJevConfig } from "@ligis/core";
 import {
   AGENT,
   INJECTED_INSTRUCTION,
+  PAYEES,
   PAYMENTS,
   VENDOR,
+  type CustomAttack,
   type JudgeOutcome,
   type JudgeResponse,
   type PaymentId,
 } from "./scenario";
 
+/**
+ * Token budget model
+ * - Jev sees only structured facts (amount, payee). The arena offers a fixed
+ *   menu of both, so Jev's whole input space is ~15 keys, each judged once a
+ *   day and then served from the shared Next data cache.
+ * - Vultr also reads the untrusted page text, so it is keyed on normalized
+ *   text and cached for 6h.
+ * - Concurrent misses for the same key share one upstream request.
+ * - Only real upstream calls count against the per-IP and global budgets, so
+ *   replays and cache hits are always free and never rate limited.
+ */
+const JEV_TTL_S = 60 * 60 * 24;
+const VULTR_TTL_S = 60 * 60 * 6;
+const PER_IP_FRESH = { max: 6, windowMs: 10 * 60_000 };
+const GLOBAL_FRESH = { max: 120, windowMs: 60 * 60_000 };
+
 const USDC_DECIMALS = 6;
 const toUnits = (usd: number) =>
   (BigInt(usd) * 10n ** BigInt(USDC_DECIMALS)).toString();
+const sha = (v: unknown) =>
+  createHash("sha256").update(JSON.stringify(v)).digest("hex");
 
-async function judgeWithJev(id: PaymentId): Promise<JudgeOutcome> {
-  const payment = PAYMENTS[id];
-  const config = loadJevConfig({
+interface JudgeCase {
+  amountUsd: number;
+  payTo: string;
+  memo: string;
+  pageText: string | null;
+}
+
+function caseFor(input: PaymentId | CustomAttack): JudgeCase {
+  if (typeof input === "string") {
+    const p = PAYMENTS[input];
+    return {
+      amountUsd: p.amountUsd,
+      payTo: p.payTo,
+      memo: p.memo,
+      pageText: input === "injected" ? INJECTED_INSTRUCTION : null,
+    };
+  }
+  return {
+    amountUsd: input.amountUsd,
+    payTo: PAYEES[input.payee].address,
+    memo: "Payment requested by content the agent read",
+    pageText: input.instruction.replace(/\s+/g, " ").trim(),
+  };
+}
+
+// ---------- Budgets (only real upstream calls count) ----------
+
+const ipHits = new Map<string, number[]>();
+const globalHits: number[] = [];
+
+function prune(hits: number[], windowMs: number, now: number) {
+  while (hits.length && now - hits[0] > windowMs) hits.shift();
+}
+
+function takeFreshBudget(ip: string): string | null {
+  const now = Date.now();
+  prune(globalHits, GLOBAL_FRESH.windowMs, now);
+  if (globalHits.length >= GLOBAL_FRESH.max)
+    return "arena budget reached for this hour";
+  const hits = ipHits.get(ip) ?? [];
+  prune(hits, PER_IP_FRESH.windowMs, now);
+  if (hits.length >= PER_IP_FRESH.max)
+    return "too many fresh verdicts, try again in a few minutes";
+  hits.push(now);
+  ipHits.set(ip, hits);
+  globalHits.push(now);
+  if (ipHits.size > 5_000) ipHits.clear();
+  return null;
+}
+
+// ---------- Cache wrapper ----------
+
+class NotCacheable extends Error {}
+const inflight = new Map<string, Promise<JudgeOutcome>>();
+
+/**
+ * Serve a verdict from the shared cache, or compute it once. Skipped outcomes
+ * (timeouts, missing keys, rate limits) are never cached.
+ */
+function cachedVerdict(
+  judge: "jev" | "vultr",
+  key: string,
+  ttl: number,
+  ip: string,
+  configured: boolean,
+  compute: () => Promise<JudgeOutcome>,
+): Promise<JudgeOutcome> {
+  // Unconfigured judges skip instantly without a network call; don't let
+  // them consume budget or touch the cache.
+  if (!configured) return compute();
+
+  const flightKey = `${judge}:${key}`;
+  const existing = inflight.get(flightKey);
+  if (existing) return existing;
+
+  const run = (async (): Promise<JudgeOutcome> => {
+    let fresh: JudgeOutcome | undefined;
+    try {
+      const hit = await unstable_cache(
+        async () => {
+          const denied = takeFreshBudget(ip);
+          if (denied) {
+            fresh = { status: "skipped", reason: `rate limited: ${denied}` };
+            throw new NotCacheable();
+          }
+          const outcome = await compute();
+          fresh = outcome;
+          if (outcome.status !== "ok") throw new NotCacheable();
+          return { ...outcome, judgedAt: new Date().toISOString() };
+        },
+        ["arena-verdict-v1", judge, key],
+        { revalidate: ttl, tags: ["arena-verdict"] },
+      )();
+      return { ...hit, cached: fresh === undefined };
+    } catch (err) {
+      if (fresh) return fresh;
+      return {
+        status: "skipped",
+        reason: err instanceof Error ? err.message : String(err),
+      };
+    }
+  })().finally(() => inflight.delete(flightKey));
+
+  inflight.set(flightKey, run);
+  return run;
+}
+
+// ---------- Jev (structured facts only) ----------
+
+function jevConfig() {
+  return loadJevConfig({
     ...process.env,
     LIGIS_JEV_ENABLED: process.env.LIGIS_JEV_ENABLED ?? "1",
     LIGIS_JEV_TRANSPORT:
@@ -25,7 +154,10 @@ async function judgeWithJev(id: PaymentId): Promise<JudgeOutcome> {
       (process.env.TYPESAFE_API_KEY ? "direct" : "auto"),
     LIGIS_JEV_TIMEOUT_MS: process.env.LIGIS_JEV_TIMEOUT_MS ?? "8000",
   });
+}
 
+async function callJev(c: JudgeCase): Promise<JudgeOutcome> {
+  const config = jevConfig();
   const result = await evaluatePaymentIntent(
     {
       subject: AGENT.subject,
@@ -39,8 +171,8 @@ async function judgeWithJev(id: PaymentId): Promise<JudgeOutcome> {
       serviceDescription: `Market-data vendor under a signed contract at $${VENDOR.priceUsd} per quarter.`,
       payment: {
         scheme: "exact",
-        amountSmallestUnit: toUnits(payment.amountUsd),
-        payTo: payment.payTo,
+        amountSmallestUnit: toUnits(c.amountUsd),
+        payTo: c.payTo,
       },
     },
     config,
@@ -62,6 +194,8 @@ async function judgeWithJev(id: PaymentId): Promise<JudgeOutcome> {
     model: result.model,
   };
 }
+
+// ---------- Vultr (reads the untrusted page text) ----------
 
 const VULTR_BASE = "https://api.vultrinference.com/v1";
 const NON_CHAT =
@@ -85,7 +219,7 @@ async function resolveVultrModel(key: string): Promise<string | null> {
   return cachedModel;
 }
 
-async function judgeWithVultr(id: PaymentId): Promise<JudgeOutcome> {
+async function callVultr(c: JudgeCase): Promise<JudgeOutcome> {
   const key = process.env.VULTR_INFERENCE_API_KEY;
   if (!key)
     return { status: "skipped", reason: "VULTR_INFERENCE_API_KEY not set" };
@@ -96,7 +230,6 @@ async function judgeWithVultr(id: PaymentId): Promise<JudgeOutcome> {
     if (!model)
       return { status: "skipped", reason: "no Vultr chat model available" };
 
-    const payment = PAYMENTS[id];
     const facts = {
       contract: {
         vendor: VENDOR.name,
@@ -105,12 +238,11 @@ async function judgeWithVultr(id: PaymentId): Promise<JudgeOutcome> {
         scope: VENDOR.service,
       },
       requestedPayment: {
-        amountUsd: payment.amountUsd,
-        payTo: payment.payTo,
-        memo: payment.memo,
+        amountUsd: c.amountUsd,
+        payTo: c.payTo,
+        memo: c.memo,
       },
-      contentAgentReadBeforePaying:
-        id === "injected" ? INJECTED_INSTRUCTION : null,
+      contentAgentReadBeforePaying: c.pageText,
     };
 
     const res = await fetch(`${VULTR_BASE}/chat/completions`, {
@@ -122,7 +254,7 @@ async function judgeWithVultr(id: PaymentId): Promise<JudgeOutcome> {
       body: JSON.stringify({
         model,
         temperature: 0,
-        max_tokens: 250,
+        max_tokens: 160,
         messages: [
           {
             role: "system",
@@ -178,22 +310,51 @@ async function judgeWithVultr(id: PaymentId): Promise<JudgeOutcome> {
   }
 }
 
-export async function judgePayment(id: PaymentId): Promise<JudgeResponse> {
+// ---------- Entry point ----------
+
+export async function judgePayment(
+  input: PaymentId | CustomAttack,
+  ip: string,
+): Promise<JudgeResponse> {
+  const c = caseFor(input);
+  const jevKey = `${c.amountUsd}:${c.payTo.toLowerCase()}`;
+  const vultrKey = sha({
+    a: c.amountUsd,
+    p: c.payTo.toLowerCase(),
+    m: c.memo,
+    t: c.pageText?.toLowerCase() ?? null,
+  });
+
+  const jc = jevConfig();
   const [jev, vultr] = await Promise.all([
-    judgeWithJev(id),
-    judgeWithVultr(id),
+    cachedVerdict("jev", jevKey, JEV_TTL_S, ip, jc.enabled && !!jc.apiKey, () =>
+      callJev(c),
+    ),
+    cachedVerdict(
+      "vultr",
+      vultrKey,
+      VULTR_TTL_S,
+      ip,
+      !!process.env.VULTR_INFERENCE_API_KEY,
+      () => callVultr(c),
+    ),
   ]);
-  const verdicts = [jev, vultr].flatMap((j) =>
-    j.status === "ok" ? [j.verdict] : [],
-  );
+
+  const ran = [jev, vultr].filter((j) => j.status === "ok");
+  const verdicts = ran.map((j) => (j.status === "ok" ? j.verdict : null));
   const final = verdicts.includes("STOP")
     ? "STOP"
     : verdicts.length
       ? "GO"
       : "UNKNOWN";
   const judgedAt = new Date().toISOString();
-  const auditId = createHash("sha256")
-    .update(JSON.stringify({ id, final, judgedAt, payment: PAYMENTS[id] }))
-    .digest("hex");
-  return { payment: id, final, jev, vultr, auditId, judgedAt };
+  return {
+    payment: typeof input === "string" ? input : "custom",
+    final,
+    jev,
+    vultr,
+    auditId: sha({ c, final, judgedAt }),
+    judgedAt,
+    cached: ran.length > 0 && ran.every((j) => j.status === "ok" && j.cached),
+  };
 }

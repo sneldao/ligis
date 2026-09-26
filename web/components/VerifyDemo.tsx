@@ -9,6 +9,7 @@ import {
 } from "@/app/actions";
 import { GateVerdict } from "./GateVerdict";
 import { Rule } from "./Rule";
+import { VerdictMark } from "./VerdictMark";
 import { ChainSwitchHint } from "./ChainSwitchHint";
 import { truncateAddress } from "@/lib/format";
 import { chainSwitchHref, subjectChainMismatch } from "@/lib/subject-format";
@@ -255,14 +256,18 @@ export function VerifyDemo({
               </p>
               <p className="flex flex-wrap items-baseline gap-x-6 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em]">
                 <span>
-                  <span className="text-sage">✓ GO</span>
+                  <span className="text-sage">
+                    <VerdictMark ok /> GO
+                  </span>
                   <span className="ml-2 text-ink-quiet">proceed</span>
                 </span>
                 <span className="text-rule" aria-hidden>
                   ·
                 </span>
                 <span>
-                  <span className="text-revoke">✗ STOP</span>
+                  <span className="text-revoke">
+                    <VerdictMark ok={false} /> STOP
+                  </span>
                   <span className="ml-2 text-ink-quiet">do not pay</span>
                 </span>
               </p>

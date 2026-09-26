@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import { Rule } from "@/components/Rule";
+import { VerdictMark } from "@/components/VerdictMark";
 import { SITUATIONS, type Situation } from "@/lib/situations";
 
 /**
@@ -216,7 +217,7 @@ function MomentBody({
             gated ? "text-sage" : "text-revoke"
           }`}
         >
-          {gated ? "✓ GO" : "✗ STOP"}
+          <VerdictMark ok={gated} /> {gated ? "GO" : "STOP"}
         </p>
         <p className="mt-2 max-w-lg font-serif text-sm leading-relaxed text-ink sm:text-base">
           {gated ? s.withLigis : s.without}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ArenaRunner } from "@/components/arena/ArenaRunner";
+import { AttackLab } from "@/components/arena/AttackLab";
 
 export const metadata: Metadata = {
   title: "Arena — watch an agent get tricked, and stopped",
@@ -25,6 +26,7 @@ export default function ArenaPage() {
           </p>
         </header>
         <ArenaRunner />
+        <AttackLab />
       </div>
     </main>
   );
