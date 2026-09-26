@@ -1,5 +1,6 @@
 import { truncateAddress } from "@/lib/format";
 import { gateReason } from "@/lib/gate-reason";
+import { SubjectSpecimen } from "@/components/SubjectSpecimen";
 
 /**
  * GateVerdict — the product's wedge, made tactile.
@@ -60,65 +61,74 @@ export function GateVerdict({
   const reason = gateReason(verdict, BigInt(Math.floor(Date.now() / 1000)));
 
   return (
-    <div className={`border-l-2 pl-6 ${tone}`}>
-      <p className="eyebrow">gate · pre-payment check</p>
+    <div
+      className={`flex flex-col-reverse gap-8 border-l-2 pl-6 sm:flex-row sm:items-start sm:justify-between ${tone}`}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="eyebrow">gate · pre-payment check</p>
 
-      <p className="mt-3 display text-3xl sm:text-4xl">
-        <span className={verdictColor}>{go ? "✓ GO" : "✗ STOP"}</span>
-        {!go && (reason.kind === "revoked" || reason.kind === "expired") ? (
-          <span className="ml-3 align-middle font-mono text-[11px] uppercase tracking-[0.16em] text-revoke/80 border border-revoke/30 px-2 py-0.5">
-            {reason.kind}
+        <p className="mt-3 display text-3xl sm:text-4xl">
+          <span className={verdictColor}>{go ? "GO" : "STOP"}</span>
+          {!go && (reason.kind === "revoked" || reason.kind === "expired") ? (
+            <span className="ml-3 align-middle font-mono text-[11px] uppercase tracking-[0.16em] text-revoke/80 border border-revoke/30 px-2 py-0.5">
+              {reason.kind}
+            </span>
+          ) : null}
+        </p>
+
+        <p className="mt-4 font-serif text-lg leading-relaxed text-ink">
+          {subjectNode} for{" "}
+          <span className="font-mono text-base tabular text-ink">
+            {verdict.capabilityId}
           </span>
-        ) : null}
-      </p>
-
-      <p className="mt-4 font-serif text-lg leading-relaxed text-ink">
-        {subjectNode} for{" "}
-        <span className="font-mono text-base tabular text-ink">
-          {verdict.capabilityId}
-        </span>
-        .
-      </p>
-
-      <p className="mt-2 font-serif text-base leading-relaxed text-ink-soft">
-        {reason.text}
-      </p>
-
-      {verdict.issuer &&
-      (go || reason.kind === "revoked" || reason.kind === "expired") ? (
-        <p className="mt-3 font-serif text-sm italic leading-relaxed text-ink-soft">
-          Issued by{" "}
-          {explorerUrl ? (
-            <a
-              href={`${explorerUrl}/address/${verdict.issuer}`}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono not-italic text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-            >
-              {truncateAddress(verdict.issuer, 6, 4)}
-            </a>
-          ) : (
-            <code className="font-mono not-italic text-ink-soft">
-              {truncateAddress(verdict.issuer, 6, 4)}
-            </code>
-          )}
-          {verdict.expiresAt && verdict.expiresAt > 0n
-            ? `, ${reason.kind === "expired" ? "expired" : "expires"} ${new Date(
-                Number(verdict.expiresAt) * 1000,
-              )
-                .toLocaleDateString("en", {
-                  month: "short",
-                  year: "numeric",
-                })
-                .toLowerCase()}`
-            : ", no expiry"}
           .
         </p>
-      ) : null}
 
-      <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-        {source ? `${source} · ` : ""}one on-chain read · not a Ligis server
-      </p>
+        <p className="mt-2 font-serif text-base leading-relaxed text-ink-soft">
+          {reason.text}
+        </p>
+
+        {verdict.issuer &&
+        (go || reason.kind === "revoked" || reason.kind === "expired") ? (
+          <p className="mt-3 font-serif text-sm italic leading-relaxed text-ink-soft">
+            Issued by{" "}
+            {explorerUrl ? (
+              <a
+                href={`${explorerUrl}/address/${verdict.issuer}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono not-italic text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+              >
+                {truncateAddress(verdict.issuer, 6, 4)}
+              </a>
+            ) : (
+              <code className="font-mono not-italic text-ink-soft">
+                {truncateAddress(verdict.issuer, 6, 4)}
+              </code>
+            )}
+            {verdict.expiresAt && verdict.expiresAt > 0n
+              ? `, ${reason.kind === "expired" ? "expired" : "expires"} ${new Date(
+                  Number(verdict.expiresAt) * 1000,
+                )
+                  .toLocaleDateString("en", {
+                    month: "short",
+                    year: "numeric",
+                  })
+                  .toLowerCase()}`
+              : ", no expiry"}
+            .
+          </p>
+        ) : null}
+
+        <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
+          {source ? `${source} · ` : ""}one on-chain read · not a Ligis server
+        </p>
+      </div>
+      <SubjectSpecimen
+        subject={verdict.subject}
+        state={go ? "go" : "stop"}
+        caption={false}
+      />
     </div>
   );
 }

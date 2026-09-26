@@ -31,6 +31,7 @@ const ALLOW_ROUNDED = new Set([
 const NO_ROUTE_SHELL = new Set([
   "app/page.tsx",
   "app/field/page.tsx",
+  "app/arena/page.tsx",
   "app/verify/page.tsx",
   "app/verify-casper/page.tsx",
   "app/embed/verify/page.tsx",
@@ -77,7 +78,8 @@ const BANNED = [
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
-    if (name === "node_modules" || name === ".next" || name === "dist") continue;
+    if (name === "node_modules" || name === ".next" || name === "dist")
+      continue;
     const p = join(dir, name);
     const st = statSync(p);
     if (st.isDirectory()) walk(p, out);
@@ -151,7 +153,10 @@ for (const file of files) {
     rel.endsWith(".tsx")
   ) {
     lines.forEach((line, i) => {
-      if (/\blive-dot\b/.test(line) && !/from ["']@\/components\/LiveDot/.test(line)) {
+      if (
+        /\blive-dot\b/.test(line) &&
+        !/from ["']@\/components\/LiveDot/.test(line)
+      ) {
         // Import lines and className="live-dot" — fail className usage.
         if (/className=.*live-dot|["'`]live-dot/.test(line)) {
           console.error(

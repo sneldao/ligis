@@ -17,7 +17,9 @@ function keccak256Str(hex: string): string {
     .join("");
 }
 
-export function truncateAddress(address: string, head = 6, tail = 4): string {
+export function truncateAddress(input: string, head = 6, tail = 4): string {
+  // Casper's "account-hash-" prefix would otherwise eat the whole head.
+  const address = input.replace(/^account-hash-/, "");
   if (address.length <= head + tail + TRUNCATE_GLYPH.length) return address;
   return `${address.slice(0, head)}${TRUNCATE_GLYPH}${address.slice(-tail)}`;
 }
@@ -59,20 +61,26 @@ export function toChecksumAddress(addr: string): string {
 const RELATIVE = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
 export function timeAgo(unixSeconds: bigint | number): string {
-  const seconds = typeof unixSeconds === "bigint" ? Number(unixSeconds) : unixSeconds;
+  const seconds =
+    typeof unixSeconds === "bigint" ? Number(unixSeconds) : unixSeconds;
   const delta = seconds - Math.floor(Date.now() / 1000);
   const abs = Math.abs(delta);
   if (abs < 60) return RELATIVE.format(Math.round(delta), "second");
   if (abs < 3600) return RELATIVE.format(Math.round(delta / 60), "minute");
   if (abs < 86400) return RELATIVE.format(Math.round(delta / 3600), "hour");
   if (abs < 2592000) return RELATIVE.format(Math.round(delta / 86400), "day");
-  if (abs < 31536000) return RELATIVE.format(Math.round(delta / 2592000), "month");
+  if (abs < 31536000)
+    return RELATIVE.format(Math.round(delta / 2592000), "month");
   return RELATIVE.format(Math.round(delta / 31536000), "year");
 }
 
-const MONTH = new Intl.DateTimeFormat("en", { month: "short", year: "numeric" });
+const MONTH = new Intl.DateTimeFormat("en", {
+  month: "short",
+  year: "numeric",
+});
 
 export function monthYear(unixSeconds: bigint | number): string {
-  const seconds = typeof unixSeconds === "bigint" ? Number(unixSeconds) : unixSeconds;
+  const seconds =
+    typeof unixSeconds === "bigint" ? Number(unixSeconds) : unixSeconds;
   return MONTH.format(new Date(seconds * 1000)).toLowerCase();
 }

@@ -11,6 +11,7 @@
 
 | Hackathon                          | Track                               | Demo                                                                                                                                                                     | Submission doc                                                 |
 | ---------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| **The Agent Arena (Vultr) 2026**   | Agent infrastructure & containment  | [ligis.vercel.app/arena](https://ligis.vercel.app/arena) — prompt-injected $60k payment stopped live by Jev + Vultr Serverless Inference judges                          | [`docs/agent-arena.md`](docs/agent-arena.md)                   |
 | **GenLayer Agent Tank 2026**       | Agent launch & commerce infra       | [60s demo (YouTube)](https://youtu.be/goACAqXjUxY) · [ligis.vercel.app/genlayer](https://ligis.vercel.app/genlayer) · JobEscrow `0x64eF9e...D0cB0F` on Studio Next 61997 | [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md)   |
 | **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure | Live gate (GO / revoked STOP / none), Envio full history, `pnpm demo:monad` on testnet _(browser writes pending)_                                                        | [`docs/metropolis-hackathon.md`](docs/metropolis-hackathon.md) |
 | **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement       | _(in progress)_                                                                                                                                                          | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)           |
@@ -184,6 +185,19 @@ Pharos RPC) by signing locally and sending via `eth_sendRawTransaction`.
 
 Agent profile pages (`/agent/<address>`) show capability history from
 `AgentCapabilityChanged` events with clickable PharosScan links.
+
+**Routes worth opening first:**
+
+| Route      | What it is                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| `/arena`   | Prompt-injection attack on a paying agent, stopped live by the judge API (`/api/arena/judge`) |
+| `/field`   | Every registered agent as a generated specimen portrait                                       |
+| `/gate`    | Gate any wallet against any capability — GO / STOP with a stamped specimen                    |
+| `/steward` | The autonomous boot → reason → gate → act → record loop (SSE)                                 |
+| `/issuers` | Who can vouch for which capability                                                            |
+
+Each address in the UI carries the same deterministic specimen portrait as
+`/field`, so a wallet is recognizable across pages.
 
 See [`docs/setup.md`](docs/setup.md) for Vercel env var configuration.
 
@@ -393,6 +407,7 @@ See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/okx-ai.md`](d
 
 | Doc                                                          | What's in it                                                                          |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| [Agent Arena](docs/agent-arena.md)                           | Vultr Agent Arena submission: `/arena` demo, judges, env vars, checklist              |
 | [Strategy](docs/strategy.md)                                 | Product strategy, competitive landscape, differentiation, roadmap, business model     |
 | [Architecture](docs/architecture.md)                         | Contract design, module structure, repository layout                                  |
 | [Attestation integrations](docs/attestation-integrations.md) | Self Protocol and EAS provenance, privacy boundaries, and rollout                     |

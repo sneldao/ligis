@@ -679,3 +679,31 @@ Do **not** re-issue `demo.metropolis.revocation` — it is the live revoked
 fixture from `pnpm demo:monad`. CI runs `pnpm smoke:demo-credentials` weekly
 (`.github/workflows/demo-credentials.yml`) so expiry / accidental re-issue
 fails the Action instead of the public demo.
+
+## Agent Arena demo (`/arena`, Vultr hackathon)
+
+Submission doc: `docs/agent-arena.md`. Scenario data lives in
+`web/lib/arena/scenario.ts`; judging in `web/lib/arena/judge.ts`, exposed at
+`POST /api/arena/judge` with `{"payment":"renewal"|"injected"}`.
+
+- Two judges run in parallel: Jev (`evaluatePaymentIntent` from `@ligis/core`)
+  and Vultr Serverless Inference (`https://api.vultrinference.com/v1`,
+  OpenAI-compatible). Any STOP ⇒ STOP; no answers ⇒ `UNKNOWN`. An unavailable
+  judge reports `status: "skipped"` with a reason — never a silent GO.
+- Env: `VULTR_INFERENCE_API_KEY` (required for the Vultr judge),
+  `VULTR_INFERENCE_MODEL` (optional pin; otherwise first chat model from
+  `/v1/models`).
+- Verified 2026-09-26: renewal → GO (Jev 0.815), injected → STOP (Jev 1.00);
+  Vultr skipped because the key was not set.
+
+## Web motion + specimen system
+
+- `SubjectSpecimen` (`web/components/SubjectSpecimen.tsx`) renders the `/field`
+  portrait for any subject string (EVM, Casper `account-hash-…`, or partial
+  input — `lib/specimen.ts` normalizes it to a stable seed). Sizes: `plate`
+  (verdicts) and `chip` (inline, used by `AddressDisplay`).
+- Page choreography is global CSS keyed off `body.page-enter`,
+  `.route-shell > *`, `h1.display`, and uppercase `border-terra` buttons — new
+  routes get it by using those structures. All motion is gated by
+  `prefers-reduced-motion: no-preference`.
+- Don't use ✓/✗ glyphs in display text — the display font lacks them.

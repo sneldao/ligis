@@ -9,6 +9,10 @@ import { addresses, network, readAgentId } from "@/lib/chain";
 
 const SAMPLE_WALLET: Address = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
 
+// The layout's GlobalDock reads useSearchParams; unless the page itself awaits
+// searchParams (as every other room does), that boundary bails out to client
+// rendering, which scripts/smoke-ssr.mjs rejects.
+
 export const metadata = {
   title: "Design · Ligis",
   description:
@@ -63,7 +67,12 @@ async function ChainProbe() {
   );
 }
 
-export default function StyleguidePage() {
+export default async function StyleguidePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  await searchParams;
   return (
     <main className="route-shell max-w-3xl">
       <header className="route-header text-xs text-ink-quiet">
@@ -254,15 +263,15 @@ export default function StyleguidePage() {
           <header className="flex items-baseline justify-between">
             <p className="eyebrow">07 · GateVerdict</p>
             <span className="font-mono text-xs text-ink-quiet">
-              ✓ GO · ✗ STOP — the only verdict
+              GO · STOP — the only verdict
             </span>
           </header>
           <Rule />
           <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
             Every pre-payment decision renders through{" "}
             <code className="font-mono text-ink">GateVerdict</code>. Never
-            invent capability-status labels as the decision — use ✓ GO / ✗ STOP
-            via this primitive.
+            invent capability-status labels as the decision — use GO / STOP via
+            this primitive.
           </p>
           <div className="space-y-10">
             <GateVerdict

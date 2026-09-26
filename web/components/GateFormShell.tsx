@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { ChainSwitchHint } from "@/components/ChainSwitchHint";
+import { SubjectSpecimen } from "@/components/SubjectSpecimen";
 import { capabilities } from "@/lib/capabilities-client";
 import { chainById } from "@/lib/network";
 import { chainSwitchHref, subjectChainMismatch } from "@/lib/subject-format";
@@ -114,17 +115,20 @@ export function GateFormShell({
           ) : null}
           <label htmlFor="subject" className="block space-y-2">
             <span className="eyebrow">subject · wallet</span>
-            <input
-              id="subject"
-              name="subject"
-              value={subjectDraft}
-              onChange={(e) => setSubjectDraft(e.target.value)}
-              spellCheck={false}
-              autoCorrect="off"
-              autoCapitalize="off"
-              disabled={busy}
-              className="block w-full border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
-            />
+            <span className="flex items-end gap-3">
+              <SubjectSpecimen subject={subjectDraft} size="chip" />
+              <input
+                id="subject"
+                name="subject"
+                value={subjectDraft}
+                onChange={(e) => setSubjectDraft(e.target.value)}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
+                disabled={busy}
+                className="block w-full min-w-0 border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
+              />
+            </span>
           </label>
           <label htmlFor="capability" className="block space-y-2">
             <span className="eyebrow">capability</span>
@@ -178,12 +182,23 @@ export function GateFormShell({
       {busy ? (
         <section className="mt-16" aria-live="polite" aria-busy="true">
           <h2 className="eyebrow">Verdict</h2>
-          <p className="mt-6 font-serif text-lg italic text-ink-quiet">
-            Reading chain…
-          </p>
-          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-            one on-chain read · not a Ligis server
-          </p>
+          <div className="mt-4 flex flex-col-reverse gap-8 border-l-2 border-rule pl-6 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="eyebrow">gate · pre-payment check</p>
+              <p className="mt-3 display text-3xl text-ink-quiet sm:text-4xl">
+                Reading chain
+                <span className="caret" aria-hidden />
+              </p>
+              <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
+                one on-chain read · not a Ligis server
+              </p>
+            </div>
+            <SubjectSpecimen
+              subject={subjectDraft}
+              state="reading"
+              caption={false}
+            />
+          </div>
         </section>
       ) : (
         children
