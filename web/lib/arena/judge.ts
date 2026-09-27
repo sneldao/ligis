@@ -202,7 +202,8 @@ async function callJev(c: JudgeCase): Promise<JudgeOutcome> {
 interface LlmProvider {
   name: string;
   base: string;
-  keyEnv: string;
+  /** First non-empty env var wins. */
+  keyEnvs: string[];
   model: string;
 }
 
@@ -210,14 +211,14 @@ const LLM_PROVIDERS: LlmProvider[] = [
   {
     name: "Vultr Inference",
     base: "https://api.vultrinference.com/v1",
-    keyEnv: "VULTR_INFERENCE_API_KEY",
+    keyEnvs: ["VULTR_API_KEY", "VULTR_INFERENCE_API_KEY"],
     // Cheapest non-reasoning chat model on Vultr ($0.09 in / $0.18 out per 1M).
     model: process.env.VULTR_INFERENCE_MODEL ?? "laguna-s-2.1",
   },
   {
     name: "Featherless",
     base: "https://api.featherless.ai/v1",
-    keyEnv: "FEATHERLESS_API_KEY",
+    keyEnvs: ["FEATHERLESS_API_KEY"],
     // Small, ungated, non-reasoning: no hidden thinking tokens to pay for.
     model: process.env.FEATHERLESS_MODEL ?? "Qwen/Qwen2.5-7B-Instruct",
   },
@@ -233,7 +234,15 @@ const providerBlockedUntil = new Map<
 >();
 
 function llmConfigured(): boolean {
-  return LLM_PROVIDERS.some((p) => !!process.env[p.keyEnv]);
+  return LLM_PROVIDERS.some((p) => !!providerKey(p));
+}
+
+function providerKey(p: LlmProvider): string | undefined {
+  for (const name of p.keyEnvs) {
+    const v = process.env[name]?.trim();
+    if (v) return v;
+  }
+  return undefined;
 }
 
 async function callLlmJudge(c: JudgeCase): Promise<JudgeOutcome> {
@@ -254,7 +263,7 @@ async function callProvider(
   p: LlmProvider,
   c: JudgeCase,
 ): Promise<JudgeOutcome> {
-  const key = process.env[p.keyEnv];
+  const key = providerKey(p);
   if (!key) return { status: "skipped", reason: "not configured" };
   // A rejected key won't start working on retry; stop hammering the API.
   const blocked = providerBlockedUntil.get(p.name);
