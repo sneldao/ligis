@@ -1,3 +1,4 @@
+import { TypedText } from "@/components/arena/TypedText";
 import {
   PAYMENTS,
   formatUsd,
@@ -7,7 +8,13 @@ import {
 
 const LABEL = "font-mono text-[11px] uppercase tracking-[0.16em]";
 
-export function TranscriptStep({ step }: { step: Step }) {
+export function TranscriptStep({
+  step,
+  instant = false,
+}: {
+  step: Step;
+  instant?: boolean;
+}) {
   switch (step.kind) {
     case "user":
       return (
@@ -23,13 +30,13 @@ export function TranscriptStep({ step }: { step: Step }) {
         <div className="flex flex-col gap-1.5">
           <span className={`${LABEL} text-signal`}>Atlas</span>
           <p className="text-pretty text-[15px] leading-relaxed text-fog">
-            {step.text}
+            <TypedText text={step.text} instant={instant} />
           </p>
         </div>
       );
     case "tool":
       return (
-        <div className="flex flex-col gap-2 border border-night-rule bg-night/60 p-3 font-mono text-xs leading-relaxed">
+        <div className="flex flex-col gap-2 border border-night-rule bg-night/60 p-3 font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
           <span className="text-fog-quiet">
             <span className="text-signal">{step.tool}</span>({step.target})
           </span>

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { truncateAddress } from "@/lib/format";
+import { VerdictMark } from "@/components/VerdictMark";
 import { chainById } from "@/lib/network";
 import { getFieldLiveAgents } from "./catalogState";
 import { isInteractiveAgent } from "./agentSeed";
@@ -140,7 +141,7 @@ export function FocusPanel() {
                   <span
                     className={`font-mono text-base tabular ${isCapable ? "text-sage" : "text-revoke"}`}
                   >
-                    {isCapable ? "✓ GO" : "✗ STOP"}
+                    <VerdictMark ok={isCapable} /> {isCapable ? "GO" : "STOP"}
                   </span>{" "}
                   <span className="font-mono text-base tabular text-ink">
                     {truncateAddress(active, 6, 4)}

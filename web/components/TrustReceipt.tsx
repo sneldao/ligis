@@ -1,5 +1,6 @@
 import { Rule } from "@/components/Rule";
 import { SignalStack } from "@/components/SignalStack";
+import { VerdictMark } from "@/components/VerdictMark";
 import { truncateHash } from "@/lib/format";
 import type { TrustReceipt as TrustReceiptData } from "@ligis/core";
 
@@ -36,7 +37,7 @@ export function TrustReceipt({ receipt }: { receipt: TrustReceiptData }) {
 
       <p className="mt-3 display text-3xl sm:text-4xl">
         <span className={go ? "text-sage" : "text-revoke"}>
-          {go ? "✓ GO" : "✗ STOP"}
+          <VerdictMark ok={go} /> {go ? "GO" : "STOP"}
         </span>
       </p>
 
@@ -95,7 +96,11 @@ export function TrustReceipt({ receipt }: { receipt: TrustReceiptData }) {
             mono
           />
           {receipt.anchoredTokenUri ? (
-            <ReceiptRow label="anchored uri" value={receipt.anchoredTokenUri} mono />
+            <ReceiptRow
+              label="anchored uri"
+              value={receipt.anchoredTokenUri}
+              mono
+            />
           ) : null}
         </div>
       </div>
