@@ -37,7 +37,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "0.0.1",
-    "three": "^0.185.1",
+    "three": "^0.186.1",
     "viem": "^2.55.10"
   },
   "devDependencies": {
