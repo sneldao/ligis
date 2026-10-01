@@ -16,7 +16,8 @@ export function SituationCast({
   mode = "link",
   onSelect,
 }: {
-  chainId: string;
+  /** Omit so moment links open the chain-agnostic gate. */
+  chainId?: string;
   activeId?: string;
   mode?: "link" | "sync";
   onSelect?: (situation: Situation) => void;
@@ -73,7 +74,7 @@ export function SituationCast({
       <ul className="mt-2" role="list">
         {SITUATIONS.map((s, i) => {
           const open = openId === s.id;
-          const gateHref = `/gate?chain=${chainId}&situation=${s.id}&capability=${s.capability}`;
+          const gateHref = `/gate?${chainId ? `chain=${chainId}&` : ""}situation=${s.id}&capability=${s.capability}`;
 
           return (
             <li

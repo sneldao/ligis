@@ -12,15 +12,11 @@ import { SITUATIONS, type Situation } from "@/lib/situations";
  * Selection syncs capability and flashes a brief “synced” cue.
  */
 export function LandingGate({
-  chainId,
   capabilities,
   defaultSubject,
-  explorerUrl,
 }: {
-  chainId: string;
   capabilities: { id: string; label: string }[];
   defaultSubject: string;
-  explorerUrl: string;
 }) {
   const [situation, setSituation] = useState<Situation>(SITUATIONS[0]!);
   const [synced, setSynced] = useState(false);
@@ -38,12 +34,7 @@ export function LandingGate({
 
   return (
     <div className="space-y-14 sm:space-y-16">
-      <SituationCast
-        chainId={chainId}
-        mode="sync"
-        activeId={situation.id}
-        onSelect={onSelect}
-      />
+      <SituationCast mode="sync" activeId={situation.id} onSelect={onSelect} />
 
       <section id="verify" className="scroll-mt-24">
         <header className="flex items-baseline justify-between gap-4">
@@ -90,12 +81,10 @@ export function LandingGate({
           <div className="space-y-10">
             <GateStates />
             <VerifyDemo
-              key={`${chainId}-${situation.capability}`}
+              key={situation.capability}
               capabilities={capabilities}
               defaultSubject={defaultSubject}
               defaultCapability={situation.capability}
-              explorerUrl={explorerUrl}
-              chainId={chainId}
             />
           </div>
         </div>

@@ -28,7 +28,9 @@ export function VerifyDemo({
   defaultSubject: string;
   /** Prefills the capability select (e.g. from a synced moment). */
   defaultCapability?: string;
-  explorerUrl: string;
+  /** Fallback explorer — resolvedChainId on the result takes precedence. */
+  explorerUrl?: string;
+  /** Omit to resolve the subject across every live registry. */
   chainId?: string;
 }) {
   const initialCapability =
@@ -317,20 +319,52 @@ function SingleGate({
   explorerUrl,
 }: {
   result: Extract<VerifyResult, { ok: true }>;
-  explorerUrl: string;
+  explorerUrl?: string;
 }) {
+  const resolvedExplorer =
+    chainById(result.resolvedChainId)?.explorerUrl ?? explorerUrl;
   return (
-    <GateVerdict
-      verdict={{
-        capable: result.capable,
-        subject: result.subject,
-        capabilityId: result.capabilityId,
-        issuer: result.issuer,
-        expiresAt: result.expiresAt,
-        revoked: result.revoked,
-      }}
-      explorerUrl={explorerUrl}
-    />
+    <div className="space-y-8">
+      <GateVerdict
+        verdict={{
+          capable: result.capable,
+          subject: result.subject,
+          capabilityId: result.capabilityId,
+          issuer: result.issuer,
+          expiresAt: result.expiresAt,
+          revoked: result.revoked,
+        }}
+        explorerUrl={resolvedExplorer}
+      />
+      {result.provenance.length > 1 ? (
+        <div>
+          <p className="eyebrow">
+            Provenance · {result.provenance.length} registries
+          </p>
+          <div className="mt-3 border-t border-rule-soft">
+            {result.provenance.map((p) => (
+              <div
+                key={p.chainId}
+                className="flex items-baseline justify-between gap-4 border-t border-rule-soft py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] first:border-t-0"
+              >
+                <span className="text-ink-soft">{p.name.toLowerCase()}</span>
+                {p.unreachable ? (
+                  <span className="text-ink-quiet">read unreachable</span>
+                ) : p.capable ? (
+                  <span className="text-sage">
+                    vouched{p.passkey ? " · passkey" : ""}
+                  </span>
+                ) : p.revoked ? (
+                  <span className="text-revoke">revoked</span>
+                ) : (
+                  <span className="text-ink-quiet">no credential</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -339,8 +373,10 @@ function BatchGate({
   explorerUrl,
 }: {
   result: Extract<BatchVerifyResult, { ok: true }>;
-  explorerUrl: string;
+  explorerUrl?: string;
 }) {
+  const resolvedExplorer =
+    chainById(result.resolvedChainId)?.explorerUrl ?? explorerUrl;
   const heldCount = result.results.filter((r) => r.capable).length;
   return (
     <div className="space-y-6">
@@ -351,7 +387,7 @@ function BatchGate({
         />
         <p className="font-serif text-lg leading-snug text-ink">
           <a
-            href={`${explorerUrl}/address/${result.subject}`}
+            href={`${resolvedExplorer}/address/${result.subject}`}
             target="_blank"
             rel="noreferrer"
             className="font-mono text-base tabular text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
@@ -362,7 +398,9 @@ function BatchGate({
         </p>
       </div>
       <p className="pl-[1.5rem] font-mono text-xs text-ink-quiet">
-        {result.rpcCalls} rpc call · isCapableMulti(subject, bytes32[])
+        {result.rpcCalls} rpc call · isCapableMulti(subject, bytes32[]) ·{" "}
+        {chainById(result.resolvedChainId)?.name.toLowerCase() ??
+          result.resolvedChainId}
       </p>
       <div className="space-y-0">
         {result.results.map((r) => (

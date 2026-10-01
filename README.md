@@ -2,6 +2,7 @@
 
 > **The trust gate for autonomous payments — one on-chain read that says GO or STOP before your agent pays a stranger.**
 > **Live on Pharos + Casper Testnet. Autonomous steward loop + x402 payments + CROO CAP commerce working end-to-end.**
+> Decision models via Runware `/v1/systemone`: `typesafe:jev@latest` + `runware:laya@1` (FREE until Oct 12).
 
 [![CI](https://github.com/sneldao/ligis/actions/workflows/ci.yml/badge.svg)](https://github.com/sneldao/ligis/actions/workflows/ci.yml)
 

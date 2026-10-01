@@ -1,11 +1,16 @@
 import type { Address } from "viem";
 import { getChain, type ChainNetwork } from "@/lib/network";
 import { verifySubject } from "@/lib/verify";
+import { resolveSubject } from "@/lib/resolve";
 import { monthYear, truncateAddress } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ subject?: string; capability?: string; chain?: string }>;
+type SearchParams = Promise<{
+  subject?: string;
+  capability?: string;
+  chain?: string;
+}>;
 
 export const metadata = {
   title: "Gate",
@@ -22,12 +27,39 @@ export default async function EmbedVerifyPage({
   const chain = getChain(params);
 
   if (!rawSubject || !rawCap) {
-    return <Frame chain={chain} error="Missing parameters. Use ?subject=0x...&capability=kyc.basic" />;
+    return (
+      <Frame
+        chain={chain}
+        error="Missing parameters. Use ?subject=0x...&capability=kyc.basic"
+      />
+    );
   }
 
   // Non-live chains can't do on-chain verification.
   if (!chain.live) {
     return <Frame chain={chain} error={`${chain.name} is not yet live.`} />;
+  }
+
+  // Unscoped embeds resolve the subject across every registry it could
+  // live on; the badge shows the verdict and names the vouching chain.
+  if (params.chain === undefined) {
+    const res = await resolveSubject(rawSubject, rawCap);
+    if (!res.ok || !res.primary.outcome.ok) {
+      return (
+        <Frame chain={chain} error={res.ok ? "Read failed." : res.error} />
+      );
+    }
+    const primary = res.primary.outcome;
+    return (
+      <Frame
+        chain={res.primary.chain}
+        subject={primary.subject as Address}
+        capabilityId={res.capabilityId}
+        capable={res.capable}
+        issuer={primary.issuer}
+        expiresAt={primary.expiresAt}
+      />
+    );
   }
 
   const outcome = await verifySubject(chain, rawSubject, rawCap);
@@ -96,7 +128,9 @@ function Frame(props: {
     >
       <div className="flex items-baseline justify-between gap-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
         <span>Ligis · gate</span>
-        <span className="font-mono tabular">{props.chain.name.toLowerCase()}</span>
+        <span className="font-mono tabular">
+          {props.chain.name.toLowerCase()}
+        </span>
       </div>
       <div className="mt-3 flex items-baseline gap-3">
         <span
@@ -104,7 +138,9 @@ function Frame(props: {
           aria-hidden
         />
         <p className="font-serif text-base leading-snug text-ink">
-          <span className={`font-mono text-sm tabular ${props.capable ? "text-sage" : "text-revoke"}`}>
+          <span
+            className={`font-mono text-sm tabular ${props.capable ? "text-sage" : "text-revoke"}`}
+          >
             {props.capable ? "✓ GO" : "✗ STOP"}
           </span>{" "}
           <span className="font-mono text-sm tabular">

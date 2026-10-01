@@ -324,6 +324,28 @@ Required Vercel env vars for Casper reads:
 `LIGIS_CASPER_CREDENTIAL_REGISTRY`. For live writes also set
 `LIGIS_CASPER_DEPLOYER_PUBKEY` and `LIGIS_CASPER_DEPLOYER_PRIVATE_KEY`.
 
+### Chain-agnostic reads + issuer desk (Monad-era product layer)
+
+- Chains now: Pharos Atlantic, Casper Testnet, Monad testnet
+  (`web/lib/network.ts`, `DEFAULT_CHAIN` = Monad).
+- **`?chain=` absent means resolve everywhere** (`web/lib/resolve.ts`,
+  union semantics, per-chain provenance). `/gate`, the landing verify read,
+  and `/embed/verify` all default to resolution; `?chain=` scopes for
+  demos/debug. Subject format drives candidates: `0x…` → EVM chains,
+  `account-hash-…` → Casper.
+- `/vouch` — issuer desk: steward key signs EIP-712 `issue` / `revoke` on
+  EVM registries (`web/lib/vouch.ts`, `vouchIssue`/`vouchRevoke` server
+  actions in `web/app/actions.ts`). Needs `LIGIS_STEWARD_KEY` on Vercel;
+  source `.env.d/steward.env` locally for writes.
+- `server-only` is a real web dep now — direct `tsx` tests of server modules
+  fail without it.
+- `pnpm --dir web smoke:ssr` defaults `BASE_URL=http://127.0.0.1:3000` —
+  other dev servers squat on 3000; run with
+  `BASE_URL=http://127.0.0.1:3001` against the Ligis dev server.
+- `scripts/smoke-demo-credentials.ts` and `web/lib/demo-subjects.ts` must
+  stay in sync (no cross-import — server-only modules can't be imported
+  by root scripts).
+
 ### CROO Provider Deployment
 
 The CROO provider runs on the Vultr server (`nuncio-vultr`) under PM2.

@@ -1,8 +1,15 @@
 import { Suspense } from "react";
-import { CHAINS, getChain, type ChainNetwork } from "@/lib/network";
+import Link from "next/link";
+import {
+  CHAINS,
+  getChain,
+  isPasskeyIssuer,
+  type ChainNetwork,
+} from "@/lib/network";
 import { capabilities } from "@/lib/chain";
 import { isCasperChain } from "@/lib/chain-router";
 import { verifySubject } from "@/lib/verify";
+import { resolveSubject, type ChainVerdict } from "@/lib/resolve";
 import { DEMO_GATE_SAMPLES } from "@/lib/demo-subjects";
 import { GateVerdict } from "@/components/GateVerdict";
 import { GateStates } from "@/components/GateStates";
@@ -33,13 +40,13 @@ export const metadata = {
 };
 
 function gateParams(
-  chain: ChainNetwork,
+  chain: ChainNetwork | null,
   subject: string,
   capability: string,
   situation?: string,
 ): string {
   const params = new URLSearchParams();
-  params.set("chain", chain.id);
+  if (chain) params.set("chain", chain.id);
   params.set("subject", subject);
   params.set("capability", capability);
   if (situation) params.set("situation", situation);
@@ -47,7 +54,7 @@ function gateParams(
 }
 
 function verifyHref(
-  chain: ChainNetwork,
+  chain: ChainNetwork | null,
   subject: string,
   capability: string,
   situation?: string,
@@ -61,10 +68,24 @@ export default async function VerifyPage({
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
+  // Unscoped (`?chain=` absent) is the product default: resolve the subject
+  // across every registry it could live on. An explicit ?chain= gives a
+  // scoped, single-registry read for demos and debugging.
+  const scoped = params.chain !== undefined;
   const chain = getChain(params);
   const situation = getSituation(params.situation);
-  const demoSubjects = DEMO_GATE_SAMPLES[chain.id] ?? [];
-  const casper = isCasperChain(chain);
+  const demoSubjects = scoped
+    ? (DEMO_GATE_SAMPLES[chain.id] ?? []).map((s) => ({ ...s, tag: "" }))
+    : // Monad first — richest provenance; matches candidate order in resolve.
+      [...CHAINS]
+        .sort((a) => (a.id === "monad-testnet" ? -1 : 0))
+        .flatMap((c) =>
+          (DEMO_GATE_SAMPLES[c.id] ?? []).map((s) => ({
+            ...s,
+            tag: ` · ${c.shortName}`,
+          })),
+        );
+  const casper = scoped && isCasperChain(chain);
 
   const rawCap = params.capability ?? situation?.capability ?? undefined;
   const rawSubject = params.subject;
@@ -87,9 +108,15 @@ export default async function VerifyPage({
             {i > 0 ? " · " : ""}
             <a
               className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-              href={verifyHref(chain, s.subject, s.capability, situation?.id)}
+              href={verifyHref(
+                scoped ? chain : null,
+                s.subject,
+                s.capability,
+                situation?.id,
+              )}
             >
               {s.label}
+              {s.tag}
             </a>
           </span>
         ))}
@@ -109,11 +136,18 @@ export default async function VerifyPage({
                 </p>
               }
             >
-              <Result
-                chain={chain}
-                subject={subjectForVerdict}
-                capability={capForVerdict}
-              />
+              {scoped ? (
+                <Result
+                  chain={chain}
+                  subject={subjectForVerdict}
+                  capability={capForVerdict}
+                />
+              ) : (
+                <Resolved
+                  subject={subjectForVerdict}
+                  capability={capForVerdict}
+                />
+              )}
             </Suspense>
           </div>
         </section>
@@ -125,10 +159,10 @@ export default async function VerifyPage({
           </p>
           <div className="mt-5 flex flex-wrap items-baseline gap-4">
             <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
-              {`${SITE_URL}/gate?${gateParams(chain, subjectForVerdict, capForVerdict, situation?.id)}`}
+              {`${SITE_URL}/gate?${gateParams(scoped ? chain : null, subjectForVerdict, capForVerdict, situation?.id)}`}
             </code>
             <CopyButton
-              value={`${SITE_URL}/gate?${gateParams(chain, subjectForVerdict, capForVerdict, situation?.id)}`}
+              value={`${SITE_URL}/gate?${gateParams(scoped ? chain : null, subjectForVerdict, capForVerdict, situation?.id)}`}
               label="copy"
               className="shrink-0"
             />
@@ -149,8 +183,9 @@ export default async function VerifyPage({
       <header className="route-header text-xs text-ink-quiet">
         <p className="eyebrow">Ligis · Gate</p>
         <span className="font-mono tabular text-ink-quiet">
-          {chain.name.toLowerCase()}
-          {chain.chainId ? ` · chain ${chain.chainId}` : ""}
+          {scoped
+            ? `${chain.name.toLowerCase()}${chain.chainId ? ` · chain ${chain.chainId}` : ""}`
+            : "all registries"}
         </span>
       </header>
 
@@ -168,7 +203,9 @@ export default async function VerifyPage({
             </>
           ) : (
             <>
-              One on-chain read on {chain.name}.{" "}
+              {scoped
+                ? `One on-chain read on ${chain.name}.`
+                : "One read across every live registry."}{" "}
               <span className="text-sage">GO</span> or{" "}
               <span className="text-revoke">STOP</span> before money moves.
             </>
@@ -181,7 +218,7 @@ export default async function VerifyPage({
             </code>
             <span className="mx-2">·</span>
             <a
-              href={`/gate?chain=${chain.id}`}
+              href={scoped ? `/gate?chain=${chain.id}` : "/gate"}
               className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
             >
               all moments
@@ -189,10 +226,20 @@ export default async function VerifyPage({
           </p>
         ) : (
           <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-            {CHAINS.map((c, i) => (
+            {!scoped ? (
+              <span className="text-ink">everywhere</span>
+            ) : (
+              <a
+                href="/gate"
+                className="underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+              >
+                everywhere
+              </a>
+            )}
+            {CHAINS.map((c) => (
               <span key={c.id}>
-                {i > 0 ? " · " : ""}
-                {c.id === chain.id ? (
+                {" · "}
+                {scoped && c.id === chain.id ? (
                   <span className="text-ink">{c.name.toLowerCase()}</span>
                 ) : (
                   <a
@@ -209,7 +256,7 @@ export default async function VerifyPage({
       </section>
 
       <GateFormShell
-        chainId={chain.id}
+        chainId={scoped ? chain.id : undefined}
         situationId={situation?.id}
         defaultSubject={rawSubject ?? defaultSubject}
         defaultCapability={defaultCapability}
@@ -221,7 +268,7 @@ export default async function VerifyPage({
 
       {!situation ? (
         <div className="mt-14">
-          <SituationCast chainId={chain.id} />
+          <SituationCast chainId={scoped ? chain.id : undefined} />
         </div>
       ) : (
         <div className="mt-12">
@@ -234,7 +281,7 @@ export default async function VerifyPage({
                   <span className="text-ink">{s.role}</span>
                 ) : (
                   <a
-                    href={`/gate?chain=${chain.id}&situation=${s.id}&capability=${s.capability}`}
+                    href={`/gate?${scoped ? `chain=${chain.id}&` : ""}situation=${s.id}&capability=${s.capability}`}
                     className="text-ink-quiet underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
                   >
                     {s.role}
@@ -248,10 +295,35 @@ export default async function VerifyPage({
 
       <section className="mt-14">
         <GateStates />
+        {!scoped || chain.id === "monad-testnet" ? (
+          <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+            settled live on {scoped ? "this chain" : "Monad Testnet"} ·{" "}
+            <a
+              href="https://testnet.monadscan.com/tx/0x5c434cce1b5df140ce13707f23717000af850e08254a8e62aacff85e54c19b65"
+              target="_blank"
+              rel="noreferrer"
+              className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              x402 facilitator tx 0x5c43··9b65
+            </a>
+          </p>
+        ) : null}
       </section>
 
       <section className="mt-14">
-        <JevTelemetry />
+        <details className="group border-y border-rule">
+          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            <span className="group-open:hidden">
+              Watch the gate&rsquo;s second reader +
+            </span>
+            <span className="hidden group-open:inline">
+              Hide intent telemetry −
+            </span>
+          </summary>
+          <div className="border-t border-rule-soft py-6">
+            <JevTelemetry />
+          </div>
+        </details>
       </section>
 
       <section className="mt-16">
@@ -263,8 +335,18 @@ export default async function VerifyPage({
           <code className="font-mono">/verify</code> &mdash; use either.
         </p>
         <pre className="mt-4 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
-          {`GET /gate?chain=${chain.id}&subject=${casper ? "account-hash-..." : "0x..."}&capability=${capForVerdict ?? "kyc.basic"}`}
+          {scoped
+            ? `GET /gate?chain=${chain.id}&subject=${casper ? "account-hash-..." : "0x..."}&capability=${capForVerdict ?? "kyc.basic"}`
+            : `GET /gate?subject=0x...&capability=${capForVerdict ?? "kyc.basic"}`}
         </pre>
+        {!scoped ? (
+          <p className="mt-3 font-serif text-sm italic leading-relaxed text-ink-quiet">
+            No <code className="font-mono not-italic">chain</code> param &mdash;
+            the subject resolves across every live registry. Add{" "}
+            <code className="font-mono not-italic">&chain=</code> to scope the
+            read to one.
+          </p>
+        ) : null}
       </section>
 
       <footer className="route-footer mt-16 text-xs text-ink-quiet">
@@ -274,14 +356,16 @@ export default async function VerifyPage({
         >
           ← Home
         </a>
-        <a
-          href={chain.explorerUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-        >
-          {casper ? "cspr.live" : "explorer"} ↗
-        </a>
+        {scoped ? (
+          <a
+            href={chain.explorerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+          >
+            {casper ? "cspr.live" : "explorer"} ↗
+          </a>
+        ) : null}
       </footer>
     </main>
   );
@@ -319,6 +403,8 @@ async function Result({
     );
   }
 
+  const passkeyIssuer = isPasskeyIssuer(outcome.issuer, chain.id);
+
   return (
     <GateVerdict
       verdict={{
@@ -331,6 +417,138 @@ async function Result({
       }}
       explorerUrl={chain.explorerUrl}
       source={`${chain.name} state`}
+      issuerNote={
+        passkeyIssuer ? (
+          <>
+            The issuer is a passkey, not a server key — the WebAuthn assertion
+            was verified on-chain by Monad&rsquo;s P256 precompile at{" "}
+            <span className="font-mono not-italic">0x0100</span>.{" "}
+            <Link
+              href="/passkey"
+              className="not-italic underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              run the ceremony
+            </Link>
+          </>
+        ) : undefined
+      }
     />
+  );
+}
+
+/** Per-chain evidence line for a resolved (unscoped) read. */
+function ProvenanceRow({
+  verdict,
+  subject,
+  capability,
+}: {
+  verdict: ChainVerdict;
+  subject: string;
+  capability: string;
+}) {
+  const { chain, outcome } = verdict;
+  const state = !outcome.ok ? (
+    <span className="text-ink-quiet">read unreachable</span>
+  ) : outcome.capable ? (
+    <span className="text-sage">
+      vouched
+      {isPasskeyIssuer(outcome.issuer, chain.id) ? " · passkey" : ""}
+    </span>
+  ) : outcome.revoked ? (
+    <span className="text-revoke">revoked</span>
+  ) : (
+    <span className="text-ink-quiet">no credential</span>
+  );
+
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-t border-rule-soft py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] first:border-t-0">
+      <span className="text-ink-soft">{chain.name.toLowerCase()}</span>
+      <span className="flex items-baseline gap-4">
+        {state}
+        <a
+          href={verifyHref(chain, subject, capability)}
+          className="text-ink-quiet underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+        >
+          scoped read →
+        </a>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Chain-agnostic read: the subject resolves across every registry it could
+ * live on; the verdict features the vouching chain and the provenance rows
+ * show what each registry said.
+ */
+async function Resolved({
+  subject,
+  capability,
+}: {
+  subject: string;
+  capability: string;
+}) {
+  const res = await resolveSubject(subject, capability);
+
+  if (!res.ok) {
+    return (
+      <p role="alert" className="font-serif text-base text-revoke">
+        {res.error}
+      </p>
+    );
+  }
+
+  const { primary } = res;
+  const outcome = primary.outcome;
+  if (!outcome.ok) return null; // resolveSubject only sets primary from ok reads
+  const passkeyIssuer = isPasskeyIssuer(outcome.issuer, primary.chain.id);
+
+  return (
+    <div className="space-y-8">
+      <GateVerdict
+        verdict={{
+          capable: res.capable,
+          subject: outcome.subject,
+          capabilityId: outcome.capabilityId,
+          issuer: outcome.issuer,
+          expiresAt: outcome.expiresAt,
+          revoked: outcome.revoked,
+        }}
+        explorerUrl={primary.chain.explorerUrl}
+        source={`${primary.chain.name} state`}
+        issuerNote={
+          passkeyIssuer ? (
+            <>
+              The issuer is a passkey, not a server key — the WebAuthn assertion
+              was verified on-chain by Monad&rsquo;s P256 precompile at{" "}
+              <span className="font-mono not-italic">0x0100</span>.{" "}
+              <Link
+                href="/passkey"
+                className="not-italic underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+              >
+                run the ceremony
+              </Link>
+            </>
+          ) : undefined
+        }
+      />
+      {res.verdicts.length > 1 ? (
+        <div>
+          <p className="eyebrow">
+            Provenance · {res.verdicts.length} registries
+          </p>
+          <div className="mt-3 border-t border-rule-soft">
+            {res.verdicts.map((v) => (
+              <ProvenanceRow
+                key={v.chain.id}
+                verdict={v}
+                subject={res.subject}
+                capability={res.capabilityId}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

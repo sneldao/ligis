@@ -140,7 +140,12 @@ and reach for typography, whitespace, and hairlines instead.
   not a category ("verifiable credentials"). Identity, credentials, the
   Steward loop, cross-chain portability, and CROO are the _moat_ that feeds
   the gate, not competing products. Surfaces frame themselves around the
-  decision moment, never around the architecture. Concretely: the gate is
+  decision moment, never around the architecture. The read is chain-agnostic
+  by default — a subject resolves across every registry it could live on
+  (union semantics: a credential recorded on any registry is a valid
+  credential), and the chain appears as _provenance_ under the verdict, not
+  as input. An explicit `?chain=` scopes the read for demos and debugging.
+  Concretely: the gate is
   served at `/gate` (the verb in the URL); the moat surfaces — `/steward`,
   `/capabilities`, `/issuers`, `/embed`, the CROO risk check, the agent
   dossiers — exist to feed the gate, and must never be promoted as

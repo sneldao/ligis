@@ -4,6 +4,7 @@ import { ChainBadge } from "@/components/ChainBadge";
 import { LandingGate } from "@/components/LandingGate";
 import { HeroStage } from "@/components/landing/HeroStage";
 import { LiveDot } from "@/components/LiveDot";
+import { Rule } from "@/components/Rule";
 import { capabilities } from "@/lib/chain";
 import {
   readBlockNumber,
@@ -118,16 +119,44 @@ export default async function HomePage({
 
           <div className="mt-10 sm:mt-14">
             <LandingGate
-              chainId={chain.id}
               capabilities={capOptions}
               defaultSubject={sampleSubject}
-              explorerUrl={chain.explorerUrl}
             />
           </div>
         </div>
       </main>
 
       <section className="mx-auto max-w-5xl px-5 pt-4 pb-16 sm:px-8 sm:pt-8 sm:pb-28">
+        <div className="mb-16 sm:mb-20">
+          <Rule />
+          <div className="mt-8 grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-[minmax(0,16rem)_1fr]">
+            <p className="eyebrow">Ship it</p>
+            <div>
+              <p className="font-serif text-base leading-relaxed text-ink-soft sm:text-lg">
+                Gate your endpoint — the same read, one line into the payment
+                path. Any client, any agent framework.
+              </p>
+              <pre className="mt-5 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+                {`GET /gate?subject=0x…&capability=kyc.basic`}
+              </pre>
+              <p className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em]">
+                <Link
+                  href="/embed"
+                  className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+                >
+                  embed the badge →
+                </Link>
+                <Link
+                  href={`/vouch?chain=${chain.id}`}
+                  className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+                >
+                  vouch for an agent →
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+
         <FieldInvite chainId={chain.id} />
 
         <nav
@@ -136,22 +165,16 @@ export default async function HomePage({
         >
           <span>Also</span>
           <Link
-            href={`/croo?chain=${chain.id}`}
+            href="/passkey"
             className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
           >
-            CROO
+            Passkey
           </Link>
           <Link
-            href={`/compose?chain=${chain.id}`}
+            href={`/vouch?chain=${chain.id}`}
             className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
           >
-            Compose
-          </Link>
-          <Link
-            href={`/issuers?chain=${chain.id}`}
-            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-          >
-            Issuers
+            Vouch
           </Link>
           <Link
             href={`/steward?chain=${chain.id}`}
@@ -160,16 +183,37 @@ export default async function HomePage({
             Steward
           </Link>
           <Link
-            href={`/capabilities?chain=${chain.id}`}
+            href={`/embed?chain=${chain.id}`}
             className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+          >
+            Embed
+          </Link>
+          <span aria-hidden="true" className="text-rule">
+            ·
+          </span>
+          <Link
+            href={`/capabilities?chain=${chain.id}`}
+            className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
             Capabilities
           </Link>
           <Link
-            href="/embed"
-            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+            href={`/issuers?chain=${chain.id}`}
+            className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
           >
-            Embed
+            Issuers
+          </Link>
+          <Link
+            href={`/croo?chain=${chain.id}`}
+            className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+          >
+            CROO
+          </Link>
+          <Link
+            href={`/compose?chain=${chain.id}`}
+            className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+          >
+            Compose
           </Link>
         </nav>
 

@@ -36,6 +36,8 @@
     "smoke:jev": "tsx scripts/jev-transport-smoke.ts",
     "demo:monad": "tsx scripts/monad-lifecycle-demo.ts",
     "demo:monad-steward": "tsx scripts/monad-steward-smoke.ts",
+    "demo:monad-passkey": "tsx scripts/monad-passkey-issue.ts",
+    "demo:monad-8004": "tsx scripts/monad-erc8004.ts",
     "smoke:demo-credentials": "tsx scripts/smoke-demo-credentials.ts",
     "seed:field": "tsx scripts/seed-field-agents.ts",
     "lint:design": "node scripts/lint-design.mjs",
@@ -48,7 +50,8 @@
     "format": "bash scripts/forge.sh fmt && prettier --write 'packages/*/src/**/*.{ts,json,md}'",
     "clean": "pnpm -r run clean && rm -rf out cache broadcast",
     "prepare": "husky",
-    "format:web": "prettier --write 'web/**/*.{ts,tsx,css}'"
+    "format:web": "prettier --write 'web/**/*.{ts,tsx,css}'",
+    "demo:monad-x402": "tsx scripts/monad-x402-demo.ts"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,yml,yaml,css}": "prettier --write"
@@ -73,7 +76,8 @@
     "lint-staged": "17.4.1",
     "playwright": "^1.45.0",
     "prettier": "^3.3.0",
-    "tsx": "^4.23.13"
+    "tsx": "^4.23.13",
+    "viem": "^2.55.10"
   },
   "engines": {
     "node": ">=20"

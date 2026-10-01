@@ -106,10 +106,23 @@
     "monad-testnet": {
       "network": "monad-testnet",
       "pharosAgentId": "0x7371bf6c8cBedcbb6B3da78c1da080e408cA7987",
-      "credentialRegistry": "0x698e1C05d34e2b6d0B6eCd71f3fC9e84e64733c5",
+      "credentialRegistry": "0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a",
       "chainId": 10143,
       "deployer": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
-      "deployedAt": "1789662100"
+      "deployedAt": "1789662100",
+      "passkeyIssuer": "0x6C500B3968C54789b518D01066Aed2990d44c068",
+      "rpId": "ligis.vercel.app",
+      "credentialRegistryV1": "0x698e1C05d34e2b6d0B6eCd71f3fC9e84e64733c5",
+      "erc8004": {
+        "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+        "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+        "validationRegistry": "0x8004Cb1BF31DAf7788923b405b754f57acEB4272"
+      },
+      "x402": {
+        "facilitator": "https://x402-facilitator.molandak.org",
+        "asset": "0x16f6bD0c285a630fe72275909c0f5815d276E2f4",
+        "assetNote": "Ligis test USDC (EIP-3009), demo-only. Canonical Monad testnet USDC: 0x534b2f3A21130d7a60830c2Df862319e593943A3"
+      }
     }
   }
 }

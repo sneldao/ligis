@@ -1,0 +1,13 @@
+network=monad-testnet
+chainId=10143
+gate=http://127.0.0.1:4040
+subject=0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec
+payer=0xa234d5ba3864acD254467193272e15941102A8fa
+asset=0x16f6bD0c285a630fe72275909c0f5815d276E2f4
+capability=data.premium
+capabilityHash=0x82d310185e56dc56563d6471011acb06809f614a7e3765e292d12d320556dc77
+credentialNonce=4
+settleTx=0x5c434cce1b5df140ce13707f23717000af850e08254a8e62aacff85e54c19b65
+revokeTx0=0x2deaffa5ea2e0d774f8a533d17e6d94a6018c95f52fda866bb04d8d4b8972f32
+gateAfter=401 (STOP)
+explorer=https://testnet.monadscan.com/tx/0x5c434cce1b5df140ce13707f23717000af850e08254a8e62aacff85e54c19b65

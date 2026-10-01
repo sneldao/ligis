@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { ChainBadge } from "@/components/ChainBadge";
 import { Rule } from "@/components/Rule";
 import { Snippet } from "@/components/Snippet";
-import { capabilities, network } from "@/lib/chain";
+import { capabilities } from "@/lib/chain";
+import { isCasperChain } from "@/lib/chain-router";
+import { getChain } from "@/lib/network";
 import { SITE_URL } from "@/lib/site";
 
-const EXAMPLE_SUBJECT = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
+const EXAMPLE_SUBJECT_EVM = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
+const EXAMPLE_SUBJECT_CASPER =
+  "account-hash-c76927ed08eb9a3a2cca7ee0b730fb4cefa22551d3e5914e4d44d693762a8326";
 const EXAMPLE_CAP = capabilities[0]?.id ?? "kyc.basic";
 
 export const metadata = {
@@ -13,7 +18,17 @@ export const metadata = {
     "Drop the Ligis gate — a live GO/STOP badge — into any page. No client SDK, no tracking, no database between the visitor and chain state.",
 };
 
-export default function EmbedPage() {
+export const dynamic = "force-dynamic";
+
+export default async function EmbedPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const chain = getChain(await searchParams);
+  const EXAMPLE_SUBJECT = isCasperChain(chain)
+    ? EXAMPLE_SUBJECT_CASPER
+    : EXAMPLE_SUBJECT_EVM;
   const iframeCode = `<iframe
   src="${SITE_URL}/embed/verify?subject=${EXAMPLE_SUBJECT}&capability=${EXAMPLE_CAP}"
   width="520" height="120"
@@ -29,6 +44,7 @@ export default function EmbedPage() {
       <header className="route-header text-xs">
         <p className="eyebrow">Ligis · Embed</p>
         <div className="flex items-baseline gap-6">
+          <ChainBadge chain={chain} />
           <Link
             href="/"
             className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
@@ -55,7 +71,7 @@ export default function EmbedPage() {
         <header className="flex items-baseline justify-between">
           <p className="eyebrow">Live preview</p>
           <p className="font-mono text-xs tabular text-ink-quiet">
-            {network.name.toLowerCase()}
+            {chain.name.toLowerCase()}
           </p>
         </header>
         <Rule className="mt-4" />
@@ -100,11 +116,10 @@ export default function EmbedPage() {
           <div className="border-t border-rule-soft py-5">
             <p className="mb-5 font-serif text-sm leading-relaxed text-ink-soft">
               Pass a subject and capability. The capability can be a
-              human-readable id or 32-byte hash. Append{" "}
-              <span className="font-mono not-italic text-ink">
-                &chain=casper-testnet
-              </span>{" "}
-              for Casper.
+              human-readable id or 32-byte hash. The subject resolves across
+              every live registry; add{" "}
+              <span className="font-mono not-italic text-ink">&chain=</span> to
+              scope the read to one.
             </p>
             <Snippet code={directLink} lang="url" />
           </div>
@@ -138,7 +153,10 @@ export default function EmbedPage() {
           ← Home
         </Link>
         <span className="font-mono tabular">
-          {network.name.toLowerCase()} · chain {network.chainId}
+          {chain.name.toLowerCase()}
+          {chain.chainId
+            ? ` · chain ${chain.chainId}`
+            : ` · ${chain.chainName}`}
         </span>
       </footer>
     </main>

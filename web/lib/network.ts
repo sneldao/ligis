@@ -72,6 +72,27 @@ export const MONAD_TESTNET: ChainNetwork = {
   writeReady: true,
 };
 
+/**
+ * PasskeyIssuer on Monad testnet — the ERC-1271 issuer whose credentials are
+ * authorized by WebAuthn/P256 assertions verified by the 0x0100 precompile.
+ * Client-safe: used to label passkey-authorized provenance on /gate and
+ * /agent surfaces.
+ */
+export const MONAD_PASSKEY_ISSUER =
+  "0x6C500B3968C54789b518D01066Aed2990d44c068";
+
+/** True when an issuer address is the Monad PasskeyIssuer contract. */
+export function isPasskeyIssuer(
+  issuer: string | null | undefined,
+  chainId: string,
+): boolean {
+  return (
+    chainId === MONAD_TESTNET.id &&
+    !!issuer &&
+    issuer.toLowerCase() === MONAD_PASSKEY_ISSUER.toLowerCase()
+  );
+}
+
 /** Key into `assets/networks.json` for a chain's EVM reads. */
 export function evmNetworkKey(chain: ChainNetwork): string {
   return chain.evmNetwork ?? chain.id;
@@ -94,8 +115,13 @@ export function chainById(id: string | undefined): ChainNetwork | undefined {
   return CHAINS.find((c) => c.id === id);
 }
 
-/** Default chain when no `?chain=` query param is present. */
-export const DEFAULT_CHAIN: ChainNetwork = CASPER_TESTNET;
+/**
+ * Default chain when no `?chain=` query param is present.
+ * Monad testnet is the Metropolis submission chain — the Monad-native
+ * surfaces (ERC-8004 profile, passkey provenance, x402 settlement) only
+ * exist there, so a cold visit should land on it.
+ */
+export const DEFAULT_CHAIN: ChainNetwork = MONAD_TESTNET;
 
 /** Legacy export — kept so existing components don't break. */
 export const network = CASPER_TESTNET;

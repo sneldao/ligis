@@ -1,6 +1,8 @@
 // Generate voiceover via ElevenLabs API and save per-line MP3s.
+// Reads voiceover.txt (format: "s1 | line text") — the single source of truth.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 if (!ELEVENLABS_API_KEY) {
@@ -8,18 +10,19 @@ if (!ELEVENLABS_API_KEY) {
 }
 
 const VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Adam
-const LINES = [
-  { id: "s1", text: "Agents can hire agents on CROO — but who verifies the counterparty?" },
-  { id: "s2", text: "Ligis is the trust layer. Callable on the CROO Agent Store, priced in USDC." },
-  { id: "s3", text: "Negotiate, pay, deliver — the full CAP lifecycle. Your agent hires Ligis before releasing funds." },
-  { id: "s4", text: "A buyer agent calls ligis.risk. CROO settles the payment on-chain." },
-  { id: "s5", text: "Ligis returns pass, warn, or fail — plus a zero-to-one-hundred risk score." },
-  { id: "s6", text: "Every verdict is backed by a live read of CredentialRegistry on Casper Testnet — the same contracts from our Casper Buildathon demo." },
-  { id: "s7", text: "One focused service today: counterparty risk checks. Verification and issuance are next on the roadmap." },
-  { id: "s8", text: "Ligis on CROO. Don't pay an agent until Ligis proves it's credentialed." },
-];
+const HERE = dirname(fileURLToPath(import.meta.url));
+const OUT_DIR = join(HERE, "audio");
 
-const OUT_DIR = "/Users/udingethe/Dev/ligis/videos/ligis-croo-hackathon/audio";
+// Parse voiceover.txt -> [{ id, text }]
+const LINES = readFileSync(join(HERE, "voiceover.txt"), "utf8")
+  .split("\n")
+  .map((l) => l.trim())
+  .filter((l) => l && l.includes("|"))
+  .map((l) => {
+    const [id, ...rest] = l.split("|");
+    return { id: id.trim(), text: rest.join("|").trim() };
+  });
+
 mkdirSync(OUT_DIR, { recursive: true });
 
 async function synthesize(line) {
@@ -28,10 +31,11 @@ async function synthesize(line) {
     text: line.text,
     model_id: "eleven_multilingual_v2",
     voice_settings: {
-      stability: 0.35,
+      stability: 0.38,
       similarity_boost: 0.75,
-      style: 0.30,
+      style: 0.2,
       use_speaker_boost: true,
+      speed: Number(process.env.VO_SPEED || 1.08),
     },
   };
 
@@ -57,6 +61,7 @@ async function synthesize(line) {
 }
 
 async function main() {
+  console.log(`Synthesizing ${LINES.length} lines -> ${OUT_DIR}`);
   for (const line of LINES) {
     await synthesize(line);
   }

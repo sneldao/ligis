@@ -46,6 +46,18 @@ const STATIC: Command[] = [
   },
   { id: "issuers", label: "Issuers", hint: "/issuers", href: "/issuers" },
   { id: "steward", label: "Steward", hint: "/steward", href: "/steward" },
+  {
+    id: "vouch",
+    label: "Vouch",
+    hint: "/vouch · the issuer desk",
+    href: "/vouch",
+  },
+  {
+    id: "passkey",
+    label: "Passkey",
+    hint: "/passkey · Monad P256",
+    href: "/passkey",
+  },
   { id: "embed", label: "Embed", hint: "/embed", href: "/embed" },
   { id: "croo", label: "CROO Agent Store", hint: "/croo", href: "/croo" },
   {

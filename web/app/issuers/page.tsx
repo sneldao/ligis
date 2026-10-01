@@ -183,6 +183,7 @@ export default async function IssuersPage({
                     <AddressDisplay
                       address={entry.issuer}
                       copy={false}
+                      link={false}
                       head={6}
                       tail={4}
                     />

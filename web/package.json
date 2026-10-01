@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",
-    "@casper-ecosystem/casper-eip-712": "^1.0.0",
     "@0gfoundation/0g-storage-ts-sdk": "^1.2.6",
+    "@casper-ecosystem/casper-eip-712": "^1.0.0",
     "@ligis/adapter-casper": "workspace:*",
     "@ligis/adapter-evm": "workspace:*",
     "@ligis/agent-logic": "workspace:*",
@@ -36,6 +36,7 @@
     "next": "^16.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "server-only": "0.0.1",
     "three": "^0.185.1",
     "viem": "^2.55.10"
   },

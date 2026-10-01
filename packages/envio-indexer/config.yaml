@@ -25,4 +25,5 @@ chains:
     start_block: 63359400 # just before Ligis deploy (AgentId @ 63359413)
     contracts:
       - name: CredentialRegistry
-        address: "0x698e1C05d34e2b6d0B6eCd71f3fC9e84e64733c5"
+        # v2 registry (ERC-1271 issuer path), deployed 2026-10-01.
+        address: "0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a"

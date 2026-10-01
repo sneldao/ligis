@@ -9,7 +9,53 @@
 > `PHAROS_DEPLOYER_KEY` / `PRIVATE_KEY` as `LIGIS_STEWARD_KEY` for funded demos
 > (`writeReady: true`). Browser wallet connect still deferred. **Envio
 > HyperIndex live** for full issuer / capability history (`LIGIS_ENVIO_GRAPHQL_URL`
-> on Vercel → VPS Hasura). ERC-8004 / P256 still open.
+> on Vercel → VPS Hasura).
+> **Research pass 2026-10-01** (12 days to the 13 Oct deadline): all four
+> Monad-native hooks confirmed available — see "Research findings
+> (2026-10-01)" below for verified addresses and the revised build plan.
+> **Execution 2026-10-01**: Phase 0 done — both original contracts Sourcify
+> `exact_match` on Monadscan infra. Phase 2 contract layer done — v2
+> `CredentialRegistry` `0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a` (ERC-1271
+> issuer path) and `PasskeyIssuer` `0x6C500B3968C54789b518D01066Aed2990d44c068`
+> deployed + Sourcify-verified on testnet; end-to-end P256 credential
+> issuance proven on-chain via `pnpm demo:monad-passkey` (enroll →
+> WebAuthn-shaped assertion → `0x0100` precompile verifies → credential minted
+> → GO → passkey-authorized revoke → STOP). Browser ceremony shipped at
+> `/passkey` — real `navigator.credentials.create()`/`get()` assertions
+> verified end-to-end against the precompile (`scripts/webauthn-e2e.ts`,
+> Playwright + CDP virtual authenticator; requires `rpIdHash` rotated to the
+> serving origin — owner op via `setRpIdHash`). Sponsored gas (Privy/4337)
+> is a roadmap item, not a submission blocker.
+> Product surfacing pass (2026-10-01): `/gate` annotates passkey-authorized
+> issuers ("verified on-chain by Monad's P256 precompile at 0x0100" →
+> `/passkey`), links the real facilitator settlement tx, and carries a live
+> `demo.passkey` fixture; `/agent` labels passkey-issued credentials
+> (`passkey · p256 · 0x0100`); landing Also-row links `/passkey`.
+> Phase 1 done — ERC-8004 steward registered on the testnet IdentityRegistry
+> (agentId **1974**, agentURI → `ligis.vercel.app/agent-registration.json`),
+> demo counterparty agentId **1975**, gate verdicts written to the
+> ReputationRegistry as `ligis.gate` feedback (`pnpm demo:monad-8004`), and
+> `/agent/<addr>?chain=monad-testnet` renders the 8004 identity + score live.
+> Phase 3 done — x402 credential-gated payments verified end-to-end on Monad
+> testnet via `pnpm demo:monad-x402`: credential issue → `402` → EIP-3009
+> `TransferWithAuthorization` → molandak facilitator settles on-chain
+> (`0x5c434cce1b5df140ce13707f23717000af850e08254a8e62aacff85e54c19b65`) →
+> `200` → revoke → `401` STOP before payment. Asset is a demo-only
+> EIP-3009 test USDC (`0x16f6bD0c285a630fe72275909c0f5815d276E2f4`); swap to
+> canonical testnet USDC `0x534b2f3A21130d7a60830c2Df862319e593943A3` once
+> Circle-faucet funds exist (faucet is reCAPTCHA-gated, not automatable).
+> **Product-direction pass (2026-10-01)**: the read is now chain-agnostic —
+> `?chain=` absent resolves the subject across every registry it could live
+> on (union semantics; `web/lib/resolve.ts`) and reports per-chain
+> provenance under the verdict. `/gate`, the landing read, and `/embed/verify`
+> all default to resolution; `?chain=` scopes for demos/debug. Default page
+> chain is Monad testnet; Jev telemetry is collapsed to a disclosure on
+> `/gate`; `/passkey` closes the loop into `/gate`. New surface `/vouch` —
+> the issuer desk: steward key signs EIP-712 `issue` / `revoke` on the EVM
+> registries (proven live: issue `0xb861f1b4…` → GO, revoke `0xedbc6700…` →
+> STOP), supply-side counterpart to the gate. Landing gained a "Ship it"
+> CTA (`GET /gate?subject=…&capability=…`, no chain param). Fixed a latent
+> cross-chain bug: `AddressDisplay` hardcoded the Casper explorer.
 > **Live product today**: [ligis.vercel.app](https://ligis.vercel.app) (Casper Testnet + Pharos Atlantic + Monad testnet)
 > **Research update**: 2026-09-24, via Parallel.ai (verify claims in the rules section against the portal before submission)
 
@@ -32,10 +78,9 @@ Public rules confirmed from monad.xyz/metropolis + hackathon.monad.xyz:
   P256/WebAuthn, write path, live integrations) is exactly the new work, and
   most of it post-dates 1 Sep anyway. Frame the write-up around what was
   **built in-window on Monad**.
-- **Mainnet-vs-testnet is NOT settled in the public rules.** The FAQ says
-  build "on Monad"; nothing publicly mandates chain 143 mainnet. Ask in the
-  Discord / check the portal. Fallback posture: build so a mainnet cutover is
-  one config change (it already nearly is).
+- **Mainnet-vs-testnet: resolved — testnet is acceptable** (owner decision
+  2026-10-01). Build stays on testnet 10143; a mainnet cutover remains one
+  config change if the portal disagrees later.
 - **Submission profile**: working product, demo, short write-up, code link;
   public GitHub repo readable by `metropolis@hackathon.monad.xyz`.
 - **No substantive judging rubric is published** — no supported weighting of
@@ -219,8 +264,10 @@ product route. What is wired today:
   above 1000 blocks and the previous code requested 200,000, so issuer history
   always failed and was reported as "no issuances". The scanner is now chunked
   and newest-first; the page distinguishes "none found" from "cannot read".
-- No ERC-8004 integration, no P256/WebAuthn, no third-party integrator yet —
-  these are the originality and traction scores, and they remain open.
+- P256/WebAuthn is proven at the contract layer (v2 registry + `PasskeyIssuer`,
+  `pnpm demo:monad-passkey`) but the browser `navigator.credentials` flow is
+  still open. No ERC-8004 integration, no third-party integrator yet — these
+  are the originality and traction scores, and they remain open.
 
 ### Live write proof (2026-09-24, testnet)
 
@@ -271,6 +318,65 @@ not a new product or top-level route.
 Shared capability hashes establish a shared namespace, not automatic
 cross-chain validity of signatures or replicated credential state.
 
+### Research findings (2026-10-01, verified via web)
+
+- **ERC-8004 registries are already deployed on Monad — no deployment needed.**
+  Testnet 10143: IdentityRegistry `0x8004A818BFB912233c491871b3d84c89A494BD9e`,
+  ReputationRegistry `0x8004B663056A597Dffe9eCcC1965A193B7388713`,
+  ValidationRegistry `0x8004Cb1BF31DAf7788923b405b754f57acEB4272`.
+  Mainnet 143: `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` / `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`.
+  Official guide: `docs.monad.xyz/guides/erc-8004`. Integration = `register()`
+  - `agentURI`, and `giveFeedback` on the ReputationRegistry after each gate
+    decision — gate verdicts become standard reputation signals any agent can read.
+- **P256 precompile is native at `0x0100`** (EIP-7951, RIP-7212-compatible
+  interface): 160-byte input `hash ‖ r ‖ s ‖ qx ‖ qy` → 32-byte `1` on valid.
+  One `staticcall` verifies a WebAuthn/passkey signature on-chain.
+- **`CredentialRegistry.issue` is ecrecover-only** — issuers are secp256k1
+  addresses; there is no ERC-1271 path today. The Monad-native design: add an
+  ERC-1271 fallback to `issue`, then ship `PasskeyIssuer.sol` whose
+  `isValidSignature` verifies a WebAuthn assertion over the EIP-712 credential
+  digest via `0x0100`. Story: "the issuer isn't a key in an env file — it's a
+  passkey, verified by Monad's native precompile." Requires a testnet redeploy.
+- **Source verification on Monadscan works today via Sourcify** (no API key):
+  `forge verify-contract <addr> <path>:<name> --chain 10143 --verifier sourcify
+--verifier-url https://sourcify-api-monad.blockvision.org/`. Monadscan's own
+  Etherscan-style API needs a key + a Foundry new enough to know chain
+  143/10143 (support merged upstream on master).
+- **x402 has a first-class Monad path**: official facilitator
+  `https://x402-facilitator.molandak.org` (x402 v2 only), testnet USDC
+  `0x534b2f3A21130d7a60830c2Df862319e593943A3`, Circle faucet for funds.
+  Dexter also runs a fee-free mainnet facilitator. This unblocks the
+  mid-stream payment-kill spectacle that was deferred.
+- **AA/sponsorship is off-the-shelf**: Alchemy, Pimlico, ZeroDev, thirdweb,
+  Biconomy all live on Monad — passkey + sponsored gas via Privy lands the
+  Track-4 bullet AND the $5k Privy bounty in one build.
+- **Deadline confirmed**: submission 13 Oct; judging 14–27 Oct; winners 3 Nov.
+  Testnet confirmed acceptable (owner decision 2026-10-01).
+
+### Revised build plan (2026-10-01, ordered)
+
+0. **Cheap wins (½ day)** — Sourcify-verify both testnet contracts; confirm
+   testnet acceptability in the portal/Discord.
+1. **ERC-8004 (1–2 days)** — register the steward agent on the testnet
+   IdentityRegistry; `agentURI` → registration JSON linking Ligis AgentId ↔
+   8004 agentId; `giveFeedback` after each gate decision; surface the link on
+   `/agent/<address>`.
+2. **P256/WebAuthn issuer (3–4 days, flagship)** — ERC-1271 fallback in
+   `CredentialRegistry.issue`; `PasskeyIssuer.sol` against `0x0100`; web flow
+   `navigator.credentials.create()` → register pubkey → `get()` signs issuance
+   intent → credential minted → `/gate` GO. Foundry tests with WebAuthn
+   vector fixtures on a Monad fork. Roadmap: seedless sponsored-gas UX via
+   Privy + ERC-4337 paymaster (also the $5k bounty) — deferred.
+3. **x402 on Monad (1–2 days)** — EVM path in `packages/x402-server` (Exact
+   scheme v2, molandak facilitator, testnet USDC) → mid-stream Revocation demo.
+4. **Film + DX + traction (2–3 days, parallel)** — live Revocation opens the
+   3-min demo; cinematic cut for the ≤30s ad; 10-minute integrator doc
+   (Solidity one-liner + 5-line TS snippet); recruit one team to call
+   `isCapable` at the lounges/Discord.
+
+Degrade gracefully: if P256 slips, ERC-8004 + x402-Monad + film still submit;
+if x402 slips, staged revoke + live `/gate` poll covers the kill-switch beat.
+
 ### Next, in order
 
 1. **Envio HyperIndex — shipped** (2026-09-24). Indexer at `/opt/ligis-envio`
@@ -287,11 +393,15 @@ cross-chain validity of signatures or replicated credential state.
    `/gate?chain=monad-testnet`). Shot list: [`scripts/metropolis-film-shots.md`](../scripts/metropolis-film-shots.md).
    Field density seeded 2026-09-25 (`pnpm seed:field` → supply 24 on Pharos +
    Monad). Jev gateway still $0 as of the same day (`pnpm smoke:jev`).
-3. Explorer source verification (testnet now; stay on testnet until the portal
-   says otherwise).
-4. ERC-8004 registration as the Monad-native hook + P256/WebAuthn issuer —
-   these two ARE the track's example bullets; missing them reads as "we also
-   deployed."
+3. Explorer source verification — **done** (2026-10-01): all four Monad
+   contracts Sourcify `exact_match`. Monadscan-native badge intentionally
+   skipped (needs an Etherscan V2 key; Sourcify already proves source).
+4. ERC-8004 + P256/WebAuthn — **contract layer done** (2026-10-01): agentIds
+   1974/1975, `ligis.gate` reputation feedback live; passkey issue/revoke
+   proven on `0x0100`. Remaining: browser `navigator.credentials` flow.
+   Sponsored gas (Privy / ERC-4337 paymaster) is a **roadmap item**, not a
+   submission blocker — it unlocks seedless UX and the $5k Privy bounty
+   post-hackathon.
 5. A second team calling `isCapable` during the event — the actual traction
    score. Recruit at the London (2 Oct) or Singapore (6 Oct) Metropolis
    Lounge activations; Singapore is DeltaV Demo Day, two-way overlap.
@@ -339,12 +449,12 @@ spectacle is staging of real paths, not scope expansion.
 | **Ready: Envio**  | HyperIndex live + Vercel GraphQL URL wired      |
 
 1. **The Revocation (demo centerpiece, ~20s).** **Ready** — CLI
-   (`pnpm demo:monad`) and steward (`pnpm demo:monad-steward`) both proven
-   2026-09-24 on testnet. Mid-stream x402 kill still needs a payment loop on
-   Monad (deferred); for the film, revoke + live `/gate` poll is enough.
-   Stage N live agents paying for services (x402 loop running, ledger
-   ticking). On stage, revoke one credential. Within one Monad block the
-   counterparty's gate flips GO → STOP and its payments fail mid-stream.
+   (`pnpm demo:monad`), steward (`pnpm demo:monad-steward`), and the
+   mid-stream x402 kill (`pnpm demo:monad-x402`, proven 2026-10-01: real
+   facilitator-settled payment on-chain, then revoke → `401`) all proven
+   on testnet. Stage N live agents paying for services (x402 loop running,
+   ledger ticking). On stage, revoke one credential. Within one Monad block
+   the counterparty's gate flips GO → STOP and its payments fail mid-stream.
    Cut to that agent's terminal: _"payment refused — capability revoked
    0.6s ago."_ (Script the stopwatch against **proposed-block** receipt
    time, not "finality" — proposed tips arrive sooner than the 600 ms

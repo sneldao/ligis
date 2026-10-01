@@ -29,7 +29,8 @@ export function GateFormShell({
   sampleLinks,
   children,
 }: {
-  chainId: string;
+  /** Omit for a chain-agnostic read — the subject resolves across registries. */
+  chainId?: string;
   situationId?: string;
   defaultSubject: string;
   defaultCapability: string;
@@ -71,7 +72,7 @@ export function GateFormShell({
   const navigate = useCallback(
     (subject: string, capability: string) => {
       const params = new URLSearchParams();
-      params.set("chain", chainId);
+      if (chainId) params.set("chain", chainId);
       params.set("subject", subject.trim());
       params.set("capability", capability.trim());
       if (situationId) params.set("situation", situationId);
@@ -109,7 +110,9 @@ export function GateFormShell({
           onSubmit={onSubmit}
           className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
         >
-          <input type="hidden" name="chain" value={chainId} />
+          {chainId ? (
+            <input type="hidden" name="chain" value={chainId} />
+          ) : null}
           {situationId ? (
             <input type="hidden" name="situation" value={situationId} />
           ) : null}

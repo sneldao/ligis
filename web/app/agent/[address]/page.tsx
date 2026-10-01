@@ -14,7 +14,8 @@ import {
   isCasperChain,
 } from "@/lib/chain-router";
 import { envioConfigured } from "@/lib/envio";
-import { getChain, type ChainNetwork } from "@/lib/network";
+import { readErc8004Profile, ERC8004_EXPLORER } from "@/lib/erc8004";
+import { getChain, isPasskeyIssuer, type ChainNetwork } from "@/lib/network";
 import { isCasperAddress } from "@/lib/chain-casper";
 import { monthYear, truncateAddress, truncateHash } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
@@ -69,6 +70,10 @@ export default async function AgentPage({
 
   const snap = await readAgentSnapshot(chain, address);
   const heldCount = snap.held.length;
+  const erc8004 =
+    chain.id === "monad-testnet" && !isCasper
+      ? await readErc8004Profile(address as Address).catch(() => null)
+      : null;
 
   const capMap = new Map(capabilities.map((c) => [c.hash.toLowerCase(), c.id]));
   const history = snap.exists
@@ -110,7 +115,11 @@ export default async function AgentPage({
               : "This address has not minted an agent. It has no portable identity, no credentials, no evidence trail. To bootstrap one, use the Steward loop or the CLI."}
           </p>
           <div className="mt-10">
-            <AddressDisplay address={address} variant="block" />
+            <AddressDisplay
+              address={address}
+              variant="block"
+              explorerHref={`${chain.explorerUrl}/${isCasper ? "account" : "address"}/${address}`}
+            />
           </div>
         </section>
 
@@ -127,6 +136,7 @@ export default async function AgentPage({
                   copy={false}
                   head={5}
                   tail={3}
+                  explorerHref={`${chain.explorerUrl}/${isCasper ? "account" : "address"}/${snap.controller}`}
                 />
               ) : (
                 "—"
@@ -185,7 +195,17 @@ export default async function AgentPage({
                       <span className="mr-2 text-[11px] uppercase tracking-[0.14em] text-ink-quiet sm:hidden">
                         issuer
                       </span>
-                      {truncateAddress(view.issuer, 5, 3)}
+                      {isPasskeyIssuer(view.issuer, chain.id) ? (
+                        <>
+                          <span className="text-ink">passkey</span>
+                          <span className="text-ink-quiet">
+                            {" "}
+                            · p256 · 0x0100
+                          </span>
+                        </>
+                      ) : (
+                        truncateAddress(view.issuer, 5, 3)
+                      )}
                     </span>
                     <span className="w-28 text-right font-mono tabular text-ink-soft">
                       {view.expiresAt === 0n
@@ -289,6 +309,104 @@ export default async function AgentPage({
           </section>
         ) : null}
 
+        {erc8004 ? (
+          <section className="mt-16 sm:mt-24">
+            <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+              <p className="eyebrow">ERC-8004 identity</p>
+              <p className="font-mono text-xs tabular text-ink-quiet">
+                trustless agents registry
+              </p>
+            </header>
+            <Rule className="mt-4" />
+            <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-6 text-sm sm:grid-cols-4 sm:gap-x-10">
+              <Fact label="agentId">
+                <span className="font-mono tabular">
+                  #{erc8004.agentId.toString()}
+                </span>
+              </Fact>
+              <Fact label="role">
+                {erc8004.isLigisSteward ? "ligis steward" : "gated agent"}
+              </Fact>
+              <Fact label="gate feedback">
+                <span className="font-mono tabular">
+                  {erc8004.feedbackCount.toString()}
+                </span>
+              </Fact>
+              <Fact label="score">
+                <span className="font-mono tabular">
+                  {erc8004.feedbackCount > 0n
+                    ? `${erc8004.summaryValue.toString()}`
+                    : "—"}
+                </span>
+              </Fact>
+            </div>
+            <p className="mt-6 max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
+              This wallet is bound to an ERC-8004 identity on Monad&rsquo;s
+              singleton IdentityRegistry. Every Ligis gate decision about it is
+              written to the standard ReputationRegistry as{" "}
+              <span className="font-mono text-ink">ligis.gate</span> feedback —
+              readable by any agent, indexer, or contract on the network.
+            </p>
+            {erc8004.feedback.length > 0 ? (
+              <div className="mt-8">
+                <div className="hidden grid-cols-[1fr_auto_auto] items-baseline gap-x-8 py-3 text-[11px] uppercase tracking-[0.16em] text-ink-quiet sm:grid">
+                  <span>capability</span>
+                  <span className="w-20">verdict</span>
+                  <span className="w-28 text-right">score</span>
+                </div>
+                <Rule />
+                {erc8004.feedback.map((f) => (
+                  <div key={`${f.client}-${f.index}`}>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 py-4 text-sm sm:grid-cols-[1fr_auto_auto] sm:gap-x-8">
+                      <span className="font-mono tabular text-ink">
+                        {f.tag2 || f.tag1}
+                      </span>
+                      <span
+                        className={`w-20 text-right font-mono text-[11px] uppercase tracking-[0.16em] sm:text-left ${f.value > 0n ? "text-sage" : "text-revoke"}`}
+                      >
+                        {f.revoked ? "revoked" : f.value > 0n ? "go" : "stop"}
+                      </span>
+                      <span className="w-28 text-right font-mono tabular text-ink-soft">
+                        {f.value.toString()}
+                        {f.valueDecimals > 0 ? `e-${f.valueDecimals}` : ""}
+                      </span>
+                    </div>
+                    <Rule tone="soft" />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3 text-sm">
+              {erc8004.agentURI ? (
+                <a
+                  href={erc8004.agentURI}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-terra underline decoration-terra/40 decoration-1 underline-offset-4 transition-colors hover:decoration-terra"
+                >
+                  Registration file ↗
+                </a>
+              ) : null}
+              <a
+                href={ERC8004_EXPLORER.identity}
+                target="_blank"
+                rel="noreferrer"
+                className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+              >
+                IdentityRegistry ↗
+              </a>
+              <a
+                href={ERC8004_EXPLORER.reputation}
+                target="_blank"
+                rel="noreferrer"
+                className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
+              >
+                ReputationRegistry ↗
+              </a>
+            </div>
+          </section>
+        ) : null}
+
         {!snap.exists ? (
           <section className="mt-24 max-w-2xl">
             <p className="eyebrow">To mint into the index</p>
@@ -343,7 +461,13 @@ export default async function AgentPage({
             rel="noreferrer"
             className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-ink hover:decoration-terra"
           >
-            On {isCasper ? "cspr.live" : "PharosScan"} ↗
+            On{" "}
+            {isCasper
+              ? "cspr.live"
+              : chain.id === "monad-testnet"
+                ? "MonadScan"
+                : "PharosScan"}{" "}
+            ↗
           </a>
         </footer>
       </main>

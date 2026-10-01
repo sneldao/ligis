@@ -121,8 +121,18 @@ contract CredentialRegistry {
         );
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
 
-        address recovered = _recover(digest, signature);
-        if (recovered != issuer) revert InvalidSignature();
+        if (issuer.code.length > 0) {
+            // Contract issuer (ERC-1271): passkey issuers, multisigs, DAOs.
+            (bool ok, bytes memory ret) = issuer.staticcall(
+                abi.encodeWithSelector(bytes4(0x1626ba7e), digest, signature)
+            );
+            if (!ok || ret.length < 32 || abi.decode(ret, (bytes4)) != bytes4(0x1626ba7e)) {
+                revert InvalidSignature();
+            }
+        } else {
+            address recovered = _recover(digest, signature);
+            if (recovered != issuer) revert InvalidSignature();
+        }
 
         _credentials[subject][capabilityHash][nonce] = Credential({
             issuer: issuer,

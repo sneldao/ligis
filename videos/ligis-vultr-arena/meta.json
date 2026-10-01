@@ -1,0 +1,5 @@
+{
+  "id": "ligis-vultr-arena",
+  "name": "Ligis — The Agent Arena (Vultr)",
+  "description": "Vultr Agent Arena 2026 submission. An agent reads a poisoned web page and tries to wire $60,000 to an attacker; two independent judges (Vultr Serverless Inference + Jev) stop it before the money moves."
+}

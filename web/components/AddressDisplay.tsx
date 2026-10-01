@@ -13,6 +13,7 @@ export function AddressDisplay({
   copy = true,
   head,
   tail,
+  explorerHref,
 }: {
   address: string;
   variant?: Variant;
@@ -20,9 +21,12 @@ export function AddressDisplay({
   copy?: boolean;
   head?: number;
   tail?: number;
+  /** Full explorer URL for this address. Callers pass the chain-aware href;
+      the legacy fallback assumes the Casper testnet explorer. */
+  explorerHref?: string;
 }) {
   const display = truncateAddress(address, head, tail);
-  const explorer = `${network.explorerUrl}/address/${address}`;
+  const explorer = explorerHref ?? `${network.explorerUrl}/address/${address}`;
 
   const body = link ? (
     <a

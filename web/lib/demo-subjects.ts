@@ -56,6 +56,12 @@ export const DEMO_GATE_SAMPLES: Record<string, DemoGateSample[]> = {
       expect: "revoked",
     },
     {
+      label: "passkey-issued",
+      subject: "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+      capability: "demo.passkey",
+      expect: "go",
+    },
+    {
       label: "unverified wallet",
       subject: "0x000000000000000000000000000000000000dEaD",
       capability: "kyc.basic",

@@ -28,12 +28,16 @@ export function GateVerdict({
   verdict,
   explorerUrl,
   source,
+  issuerNote,
 }: {
   verdict: GateVerdictInput;
   /** When provided, subject + issuer link to the explorer. */
   explorerUrl?: string;
   /** Provenance line, e.g. "pharos atlantic state". */
   source?: string;
+  /** Optional issuer provenance line rendered under "Issued by …" —
+      e.g. passkey authorization via Monad's P256 precompile. */
+  issuerNote?: React.ReactNode;
 }) {
   const go = verdict.capable;
   const tone = go ? "border-sage" : "border-revoke";
@@ -117,6 +121,12 @@ export function GateVerdict({
                   .toLowerCase()}`
               : ", no expiry"}
             .
+          </p>
+        ) : null}
+
+        {issuerNote ? (
+          <p className="mt-1.5 font-serif text-xs italic leading-relaxed text-ink-quiet">
+            {issuerNote}
           </p>
         ) : null}
 

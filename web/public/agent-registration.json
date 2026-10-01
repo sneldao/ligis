@@ -1,0 +1,33 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Ligis Trust Steward",
+  "description": "Autonomous issuer for Ligis, the trust gate for autonomous payments. Mints ERC-721 agent identities, issues EIP-712 capability credentials, and records gate decisions as ERC-8004 reputation. One on-chain read — isCapable(subject, capabilityHash) — says GO or STOP before your agent pays a stranger.",
+  "image": "https://ligis.vercel.app/opengraph-image.png",
+  "services": [
+    {
+      "name": "web",
+      "endpoint": "https://ligis.vercel.app"
+    },
+    {
+      "name": "gate",
+      "endpoint": "https://ligis.vercel.app/gate?chain=monad-testnet"
+    },
+    {
+      "name": "indexer",
+      "endpoint": "http://144.202.117.160:18080/v1/graphql"
+    }
+  ],
+  "registrations": [
+    {
+      "agentId": 1974,
+      "agentRegistry": "eip155:10143:0x8004A818BFB912233c491871b3d84c89A494BD9e"
+    }
+  ],
+  "ligis": {
+    "agentIdContract": "eip155:10143:0x7371bf6c8cBedcbb6B3da78c1da080e408cA7987",
+    "credentialRegistry": "eip155:10143:0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a",
+    "passkeyIssuer": "eip155:10143:0x6C500B3968C54789b518D01066Aed2990d44c068"
+  },
+  "supportedTrust": ["reputation"],
+  "active": true
+}

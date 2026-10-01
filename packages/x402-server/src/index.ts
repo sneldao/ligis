@@ -33,8 +33,10 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { serve } from "@hono/node-server";
 import { CasperAdapter } from "@ligis/adapter-casper";
+import { keccak_256 } from "@noble/hashes/sha3";
 import { execFileSync } from "node:child_process";
 import {
+  capabilityHash,
   evaluatePaymentIntent,
   jevHeaders,
   jevSummary,
@@ -61,18 +63,46 @@ interface PaymentRequirements {
 
 // ---------- Config ----------
 
+/**
+ * Chain mode. "casper" (default) is the original CEP-18 flow; "monad-testnet"
+ * (or any EVM slug) runs the same trust gate against the EVM
+ * CredentialRegistry and settles x402 v2 "exact" payments via an EVM
+ * facilitator (default: Monad's molandak facilitator).
+ */
+const GATE_NETWORK = process.env.LIGIS_X402_NETWORK ?? "casper";
+const IS_EVM = GATE_NETWORK !== "casper";
+
+/** EVM network parameters — defaults are Monad testnet + Circle USDC. */
+const EVM = {
+  chainId: Number(process.env.LIGIS_X402_CHAIN_ID ?? "10143"),
+  caip2: `eip155:${Number(process.env.LIGIS_X402_CHAIN_ID ?? "10143")}`,
+  rpcUrl: process.env.LIGIS_X402_RPC_URL ?? "https://testnet-rpc.monad.xyz",
+  registry:
+    process.env.LIGIS_X402_REGISTRY ??
+    "0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a",
+  asset:
+    process.env.LIGIS_X402_ASSET ??
+    "0x534b2f3A21130d7a60830c2Df862319e593943A3", // Circle USDC testnet
+  assetName: process.env.LIGIS_X402_ASSET_NAME ?? "USDC",
+  assetVersion: process.env.LIGIS_X402_ASSET_VERSION ?? "2",
+  assetDecimals: Number(process.env.LIGIS_X402_ASSET_DECIMALS ?? "6"),
+};
+
 const CONFIG = {
   capability: process.env.LIGIS_GATE_CAPABILITY ?? "data.premium",
-  priceSmallestUnit: process.env.LIGIS_GATE_PRICE ?? "1000000000", // 1 CSPR in motes
+  priceSmallestUnit:
+    process.env.LIGIS_GATE_PRICE ?? (IS_EVM ? "1000" : "1000000000"),
   asset:
     process.env.LIGIS_GATE_ASSET ?? process.env.LIGIS_CASPER_X402_TOKEN ?? "",
-  payTo: process.env.LIGIS_GATE_PAY_TO ?? "",
+  payTo: process.env.LIGIS_GATE_PAY_TO ?? process.env.LIGIS_X402_PAY_TO ?? "",
   facilitatorUrl:
-    process.env.LIGIS_FACILITATOR_URL ?? "https://x402-facilitator.cspr.cloud",
+    process.env.LIGIS_FACILITATOR_URL ??
+    (IS_EVM
+      ? "https://x402-facilitator.molandak.org"
+      : "https://x402-facilitator.cspr.cloud"),
   facilitatorToken: process.env.CSPR_CLOUD_TOKEN ?? "",
-  settlementMode: (process.env.X402_SETTLEMENT_MODE ?? "local") as
-    | "facilitator"
-    | "local",
+  settlementMode: (process.env.X402_SETTLEMENT_MODE ??
+    (IS_EVM ? "facilitator" : "local")) as "facilitator" | "local",
   rpcUrl:
     process.env.LIGIS_CASPER_RPC_URL ??
     "https://node.testnet.casper.network/rpc",
@@ -81,6 +111,126 @@ const CONFIG = {
 
 const adapter = new CasperAdapter();
 const app = new Hono();
+
+// ---------- EVM (Monad) helpers ----------
+
+const IS_CAPABLE_SELECTOR = keccak_256(
+  new TextEncoder().encode("isCapable(address,bytes32)"),
+).slice(0, 4);
+
+/** EVM credential gate: CredentialRegistry.isCapable(subject, capHash). */
+async function evmIsCapable(
+  subject: string,
+  capability: string,
+): Promise<{ capable: boolean }> {
+  const cap = capabilityHash(capability).slice(2);
+  const addr = subject.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+  const selHex = Array.from(IS_CAPABLE_SELECTOR)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const data = `0x${selHex}${addr}${cap}`;
+  const res = await fetch(EVM.rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_call",
+      params: [{ to: EVM.registry, data }, "latest"],
+    }),
+  });
+  const json = (await res.json()) as {
+    result?: string;
+    error?: { message: string };
+  };
+  if (!json.result) {
+    throw new Error(json.error?.message ?? "eth_call returned no data");
+  }
+  return { capable: json.result.endsWith("1") };
+}
+
+/** x402 v2 PaymentRequirements for an EVM (EIP-3009 exact) payment. */
+function evmPaymentRequirements(resourceUrl: string) {
+  return {
+    scheme: "exact" as const,
+    network: EVM.caip2,
+    amount: CONFIG.priceSmallestUnit,
+    asset: EVM.asset,
+    payTo: CONFIG.payTo,
+    maxTimeoutSeconds: 300,
+    extra: { name: EVM.assetName, version: EVM.assetVersion },
+  };
+}
+
+/**
+ * Settle via an EVM x402 facilitator (v2): POST /verify then /settle with
+ * {x402Version, paymentPayload, paymentRequirements}. The facilitator checks
+ * the EIP-3009 signature and submits transferWithAuthorization on-chain.
+ */
+async function settleViaEvmFacilitator(
+  paymentHeader: string,
+  resourceUrl: string,
+): Promise<{ ok: boolean; txHash?: string; error?: string; mode?: string }> {
+  try {
+    const paymentPayload = JSON.parse(
+      Buffer.from(paymentHeader, "base64").toString(),
+    );
+    const body = JSON.stringify({
+      x402Version: 2,
+      paymentPayload,
+      paymentRequirements: evmPaymentRequirements(resourceUrl),
+    });
+    const headers = {
+      "content-type": "application/json",
+      accept: "application/json",
+    };
+
+    const verifyRes = await fetch(`${CONFIG.facilitatorUrl}/verify`, {
+      method: "POST",
+      headers,
+      body,
+    });
+    const verifyData = (await verifyRes.json()) as {
+      isValid?: boolean;
+      invalidReason?: string;
+      invalidReasonDetails?: string;
+    };
+    if (!verifyData.isValid) {
+      return {
+        ok: false,
+        error: `verification failed: ${verifyData.invalidReason ?? "unknown"} — ${verifyData.invalidReasonDetails ?? ""}`,
+      };
+    }
+
+    const settleRes = await fetch(`${CONFIG.facilitatorUrl}/settle`, {
+      method: "POST",
+      headers,
+      body,
+    });
+    const settleData = (await settleRes.json()) as {
+      success?: boolean;
+      transaction?: string;
+      errorReason?: string;
+      errorMessage?: string;
+    };
+    if (settleData.success) {
+      return {
+        ok: true,
+        txHash: settleData.transaction,
+        mode: "facilitator-eip3009",
+      };
+    }
+    return {
+      ok: false,
+      error: `settlement failed: ${settleData.errorReason ?? "unknown"} — ${settleData.errorMessage ?? ""}`,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
 
 // Jev intent layer — opt-in, fail-open (see @ligis/core/src/jev.ts).
 const JEVC = loadJevConfig();
@@ -91,7 +241,7 @@ app.get("/", (c) =>
   c.json({
     service: "Ligis Trust Gate",
     capability: CONFIG.capability,
-    chain: adapter.chainId,
+    chain: IS_EVM ? EVM.caip2 : adapter.chainId,
     endpoint: "/premium",
     settlement: CONFIG.settlementMode,
     price: {
@@ -162,12 +312,16 @@ app.get("/premium", async (c) => {
     return c.json(
       {
         ok: false,
-        error: "missing X-Subject header (the agent's Casper account hash)",
+        error: IS_EVM
+          ? "missing X-Subject header (the agent's EVM address)"
+          : "missing X-Subject header (the agent's Casper account hash)",
       },
       400,
     );
   }
-  const paymentHeader = c.req.header("X-PAYMENT");
+  // x402 v2 uses PAYMENT-SIGNATURE; X-PAYMENT is kept for v1-style clients.
+  const paymentHeader =
+    c.req.header("PAYMENT-SIGNATURE") ?? c.req.header("X-PAYMENT");
 
   // 1. Credential read + Jev intent, concurrently. The credential check
   //    shells out synchronously to the casper-client CLI (which blocks the
@@ -191,7 +345,9 @@ app.get("/premium", async (c) => {
   // Gate: does this subject hold a valid Ligis credential?
   let capable = false;
   try {
-    const check = await verifyCapabilityCached(subject, CONFIG.capability);
+    const check = IS_EVM
+      ? await evmIsCapable(subject, CONFIG.capability)
+      : await verifyCapabilityCached(subject, CONFIG.capability);
     capable = check.capable;
   } catch (err) {
     return c.json(
@@ -249,8 +405,21 @@ app.get("/premium", async (c) => {
     });
   }
 
-  // 2. Payment: do we have an X-PAYMENT header?
+  // 2. Payment: do we have a payment signature header?
   if (!paymentHeader) {
+    if (IS_EVM) {
+      return respond(402, {
+        x402Version: 2,
+        error: "PAYMENT-SIGNATURE header is required",
+        resource: {
+          url: c.req.url,
+          description: `Ligis Trust Gate — ${CONFIG.capability} (RWA oracle feed)`,
+          mimeType: "application/json",
+        },
+        accepts: [evmPaymentRequirements(c.req.url)],
+        extensions: {},
+      });
+    }
     const reqs = paymentRequirements(c.req.url);
     return respond(402, {
       x402Version: 2,
@@ -266,7 +435,9 @@ app.get("/premium", async (c) => {
     error?: string;
     mode?: string;
   };
-  if (CONFIG.settlementMode === "facilitator") {
+  if (IS_EVM) {
+    settleResult = await settleViaEvmFacilitator(paymentHeader, c.req.url);
+  } else if (CONFIG.settlementMode === "facilitator") {
     settleResult = await settleViaFacilitator(paymentHeader, c.req.url);
   } else {
     settleResult = await settleLocally(paymentHeader, c.req.url);
@@ -282,6 +453,7 @@ app.get("/premium", async (c) => {
 
   // 4. Deliver
   const payload = await premiumPayload();
+  c.header("PAYMENT-RESPONSE", settleResult.txHash ?? "");
   c.header("X-PAYMENT-RESPONSE", settleResult.txHash ?? "");
   return respond(200, {
     ok: true,
@@ -290,7 +462,7 @@ app.get("/premium", async (c) => {
     payload,
     settled: {
       txHash: settleResult.txHash,
-      chain: adapter.chainId,
+      chain: IS_EVM ? EVM.caip2 : adapter.chainId,
       mode: settleResult.mode ?? CONFIG.settlementMode,
     },
   });
@@ -746,7 +918,7 @@ async function premiumPayload() {
     oracle: {
       provider: "Ligis RWA Oracle",
       credential: CONFIG.capability,
-      chain: adapter.chainId,
+      chain: IS_EVM ? EVM.caip2 : adapter.chainId,
       lastUpdate: new Date().toISOString(),
       confidence: isLive ? 0.95 : 0.5,
     },
@@ -777,7 +949,10 @@ function sleep(ms: number): Promise<void> {
 
 console.log(`Ligis Trust Gate starting on :${PORT}`);
 console.log(`  capability:   ${CONFIG.capability}`);
-console.log(`  chain:        ${adapter.chainId}`);
+console.log(
+  `  network:      ${GATE_NETWORK}${IS_EVM ? ` (${EVM.caip2}, asset ${EVM.asset})` : ""}`,
+);
+console.log(`  chain:        ${IS_EVM ? EVM.caip2 : adapter.chainId}`);
 console.log(`  settlement:   ${CONFIG.settlementMode}`);
 console.log(`  facilitator:  ${CONFIG.facilitatorUrl}`);
 console.log(

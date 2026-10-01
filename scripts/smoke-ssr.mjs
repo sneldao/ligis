@@ -19,6 +19,8 @@ const ROUTES = [
   "/styleguide",
   "/field",
   "/steward",
+  "/vouch",
+  "/passkey",
 ];
 
 const BAIL = /BAILOUT_TO_CLIENT_SIDE_RENDERING/i;
