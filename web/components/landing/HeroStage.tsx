@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { HeroWire } from "@/components/landing/HeroWire";
+import { HeroCtaCounter } from "@/components/landing/HeroCtaCounter";
 
 export function HeroStage() {
   return (
     <section
+      data-mode="incident"
       className="night-grid relative overflow-hidden"
       aria-labelledby="hero-title"
     >
@@ -27,33 +29,40 @@ export function HeroStage() {
             style={{ ["--cascade-step" as string]: 2 }}
           >
             Ligis checks every payment against what the agent was actually hired
-            to do: right payee, right amount, in scope.{" "}
-            <span className="text-go">GO</span> or{" "}
-            <span className="text-stop">STOP</span> in under 200ms, before money
-            moves.
+            to do: right payee, right amount, in scope, plus a verified-payee
+            credential read. <span className="text-go">GO</span> or{" "}
+            <span className="text-stop">STOP</span> before money moves.
           </p>
           <div
-            className="flex flex-wrap items-center gap-3 pt-2"
+            className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2"
             style={{ ["--cascade-step" as string]: 3 }}
           >
-            <Link
-              href="/arena"
-              className="rounded-full bg-fog px-6 py-3 font-mono text-xs uppercase tracking-[0.14em] text-night transition-opacity hover:opacity-90"
-            >
-              Watch the attack
-            </Link>
-            <Link
+            <HeroCtaCounter
+              bucket="hero:gate"
               href="#gate"
-              className="rounded-full border border-night-rule px-6 py-3 font-mono text-xs uppercase tracking-[0.14em] text-fog transition-colors hover:border-fog-quiet"
+              className="font-mono text-xs uppercase tracking-[0.14em] text-fog underline decoration-terra decoration-2 underline-offset-8 transition-colors hover:text-terra-soft hover:decoration-terra-soft"
             >
-              Try the gate
-            </Link>
+              Try the gate →
+            </HeroCtaCounter>
+            <HeroCtaCounter
+              bucket="hero:arena"
+              href="/arena"
+              className="font-mono text-xs uppercase tracking-[0.14em] text-fog-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-fog hover:decoration-terra"
+            >
+              Watch an attack stopped
+            </HeroCtaCounter>
           </div>
           <p
             className="pt-4 font-mono text-[11px] leading-relaxed text-fog-quiet"
             style={{ ["--cascade-step" as string]: 4 }}
           >
-            Judged by Jev (TypeSafe) and Vultr Inference · credentials on Casper
+            Judged by Jev (TypeSafe) and Vultr Inference · measured live under
+            <Link
+              href="/gate"
+              className="ml-1 underline decoration-rule decoration-1 underline-offset-4 hover:decoration-fog"
+            >
+              /gate
+            </Link>
           </p>
         </div>
         <div className="landing-cascade">

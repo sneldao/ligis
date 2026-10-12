@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useId, useRef, useState } from "react";
 import { postJudge } from "@/components/arena/ArenaRunner";
-import { VerdictCard } from "@/components/arena/VerdictCard";
+import { ArenaVerdict } from "@/components/arena/ArenaVerdict";
 import {
   AMOUNT_CHOICES,
   ATTACK_PRESETS,
@@ -228,7 +228,7 @@ export function AttackLab() {
             <button
               type="submit"
               disabled={!valid || busy}
-              className="btn-press rounded-full bg-fog px-5 py-3 font-mono text-xs uppercase tracking-[0.14em] text-night transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="btn-press bg-fog px-5 py-3 font-mono text-xs uppercase tracking-[0.14em] text-night transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {busy ? "Atlas is reading…" : "Send Atlas to the page"}
             </button>
@@ -252,7 +252,7 @@ export function AttackLab() {
                 exit={{ opacity: 0 }}
                 className="flex flex-col gap-3"
               >
-                <VerdictCard
+                <ArenaVerdict
                   amountUsd={current.attack.amountUsd}
                   payTo={PAYEES[current.attack.payee].address}
                   payToLabel={PAYEES[current.attack.payee].label}

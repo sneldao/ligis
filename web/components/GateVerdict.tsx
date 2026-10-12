@@ -10,7 +10,7 @@ import { SubjectSpecimen } from "@/components/SubjectSpecimen";
  * moves to a stranger: GO or STOP. This component renders that decision the
  * same way everywhere it appears — the home check, /gate, and embeds — so
  * the product owns one verb ("gate the payment") instead of competing on a
- * category ("verifiable credentials").
+ * trust-category label.
  *
  * Presentational only. Server- and client-renderable. No boxes, no shadows —
  * a left rule in the verdict tone carries the containment, per DESIGN.md.

@@ -12,6 +12,7 @@ import {
 } from "react";
 import { ChainSwitchHint } from "@/components/ChainSwitchHint";
 import { SubjectSpecimen } from "@/components/SubjectSpecimen";
+import { counterAction } from "@/app/actions/counter";
 import { capabilities } from "@/lib/capabilities-client";
 import { chainById } from "@/lib/network";
 import { chainSwitchHref, subjectChainMismatch } from "@/lib/subject-format";
@@ -90,6 +91,16 @@ export function GateFormShell({
     const subject = String(fd.get("subject") ?? "");
     const capability = String(fd.get("capability") ?? "");
     if (!subject || !capability) return;
+    // Privacy-light aggregate counter — situation bucket only.
+    const bucket =
+      situationId === "treasury"
+        ? "gate:preset:legit"
+        : situationId === "merchant"
+          ? "gate:preset:overpay"
+          : situationId === "escrow" || situationId === "compliance"
+            ? "gate:preset:injected"
+            : "gate:custom";
+    void counterAction("gate_run", bucket);
     navigate(subject, capability);
   }
 
@@ -134,7 +145,7 @@ export function GateFormShell({
             </span>
           </label>
           <label htmlFor="capability" className="block space-y-2">
-            <span className="eyebrow">capability</span>
+            <span className="eyebrow">permission</span>
             <span className="relative block">
               <select
                 id="capability"
@@ -189,7 +200,7 @@ export function GateFormShell({
             <div>
               <p className="eyebrow">gate · pre-payment check</p>
               <p className="mt-3 display text-3xl text-ink-quiet sm:text-4xl">
-                Reading chain
+                Reading registry
                 <span className="caret" aria-hidden />
               </p>
               <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">

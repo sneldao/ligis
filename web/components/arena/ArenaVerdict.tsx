@@ -71,7 +71,14 @@ export function isJudgeSplit(r: JudgeResponse) {
   );
 }
 
-export function VerdictCard({
+/**
+ * ArenaVerdict — the night-themed (incident-mode) verdict primitive for
+ * the /arena page. Sibling to `GateVerdict` (paper/day mode). Same
+ * rules apply: no box, no shadow, no "card" — a left rule carries the
+ * containment. Reach via the same docs/positioning.md "four signals"
+ * model: right payee, right amount, in scope, verified payee.
+ */
+export function ArenaVerdict({
   amountUsd,
   payTo,
   payToLabel,
@@ -90,6 +97,7 @@ export function VerdictCard({
 
   return (
     <article
+      data-mode="incident"
       className={`relative flex flex-col gap-4 overflow-hidden border bg-night/70 p-4 sm:p-5 ${
         stop
           ? "stop-flash border-stop/50"
@@ -115,7 +123,7 @@ export function VerdictCard({
           </span>
         </div>
         {pending ? (
-          <span className="flex shrink-0 items-center gap-2 rounded-full border border-signal/40 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
+          <span className="flex shrink-0 items-center gap-2 border border-signal/40 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
             <span
               className="size-1.5 animate-pulse rounded-full bg-signal"
               aria-hidden
@@ -133,7 +141,7 @@ export function VerdictCard({
           </motion.span>
         ) : (
           <span
-            className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1 font-mono text-sm font-medium tracking-[0.12em] ${
+            className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1 font-mono text-sm font-medium tracking-[0.12em] ${
               final === "GO"
                 ? "bg-go text-night"
                 : "border border-night-rule text-fog-quiet"

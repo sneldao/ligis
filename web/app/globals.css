@@ -406,7 +406,37 @@ summary:focus-visible {
 
 /* ---------- Night stage ---------- */
 
+/* Incident-mode convention (Phase 2).
+ *
+ * Surfaces that opt into night theme — the landing hero, /arena, the
+ * "attack stopped" demo — apply `data-mode="incident"` on their root or
+ * on a verdict primitive. Inside that scope, the night-tuned go / stop
+ * tokens (`--color-go`, `--color-stop`) are the canonical GO / STOP
+ * colors, the same way `--color-sage` / `--color-revoke` are the canonical
+ * GO / STOP colors on paper. Both scopes share the SAME MEANING — one
+ * name, two themes — so the verdict primitive reads the same on /arena
+ * and /gate without the component needing to know which mode it is in.
+ *
+ * Lint rule: `text-go` / `text-stop` (night) is permitted inside
+ * incident-mode surfaces; `text-sage` / `text-revoke` (paper) is
+ * permitted inside paper surfaces. Verdict primitives are exempt in
+ * both directions. `scripts/lint-design.mjs` enforces this.
+ */
+[data-mode="incident"] {
+  /* The night go / stop tokens already resolve correctly via @theme;
+     the scope is reserved for future overrides (e.g. high-contrast
+     accessibility variants of the same semantics). */
+}
+
+/* Incident-mode opt-in. Pages set `data-mode="incident"` on their root
+   and apply `.night-grid` (or any incident surface class) to get the
+   night palette + dot grid. The class is now scoped, so it does nothing
+   outside an incident-mode root — paper surfaces stay paper. */
 .night-grid {
+  /* no-op outside [data-mode="incident"]; see selectors below */
+}
+
+[data-mode="incident"] .night-grid {
   background-color: var(--color-night);
   background-image: radial-gradient(
     color-mix(in oklab, var(--color-fog) 14%, transparent) 1px,
@@ -415,7 +445,7 @@ summary:focus-visible {
   background-size: 22px 22px;
 }
 
-.night-grid-fade {
+[data-mode="incident"] .night-grid-fade {
   mask-image: radial-gradient(
     ellipse 80% 70% at 50% 35%,
     #000 40%,

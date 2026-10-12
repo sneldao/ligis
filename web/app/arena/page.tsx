@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ArenaPage() {
   return (
-    <main className="night-grid min-h-dvh">
+    <main data-mode="incident" className="night-grid min-h-dvh">
       <div className="mx-auto flex max-w-6xl flex-col gap-10 px-5 pt-28 pb-20 sm:px-8 sm:pt-32">
         <header className="flex max-w-2xl flex-col gap-4">
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-signal">

@@ -9,7 +9,7 @@ import {
 import { useRef, useState } from "react";
 import { TranscriptStep } from "@/components/arena/TranscriptStep";
 import { TreasuryMeter } from "@/components/arena/TreasuryMeter";
-import { VerdictCard } from "@/components/arena/VerdictCard";
+import { ArenaVerdict } from "@/components/arena/ArenaVerdict";
 import {
   AGENT,
   PAYMENTS,
@@ -59,7 +59,7 @@ function PaymentVerdict({
 }) {
   const p = PAYMENTS[id];
   return (
-    <VerdictCard
+    <ArenaVerdict
       amountUsd={p.amountUsd}
       payTo={p.payTo}
       payToLabel={p.payToLabel}
@@ -217,7 +217,7 @@ export function ArenaRunner() {
             type="button"
             onClick={run}
             disabled={phase === "running"}
-            className="btn-press rounded-full bg-fog px-5 py-2.5 font-mono text-xs uppercase tracking-[0.14em] text-night transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="btn-press bg-fog px-5 py-2.5 font-mono text-xs uppercase tracking-[0.14em] text-night transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {phase === "idle"
               ? "Run the attack"

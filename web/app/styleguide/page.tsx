@@ -3,11 +3,41 @@ import type { Address } from "viem";
 import { AddressDisplay } from "@/components/AddressDisplay";
 import { CopyButton } from "@/components/CopyButton";
 import { GateVerdict } from "@/components/GateVerdict";
+import { ArenaVerdict } from "@/components/arena/ArenaVerdict";
 import { Rule } from "@/components/Rule";
 import { StyleguideInteractions } from "@/components/StyleguideInteractions";
 import { addresses, network, readAgentId } from "@/lib/chain";
+import type { JudgeResponse } from "@/lib/arena/scenario";
 
 const SAMPLE_WALLET: Address = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
+
+// Styleguide specimen for ArenaVerdict — a deliberately high-stakes STOP
+// with both judges answering and a split-reasons list. Pinned to a fixed
+// timestamp so the "ago" copy doesn't drift between server and client
+// renders and trip a hydration warning.
+const SAMPLE_ARENA_VERDICT: JudgeResponse = {
+  payment: "injected",
+  final: "STOP",
+  cached: false,
+  auditId: "sg-incident-stop",
+  judgedAt: "2026-09-26T20:48:51.706Z",
+  jev: {
+    status: "ok",
+    verdict: "STOP",
+    confidence: 0.96,
+    reasons: ["scope-mismatch", "payee-mismatch", "abnormal-pattern"],
+    latencyMs: 135,
+    model: "jev-1.13.0",
+  },
+  vultr: {
+    status: "ok",
+    verdict: "STOP",
+    confidence: 0.92,
+    reasons: ["page text carried a prompt-injection"],
+    latencyMs: 240,
+    provider: "Vultr Inference",
+  },
+};
 
 // The layout's GlobalDock reads useSearchParams; unless the page itself awaits
 // searchParams (as every other room does), that boundary bails out to client
@@ -297,6 +327,96 @@ export default async function StyleguidePage({
               source="styleguide specimen"
             />
           </div>
+        </section>
+
+        <section className="space-y-6">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">08 · ArenaVerdict · incident mode</p>
+            <span className="font-mono text-xs text-ink-quiet">
+              night-themed sibling of GateVerdict
+            </span>
+          </header>
+          <Rule />
+          <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
+            Every pre-payment decision renders through the same verdict
+            primitive in either theme.{" "}
+            <code className="font-mono text-ink">GateVerdict</code> on paper;
+            <code className="font-mono text-ink"> ArenaVerdict</code> inside
+            <code className="font-mono text-ink">
+              {" "}
+              [data-mode=&quot;incident&quot;]
+            </code>
+            surfaces. Both mean the same thing: GO or STOP, with the four
+            signals from{" "}
+            <code className="font-mono text-ink">docs/positioning.md</code>.
+          </p>
+          <ArenaVerdict
+            amountUsd={60_000}
+            payTo="0x9F3c11eA07b5dE24Cc81aB6f3D90e57b2A4d7F08"
+            payToLabel="Unknown account"
+            result={SAMPLE_ARENA_VERDICT}
+          />
+        </section>
+
+        <section className="space-y-6">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">
+              09 · Verdict tokens · one name, two themes
+            </p>
+            <span className="font-mono text-xs text-ink-quiet">
+              same meaning · different values
+            </span>
+          </header>
+          <Rule />
+          <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
+            Verdict semantics are shared; the colors differ by theme.
+            <code className="font-mono text-ink"> text-go </code> and
+            <code className="font-mono text-ink"> text-sage </code> both mean
+            &ldquo;the payee is acceptable&rdquo;; only the value differs. The
+            mapping is documented in
+            <code className="font-mono text-ink"> docs/positioning.md</code>.
+          </p>
+          <div className="grid grid-cols-1 gap-x-10 gap-y-4 sm:grid-cols-[10rem_1fr_1fr]">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+              meaning
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+              paper · /gate · FieldInvite
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet">
+              night · /arena · HeroStage
+            </span>
+            <span className="font-serif text-sm text-ink-soft">GO</span>
+            <span className="font-mono text-base text-sage">GO</span>
+            <span
+              data-mode="incident"
+              className="rounded bg-night px-4 py-2 font-mono text-base text-go"
+            >
+              GO
+            </span>
+            <span className="font-serif text-sm text-ink-soft">STOP</span>
+            <span className="font-mono text-base text-revoke">STOP</span>
+            <span
+              data-mode="incident"
+              className="rounded bg-night px-4 py-2 font-mono text-base text-stop"
+            >
+              STOP
+            </span>
+            <span className="font-serif text-sm text-ink-soft">SKIPPED</span>
+            <span className="font-mono text-base text-ink-quiet">SKIPPED</span>
+            <span className="rounded bg-night px-4 py-2 font-mono text-base text-fog-quiet">
+              SKIPPED
+            </span>
+          </div>
+          <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
+            Outside verdict primitives, only{" "}
+            <code className="font-mono text-ink">text-ink</code>,
+            <code className="font-mono text-ink"> text-ink-soft</code>,
+            <code className="font-mono text-ink"> text-ink-quiet</code>,
+            <code className="font-mono text-ink"> text-terra</code>, and
+            <code className="font-mono text-ink"> text-sky</code> are used. The
+            verdict colors stay reserved for the wedges that earn them.
+          </p>
         </section>
 
         <StyleguideInteractions />
