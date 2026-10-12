@@ -147,6 +147,13 @@ with monthly wallet plans for predictability.
 Per-call without a plan: $0.015 / check. The plan is a discount plus a
 ceiling; per-call without a plan is the floor.
 
+**Why the 17× spread.** CROO's $0.25/listing includes the marketplace
+commission and the premium of hiring an agent-to-agent service. The
+web/API plans charge infrastructure cost — the actual Jev call (~$0.0001)
+plus provider overhead — because the buyer is subscribing to
+infrastructure, not negotiating a service. Both prices are honest; the
+difference reflects who is buying and through what channel.
+
 These numbers are live as of the Phase 5 pricing update. They move
 together in `SERVICE_PRICE_USD` (`packages/croo-adapter/src/services.ts`),
 `croo-store-manifest.json`, and the live CROO Dashboard

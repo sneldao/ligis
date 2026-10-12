@@ -9,6 +9,14 @@ import "server-only";
  * aggregate-only and intended to be summed off-platform (cron / a
  * `pnpm counter:dump` script).
  *
+ * ⚠️ Production note: `~/.ligis/counters.jsonl` is ephemeral on Vercel
+ * (each instance has its own filesystem; /tmp is wiped per invocation).
+ * To make counters survive across deployments, migrate to a durable KV
+ * store (Upstash, Vercel KV, or a log drain to BigQuery/ClickHouse). The
+ * write path is intentionally simple — swap the appendFileSync call for
+ * a KV set() and the aggregate() reader for a KV scan — without touching
+ * the caller sites.
+ *
  * The shape is intentionally narrow: a fixed category string plus a
  * granularity bucket (e.g. `"api:go"`, `"api:stop"`, `"hero:gate"`,
  * `"hero:arena"`, `"share:gate"`, `"gate:preset:legit"`). Unknown buckets

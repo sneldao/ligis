@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { ShareLinkCounter } from "@/components/ShareLinkCounter";
+import { GateDecision } from "@/components/GateDecision";
 import {
   CHAINS,
   getChain,
@@ -31,6 +32,8 @@ type SearchParams = Promise<{
   capability?: string;
   chain?: string;
   situation?: string;
+  amountUsd?: string;
+  purpose?: string;
 }>;
 
 export const metadata = {
@@ -45,12 +48,16 @@ function gateParams(
   subject: string,
   capability: string,
   situation?: string,
+  amountUsd?: number,
+  purpose?: string,
 ): string {
   const params = new URLSearchParams();
   if (chain) params.set("chain", chain.id);
   params.set("subject", subject);
   params.set("capability", capability);
   if (situation) params.set("situation", situation);
+  if (amountUsd !== undefined) params.set("amountUsd", String(amountUsd));
+  if (purpose) params.set("purpose", purpose);
   return params.toString();
 }
 
@@ -100,6 +107,16 @@ export default async function VerifyPage({
   const capForVerdict = rawCap ?? (situation ? defaultCapability : undefined);
   const showVerdict = Boolean(subjectForVerdict && capForVerdict);
 
+  // Decision mode: when amountUsd and purpose are provided, run the full
+  // pre-payment decision (decide()) via the client-side GateDecision component.
+  const decisionAmountUsd = params.amountUsd
+    ? parseFloat(params.amountUsd)
+    : undefined;
+  const decisionPurpose = params.purpose ?? undefined;
+  const showDecision = Boolean(
+    subjectForVerdict && capForVerdict && decisionAmountUsd && decisionPurpose,
+  );
+
   const sampleLinks =
     demoSubjects.length > 0 ? (
       <p className="mt-4 font-mono text-xs text-ink-quiet">
@@ -124,51 +141,105 @@ export default async function VerifyPage({
       </p>
     ) : null;
 
+  // Decision-mode share link (includes amount + purpose for full decide())
+  const decisionShareUrl =
+    subjectForVerdict && capForVerdict
+      ? `${SITE_URL}/gate?${gateParams(
+          scoped ? chain : null,
+          subjectForVerdict,
+          capForVerdict,
+          situation?.id,
+          decisionAmountUsd,
+          decisionPurpose,
+        )}`
+      : null;
+
   const verdictBlock =
     showVerdict && subjectForVerdict && capForVerdict ? (
       <>
-        <section className="mt-16">
-          <h2 className="eyebrow">Verdict</h2>
-          <div className="mt-6">
-            <Suspense
-              fallback={
-                <p className="font-serif text-lg italic text-ink-quiet">
-                  Reading registry…
-                </p>
-              }
-            >
-              {scoped ? (
-                <Result
-                  chain={chain}
-                  subject={subjectForVerdict}
-                  capability={capForVerdict}
-                />
-              ) : (
-                <Resolved
-                  subject={subjectForVerdict}
-                  capability={capForVerdict}
-                />
-              )}
-            </Suspense>
-          </div>
-        </section>
-        <section className="mt-12">
-          <h2 className="eyebrow">Share</h2>
-          <p className="mt-3 max-w-xl font-serif text-sm leading-relaxed text-ink-soft">
-            Anyone who opens this URL re-runs the same on-chain read. No
-            account. No Ligis server.
-          </p>
-          <div className="mt-5 flex flex-wrap items-baseline gap-4">
-            <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
-              {`${SITE_URL}/gate?${gateParams(scoped ? chain : null, subjectForVerdict, capForVerdict, situation?.id)}`}
-            </code>
-            <CopyButton
-              value={`${SITE_URL}/gate?${gateParams(scoped ? chain : null, subjectForVerdict, capForVerdict, situation?.id)}`}
-              label="copy"
-              className="shrink-0"
+        {/* Decision mode: full pre-payment check when amount + purpose present */}
+        {showDecision ? (
+          <section className="mt-16">
+            <h2 className="eyebrow">Pre-payment decision</h2>
+            <p className="mt-3 font-serif text-sm leading-relaxed text-ink-soft">
+              Running the full four-signal check against the contracted terms.
+              Mandate is enforced in code; Jev provides intent verification when
+              configured. Credential read is one signal — not the whole answer.
+            </p>
+            <GateDecision
+              payee={subjectForVerdict}
+              amountUsd={decisionAmountUsd!}
+              purpose={decisionPurpose!}
+              capability={capForVerdict}
+              situation={situation?.id}
             />
-          </div>
-        </section>
+            {decisionShareUrl ? (
+              <section className="mt-12">
+                <h2 className="eyebrow">Share</h2>
+                <p className="mt-3 max-w-xl font-serif text-sm leading-relaxed text-ink-soft">
+                  Anyone who opens this URL re-runs the same decision.
+                </p>
+                <div className="mt-5 flex flex-wrap items-baseline gap-4">
+                  <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+                    {decisionShareUrl}
+                  </code>
+                  <CopyButton
+                    value={decisionShareUrl}
+                    label="copy"
+                    className="shrink-0"
+                  />
+                </div>
+              </section>
+            ) : null}
+          </section>
+        ) : null}
+        {/* Credential-only view (fallback when no amount/purpose) */}
+        {!showDecision && (
+          <section className="mt-16">
+            <h2 className="eyebrow">Credential check</h2>
+            <div className="mt-6">
+              <Suspense
+                fallback={
+                  <p className="font-serif text-lg italic text-ink-quiet">
+                    Reading registry…
+                  </p>
+                }
+              >
+                {scoped ? (
+                  <Result
+                    chain={chain}
+                    subject={subjectForVerdict}
+                    capability={capForVerdict}
+                  />
+                ) : (
+                  <Resolved
+                    subject={subjectForVerdict}
+                    capability={capForVerdict}
+                  />
+                )}
+              </Suspense>
+            </div>
+          </section>
+        )}
+        {showDecision ? null : (
+          <section className="mt-12">
+            <h2 className="eyebrow">Share</h2>
+            <p className="mt-3 max-w-xl font-serif text-sm leading-relaxed text-ink-soft">
+              Anyone who opens this URL re-runs the same on-chain read. No
+              account. No Ligis server.
+            </p>
+            <div className="mt-5 flex flex-wrap items-baseline gap-4">
+              <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+                {`${SITE_URL}/gate?${gateParams(scoped ? chain : null, subjectForVerdict, capForVerdict, situation?.id)}`}
+              </code>
+              <CopyButton
+                value={`${SITE_URL}/gate?${gateParams(scoped ? chain : null, subjectForVerdict, capForVerdict, situation?.id)}`}
+                label="copy"
+                className="shrink-0"
+              />
+            </div>
+          </section>
+        )}
       </>
     ) : (
       <section className="mt-16">

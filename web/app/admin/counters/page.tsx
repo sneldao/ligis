@@ -1,5 +1,6 @@
 import "server-only";
 
+import { headers } from "next/headers";
 import { aggregate } from "@/lib/counters";
 import { Rule } from "@/components/Rule";
 import Link from "next/link";
@@ -10,6 +11,26 @@ export const metadata = {
   description: "Optional firewall counters. Privacy-light, aggregate-only.",
   robots: { index: false, follow: false },
 };
+
+/**
+ * Simple env-token gate. The admin page is not linked from anywhere public
+ * except ⌘K, but adding a token check prevents casual discovery via URL
+ * guessing. Set LIGIS_ADMIN_TOKEN in production to enable; omit to disable
+ * the gate (page returns 403 without a valid token).
+ */
+const ADMIN_TOKEN = process.env.LIGIS_ADMIN_TOKEN ?? "";
+
+function checkAuth(req: { headers: { get: (k: string) => string | null } }): {
+  ok: boolean;
+  reason?: string;
+} {
+  if (!ADMIN_TOKEN) return { ok: true };
+  const header = req.headers.get("authorization");
+  if (!header) return { ok: false, reason: "missing auth" };
+  const token = header.startsWith("Bearer ") ? header.slice(7) : header;
+  if (token !== ADMIN_TOKEN) return { ok: false, reason: "invalid token" };
+  return { ok: true };
+}
 
 /**
  * `/admin/counters` — operator surface for the privacy-light counters
@@ -37,7 +58,23 @@ function tile(label: string, value: number, hint?: string) {
   );
 }
 
-export default function CountersPage() {
+export default async function CountersPage() {
+  // Auth gate: when LIGIS_ADMIN_TOKEN is set, require Bearer token in
+  // Authorization header. Silently allow when unset (local dev convenience).
+  const token = process.env.LIGIS_ADMIN_TOKEN ?? "";
+  if (token) {
+    const h = await headers();
+    const auth = h.get("authorization");
+    const provided = auth?.startsWith("Bearer ") ? auth.slice(7) : (auth ?? "");
+    if (provided !== token) {
+      return (
+        <main className="route-shell max-w-3xl">
+          <p className="mt-20 text-revoke font-serif text-xl">Unauthorized</p>
+        </main>
+      );
+    }
+  }
+
   const counts = aggregate();
 
   const heroTotal =
