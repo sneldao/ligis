@@ -26,18 +26,29 @@ export type GateDecisionResult = {
   costUsd?: number;
 };
 
+export type GateMandate = {
+  payees?: string[];
+  maxUsd?: number;
+  /** Contracted price for this job. Used as Jev reference price.
+   * When absent, amountUsd is used (compliant payment against cap).
+   */
+  expectedUsd?: number;
+};
+
 export function GateDecision({
   payee,
   amountUsd,
   purpose,
   capability,
   situation,
+  mandate,
 }: {
   payee: string;
   amountUsd: number;
   purpose: string;
   capability: string;
   situation?: string;
+  mandate?: GateMandate;
 }) {
   const [result, setResult] = useState<GateDecisionResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,7 +69,13 @@ export function GateDecision({
         const res = await fetch("/api/gate", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ payee, amountUsd, purpose, capability }),
+          body: JSON.stringify({
+            payee,
+            amountUsd,
+            purpose,
+            capability,
+            mandate,
+          }),
           signal: controller.signal,
         });
         if (!res.ok) {

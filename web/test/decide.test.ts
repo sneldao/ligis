@@ -86,11 +86,16 @@ function credentialOk(
     expiresAt: overrides.expiresAt ?? FUTURE_EXP,
     revoked: overrides.revoked ?? false,
   };
+  const resolvedIssuer = (overrides.issuer ?? ISSUER) as Hex | null;
+  const selfIssued =
+    resolvedIssuer !== null &&
+    resolvedIssuer.toLowerCase() === PAYEE.toLowerCase();
   return Promise.resolve({
     ok: true,
     subject: PAYEE,
     capabilityId: "agent.commerce.escrow",
-    capable: outcome.capable,
+    capable: outcome.capable && !selfIssued,
+    selfIssued,
     verdicts: [{ chain: PHAROS_ATLANTIC, outcome }],
     primary: { chain: PHAROS_ATLANTIC, outcome },
   });
@@ -309,7 +314,7 @@ describe("decide()", () => {
     assert.ok(decision.provenance.some((p) => p.includes("page-text stop")));
   });
 
-  it("omitted capability → verified-payee SKIPPED (no fabricated credential check)", async () => {
+  it("omitted capability → verified-payee SKIPPED (neutral, not blocking GO)", async () => {
     const decision = await decide(
       { ...baseIntent, capability: undefined },
       {
@@ -324,7 +329,8 @@ describe("decide()", () => {
     )!;
     assert.strictEqual(verifiedPayee.status, "SKIPPED");
     assert.ok(verifiedPayee.reason?.includes("no capability supplied"));
-    assert.strictEqual(decision.verdict, "UNKNOWN");
+    // SKIPPED verified-payee is neutral — doesn't block GO when other signals pass
+    assert.strictEqual(decision.verdict, "GO");
   });
 
   it("mandate payee mismatch → STOP via right-payee signal", async () => {
@@ -396,5 +402,70 @@ describe("decide()", () => {
       verifiedPayee.reason?.includes("self-issued"),
       `expected self-issued reason, got: ${verifiedPayee.reason}`,
     );
+  });
+
+  it("mandate pass with Jev off → GO (payee/amount from mandate, cred SKIPPED)", async () => {
+    // Mandate enforces payee and amount; Jev off means intent signals skip;
+    // but mandate already answered them → GO is valid.
+    const decision = await decide(
+      {
+        ...baseIntent,
+        payee: PAYEE,
+        mandate: { payees: [PAYEE], maxUsd: 5000 },
+      },
+      {
+        evaluateIntent: async () => jevSkipped("layer disabled"),
+        resolveSubject: () => credentialError("no capability"),
+        env: { ...env, AI_GATEWAY_API_KEY: "" },
+      },
+    );
+
+    assert.strictEqual(decision.verdict, "GO");
+    const payeeSignal = decision.signals.find((s) => s.id === "right-payee")!;
+    const amountSignal = decision.signals.find((s) => s.id === "right-amount")!;
+    const credSignal = decision.signals.find((s) => s.id === "verified-payee")!;
+    assert.strictEqual(payeeSignal.status, "GO");
+    assert.strictEqual(amountSignal.status, "GO");
+    assert.strictEqual(credSignal.status, "SKIPPED");
+  });
+
+  it("pay second allowlisted payee → not STOPped by mandate", async () => {
+    const otherPayee = "0x1111111111111111111111111111111111111111" as Hex;
+    const decision = await decide(
+      {
+        ...baseIntent,
+        payee: otherPayee,
+        mandate: { payees: [PAYEE, otherPayee], maxUsd: 5000 },
+      },
+      {
+        evaluateIntent: async () => jevOk(),
+        resolveSubject: () => credentialOk({ issuer: ISSUER }),
+        env,
+      },
+    );
+
+    assert.strictEqual(decision.verdict, "GO");
+    const payeeSignal = decision.signals.find((s) => s.id === "right-payee")!;
+    assert.strictEqual(payeeSignal.status, "GO");
+    assert.ok(payeeSignal.reason?.includes(otherPayee));
+  });
+
+  it("pay $50 under $10000 cap → not STOPped on amount", async () => {
+    const decision = await decide(
+      {
+        ...baseIntent,
+        amountUsd: 50,
+        mandate: { payees: [PAYEE], maxUsd: 10000 },
+      },
+      {
+        evaluateIntent: async () => jevOk(),
+        resolveSubject: () => credentialOk({ issuer: ISSUER }),
+        env,
+      },
+    );
+
+    assert.strictEqual(decision.verdict, "GO");
+    const amountSignal = decision.signals.find((s) => s.id === "right-amount")!;
+    assert.strictEqual(amountSignal.status, "GO");
   });
 });

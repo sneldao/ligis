@@ -23,6 +23,8 @@ export type SubjectResolution =
       verdicts: ChainVerdict[];
       /** True when any live registry holds a valid credential. */
       capable: boolean;
+      /** True when the credential's issuer is the same as the subject (self-issued). */
+      selfIssued?: boolean;
       /** The verdict to feature — the vouching chain, else most informative. */
       primary: ChainVerdict;
     };
@@ -106,12 +108,19 @@ export async function resolveSubject(
     okReads.find((v) => v.outcome.revoked) ??
     okReads[0]!;
 
+  // Self-issued check: if issuer === subject, the credential is not trustworthy.
+  const normalizedSubject = subjectRaw.toLowerCase();
+  const selfIssued =
+    primary.outcome.issuer !== null &&
+    primary.outcome.issuer.toLowerCase() === normalizedSubject;
+
   return {
     ok: true,
     subject: primary.outcome.subject,
     capabilityId: cap.id,
     verdicts,
-    capable: okReads.some((v) => v.outcome.capable),
+    capable: okReads.some((v) => v.outcome.capable) && !selfIssued,
+    selfIssued,
     primary,
   };
 }

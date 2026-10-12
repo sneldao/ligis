@@ -1,6 +1,5 @@
 import "server-only";
 
-import { headers } from "next/headers";
 import { aggregate } from "@/lib/counters";
 import { Rule } from "@/components/Rule";
 import Link from "next/link";
@@ -13,21 +12,22 @@ export const metadata = {
 };
 
 /**
- * Simple env-token gate. The admin page is not linked from anywhere public
- * except ⌘K, but adding a token check prevents casual discovery via URL
- * guessing. Set LIGIS_ADMIN_TOKEN in production to enable; omit to disable
- * the gate (page returns 403 without a valid token).
+ * Auth gate for /admin/counters.
+ * - In production (LIGIS_ADMIN_TOKEN set): requires ?token= query param.
+ *   Fails closed (403) if token is missing or wrong.
+ * - Local dev (no token set): no gate, page is open.
+ * Uses query param instead of Authorization header so browsers can
+ * navigate directly without CORS/preflight issues.
  */
 const ADMIN_TOKEN = process.env.LIGIS_ADMIN_TOKEN ?? "";
 
-function checkAuth(req: { headers: { get: (k: string) => string | null } }): {
+function checkAuth(searchParams: URLSearchParams): {
   ok: boolean;
   reason?: string;
 } {
   if (!ADMIN_TOKEN) return { ok: true };
-  const header = req.headers.get("authorization");
-  if (!header) return { ok: false, reason: "missing auth" };
-  const token = header.startsWith("Bearer ") ? header.slice(7) : header;
+  const token = searchParams.get("token");
+  if (!token) return { ok: false, reason: "missing token" };
   if (token !== ADMIN_TOKEN) return { ok: false, reason: "invalid token" };
   return { ok: true };
 }
@@ -58,21 +58,34 @@ function tile(label: string, value: number, hint?: string) {
   );
 }
 
-export default async function CountersPage() {
-  // Auth gate: when LIGIS_ADMIN_TOKEN is set, require Bearer token in
-  // Authorization header. Silently allow when unset (local dev convenience).
-  const token = process.env.LIGIS_ADMIN_TOKEN ?? "";
-  if (token) {
-    const h = await headers();
-    const auth = h.get("authorization");
-    const provided = auth?.startsWith("Bearer ") ? auth.slice(7) : (auth ?? "");
-    if (provided !== token) {
-      return (
-        <main className="route-shell max-w-3xl">
-          <p className="mt-20 text-revoke font-serif text-xl">Unauthorized</p>
-        </main>
-      );
-    }
+export default async function CountersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string }>;
+}) {
+  // Auth gate: when LIGIS_ADMIN_TOKEN is set, require ?token= query param.
+  // Fails closed in production; silently allows in local dev.
+  const params = await searchParams;
+  const authCheck = checkAuth(
+    new URLSearchParams(params as Record<string, string>),
+  );
+  if (!authCheck.ok) {
+    return (
+      <main className="route-shell max-w-3xl">
+        <header className="route-header text-xs">
+          <p className="eyebrow">Ligis · Counters</p>
+          <Link
+            href="/"
+            className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+          >
+            ← Home
+          </Link>
+        </header>
+        <p className="mt-20 font-serif text-xl text-revoke">
+          Unauthorized — pass ?token= to access.
+        </p>
+      </main>
+    );
   }
 
   const counts = aggregate();

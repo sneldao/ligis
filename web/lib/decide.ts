@@ -1,15 +1,16 @@
 /**
  * `decide()` — the Ligis pre-payment decision service.
  *
- * Spec: `docs/decide-api.md`. One code path used by `/gate` (POST /api/gate)
- * and `/arena` (with `pageText` set). Returns a `Decision` built from four
- * signals (right payee, right amount, in scope, verified payee), evaluated
- * concurrently. Composition rule: STOP wins; GO only when the payee and
- * amount signals actually answered (mandate or Jev); otherwise UNKNOWN.
+ * Spec: `docs/decide-api.md`. Used by `POST /api/gate` and the
+ * client-side `GateDecision` component on `/gate`. Returns a `Decision`
+ * built from four signals (right payee, right amount, in scope, verified
+ * payee), evaluated concurrently. Composition rule: STOP wins; GO only
+ * when the payee and amount signals actually answered (mandate or Jev);
+ * otherwise UNKNOWN.
  *
  * Mandate is enforced in code as deterministic signals (per AGENTS.md:
  * "computable policy stays in code"). Jev is the reflex layer, not the
- * authority.
+ * authority. Arena uses its own `judgePayment()` and does NOT call this.
  *
  * Server-only by transitive import (`resolveSubject` enforces it).
  */
@@ -82,6 +83,10 @@ export type PaymentIntent = {
   mandate?: {
     payees?: string[];
     maxUsd?: number;
+    /** Contracted price for this job. Used as Jev reference price.
+     * When absent, amountUsd is used (compliant payment against cap).
+     */
+    expectedUsd?: number;
     scope?: string;
   };
   /** Capability the payment targets (e.g. `data.premium`). Required to
@@ -193,26 +198,45 @@ function defaultJudgePageText(text: string): {
 // ─── mandate enforcement ──────────────────────────────────────────────
 
 /**
- * Deterministic mandate checks. These run BEFORE Jev so the contract
- * terms (not the model) are the first line of defense. Computable policy
- * stays in code per AGENTS.md.
+ * Enforces the operator mandate as deterministic signals BEFORE Jev.
  *
- * Returns signal updates for payee and amount when the mandate is set;
- * null means "mandate not set, defer to Jev".
+ * Returns GO signals when the mandate passes (payee on allowlist, amount
+ * within cap) so the signal is "answered" even when Jev is off. Without
+ * this, a compliant payment would fall through to Jev and become SKIPPED
+ * when the intent layer is disabled, making GO impossible.
+ *
+ * Returns STOP signals when the mandate is violated. Returns null for
+ * signals that should defer to Jev (no mandate, or mandate present but
+ * not applicable to that signal).
  */
 function checkMandate(intent: PaymentIntent): {
   payeeSignal: Signal | null;
   amountSignal: Signal | null;
+  /** The matched allowlist entry for this payee, used as Jev reference. */
+  matchedPayee: string | null;
 } {
-  if (!intent.mandate) return { payeeSignal: null, amountSignal: null };
+  if (!intent.mandate) {
+    return { payeeSignal: null, amountSignal: null, matchedPayee: null };
+  }
 
   let payeeSignal: Signal | null = null;
+  let matchedPayee: string | null = null;
   if (intent.mandate.payees && intent.mandate.payees.length > 0) {
     const normalizedPayee = intent.payee.toLowerCase();
-    const allowed = intent.mandate.payees.some(
+    const matched = intent.mandate.payees.find(
       (p) => p.toLowerCase() === normalizedPayee,
     );
-    if (!allowed) {
+    if (matched) {
+      // Mandate pass: payee is on the allowlist. Return GO at confidence 1
+      // so the signal is "answered" even when Jev is off.
+      matchedPayee = matched;
+      payeeSignal = baseSignal(
+        "right-payee",
+        "GO",
+        1,
+        `payee ${matched} is on mandate allowlist`,
+      );
+    } else {
       payeeSignal = baseSignal(
         "right-payee",
         "STOP",
@@ -230,9 +254,17 @@ function checkMandate(intent: PaymentIntent): {
       1,
       `amount $${intent.amountUsd} exceeds mandate max $${intent.mandate.maxUsd}`,
     );
+  } else if (intent.mandate.maxUsd && intent.amountUsd > 0) {
+    // Mandate pass: amount is within cap. Return GO at confidence 1.
+    amountSignal = baseSignal(
+      "right-amount",
+      "GO",
+      1,
+      `amount $${intent.amountUsd} is within mandate cap $${intent.mandate.maxUsd}`,
+    );
   }
 
-  return { payeeSignal, amountSignal };
+  return { payeeSignal, amountSignal, matchedPayee };
 }
 
 // ─── main entry ─────────────────────────────────────────────────────────
@@ -252,16 +284,26 @@ export async function decide(
     Math.max(0, Math.round(intent.amountUsd * 10 ** ASSUMED_USDC_DECIMALS)),
   ).toString();
 
+  // Run mandate checks first — they're deterministic and cheap.
+  const mandateResult = checkMandate(intent);
+
   // Mandate-driven reference values beat intent values where set.
   // The gate advertises what the contract says; Jev compares the
   // actual payment against that reference. If no mandate, fall back
   // to the intent values (the operator's declared terms at request time).
-  const advertisedPayTo = intent.mandate?.payees?.[0] ?? intent.payee;
-  const contractPriceSmallestUnit = intent.mandate?.maxUsd
-    ? BigInt(
-        Math.round(intent.mandate.maxUsd * 10 ** ASSUMED_USDC_DECIMALS),
-      ).toString()
-    : smallestUnit;
+  //
+  // matchedPayee: which allowlist entry matched (used as advertisedPayTo
+  // so Jev doesn't see a false payee-mismatch when paying a second
+  // allowlisted address).
+  // contractPriceSmallestUnit: the EXPECTED price, not the cap. Use
+  // mandate.expectedUsd when available (the contracted rate); otherwise
+  // fall back to amountUsd (the actual payment — a compliant payment
+  // against a cap should not read as underpayment).
+  const advertisedPayTo = mandateResult.matchedPayee ?? intent.payee;
+  const referencePriceUsd = intent.mandate?.expectedUsd ?? intent.amountUsd;
+  const contractPriceSmallestUnit = BigInt(
+    Math.round(referencePriceUsd * 10 ** ASSUMED_USDC_DECIMALS),
+  ).toString();
 
   const jevInput: JevIntentInput = {
     subject: intent.payee,
@@ -276,10 +318,6 @@ export async function decide(
       payTo: intent.payee,
     },
   };
-
-  // Run mandate checks first — they're deterministic and cheap.
-  const { payeeSignal: mandatePayee, amountSignal: mandateAmount } =
-    checkMandate(intent);
 
   const [jevResult, credentialResult, pageJudgeResult] =
     await Promise.allSettled([
@@ -313,10 +351,12 @@ export async function decide(
 
   const signals: Signal[] = SIGNAL_ORDER.map((id) => {
     // Mandate overrides beat Jev on payee/amount where set.
-    if (id === "right-payee" && mandatePayee) return mandatePayee;
-    if (id === "right-amount" && mandateAmount) return mandateAmount;
+    if (id === "right-payee" && mandateResult.payeeSignal)
+      return mandateResult.payeeSignal;
+    if (id === "right-amount" && mandateResult.amountSignal)
+      return mandateResult.amountSignal;
     if (id === "verified-payee") {
-      return verifiedPayeeSignal(credentialResult, intent.payee);
+      return verifiedPayeeSignal(credentialResult);
     }
     return buildSignal(id, jev, credentialResult, pageJudge);
   });
@@ -405,21 +445,11 @@ function jevSignalFor(jev: JevIntentResult, signalId: Signal["id"]): Signal {
 }
 
 /**
- * Check whether a credential is self-issued (issuer === subject).
- * Self-issued credentials are not trustworthy — a payee cannot vouch
- * for themselves.
+ * Build the verified-payee signal from a resolution result.
+ * Self-issued credentials (issuer === subject) are treated as STOP.
  */
-function isSelfIssued(
-  subject: string,
-  issuer: string | null | undefined,
-): boolean {
-  if (!issuer) return false;
-  return subject.toLowerCase() === issuer.toLowerCase();
-}
-
 function verifiedPayeeSignal(
   result: PromiseSettledResult<SubjectResolution>,
-  subject?: string,
 ): Signal {
   if (result.status === "rejected") {
     return baseSignal(
@@ -442,7 +472,7 @@ function verifiedPayeeSignal(
   }
 
   // Self-issued credentials don't count as verification.
-  if (subject && isSelfIssued(subject, out.issuer)) {
+  if (r.selfIssued) {
     return baseSignal(
       "verified-payee",
       "STOP",
@@ -496,12 +526,16 @@ function baseSignal(
 /**
  * Compose the final verdict from the four signals.
  *
- * Composition rule: STOP wins. GO only when the payee AND amount signals
- * actually answered (mandate or Jev evaluated them). If either is SKIPPED
- * without a determinative STOP, the verdict is UNKNOWN — not GO.
+ * Composition rule: STOP wins. GO when:
+ * 1. No signal is STOP
+ * 2. Payee and amount signals have answered (mandate or Jev evaluated them)
+ *    — a mandate pass counts as GO, Jev GO/STOP counts as answered,
+ *    missing capability (verified-payee SKIPPED) is neutral
+ * 3. All ANSWERED signals are GO (SKIPPED signals are neutral)
  *
- * This prevents a single credential GO from silencing three skipped
- * signals into a misleading green light.
+ * Returns UNKNOWN when payee or amount couldn't be evaluated (Jev off,
+ * no mandate). This prevents a single credential GO from silencing three
+ * skipped signals into a misleading green light.
  */
 function composeVerdict(signals: Signal[]): Decision["verdict"] {
   if (signals.some((s) => s.status === "STOP")) return "STOP";
@@ -513,10 +547,12 @@ function composeVerdict(signals: Signal[]): Decision["verdict"] {
   const intentSignalsAnswered =
     payee.status !== "SKIPPED" && amount.status !== "SKIPPED";
 
-  if (intentSignalsAnswered) {
-    // All four signals answered; if none STOP, then GO.
-    if (signals.every((s) => s.status === "GO")) return "GO";
-  }
+  if (!intentSignalsAnswered) return "UNKNOWN";
+
+  // All ANSWERED signals must be GO. SKIPPED signals (e.g. verified-payee
+  // when capability is missing) are neutral — they don't block GO.
+  const answeredSignals = signals.filter((s) => s.status !== "SKIPPED");
+  if (answeredSignals.every((s) => s.status === "GO")) return "GO";
 
   return "UNKNOWN";
 }
