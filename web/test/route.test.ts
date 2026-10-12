@@ -1,23 +1,22 @@
 import assert from "node:assert";
 import { test } from "node:test";
 import { parseMandate } from "@/lib/mandate";
+import { bodyToIntent, queryToIntent } from "@/lib/gate-intent";
+import { runGateDecision } from "@/lib/gate-run";
+import type { SubjectResolution } from "@/lib/resolve";
 
-// NOTE: runDecide / bodyToIntent import the route module, which pulls in
-// server-only via @/lib/resolve. Run this file with:
-//   node --conditions=react-server --import tsx --test web/test/route.test.ts
-// so the server-only guard is a no-op. The default `pnpm --filter @ligis/web
-// test` (no conditions) cannot import the route — these tests live alongside
-// the pure parseMandate tests so CI runs both from the same file.
+// NOTE: bodyToIntent / queryToIntent / runGateDecision live in lib/gate-intent
+// + lib/gate-run, not route.ts — Next's generated route types require every
+// non-route export to satisfy `{ [x: string]: never }`, so exporting helpers
+// from route.ts breaks `next build` (a constraint `tsc --noEmit` doesn't
+// apply). These tests exercise the exact validation + decision layer the
+// route delegates to, with no route import needed.
 const PAYEE = "0x89AbCdEf0123456789abcdef0123456789abcdef0" as `0x${string}`;
 
 // Mandate parser tests — these exercise the exact validation logic that
-// the route's bodyToIntent delegates to parseMandate(). parseMandate is
-// in lib/mandate.ts (pure, no server-only dep) so it can be unit-tested.
-// Importing bodyToIntent from the route is infeasible: route.ts imports
-// resolveSubject from @/lib/resolve which pulls in server-only at module
-// load time, and the test runner throws before any test body runs.
-// The 45 decide.test.ts tests cover the full decision pipeline; these
-// tests cover the parsing/validation layer that feeds into it.
+// bodyToIntent delegates to parseMandate(). parseMandate is in
+// lib/mandate.ts (pure, no server-only dep). The decide.test.ts tests cover
+// the full decision pipeline; these cover the parsing/validation layer.
 
 test("parseMandate parses expectedUsd from mandate", () => {
   const mandateRaw = {
@@ -60,34 +59,10 @@ test("parseMandate rejects non-numeric expectedUsd", () => {
   );
 });
 
-// ─── route-level tests (require --conditions=react-server) ──────────────
-// bodyToIntent / runDecide import the route module, which pulls server-only
-// via @/lib/resolve. tsx resolves the `react-server` export condition only
-// when it is passed explicitly:
-//   node --conditions=react-server --import tsx --test test/route.test.ts
-// (verified: default import throws "cannot be imported from a Client
-// Component module"; with the flag the route imports and runDecide returns
-// real decisions over a stubbed resolveSubject).
-// Guard with try/catch so a default-conditions run reports a skip instead of
-// a hard failure — CI runs this file twice (see web/package.json scripts).
+// ─── intent parsing (same code the route delegates to) ────────────────
 
-async function loadRoute(): Promise<
-  typeof import("@/app/api/gate/route") | null
-> {
-  try {
-    return await import("@/app/api/gate/route");
-  } catch {
-    return null;
-  }
-}
-
-test("route bodyToIntent builds intent with mandate", async () => {
-  const route = await loadRoute();
-  if (!route) {
-    console.log("  (skip: re-run with --conditions=react-server)");
-    return;
-  }
-  const intent = route.bodyToIntent({
+test("bodyToIntent builds intent with mandate", () => {
+  const intent = bodyToIntent({
     payee: PAYEE,
     amountUsd: 100,
     purpose: "Q4 renewal",
@@ -99,13 +74,8 @@ test("route bodyToIntent builds intent with mandate", async () => {
   assert.strictEqual(asIntent.mandate?.expectedUsd, 100);
 });
 
-test("route bodyToIntent rejects bad payee", async () => {
-  const route = await loadRoute();
-  if (!route) {
-    console.log("  (skip: re-run with --conditions=react-server)");
-    return;
-  }
-  const out = route.bodyToIntent({
+test("bodyToIntent rejects bad payee", () => {
+  const out = bodyToIntent({
     payee: "",
     amountUsd: 100,
     purpose: "x",
@@ -116,13 +86,8 @@ test("route bodyToIntent rejects bad payee", async () => {
   );
 });
 
-test("route queryToIntent carries mandatePayees/maxUsd/expectedUsd", async () => {
-  const route = await loadRoute();
-  if (!route) {
-    console.log("  (skip: re-run with --conditions=react-server)");
-    return;
-  }
-  const out = route.queryToIntent(
+test("queryToIntent carries mandatePayees/maxUsd/expectedUsd", () => {
+  const out = queryToIntent(
     "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
     "100",
     "Q4 renewal",
@@ -144,13 +109,8 @@ test("route queryToIntent carries mandatePayees/maxUsd/expectedUsd", async () =>
   assert.strictEqual(intent.mandate?.expectedUsd, 100);
 });
 
-test("route queryToIntent rejects bad mandateMaxUsd", async () => {
-  const route = await loadRoute();
-  if (!route) {
-    console.log("  (skip: re-run with --conditions=react-server)");
-    return;
-  }
-  const out = route.queryToIntent(
+test("queryToIntent rejects bad mandateMaxUsd", () => {
+  const out = queryToIntent(
     "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
     "100",
     "Q4 renewal",
@@ -165,13 +125,41 @@ test("route queryToIntent rejects bad mandateMaxUsd", async () => {
   );
 });
 
-test("route runDecide returns GO over stubbed resolveSubject", async () => {
-  const route = await loadRoute();
-  if (!route) {
-    console.log("  (skip: re-run with --conditions=react-server)");
-    return;
-  }
-  const res = await route.runDecide(
+// ─── decisions (same code the route delegates to) ─────────────────────
+
+function credentialOkStub(): SubjectResolution {
+  return {
+    ok: true as const,
+    subject: PAYEE,
+    capabilityId: "agent.commerce.escrow",
+    capable: true,
+    verdicts: [],
+    primary: {
+      chain: {
+        id: "pharos-atlantic",
+        kind: "evm" as const,
+        name: "Pharos Atlantic Testnet",
+        explorerUrl: "https://atlantic.pharosscan.xyz",
+        live: true,
+        shortName: "pharos",
+        writeReady: true,
+      },
+      outcome: {
+        ok: true as const,
+        subject: PAYEE,
+        capabilityId: "agent.commerce.escrow",
+        capabilityHash: ("0x" + "ab".repeat(32)) as `0x${string}`,
+        capable: true,
+        issuer: "0xa1c4e3f0123456789abcdef0123456789abcdef0" as `0x${string}`,
+        expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400 * 90),
+        revoked: false,
+      },
+    },
+  };
+}
+
+test("runGateDecision returns GO over stubbed resolveSubject", async () => {
+  const out = await runGateDecision(
     {
       payee: PAYEE,
       amountUsd: 100,
@@ -179,55 +167,19 @@ test("route runDecide returns GO over stubbed resolveSubject", async () => {
       capability: "agent.commerce.escrow",
       mandate: { payees: [PAYEE], maxUsd: 10000, expectedUsd: 100 },
     },
-    {
-      resolveSubject: async () => ({
-        ok: true as const,
-        subject: PAYEE,
-        capabilityId: "agent.commerce.escrow",
-        capable: true,
-        verdicts: [],
-        primary: {
-          chain: {
-            id: "pharos-atlantic",
-            kind: "evm",
-            name: "Pharos Atlantic Testnet",
-            explorerUrl: "https://atlantic.pharosscan.xyz",
-            live: true,
-            shortName: "pharos",
-            writeReady: true,
-          },
-          outcome: {
-            ok: true as const,
-            subject: PAYEE,
-            capabilityId: "agent.commerce.escrow",
-            capabilityHash: ("0x" + "ab".repeat(32)) as `0x${string}`,
-            capable: true,
-            issuer:
-              "0xa1c4e3f0123456789abcdef0123456789abcdef0" as `0x${string}`,
-            expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400 * 90),
-            revoked: false,
-          },
-        },
-      }),
-    },
+    { resolveSubject: async () => credentialOkStub() },
   );
-  assert.strictEqual(res.status, 200);
-  const body = (await res.json()) as { verdict: string; signals: unknown[] };
+  assert.ok(out.ok, `expected decision, got: ${JSON.stringify(out)}`);
   // Mandate pins payee + amount (both GO), credential stub is GO, Jev is off
   // in the test env (SKIPPED, neutral) — composition yields GO.
-  assert.strictEqual(body.verdict, "GO");
-  assert.ok(Array.isArray(body.signals) && body.signals.length === 4);
+  assert.strictEqual(out.decision.verdict, "GO");
+  assert.strictEqual(out.decision.signals.length, 4);
 });
 
-test("route runDecide with cap-only mandate keeps right-payee SKIPPED", async () => {
+test("runGateDecision with cap-only mandate keeps right-payee SKIPPED", async () => {
   // Regression: the /gate form must never default the allowlist to the payee
   // being checked — a cap/quote alone must leave right-payee skipped, not GO.
-  const route = await loadRoute();
-  if (!route) {
-    console.log("  (skip: re-run with --conditions=react-server)");
-    return;
-  }
-  const res = await route.runDecide(
+  const out = await runGateDecision(
     {
       payee: PAYEE,
       amountUsd: 100,
@@ -235,45 +187,11 @@ test("route runDecide with cap-only mandate keeps right-payee SKIPPED", async ()
       capability: "agent.commerce.escrow",
       mandate: { maxUsd: 10000 },
     },
-    {
-      resolveSubject: async () => ({
-        ok: true as const,
-        subject: PAYEE,
-        capabilityId: "agent.commerce.escrow",
-        capable: true,
-        verdicts: [],
-        primary: {
-          chain: {
-            id: "pharos-atlantic",
-            kind: "evm",
-            name: "Pharos Atlantic Testnet",
-            explorerUrl: "https://atlantic.pharosscan.xyz",
-            live: true,
-            shortName: "pharos",
-            writeReady: true,
-          },
-          outcome: {
-            ok: true as const,
-            subject: PAYEE,
-            capabilityId: "agent.commerce.escrow",
-            capabilityHash: ("0x" + "ab".repeat(32)) as `0x${string}`,
-            capable: true,
-            issuer:
-              "0xa1c4e3f0123456789abcdef0123456789abcdef0" as `0x${string}`,
-            expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400 * 90),
-            revoked: false,
-          },
-        },
-      }),
-    },
+    { resolveSubject: async () => credentialOkStub() },
   );
-  assert.strictEqual(res.status, 200);
-  const body = (await res.json()) as {
-    verdict: string;
-    signals: Array<{ id: string; status: string; reason?: string }>;
-  };
-  const payeeSignal = body.signals.find((s) => s.id === "right-payee")!;
+  assert.ok(out.ok, `expected decision, got: ${JSON.stringify(out)}`);
+  const payeeSignal = out.decision.signals.find((s) => s.id === "right-payee")!;
   assert.strictEqual(payeeSignal.status, "SKIPPED");
   assert.ok(payeeSignal.reason?.includes("no contracted payee"));
-  assert.strictEqual(body.verdict, "UNKNOWN");
+  assert.strictEqual(out.decision.verdict, "UNKNOWN");
 });

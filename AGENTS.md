@@ -345,7 +345,10 @@ For the Casper self-issued check (`web/lib/verify.ts`) also set
 - Route-level tests run under `--conditions=react-server`
   (`pnpm --filter @ligis/web test` runs the suite twice: default + react-server
   for `route.test.ts`), where the `server-only` guard is a no-op so
-  `bodyToIntent` / `queryToIntent` / `runDecide` import for real.
+  `bodyToIntent` / `queryToIntent` / `runGateDecision` import for real.
+  (Intent parsing lives in `web/lib/gate-intent.ts` and execution in
+  `web/lib/gate-run.ts` — not `route.ts`, where Next's generated route types
+  reject non-route exports and break `next build`.)
 - `/api/gate` GET accepts the same mandate the form writes:
   `mandatePayees` (comma-separated), `mandateMaxUsd`, `mandateExpectedUsd`.
 - Counters honor `LIGIS_COUNTERS_DIR` and default to `/tmp/.ligis` on Vercel
