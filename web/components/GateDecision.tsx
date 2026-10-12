@@ -5,6 +5,9 @@ import { Rule } from "@/components/Rule";
 import { GateVerdict } from "@/components/GateVerdict";
 import type { GateVerdictInput } from "@/components/GateVerdict";
 import { SubjectSpecimen } from "@/components/SubjectSpecimen";
+import { SignalStack } from "@/components/SignalStack";
+import { decisionToTrustSignals } from "@/lib/decision-receipt";
+import type { Decision } from "@/lib/decide";
 
 /**
  * GateDecision — client-side decision runner.
@@ -51,6 +54,7 @@ export function GateDecision({
   mandate?: GateMandate;
 }) {
   const [result, setResult] = useState<GateDecisionResult | null>(null);
+  const [rawDecision, setRawDecision] = useState<Decision | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -63,6 +67,7 @@ export function GateDecision({
     setLoading(true);
     setError(null);
     setResult(null);
+    setRawDecision(null);
 
     void (async () => {
       try {
@@ -89,6 +94,10 @@ export function GateDecision({
           latencyMs: data.latencyMs,
           costUsd: data.costUsd,
         });
+        // Keep the full decision for the signal-ledger receipt (chain,
+        // issuer, latency per signal) — the slimmed shape above drives the
+        // verdict display only.
+        setRawDecision(data as Decision);
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") return;
         setError(e instanceof Error ? e.message : String(e));
@@ -259,6 +268,17 @@ export function GateDecision({
           </code>
         </div>
       </details>
+      {/* Signal ledger — the shared trust-signal vocabulary */}
+      {rawDecision ? (
+        <details className="group border-t border-rule pt-4">
+          <summary className="cursor-pointer list-none py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
+            Signal ledger →
+          </summary>
+          <div className="mt-3">
+            <SignalStack signals={decisionToTrustSignals(rawDecision)} />
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }

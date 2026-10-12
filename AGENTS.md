@@ -351,8 +351,15 @@ For the Casper self-issued check (`web/lib/verify.ts`) also set
   reject non-route exports and break `next build`.)
 - `/api/gate` GET accepts the same mandate the form writes:
   `mandatePayees` (comma-separated), `mandateMaxUsd`, `mandateExpectedUsd`.
-- Counters honor `LIGIS_COUNTERS_DIR` and default to `/tmp/.ligis` on Vercel
-  (ephemeral per instance — migrate to KV for durable counts).
+- Counters honor `LIGIS_COUNTERS_DIR` and default to `/tmp/.ligis` on Vercel.
+  Set `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Upstash/Vercel KV REST) for
+  durable counts — `record()` stays sync, `aggregateAsync()` reads the
+  backend, `/admin/counters` shows which is active.
+- Decision → receipt mapping (`web/lib/decision-receipt.ts`): right-payee
+  and right-amount → `policy`, in-scope → `identity`, verified-payee →
+  `capability`. SKIPPED folds to `unknown` and is kept, so the receipt shows
+  what didn't answer. `GateDecision` renders it as a collapsible "Signal
+  ledger" via the shared `SignalStack`.
 - `pnpm --dir web smoke:ssr` defaults `BASE_URL=http://127.0.0.1:3000` —
   other dev servers squat on 3000; run with
   `BASE_URL=http://127.0.0.1:3001` against the Ligis dev server.
