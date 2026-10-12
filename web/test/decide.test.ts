@@ -235,14 +235,14 @@ describe("decide()", () => {
     );
   });
 
-  it("Jev layer skipped but credential GO → still GO (credential is the source of truth)", async () => {
+  it("Jev skipped but credential GO → UNKNOWN (payee/amount must answer for GO)", async () => {
     const decision = await decide(baseIntent, {
       evaluateIntent: async () => jevSkipped("layer disabled"),
       resolveSubject: () => credentialOk(),
       env,
     });
 
-    assert.strictEqual(decision.verdict, "GO");
+    assert.strictEqual(decision.verdict, "UNKNOWN");
     const intentSignals = decision.signals.filter(
       (s) => s.id !== "verified-payee",
     );
@@ -324,6 +324,77 @@ describe("decide()", () => {
     )!;
     assert.strictEqual(verifiedPayee.status, "SKIPPED");
     assert.ok(verifiedPayee.reason?.includes("no capability supplied"));
-    assert.strictEqual(decision.verdict, "GO");
+    assert.strictEqual(decision.verdict, "UNKNOWN");
+  });
+
+  it("mandate payee mismatch → STOP via right-payee signal", async () => {
+    const decision = await decide(
+      {
+        ...baseIntent,
+        payee: "0x1111111111111111111111111111111111111111",
+        mandate: {
+          payees: ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
+          maxUsd: 5000,
+        },
+      },
+      {
+        evaluateIntent: async () => jevOk(),
+        resolveSubject: () => credentialOk({ issuer: ISSUER }),
+        env,
+      },
+    );
+
+    assert.strictEqual(decision.verdict, "STOP");
+    const payeeSignal = decision.signals.find((s) => s.id === "right-payee")!;
+    assert.strictEqual(payeeSignal.status, "STOP");
+    assert.ok(
+      payeeSignal.reason?.includes("not on mandate allowlist"),
+      `expected payee mismatch reason, got: ${payeeSignal.reason}`,
+    );
+  });
+
+  it("mandate amount exceeded → STOP via right-amount signal", async () => {
+    const decision = await decide(
+      {
+        ...baseIntent,
+        amountUsd: 5000,
+        mandate: {
+          payees: [PAYEE],
+          maxUsd: 1000,
+        },
+      },
+      {
+        evaluateIntent: async () => jevOk(),
+        resolveSubject: () => credentialOk({ issuer: ISSUER }),
+        env,
+      },
+    );
+
+    assert.strictEqual(decision.verdict, "STOP");
+    const amountSignal = decision.signals.find((s) => s.id === "right-amount")!;
+    assert.strictEqual(amountSignal.status, "STOP");
+    assert.ok(
+      amountSignal.reason?.includes("exceeds mandate max"),
+      `expected amount exceeded reason, got: ${amountSignal.reason}`,
+    );
+  });
+
+  it("self-issued credential → STOP via verified-payee signal", async () => {
+    // When issuer === subject (payee), the credential is not trustworthy.
+    const decision = await decide(baseIntent, {
+      evaluateIntent: async () => jevOk(),
+      resolveSubject: () => credentialOk({ issuer: PAYEE }),
+      env,
+    });
+
+    assert.strictEqual(decision.verdict, "STOP");
+    const verifiedPayee = decision.signals.find(
+      (s) => s.id === "verified-payee",
+    )!;
+    assert.strictEqual(verifiedPayee.status, "STOP");
+    assert.ok(
+      verifiedPayee.reason?.includes("self-issued"),
+      `expected self-issued reason, got: ${verifiedPayee.reason}`,
+    );
   });
 });
