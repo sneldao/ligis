@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Issuers — Ligis",
+  title: "Verifiers — Ligis",
   description:
-    "Who vouches for agents. Every credential is signed by an issuer — the one saying 'I checked this agent, and it's authorized.' These are the addresses that have vouched on chain.",
+    "Who has verified an agent. Every approval is signed by a verifier — the one saying 'I checked this payee, and they're authorized to transact.' These are the addresses that have signed on-chain.",
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -66,7 +66,7 @@ export default async function IssuersPage({
     return (
       <main className="route-shell max-w-5xl">
         <header className="route-header text-xs">
-          <p className="eyebrow">Ligis · Issuers</p>
+          <p className="eyebrow">Ligis · Verifiers</p>
           <div className="flex items-baseline gap-6">
             <ChainBadge chain={chain} />
             <Link
@@ -99,7 +99,7 @@ export default async function IssuersPage({
   return (
     <main className="route-shell max-w-5xl">
       <header className="route-header text-xs">
-        <p className="eyebrow">Ligis · Issuers</p>
+        <p className="eyebrow">Ligis · Verifiers</p>
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
           <Link
@@ -113,13 +113,13 @@ export default async function IssuersPage({
 
       <section className="mt-14 max-w-3xl sm:mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
-          Who vouches
+          Who verified
           <br />
-          for agents.
+          agents.
         </h1>
         <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
-          Issuers are the parties who sign an agent&rsquo;s credentials. Their
-          signatures make a claim independently verifiable by any caller.
+          Verifiers are the parties who sign an agent&rsquo;s approval. Their
+          signatures make a claim independently checkable by the next caller.
         </p>
         <p className="mt-4 max-w-prose font-serif text-sm italic leading-relaxed text-ink-quiet">
           {meta.lead}

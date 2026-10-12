@@ -60,7 +60,7 @@ export default async function HomePage({
             "@type": "WebApplication",
             name: "Ligis",
             description:
-              "Portable identity and verifiable credentials for autonomous agents. One on-chain read before money moves.",
+              "A spend firewall for AI agents: every payment is checked against the job before money moves. Right payee, right amount, in scope, plus a verified-payee credential read.",
             applicationCategory: "DeveloperApplication",
             operatingSystem: "Web",
             offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
@@ -134,10 +134,20 @@ export default async function HomePage({
             <div>
               <p className="font-serif text-base leading-relaxed text-ink-soft sm:text-lg">
                 Gate your endpoint — the same read, one line into the payment
-                path. Any client, any agent framework.
+                path. Any client, any agent framework. The verdict header (
+                <code className="font-mono text-ink">X-Ligis-Gate-Verdict</code>
+                ) carries the GO/STOP answer before the body parses.
               </p>
-              <pre className="mt-5 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
-                {`GET /gate?subject=0x…&capability=kyc.basic`}
+              <pre className="mt-5 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink">
+                {`curl -X POST https://ligis.vercel.app/api/gate \\
+  -H 'content-type: application/json' \\
+  -d '{
+    "payee":      "0xabc…",
+    "amountUsd":  4200,
+    "purpose":    "pay for premium RWA data",
+    "capability": "data.premium"
+  }'
+# → { "verdict": "GO", "signals": [...], "latencyMs": 720, ... }`}
               </pre>
               <p className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em]">
                 <Link
@@ -150,8 +160,13 @@ export default async function HomePage({
                   href={`/vouch?chain=${chain.id}`}
                   className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
                 >
-                  vouch for an agent →
+                  verify a payee →
                 </Link>
+              </p>
+              <p className="mt-3 max-w-prose font-serif text-xs italic leading-relaxed text-ink-quiet">
+                Privacy: the gate logs only an aggregate counter of which
+                branches ran and which CTAs were clicked. No payee, amount, IP,
+                or user agent is recorded.
               </p>
             </div>
           </div>
@@ -160,10 +175,16 @@ export default async function HomePage({
         <FieldInvite chainId={chain.id} />
 
         <nav
-          aria-label="Also"
+          aria-label="Proofs and integrations"
           className="mt-16 flex flex-wrap items-baseline gap-x-7 gap-y-3 border-t border-rule pt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet sm:mt-20"
         >
-          <span>Also</span>
+          <span>Proofs &amp; integrations</span>
+          <Link
+            href="/proofs"
+            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+          >
+            Proofs
+          </Link>
           <Link
             href="/passkey"
             className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
@@ -174,46 +195,19 @@ export default async function HomePage({
             href={`/vouch?chain=${chain.id}`}
             className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
           >
-            Vouch
+            Verify a payee
           </Link>
           <Link
-            href={`/steward?chain=${chain.id}`}
+            href={`/croo?chain=${chain.id}`}
             className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
           >
-            Steward
+            CROO
           </Link>
           <Link
             href={`/embed?chain=${chain.id}`}
             className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
           >
             Embed
-          </Link>
-          <span aria-hidden="true" className="text-rule">
-            ·
-          </span>
-          <Link
-            href={`/capabilities?chain=${chain.id}`}
-            className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-          >
-            Capabilities
-          </Link>
-          <Link
-            href={`/issuers?chain=${chain.id}`}
-            className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-          >
-            Issuers
-          </Link>
-          <Link
-            href={`/croo?chain=${chain.id}`}
-            className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-          >
-            CROO
-          </Link>
-          <Link
-            href={`/compose?chain=${chain.id}`}
-            className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-          >
-            Compose
           </Link>
         </nav>
 

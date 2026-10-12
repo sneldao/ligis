@@ -31,12 +31,24 @@ const REFERENCE_CAPS = credentialsRef.capabilities.map((c) => ({
 const STATIC: Command[] = [
   { id: "gate", label: "Gate", hint: "gate a payment", href: "/gate" },
   {
+    id: "arena",
+    label: "Arena",
+    hint: "watch a prompt-injection attack get stopped",
+    href: "/arena",
+  },
+  {
     id: "genlayer",
     label: "Escrow",
     hint: "GenLayer JobEscrow · Agent Tank",
     href: "/genlayer",
   },
   { id: "field", label: "Field", hint: "live registry", href: "/field" },
+  {
+    id: "proofs",
+    label: "Proofs",
+    hint: "the wedge, demonstrated",
+    href: "/proofs",
+  },
   { id: "home", label: "Home", hint: "/", href: "/" },
   {
     id: "capabilities",
@@ -44,11 +56,16 @@ const STATIC: Command[] = [
     hint: "/capabilities",
     href: "/capabilities",
   },
-  { id: "issuers", label: "Issuers", hint: "/issuers", href: "/issuers" },
+  {
+    id: "issuers",
+    label: "Verifiers",
+    hint: "/issuers · who signed the credentials",
+    href: "/issuers",
+  },
   { id: "steward", label: "Steward", hint: "/steward", href: "/steward" },
   {
     id: "vouch",
-    label: "Vouch",
+    label: "Verify a payee",
     hint: "/vouch · the issuer desk",
     href: "/vouch",
   },
@@ -71,6 +88,12 @@ const STATIC: Command[] = [
     label: "Design system",
     hint: "/styleguide",
     href: "/styleguide",
+  },
+  {
+    id: "admin",
+    label: "Counters",
+    hint: "/admin/counters · privacy-light aggregate",
+    href: "/admin/counters",
   },
 ];
 

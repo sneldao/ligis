@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { copyToClipboard } from "@/lib/clipboard";
 
-export function Snippet({ code, lang = "ts" }: { code: string; lang?: string }) {
+export function Snippet({
+  code,
+  lang = "ts",
+}: {
+  code: string;
+  lang?: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -12,7 +18,9 @@ export function Snippet({ code, lang = "ts" }: { code: string; lang?: string }) 
     return () => clearTimeout(id);
   }, [copied]);
 
-  const tone = copied ? "text-sage" : "text-ink-quiet hover:text-ink";
+  // "copied" is an action confirmation, not a verdict — use the action
+  // accent (terra), not the verdict color (sage). Same rule as CopyButton.
+  const tone = copied ? "text-terra" : "text-ink-quiet hover:text-ink";
 
   return (
     <div className="space-y-3">
@@ -29,7 +37,17 @@ export function Snippet({ code, lang = "ts" }: { code: string; lang?: string }) 
         >
           {copied ? (
             <>
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
                 <polyline points="2,6.5 5,9 10,3" />
               </svg>
               copied

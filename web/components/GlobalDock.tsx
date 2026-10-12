@@ -9,12 +9,11 @@ import { UnifiedWalletChip } from "@/components/UnifiedWalletChip";
 import { useBodyScrollLock } from "@/lib/use-body-scroll-lock";
 import { openCommandPalette } from "@/lib/command-palette";
 
+// Dock inventory is locked: only the verb (Gate) and the field show here.
+// Arena, GenLayer, CROO, Passkey, Compose, and the rest of the moat live in
+// the command palette and the landing hero — never as peer NAV items.
+// See `web/DESIGN.md` "Dock inventory" and `scripts/lint-design.mjs`.
 const NAV = [
-  {
-    href: "/arena",
-    label: "Arena",
-    description: "Watch a prompt-injection attack get stopped",
-  },
   { href: "/gate", label: "Gate", description: "Gate a payment" },
   { href: "/field", label: "Field", description: "Field · live registry" },
 ];

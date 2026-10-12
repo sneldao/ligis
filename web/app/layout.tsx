@@ -42,7 +42,7 @@ const jetbrains = localFont({
 
 const TITLE = "Ligis — gate the payment before your agent makes it";
 const DESCRIPTION =
-  "When your agent is about to pay a stranger, Ligis is the one on-chain read that says GO or STOP — before money moves. Portable identity and verifiable credentials for autonomous agents, made into a single trust gate.";
+  "A spend firewall for AI agents: every payment is checked against the job before money moves. Right payee, right amount, in scope, plus a verified-payee credential read — one call returns GO or STOP with full provenance.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -54,15 +54,15 @@ export const metadata: Metadata = {
   applicationName: "Ligis",
   keywords: [
     "Ligis",
-    "Pharos",
-    "agent identity",
-    "verifiable credentials",
-    "EIP-712",
-    "ERC-721",
+    "agent payments",
+    "spend firewall",
     "AI agents",
-    "0G",
-    "counterparty risk",
-    "agent trust",
+    "x402",
+    "Pharos",
+    "Casper",
+    "Monad",
+    "trust gate",
+    "pre-payment decision",
   ],
   authors: [{ name: "sneldao" }],
   creator: "sneldao",
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/opengraph-image",
-        alt: "Ligis — know who you're paying before you pay",
+        alt: "Ligis — gate the payment before money moves",
       },
     ],
   },

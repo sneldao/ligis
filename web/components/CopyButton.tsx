@@ -20,7 +20,9 @@ export function CopyButton({
     return () => clearTimeout(id);
   }, [copied]);
 
-  const tone = copied ? "text-sage" : "text-ink-quiet hover:text-ink";
+  // "copied" is an action confirmation, not a verdict — use the action
+  // accent (terra), not the verdict color (sage). See docs/positioning.md.
+  const tone = copied ? "text-terra" : "text-ink-quiet hover:text-ink";
 
   return (
     <button

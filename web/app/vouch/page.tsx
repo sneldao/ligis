@@ -29,7 +29,7 @@ export default async function VouchPage({
   return (
     <main className="route-shell max-w-3xl">
       <header className="route-header text-xs">
-        <p className="eyebrow">Ligis · Vouch</p>
+        <p className="eyebrow">Ligis · Verify a payee</p>
         <div className="flex items-baseline gap-6">
           <ChainBadge chain={chain} />
           <Link
@@ -43,7 +43,7 @@ export default async function VouchPage({
 
       <section className="mt-14 sm:mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
-          Vouch for an agent.
+          Verify a payee.
         </h1>
         <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
           An issuer is whoever says yes. The desk below signs a credential with
