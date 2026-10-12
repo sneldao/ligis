@@ -115,15 +115,20 @@ export async function verifySubject(
       resolvedIssuer !== null &&
       resolvedIssuer.toLowerCase() === subject.toLowerCase();
 
-    // Casper: check against known deployer identity
-    const casperDeployer = (process.env as any).LIGIS_CASPER_DEPLOYER as
-      | string
-      | undefined;
-    const isSelfIssuedCasper = isCasperChain(chain)
-      ? casperDeployer
-        ? subject.toLowerCase() === casperDeployer.toLowerCase()
-        : false
-      : false;
+    // Casper: subject is an account-hash-..., issuer is stored as 0x...
+    // Self-issued means: subject == deployer account hash AND issuer ==
+    // deployer's EVM address (same secp256k1 key on both chains).
+    const casperDeployerAccountHash =
+      process.env.LIGIS_CASPER_DEPLOYER_ACCOUNT_HASH ?? undefined;
+    const casperDeployerEvmAddress =
+      process.env.LIGIS_CASPER_DEPLOYER_EVM_ADDRESS ?? undefined;
+    const isSelfIssuedCasper =
+      isCasperChain(chain) &&
+      subject.toLowerCase() ===
+        (casperDeployerAccountHash ?? "").toLowerCase() &&
+      resolvedIssuer !== null &&
+      resolvedIssuer.toLowerCase() ===
+        (casperDeployerEvmAddress ?? "").toLowerCase();
 
     const selfIssued = isSelfIssuedEvm || isSelfIssuedCasper;
     if (!capable) {

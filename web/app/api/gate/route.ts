@@ -19,7 +19,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decide, type PaymentIntent } from "@/lib/decide";
 import { parseMandate } from "@/lib/mandate";
-import { resolveSubject } from "@/lib/resolve";
+import type { SubjectResolution } from "@/lib/resolve";
+import { resolveSubject as resolveSubjectProd } from "@/lib/resolve";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -205,12 +206,16 @@ export async function GET(req: NextRequest) {
   return runDecide(intent);
 }
 
-async function runDecide(intent: PaymentIntent): Promise<Response> {
+async function runDecide(
+  intent: PaymentIntent,
+  opts?: {
+    resolveSubject?: (payee: string, cap: string) => Promise<SubjectResolution>;
+  },
+): Promise<Response> {
+  const resolve = opts?.resolveSubject ?? resolveSubjectProd;
   try {
     const decision = await decide(intent, {
-      // Production wires the real chain-agnostic credential resolver.
-      // Tests bypass this layer entirely.
-      resolveSubject: (payee, capability) => resolveSubject(payee, capability),
+      resolveSubject: (payee, capability) => resolve(payee, capability),
     });
     // Privacy-light aggregate counter — verdict only, no payee / amount.
     try {

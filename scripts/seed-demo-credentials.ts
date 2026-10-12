@@ -1,15 +1,18 @@
 #!/usr/bin/env tsx
 /**
- * Seed the web demo's sample agents with the credentials the named
- * situations on /gate check, so a visitor's first live verdict can be GO.
+ * Seed the web demo's sample agents with credentials so the public
+ * /gate landing can show GO for the "verified agent" samples.
  *
  * Idempotent: verifies first and only issues what is missing or expired.
- * Credentials are issued for one year by the steward key (NOT the deployer)
- * so the demo agent is NOT self-issued. The steward key is a separate key
- * that the operator uses for signing credentials.
+ * Credentials are issued for one year by the steward key (a SEPARATE key
+ * from the deployer). Using the deployer key would create self-issued
+ * credentials that the gate rejects.
+ *
+ * The demo agent subject is 0xd21a... on both EVM chains (Pharos + Monad).
+ * The Casper subject is the account-hash listed in DEMO_GATE_SAMPLES.
  *
  * Usage:
- *   LIGIS_STEWARD_KEY=0x... npx tsx scripts/seed-demo-credentials.ts [pharos|casper]
+ *   LIGIS_STEWARD_KEY=0x... npx tsx scripts/seed-demo-credentials.ts [pharos|monad|casper]
  */
 import { readFileSync, existsSync } from "node:fs";
 import { CasperAdapter } from "@ligis/adapter-casper";
@@ -38,6 +41,19 @@ function loadEnvFiles(...files: string[]): void {
   }
 }
 
+/**
+ * The demo agent subject per DEMO_GATE_SAMPLES — the same address
+ * on both EVM chains (Pharos + Monad). Must NOT equal the steward
+ * key address, or we'd create self-issued credentials.
+ */
+const DEMO_SUBJECT =
+  process.env.LIGIS_DEMO_SUBJECT ??
+  "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
+
+const CASPER_DEMO_SUBJECT =
+  process.env.LIGIS_DEMO_SUBJECT_CASPER ??
+  "account-hash-c76927ed08eb9a3a2cca7ee0b730fb4cefa22551d3e5914e4d44d693762a8326";
+
 async function seed(
   label: string,
   adapter: ChainAdapter,
@@ -48,13 +64,13 @@ async function seed(
   for (const capability of CAPABILITIES) {
     const before = await adapter.verifyCapability({ subject, capability });
     if (before.capable) {
-      // Verify not self-issued
+      // Verify not self-issued (issuer === subject)
       if (
         before.latest.issuer &&
         before.latest.issuer.toLowerCase() === subject.toLowerCase()
       ) {
         console.log(
-          `  ${capability}: SELF-ISSUED → will re-issue with steward key`,
+          `  ${capability}: SELF-ISSUED → re-issuing with steward key`,
         );
       } else {
         console.log(`  ${capability}: already GO`);
@@ -74,14 +90,15 @@ async function seed(
       after.latest.issuer &&
       after.latest.issuer.toLowerCase() === subject.toLowerCase()
     ) {
-      console.log(
-        `  ${capability}: RE-ISSUED but still self-issued! Issuer=${after.latest.issuer}`,
+      console.error(
+        `  ${capability}: FATAL — re-issued but still self-issued! ` +
+          `issuer=${after.latest.issuer}`,
       );
-    } else {
-      console.log(
-        `  ${capability}: issued → ${after.capable ? "GO" : "STILL STOP"} · ${tx.explorerUrl}`,
-      );
+      process.exit(1);
     }
+    console.log(
+      `  ${capability}: issued → ${after.capable ? "GO" : "STILL STOP"} · ${tx.explorerUrl}`,
+    );
   }
 }
 
@@ -91,6 +108,7 @@ async function main() {
     ".env.d/steward.env",
     ".env.d/deployer.env",
   );
+
   const issuerKey = process.env.LIGIS_STEWARD_KEY;
   if (!issuerKey)
     throw new Error(
@@ -100,18 +118,45 @@ async function main() {
     );
   process.env.PRIVATE_KEY = issuerKey;
 
+  // The demo subject is NOT the steward wallet — it's the agent
+  // address from DEMO_GATE_SAMPLES. This prevents self-issued creds.
+  const demoSubject = DEMO_SUBJECT.toLowerCase();
+
   const only = process.argv[2];
+
   if (!only || only === "pharos") {
     const pharos = new EvmAdapter();
-    const subject = pharos.walletAddress();
-    if (!subject) throw new Error("Pharos adapter has no wallet");
-    await seed(pharos.chainName, pharos, subject, issuerKey);
+    const wallet = pharos.walletAddress()?.toLowerCase();
+    if (wallet && wallet === demoSubject) {
+      console.error(
+        `FATAL: steward wallet (${wallet}) === demo subject (${demoSubject}). ` +
+          `This would create self-issued credentials the gate rejects. ` +
+          `Set LIGIS_DEMO_SUBJECT to a non-steward address.`,
+      );
+      process.exit(1);
+    }
+    await seed(pharos.chainName, pharos, DEMO_SUBJECT, issuerKey);
+  }
+  if (!only || only === "monad") {
+    const prev = process.env.LIGIS_NETWORK;
+    process.env.LIGIS_NETWORK = "monad-testnet";
+    const monad = new EvmAdapter();
+    const wallet = monad.walletAddress()?.toLowerCase();
+    if (wallet && wallet === demoSubject) {
+      console.error(
+        `FATAL: steward wallet (${wallet}) === demo subject (${demoSubject}). ` +
+          `This would create self-issued credentials the gate rejects. ` +
+          `Set LIGIS_DEMO_SUBJECT to a non-steward address.`,
+      );
+      process.exit(1);
+    }
+    await seed(monad.chainName, monad, DEMO_SUBJECT, issuerKey);
+    if (prev !== undefined) process.env.LIGIS_NETWORK = prev;
+    else delete process.env.LIGIS_NETWORK;
   }
   if (!only || only === "casper") {
     const casper = new CasperAdapter();
-    const subject = casper.walletAddress();
-    if (!subject) throw new Error("Casper adapter has no wallet");
-    await seed(casper.chainName, casper, subject, issuerKey);
+    await seed(casper.chainName, casper, CASPER_DEMO_SUBJECT, issuerKey);
   }
 }
 
