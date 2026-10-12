@@ -173,6 +173,11 @@ const INJECTION_TRIGGERS: ReadonlyArray<RegExp> = [
 // can serve CSPR (9 decimals), ETH (18), etc. without re-deriving here.
 const ASSUMED_USDC_DECIMALS = 6;
 
+/** Tolerance above expectedUsd before the amount check stops the payment.
+ * 10 % — allows minor rounding / exchange-rate drift while catching
+ * deliberate overbilling (the original attack was 90× the contract). */
+const EXPECTED_USD_TOLERANCE = 0.1;
+
 function defaultJudgePageText(text: string): {
   status: VerdictStatus;
   confidence: number;
@@ -198,25 +203,35 @@ function defaultJudgePageText(text: string): {
 // ─── mandate enforcement ──────────────────────────────────────────────
 
 /**
- * Enforces the operator mandate as deterministic signals BEFORE Jev.
+ * Enforces the operator mandate as deterministic checks.
  *
- * Returns GO signals when the mandate passes (payee on allowlist, amount
- * within cap) so the signal is "answered" even when Jev is off. Without
- * this, a compliant payment would fall through to Jev and become SKIPPED
- * when the intent layer is disabled, making GO impossible.
+ * The mandate is the contract — computable terms enforced in code (AGENTS.md).
+ * Jev is the reflex layer, not the authority. A mandate check returns GO/STOP
+ * when it can, SKIPPED when there's no mandate constraint for that signal.
  *
- * Returns STOP signals when the mandate is violated. Returns null for
- * signals that should defer to Jev (no mandate, or mandate present but
- * not applicable to that signal).
+ * The mandate DOES NOT override Jev — STOP from either wins. This prevents a
+ * mandate pass from silencing a Jev STOP (e.g. prompt injection detected by
+ * Jev but not by mandate checks). Similarly, a Jev STOP is never masked by a
+ * mandate pass.
+ *
+ * expectedUsd enforcement: if set and amountUsd exceeds expectedUsd × (1 +
+ * tolerance), returns STOP. Catches overbilling that falls under maxUsd cap
+ * but violates the contracted price.
  */
 function checkMandate(intent: PaymentIntent): {
-  payeeSignal: Signal | null;
+  payeeSignal: Signal | null; // null = no mandate constraint → defer to Jev
   amountSignal: Signal | null;
+  expectedUsdSignal: Signal | null; // null = no expectedUsd → skip this check
   /** The matched allowlist entry for this payee, used as Jev reference. */
   matchedPayee: string | null;
 } {
   if (!intent.mandate) {
-    return { payeeSignal: null, amountSignal: null, matchedPayee: null };
+    return {
+      payeeSignal: null,
+      amountSignal: null,
+      expectedUsdSignal: null,
+      matchedPayee: null,
+    };
   }
 
   let payeeSignal: Signal | null = null;
@@ -227,8 +242,6 @@ function checkMandate(intent: PaymentIntent): {
       (p) => p.toLowerCase() === normalizedPayee,
     );
     if (matched) {
-      // Mandate pass: payee is on the allowlist. Return GO at confidence 1
-      // so the signal is "answered" even when Jev is off.
       matchedPayee = matched;
       payeeSignal = baseSignal(
         "right-payee",
@@ -255,7 +268,6 @@ function checkMandate(intent: PaymentIntent): {
       `amount $${intent.amountUsd} exceeds mandate max $${intent.mandate.maxUsd}`,
     );
   } else if (intent.mandate.maxUsd && intent.amountUsd > 0) {
-    // Mandate pass: amount is within cap. Return GO at confidence 1.
     amountSignal = baseSignal(
       "right-amount",
       "GO",
@@ -264,7 +276,69 @@ function checkMandate(intent: PaymentIntent): {
     );
   }
 
-  return { payeeSignal, amountSignal, matchedPayee };
+  // expectedUsd tolerance check: catches overbilling under the maxUsd cap.
+  // A 90× overcharge that falls under the cap still triggers STOP.
+  let expectedUsdSignal: Signal | null = null;
+  if (
+    intent.mandate.expectedUsd !== undefined &&
+    intent.mandate.expectedUsd > 0 &&
+    intent.amountUsd > 0
+  ) {
+    const threshold = intent.mandate.expectedUsd * (1 + EXPECTED_USD_TOLERANCE);
+    if (intent.amountUsd > threshold) {
+      expectedUsdSignal = baseSignal(
+        "right-amount",
+        "STOP",
+        1,
+        `amount $${intent.amountUsd} exceeds contracted price $${intent.mandate.expectedUsd} (+${(EXPECTED_USD_TOLERANCE * 100).toFixed(0)}% tolerance)`,
+      );
+    } else if (intent.amountUsd >= intent.mandate.expectedUsd) {
+      expectedUsdSignal = baseSignal(
+        "right-amount",
+        "GO",
+        1,
+        `amount $${intent.amountUsd} is within contracted price $${intent.mandate.expectedUsd} (+${(EXPECTED_USD_TOLERANCE * 100).toFixed(0)}% tolerance)`,
+      );
+    }
+  }
+
+  return { payeeSignal, amountSignal, expectedUsdSignal, matchedPayee };
+}
+
+/**
+ * Combine a mandate signal with a Jev signal for the same check.
+ *
+ * STOP wins from either. Mandate is the contract — when there's a mandate
+ * constraint, Jev is supplementary (never silences a mandate GO). When there
+ * is NO mandate constraint, the signal is SKIPPED regardless of Jev, because
+ * Jev's payee/amount check without a mandate compares the payment to itself
+ * (advertisedPayTo = intent.payee, referencePrice = intent.amountUsd).
+ *
+ * This ensures:
+ * - Mandate STOP + Jev GO → STOP (contract violation wins)
+ * - Mandate GO + Jev STOP → STOP (Jev catches prompt injection, etc.)
+ * - No mandate + Jev GO → SKIPPED (no contract to check against)
+ */
+function combineSignals(mandate: Signal | null, jev: Signal): Signal {
+  // STOP always wins.
+  if (mandate?.status === "STOP") return mandate;
+  if (jev.status === "STOP") return jev;
+
+  // If mandate has a view (GO), use it — Jev GO doesn't add value.
+  if (mandate) return mandate;
+
+  // No mandate constraint → SKIPPED regardless of Jev.
+  // Jev's payee/amount without a mandate compares payment to itself.
+  return baseSignal(
+    jev.id,
+    "SKIPPED",
+    0,
+    jev.id === "right-payee"
+      ? "no contracted payee"
+      : jev.id === "right-amount"
+        ? "no contracted price"
+        : jev.reason,
+  );
 }
 
 // ─── main entry ─────────────────────────────────────────────────────────
@@ -350,11 +424,30 @@ export async function decide(
     pageJudgeResult.status === "fulfilled" ? pageJudgeResult.value : null;
 
   const signals: Signal[] = SIGNAL_ORDER.map((id) => {
-    // Mandate overrides beat Jev on payee/amount where set.
-    if (id === "right-payee" && mandateResult.payeeSignal)
-      return mandateResult.payeeSignal;
-    if (id === "right-amount" && mandateResult.amountSignal)
-      return mandateResult.amountSignal;
+    // Combine mandate with Jev: STOP wins from either. Mandate doesn't
+    // override Jev — a Jev STOP on payee or amount always wins.
+    if (id === "right-payee") {
+      const jevSignal = jevSignalFor(jev, id);
+      return combineSignals(mandateResult.payeeSignal, jevSignal);
+    }
+    if (id === "right-amount") {
+      const jevSignal = jevSignalFor(jev, id);
+      // Combine mandate result with expectedUsd check: if either mandate
+      // or expectedUsd says STOP, STOP wins.
+      const mandateAmnt = combineSignals(mandateResult.amountSignal, jevSignal);
+      const expectedUsdAmnt = combineSignals(
+        mandateResult.expectedUsdSignal,
+        jevSignal,
+      );
+      // If either mandate-amnt or expected-usd-amnt says STOP, STOP wins.
+      if (mandateAmnt.status === "STOP") return mandateAmnt;
+      if (expectedUsdAmnt.status === "STOP") return expectedUsdAmnt;
+      // If mandate-amnt has a view, use it; else use expected-usd-amnt.
+      if (mandateResult.amountSignal) return mandateAmnt;
+      if (mandateResult.expectedUsdSignal) return expectedUsdAmnt;
+      // No mandate constraints → combine (returns SKIPPED).
+      return combineSignals(null, jevSignal);
+    }
     if (id === "verified-payee") {
       return verifiedPayeeSignal(credentialResult);
     }

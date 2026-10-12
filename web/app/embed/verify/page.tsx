@@ -68,14 +68,19 @@ export default async function EmbedVerifyPage({
     return <Frame chain={chain} error={outcome.error} />;
   }
 
+  // Self-issued credentials are not trustworthy regardless of capability.
+  const selfIssued = outcome.selfIssued ?? false;
+  const effectiveCapable = selfIssued ? false : outcome.capable;
+
   return (
     <Frame
       chain={chain}
       subject={outcome.subject as Address}
       capabilityId={outcome.capabilityId}
-      capable={outcome.capable}
+      capable={effectiveCapable}
       issuer={outcome.issuer}
       expiresAt={outcome.expiresAt}
+      selfIssued={selfIssued}
     />
   );
 }
@@ -88,6 +93,7 @@ function Frame(props: {
   capable?: boolean;
   issuer?: `0x${string}` | null;
   expiresAt?: bigint | null;
+  selfIssued?: boolean;
 }) {
   const link =
     props.subject && props.capabilityId
@@ -105,11 +111,16 @@ function Frame(props: {
     );
   }
 
+  const selfIssuedNote = props.selfIssued
+    ? " Self-issued credential (issuer === subject). Not trustworthy."
+    : "";
+
   const dotClass = props.capable ? "bg-sage" : "bg-revoke";
   const verdict = props.capable ? "GO" : "STOP";
   const ariaLabel = [
     `Ligis gate: ${truncateAddress(props.subject!, 6, 4)}, verdict ${verdict}, for ${props.capabilityId}`,
-    props.capable && props.issuer
+    selfIssuedNote,
+    props.capable && !props.selfIssued && props.issuer
       ? `, issued by ${truncateAddress(props.issuer, 5, 3)}${
           props.expiresAt && props.expiresAt > 0n
             ? `, expires ${monthYear(props.expiresAt)}`

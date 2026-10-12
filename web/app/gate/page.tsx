@@ -483,6 +483,7 @@ async function Result({
   }
 
   const passkeyIssuer = isPasskeyIssuer(outcome.issuer, chain.id);
+  const selfIssued = outcome.selfIssued ?? false;
 
   return (
     <GateVerdict
@@ -497,7 +498,11 @@ async function Result({
       explorerUrl={chain.explorerUrl}
       source={`${chain.name} state`}
       issuerNote={
-        passkeyIssuer ? (
+        selfIssued ? (
+          <p className="text-revoke">
+            Self-issued credential (issuer === subject). Not trustworthy.
+          </p>
+        ) : passkeyIssuer ? (
           <>
             The issuer is a passkey, not a server key — the WebAuthn assertion
             was verified on-chain by Monad&rsquo;s P256 precompile at{" "}
@@ -581,6 +586,7 @@ async function Resolved({
   const outcome = primary.outcome;
   if (!outcome.ok) return null; // resolveSubject only sets primary from ok reads
   const passkeyIssuer = isPasskeyIssuer(outcome.issuer, primary.chain.id);
+  const selfIssued = res.selfIssued ?? false;
 
   return (
     <div className="space-y-8">
@@ -596,7 +602,11 @@ async function Resolved({
         explorerUrl={primary.chain.explorerUrl}
         source={`${primary.chain.name} state`}
         issuerNote={
-          passkeyIssuer ? (
+          selfIssued ? (
+            <p className="text-revoke">
+              Self-issued credential (issuer === subject). Not trustworthy.
+            </p>
+          ) : passkeyIssuer ? (
             <>
               The issuer is a passkey, not a server key — the WebAuthn assertion
               was verified on-chain by Monad&rsquo;s P256 precompile at{" "}

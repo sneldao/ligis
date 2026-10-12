@@ -25,6 +25,8 @@ export type VerificationOutcome =
       issuer: `0x${string}` | null;
       expiresAt: bigint | null;
       revoked: boolean;
+      /** True when the credential's issuer is the same as the subject (self-issued). */
+      selfIssued?: boolean;
     };
 
 function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
@@ -99,16 +101,25 @@ export async function verifySubject(
       view != null &&
       view.issuer != null &&
       view.issuer.toLowerCase() !== ZERO_ADDRESS;
+    const resolvedIssuer = hasCredential
+      ? (view!.issuer as `0x${string}`)
+      : ((view?.issuer as `0x${string}` | undefined) ?? null);
+    // Self-issued check: if issuer === subject (case-insensitive), the
+    // credential is not trustworthy regardless of its technical validity.
+    const selfIssued =
+      resolvedIssuer !== null &&
+      resolvedIssuer.toLowerCase() === subject.toLowerCase();
     if (!capable) {
       return {
         ok: true,
         subject,
         capabilityId: cap.id,
         capabilityHash: cap.hash,
-        capable: false,
-        issuer: hasCredential ? (view!.issuer as `0x${string}`) : null,
+        capable: selfIssued ? false : false,
+        issuer: resolvedIssuer,
         expiresAt: hasCredential ? view!.expiresAt : null,
         revoked: hasCredential ? view!.revoked : false,
+        selfIssued,
       };
     }
     return {
@@ -116,10 +127,11 @@ export async function verifySubject(
       subject,
       capabilityId: cap.id,
       capabilityHash: cap.hash,
-      capable: true,
-      issuer: (view?.issuer as `0x${string}` | undefined) ?? null,
+      capable: selfIssued ? false : true,
+      issuer: resolvedIssuer,
       expiresAt: view?.expiresAt ?? null,
       revoked: view?.revoked ?? false,
+      selfIssued,
     };
   } catch (err) {
     return {

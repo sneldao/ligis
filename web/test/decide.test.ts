@@ -117,11 +117,14 @@ const env: NodeJS.ProcessEnv = {
 
 describe("decide()", () => {
   it("legit renewal → GO with all four signals GO", async () => {
-    const decision = await decide(baseIntent, {
-      evaluateIntent: async () => jevOk(),
-      resolveSubject: () => credentialOk(),
-      env,
-    });
+    const decision = await decide(
+      { ...baseIntent, mandate: { payees: [PAYEE], maxUsd: 5000 } },
+      {
+        evaluateIntent: async () => jevOk(),
+        resolveSubject: () => credentialOk(),
+        env,
+      },
+    );
 
     assert.strictEqual(decision.verdict, "GO");
     assert.strictEqual(decision.signals.length, 4);
@@ -269,11 +272,14 @@ describe("decide()", () => {
     const stubCred = () => credentialOk();
     const decisions = await Promise.all(
       Array.from({ length: 10 }, () =>
-        decide(baseIntent, {
-          evaluateIntent: stubJev,
-          resolveSubject: stubCred,
-          env,
-        }),
+        decide(
+          { ...baseIntent, mandate: { payees: [PAYEE], maxUsd: 5000 } },
+          {
+            evaluateIntent: stubJev,
+            resolveSubject: stubCred,
+            env,
+          },
+        ),
       ),
     );
 
@@ -316,7 +322,11 @@ describe("decide()", () => {
 
   it("omitted capability → verified-payee SKIPPED (neutral, not blocking GO)", async () => {
     const decision = await decide(
-      { ...baseIntent, capability: undefined },
+      {
+        ...baseIntent,
+        capability: undefined,
+        mandate: { payees: [PAYEE], maxUsd: 5000 },
+      },
       {
         evaluateIntent: async () => jevOk(),
         resolveSubject: () => credentialOk(),
@@ -467,5 +477,90 @@ describe("decide()", () => {
     assert.strictEqual(decision.verdict, "GO");
     const amountSignal = decision.signals.find((s) => s.id === "right-amount")!;
     assert.strictEqual(amountSignal.status, "GO");
+  });
+
+  it("expectedUsd: 100, paid $9000 (90×) → STOP on right-amount", async () => {
+    const decision = await decide(
+      {
+        ...baseIntent,
+        amountUsd: 9000,
+        mandate: {
+          payees: [PAYEE],
+          maxUsd: 10000,
+          expectedUsd: 100,
+        },
+      },
+      {
+        evaluateIntent: async () => jevOk(),
+        resolveSubject: () => credentialOk({ issuer: ISSUER }),
+        env,
+      },
+    );
+
+    assert.strictEqual(decision.verdict, "STOP");
+    const amountSignal = decision.signals.find((s) => s.id === "right-amount")!;
+    assert.strictEqual(amountSignal.status, "STOP");
+    assert.ok(
+      amountSignal.reason?.includes("9000") &&
+        amountSignal.reason?.includes("100"),
+      `reason should mention amounts, got: ${amountSignal.reason}`,
+    );
+  });
+
+  it("no mandate with Jev GO → UNKNOWN (payee/amount SKIPPED, no contract)", async () => {
+    const decision = await decide(baseIntent, {
+      evaluateIntent: async () => jevOk(),
+      resolveSubject: () => credentialOk(),
+      env,
+    });
+
+    assert.strictEqual(decision.verdict, "UNKNOWN");
+    const payeeSignal = decision.signals.find((s) => s.id === "right-payee")!;
+    const amountSignal = decision.signals.find((s) => s.id === "right-amount")!;
+    assert.strictEqual(payeeSignal.status, "SKIPPED");
+    assert.strictEqual(amountSignal.status, "SKIPPED");
+    assert.ok(payeeSignal.reason?.includes("no contracted payee"));
+    assert.ok(amountSignal.reason?.includes("no contracted price"));
+  });
+
+  it("mandate payee GO + Jev payee STOP → STOP (Jev wins)", async () => {
+    const decision = await decide(
+      {
+        ...baseIntent,
+        mandate: { payees: [PAYEE], maxUsd: 5000 },
+      },
+      {
+        evaluateIntent: async () =>
+          jevStopFlag("payee-mismatch", "payee mismatch"),
+        resolveSubject: () => credentialOk({ issuer: ISSUER }),
+        env,
+      },
+    );
+
+    assert.strictEqual(decision.verdict, "STOP");
+    const payeeSignal = decision.signals.find((s) => s.id === "right-payee")!;
+    assert.strictEqual(payeeSignal.status, "STOP");
+    assert.strictEqual(payeeSignal.reason, "payee mismatch");
+  });
+
+  it("mandate amount GO + Jev amount STOP → STOP (Jev wins)", async () => {
+    const decision = await decide(
+      {
+        ...baseIntent,
+        amountUsd: 50,
+        mandate: { payees: [PAYEE], maxUsd: 5000 },
+      },
+      {
+        evaluateIntent: async () =>
+          jevStopFlag("amount-mismatch", "implausible amount"),
+        resolveSubject: () => credentialOk({ issuer: ISSUER }),
+        env,
+      },
+    );
+
+    assert.strictEqual(decision.verdict, "STOP");
+    const amountSignal = decision.signals.find((s) => s.id === "right-amount")!;
+    assert.strictEqual(amountSignal.status, "STOP");
+    assert.strictEqual(amountSignal.reason, "implausible amount");
   });
 });
