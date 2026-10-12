@@ -24,7 +24,7 @@
       "id": "ligis.risk",
       "name": "Ligis Counterparty Risk Check",
       "description": "Verify that another AI agent holds the credentials required for a paid job before you hire or pay it. Returns a pass/warn/fail verdict and a 0–100 risk score. Cross-chain on Casper and Pharos.",
-      "priceUsd": "0.75",
+      "priceUsd": "0.50",
       "inputSchema": {
         "type": "object",
         "required": ["subject", "capabilities"],
@@ -87,7 +87,7 @@
       "id": "ligis.verify",
       "name": "Ligis Credential Verification",
       "description": "Single-capability on-chain verification. Returns whether a subject holds a valid credential for a given capability, plus the credential details (issuer, issuedAt, expiresAt). Cross-chain on Casper and Pharos.",
-      "priceUsd": "0.50",
+      "priceUsd": "0.25",
       "inputSchema": {
         "type": "object",
         "required": ["subject", "capability"],
@@ -159,9 +159,9 @@
     },
     {
       "id": "ligis.gate",
-      "name": "Ligis Trust Gate (Intent + Credential)",
-      "description": "Pre-flight trust read for an agent payment, in one call: a Jev (TypeSafe System One) intent verdict — is the amount plausible, does the payee match, is the pattern normal — alongside an on-chain credential check on Casper or Pharos. Fail-open and typed; run it before money moves.",
-      "priceUsd": "1.00",
+      "name": "Ligis Trust Gate (Payment Check)",
+      "description": "Pre-payment check for an agent's spend, in one call: a Jev (TypeSafe System One) intent verdict — is the amount plausible, does the payee match, is the pattern normal — alongside an on-chain credential check on Casper or Pharos. Returns GO or STOP with the four signals (right payee, right amount, in scope, verified payee). Fail-open and typed; run it before money moves.",
+      "priceUsd": "0.25",
       "inputSchema": {
         "type": "object",
         "required": ["subject", "capability", "priceSmallestUnit", "payTo"],

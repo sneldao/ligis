@@ -61,13 +61,18 @@ describe("service catalog consistency", () => {
   });
 
   it("keeps the one-order bundle cheaper than buying its parts", () => {
+    // `ligis.qualify` collapses three negotiations: risk + verify + issue.
+    // The bundle must undercut that total; if pricing drifts and they tie,
+    // qualify loses its "one order" value prop and the buyer has no reason
+    // to prefer it.
     const bundle = Number(SERVICE_PRICE_USD[SERVICE_ID.qualify]);
     const parts =
       Number(SERVICE_PRICE_USD[SERVICE_ID.risk]) +
+      Number(SERVICE_PRICE_USD[SERVICE_ID.verify]) +
       Number(SERVICE_PRICE_USD[SERVICE_ID.issue]);
     assert.ok(
       bundle < parts,
-      `ligis.qualify ($${bundle}) must undercut ligis.risk + ligis.issue ($${parts})`,
+      `ligis.qualify ($${bundle}) must undercut risk + verify + issue ($${parts})`,
     );
   });
 

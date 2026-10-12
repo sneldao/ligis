@@ -63,10 +63,10 @@ Listed on the CROO Agent Store:
 
 | Service ID          | Purpose                                                                                              | Example input                                                                                           | Price |
 | ------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----- |
-| **`ligis.risk`**    | **Counterparty risk check** — pass/warn/fail + 0–100 score, with a `pathToTrust` next step on `fail` | `{ subject, capabilities: ["agent.commerce.escrow"], minTtlSeconds: 86400 }`                            | $0.75 |
-| **`ligis.verify`**  | Single-capability on-chain verification                                                              | `{ subject, capability: "kyc.basic" }`                                                                  | $0.50 |
+| **`ligis.risk`**    | **Counterparty risk check** — pass/warn/fail + 0–100 score, with a `pathToTrust` next step on `fail` | `{ subject, capabilities: ["agent.commerce.escrow"], minTtlSeconds: 86400 }`                            | $0.50 |
+| **`ligis.verify`**  | Single-capability on-chain verification                                                              | `{ subject, capability: "kyc.basic" }`                                                                  | $0.25 |
 | **`ligis.issue`**   | Signed capability credential issuance (optional EAS import)                                          | `{ subject, capability: "kyc.basic", expiresInSeconds: 86400 }`                                         | $2.00 |
-| **`ligis.gate`**    | Payment pre-flight: Jev intent verdict + credential check                                            | `{ subject, capability: "data.premium", priceSmallestUnit: "1000000000", payTo: "0x00…" }`              | $1.00 |
+| **`ligis.gate`**    | **Payment check**: Jev intent verdict + credential check                                             | `{ subject, capability: "data.premium", priceSmallestUnit: "1000000000", payTo: "0x00…" }`              | $0.25 |
 | **`ligis.qualify`** | One order: check → policy-gated issue → re-check (evidence required unless allowlisted)              | `{ subject, capabilities: ["agent.commerce.escrow"], evidence: [{ capability, externalAttestation }] }` | $2.50 |
 
 Prices live in `SERVICE_PRICE_USD` (`src/services.ts`) and drive both the

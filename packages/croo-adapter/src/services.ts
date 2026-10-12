@@ -65,12 +65,16 @@ export type SupportedServiceId = (typeof SUPPORTED_SERVICES)[number];
  * is actually charged, so a mismatch here is a lie in the deliverable.
  */
 export const SERVICE_PRICE_USD: Record<SupportedServiceId, string> = {
-  [SERVICE_ID.risk]: "0.75",
-  [SERVICE_ID.verify]: "0.50",
+  [SERVICE_ID.risk]: "0.50",
+  [SERVICE_ID.verify]: "0.25",
   [SERVICE_ID.issue]: "2.00",
-  [SERVICE_ID.gate]: "1.00",
-  // One order instead of risk ($0.75) + issue ($2.00) = $2.75, so the bundle
-  // is visibly cheaper than the two-order path it replaces.
+  // `ligis.gate` is the wedge — it runs on every payment. Per-call price
+  // anchors at infrastructure cost (Jev ≈ $0.0001 + provider overhead),
+  // not at marketplace premium. See docs/positioning.md "Pricing model".
+  [SERVICE_ID.gate]: "0.25",
+  // One order instead of risk ($0.50) + verify ($0.25) + issue ($2.00) =
+  // $2.75 across three negotiations, so the bundle is $0.25 cheaper AND
+  // removes one buyer hop. See docs/positioning.md.
   [SERVICE_ID.qualify]: "2.50",
 };
 

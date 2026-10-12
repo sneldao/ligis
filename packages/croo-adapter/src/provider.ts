@@ -247,9 +247,9 @@ export const defaultServices: ServiceDescriptor[] = [
   },
   {
     id: SERVICE_ID.qualify,
-    name: "Ligis Credential Qualification",
+    name: "Ligis Payment Qualification",
     description:
-      "One order from not-credentialed to credentialed: Ligis checks the counterparty, issues the missing capabilities the trust policy allows (external evidence required unless a capability is explicitly allowlisted as self-issuable), then re-checks and returns both verdicts. Payment alone never mints a credential.",
+      "One order from unverified payee to payment-ready: Ligis checks the counterparty, mints the missing approvals the trust policy allows (external evidence required unless the capability is explicitly allowlisted as self-issuable), then re-checks and returns both verdicts. Payment alone never mints trust — only evidence or an explicit allowlist does.",
     priceUsd: SERVICE_PRICE_USD[SERVICE_ID.qualify],
     inputSchema: {
       type: "object",
