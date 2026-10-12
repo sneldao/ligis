@@ -117,20 +117,19 @@ export default async function VerifyPage({
 
   // Decision mode: when amountUsd and purpose are provided, run the full
   // pre-payment decision (decide()) via the client-side GateDecision component.
-  // Mandate (contracted terms) is optional: payees default to the subject,
-  // and blank fields leave the payee/amount checks skipped.
+  // Mandate (contracted terms) is optional: a blank allowlist sends no
+  // payees, so right-payee stays SKIPPED ("no contracted payee") rather than
+  // comparing the payee with itself. Tick the box to state the contract.
   const decisionAmountUsd = params.amountUsd
     ? parseFloat(params.amountUsd)
     : undefined;
   const decisionPurpose = params.purpose ?? undefined;
   const mandatePayeesRaw = params.mandatePayees?.trim() || undefined;
   const decisionMandate = {
-    payees:
-      mandatePayeesRaw
-        ?.split(",")
-        .map((s) => s.trim())
-        .filter(Boolean) ??
-      (subjectForVerdict ? [subjectForVerdict] : undefined),
+    payees: mandatePayeesRaw
+      ?.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
     maxUsd: params.mandateMaxUsd ? parseFloat(params.mandateMaxUsd) : undefined,
     expectedUsd: params.mandateExpectedUsd
       ? parseFloat(params.mandateExpectedUsd)

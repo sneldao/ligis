@@ -218,3 +218,62 @@ test("route runDecide returns GO over stubbed resolveSubject", async () => {
   assert.strictEqual(body.verdict, "GO");
   assert.ok(Array.isArray(body.signals) && body.signals.length === 4);
 });
+
+test("route runDecide with cap-only mandate keeps right-payee SKIPPED", async () => {
+  // Regression: the /gate form must never default the allowlist to the payee
+  // being checked — a cap/quote alone must leave right-payee skipped, not GO.
+  const route = await loadRoute();
+  if (!route) {
+    console.log("  (skip: re-run with --conditions=react-server)");
+    return;
+  }
+  const res = await route.runDecide(
+    {
+      payee: PAYEE,
+      amountUsd: 100,
+      purpose: "Q4 renewal",
+      capability: "agent.commerce.escrow",
+      mandate: { maxUsd: 10000 },
+    },
+    {
+      resolveSubject: async () => ({
+        ok: true as const,
+        subject: PAYEE,
+        capabilityId: "agent.commerce.escrow",
+        capable: true,
+        verdicts: [],
+        primary: {
+          chain: {
+            id: "pharos-atlantic",
+            kind: "evm",
+            name: "Pharos Atlantic Testnet",
+            explorerUrl: "https://atlantic.pharosscan.xyz",
+            live: true,
+            shortName: "pharos",
+            writeReady: true,
+          },
+          outcome: {
+            ok: true as const,
+            subject: PAYEE,
+            capabilityId: "agent.commerce.escrow",
+            capabilityHash: ("0x" + "ab".repeat(32)) as `0x${string}`,
+            capable: true,
+            issuer:
+              "0xa1c4e3f0123456789abcdef0123456789abcdef0" as `0x${string}`,
+            expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400 * 90),
+            revoked: false,
+          },
+        },
+      }),
+    },
+  );
+  assert.strictEqual(res.status, 200);
+  const body = (await res.json()) as {
+    verdict: string;
+    signals: Array<{ id: string; status: string; reason?: string }>;
+  };
+  const payeeSignal = body.signals.find((s) => s.id === "right-payee")!;
+  assert.strictEqual(payeeSignal.status, "SKIPPED");
+  assert.ok(payeeSignal.reason?.includes("no contracted payee"));
+  assert.strictEqual(body.verdict, "UNKNOWN");
+});

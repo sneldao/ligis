@@ -23,9 +23,10 @@ import { chainSwitchHref, subjectChainMismatch } from "@/lib/subject-format";
  *
  * Two modes:
  * - Credential mode: subject + permission → scoped read / resolve.
- * - Decision mode: adds payee duplicate (defaults to subject), amount,
- *   purpose, and optional mandate (contracted payees, cap, expected price)
- *   → full four-signal decide() via GateDecision.
+ * - Decision mode: adds amount, purpose, and optional mandate (contracted
+ *   payees, cap, expected price) → full four-signal decide() via GateDecision.
+ *   A blank allowlist sends no payees, so right-payee stays SKIPPED — the
+ *   form never compares the payee with itself.
  */
 export function GateFormShell({
   chainId,
@@ -64,6 +65,10 @@ export function GateFormShell({
   const [mandatePayeesDraft, setMandatePayeesDraft] = useState(
     defaultMandate?.payees ?? "",
   );
+  // Explicit opt-in: "contracted payee is this address". Checked sends the
+  // current subject as the sole allowlist entry; unchecked sends whatever is
+  // typed (possibly nothing → right-payee stays SKIPPED).
+  const [mandateSelfChecked, setMandateSelfChecked] = useState(false);
   const [mandateMaxDraft, setMandateMaxDraft] = useState(
     defaultMandate?.maxUsd ?? "",
   );
@@ -165,12 +170,14 @@ export function GateFormShell({
     const amountUsd = String(fd.get("amountUsd") ?? "").trim();
     const purpose = String(fd.get("purpose") ?? "").trim();
     if (!amountUsd || !purpose) return;
+    const selfChecked = fd.get("mandateSelf") === "on";
+    const typedPayees = String(fd.get("mandatePayees") ?? "").trim();
     navigate({
       subject,
       capability,
       amountUsd,
       purpose,
-      mandatePayees: String(fd.get("mandatePayees") ?? ""),
+      mandatePayees: selfChecked ? subject.trim() : typedPayees,
       mandateMaxUsd: String(fd.get("mandateMaxUsd") ?? ""),
       mandateExpectedUsd: String(fd.get("mandateExpectedUsd") ?? ""),
     });
@@ -305,15 +312,38 @@ export function GateFormShell({
                     <input
                       id="mandatePayees"
                       name="mandatePayees"
-                      placeholder="0x… (defaults to subject)"
+                      placeholder="0x… or account-hash-…"
                       value={mandatePayeesDraft}
-                      onChange={(e) => setMandatePayeesDraft(e.target.value)}
+                      onChange={(e) => {
+                        setMandatePayeesDraft(e.target.value);
+                        setMandateSelfChecked(false);
+                      }}
                       spellCheck={false}
                       autoCorrect="off"
                       autoCapitalize="off"
                       disabled={busy}
                       className="block w-full min-w-0 border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
                     />
+                    <label
+                      htmlFor="mandateSelf"
+                      className="flex cursor-pointer items-center gap-2 font-mono text-[11px] text-ink-soft"
+                    >
+                      <input
+                        id="mandateSelf"
+                        name="mandateSelf"
+                        type="checkbox"
+                        checked={mandateSelfChecked}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setMandateSelfChecked(checked);
+                          if (checked)
+                            setMandatePayeesDraft(subjectDraft.trim());
+                        }}
+                        disabled={busy}
+                        className="h-3.5 w-3.5 accent-[#b4552d]"
+                      />
+                      contracted payee is this address
+                    </label>
                   </label>
                   <label htmlFor="mandateMaxUsd" className="block space-y-2">
                     <span className="font-mono text-[11px] text-ink-quiet">
@@ -350,8 +380,8 @@ export function GateFormShell({
                   </label>
                 </div>
                 <p className="mt-2 font-serif text-sm italic text-ink-quiet">
-                  No contract on file? Leave blank — the payee and amount checks
-                  stay skipped and the credential is the whole answer.
+                  No contract on file? Leave the payee list blank — right-payee
+                  stays skipped and the credential is the whole answer.
                 </p>
               </div>
             </>

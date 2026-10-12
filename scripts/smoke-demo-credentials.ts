@@ -13,8 +13,33 @@
  *
  * Public RPCs from assets/networks.json — no deployer keys required.
  */
+import { readFileSync, existsSync } from "node:fs";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
+
+function loadEnvFiles(...files: string[]): void {
+  for (const f of files) {
+    if (!existsSync(f)) continue;
+    for (const line of readFileSync(f, "utf-8").split("\n")) {
+      const t = line.trim();
+      if (!t || t.startsWith("#")) continue;
+      const eq = t.indexOf("=");
+      if (eq === -1) continue;
+      const key = t.slice(0, eq).trim();
+      if (!process.env[key]) {
+        process.env[key] = t
+          .slice(eq + 1)
+          .trim()
+          .replace(/^['"]|['"]$/g, "");
+      }
+    }
+  }
+}
+
+// Casper reads need the public deployment values (RPC, registry package
+// hash). Load the local env file when present; CI passes the same values as
+// workflow env vars (see .github/workflows/demo-credentials.yml).
+loadEnvFiles(".env.d/casper.env");
 
 // Keep in sync with web/lib/demo-subjects.ts (duplicated so this script has
 // no web/ import path / server-only coupling).
