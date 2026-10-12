@@ -37,6 +37,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { resolveBackend } from "./counters-backend";
 
 export type CounterCategory =
   | "hero_cta_click"
@@ -90,6 +91,20 @@ function ensureDir(): void {
   }
 }
 
+// Storage backend, resolved once at module load. File by default; Upstash
+// REST when KV_REST_API_URL + KV_REST_API_TOKEN are set (see
+// counters-backend.ts). `record()` stays sync — the Upstash write is
+// fire-and-forget inside the backend.
+const { backend, kind: BACKEND_KIND } = resolveBackend(
+  COUNTERS_FILE,
+  ensureDir,
+);
+
+/** Which storage backend is active — surfaced on /admin/counters. */
+export function backendKind(): "upstash" | "file" {
+  return BACKEND_KIND;
+}
+
 /**
  * Append a single counter line. Buckets outside the allowlist are
  * silently dropped so we never accidentally leak a richer signal (like a
@@ -97,15 +112,8 @@ function ensureDir(): void {
  */
 export function record(category: CounterCategory, bucket: CounterBucket): void {
   if (!ALLOWED_BUCKETS.has(bucket)) return;
-  try {
-    ensureDir();
-    appendFileSync(
-      COUNTERS_FILE,
-      JSON.stringify({ t: Date.now(), c: category, b: bucket }) + "\n",
-    );
-  } catch {
-    // best-effort — see module docstring
-  }
+  void category; // category is part of the legacy JSONL shape; KV keys on bucket only
+  backend.incr(bucket);
 }
 
 /**
@@ -151,8 +159,13 @@ function maybePrune(): void {
 /**
  * Aggregate the current counters file into per-bucket counts. Read-only;
  * no filesystem writes. Returns an empty object on missing/corrupt file.
+ *
+ * Sync file path (today's behavior). When the Upstash backend is active,
+ * prefer `aggregateAsync()` — this returns the file fallback (likely empty
+ * on Vercel) so legacy callers never break.
  */
 export function aggregate(): Record<string, number> {
+  if (BACKEND_KIND !== "file") return {};
   try {
     if (!existsSync(COUNTERS_FILE)) return {};
     const text = readFileSync(COUNTERS_FILE, "utf8");
@@ -174,5 +187,24 @@ export function aggregate(): Record<string, number> {
   }
 }
 
-// Auto-prune on first import in a process; cheap, idempotent.
+/**
+ * Backend-aware read: Upstash `HGETALL` when configured, file scan
+ * otherwise. Use from async server contexts (pages, route handlers).
+ */
+export async function aggregateAsync(): Promise<Record<string, number>> {
+  const raw = await backend.readAll();
+  // Re-apply the allowlist on read so a stray KV field can never surface.
+  const out: Record<string, number> = {};
+  for (const [bucket, n] of Object.entries(raw)) {
+    if (
+      typeof n === "number" &&
+      Number.isFinite(n) &&
+      ALLOWED_BUCKETS.has(bucket as CounterBucket)
+    )
+      out[bucket] = n;
+  }
+  return out;
+}
+
+// Auto-prune on first import in a process; cheap, idempotent. File only.
 maybePrune();

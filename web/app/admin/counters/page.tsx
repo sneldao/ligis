@@ -1,6 +1,6 @@
 import "server-only";
 
-import { aggregate } from "@/lib/counters";
+import { aggregateAsync, backendKind } from "@/lib/counters";
 import { Rule } from "@/components/Rule";
 import Link from "next/link";
 
@@ -93,7 +93,8 @@ export default async function CountersPage({
     );
   }
 
-  const counts = aggregate();
+  const counts = await aggregateAsync();
+  const backend = backendKind();
 
   const heroTotal =
     (counts["hero:gate"] ?? 0) +
@@ -151,9 +152,35 @@ export default async function CountersPage({
           Aggregate-only counts of which CTAs were clicked, which gate branches
           visitors tried, and how often the API was called. No payee, amount,
           IP, user agent, or referrer is logged &mdash; only the fixed bucket
-          id. The file lives at{" "}
-          <code className="font-mono text-ink">~/.ligis/counters.jsonl</code>;
-          this page is a reader, not a writer.
+          id. Read from{" "}
+          {backend === "upstash" ? (
+            <span>
+              Upstash KV (
+              <code className="font-mono text-ink">ligis:counters</code>
+              ); file fallback at{" "}
+              <code className="font-mono text-ink">
+                ~/.ligis/counters.jsonl
+              </code>
+            </span>
+          ) : (
+            <span>
+              <code className="font-mono text-ink">
+                ~/.ligis/counters.jsonl
+              </code>
+              {process.env.VERCEL ? (
+                <>
+                  {" "}
+                  (ephemeral on Vercel &mdash; set{" "}
+                  <code className="font-mono text-ink">
+                    KV_REST_API_URL
+                  </code> +{" "}
+                  <code className="font-mono text-ink">KV_REST_API_TOKEN</code>{" "}
+                  for durable counts)
+                </>
+              ) : null}
+            </span>
+          )}
+          ; this page is a reader, not a writer.
         </p>
       </section>
 
