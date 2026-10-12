@@ -123,11 +123,16 @@ export function bodyToIntent(
   };
 }
 
-function queryToIntent(
+export function queryToIntent(
   payee: string | null,
   amountUsd: string | null,
   purpose: string | null,
   capability: string | null,
+  mandateRaw?: {
+    mandatePayees?: string | null;
+    mandateMaxUsd?: string | null;
+    mandateExpectedUsd?: string | null;
+  },
 ): PaymentIntent | string {
   const p = asPayee(payee);
   if (!p)
@@ -155,7 +160,28 @@ function queryToIntent(
     }
     cap = parsed;
   }
-  return { payee: p, amountUsd: n, purpose: pur, capability: cap };
+  let mandate: PaymentIntent["mandate"];
+  if (mandateRaw) {
+    const raw: Record<string, unknown> = {};
+    if (mandateRaw.mandatePayees != null) {
+      raw.payees = mandateRaw.mandatePayees
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    if (mandateRaw.mandateMaxUsd != null) {
+      const n = Number(mandateRaw.mandateMaxUsd);
+      raw.maxUsd = Number.isFinite(n) ? n : mandateRaw.mandateMaxUsd;
+    }
+    if (mandateRaw.mandateExpectedUsd != null) {
+      const n = Number(mandateRaw.mandateExpectedUsd);
+      raw.expectedUsd = Number.isFinite(n) ? n : mandateRaw.mandateExpectedUsd;
+    }
+    const parsed = parseMandate(raw);
+    if (typeof parsed === "string") return bad400(parsed);
+    mandate = parsed;
+  }
+  return { payee: p, amountUsd: n, purpose: pur, capability: cap, mandate };
 }
 
 function bad400(message: string): string {
@@ -198,6 +224,11 @@ export async function GET(req: NextRequest) {
     q.get("amountUsd"),
     q.get("purpose"),
     q.get("capability"),
+    {
+      mandatePayees: q.get("mandatePayees"),
+      mandateMaxUsd: q.get("mandateMaxUsd"),
+      mandateExpectedUsd: q.get("mandateExpectedUsd"),
+    },
   );
   if (isBadRequest(intentOrError)) {
     return bad(fromBadRequest(intentOrError));
@@ -206,7 +237,7 @@ export async function GET(req: NextRequest) {
   return runDecide(intent);
 }
 
-async function runDecide(
+export async function runDecide(
   intent: PaymentIntent,
   opts?: {
     resolveSubject?: (payee: string, cap: string) => Promise<SubjectResolution>;

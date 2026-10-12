@@ -125,17 +125,27 @@ async function main() {
   const only = process.argv[2];
 
   if (!only || only === "pharos") {
-    const pharos = new EvmAdapter();
-    const wallet = pharos.walletAddress()?.toLowerCase();
-    if (wallet && wallet === demoSubject) {
-      console.error(
-        `FATAL: steward wallet (${wallet}) === demo subject (${demoSubject}). ` +
-          `This would create self-issued credentials the gate rejects. ` +
-          `Set LIGIS_DEMO_SUBJECT to a non-steward address.`,
-      );
-      process.exit(1);
+    // Pin the network explicitly: the adapter resolves from LIGIS_NETWORK
+    // (falling back to networks.json default), so a shell exporting
+    // LIGIS_NETWORK=monad-testnet would otherwise seed Monad twice.
+    const prev = process.env.LIGIS_NETWORK;
+    process.env.LIGIS_NETWORK = "atlantic-testnet";
+    try {
+      const pharos = new EvmAdapter();
+      const wallet = pharos.walletAddress()?.toLowerCase();
+      if (wallet && wallet === demoSubject) {
+        console.error(
+          `FATAL: steward wallet (${wallet}) === demo subject (${demoSubject}). ` +
+            `This would create self-issued credentials the gate rejects. ` +
+            `Set LIGIS_DEMO_SUBJECT to a non-steward address.`,
+        );
+        process.exit(1);
+      }
+      await seed(pharos.chainName, pharos, DEMO_SUBJECT, issuerKey);
+    } finally {
+      if (prev !== undefined) process.env.LIGIS_NETWORK = prev;
+      else delete process.env.LIGIS_NETWORK;
     }
-    await seed(pharos.chainName, pharos, DEMO_SUBJECT, issuerKey);
   }
   if (!only || only === "monad") {
     const prev = process.env.LIGIS_NETWORK;

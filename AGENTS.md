@@ -323,6 +323,9 @@ Required Vercel env vars for Casper reads:
 `LIGIS_CASPER_RPC_URL`, `LIGIS_CASPER_NETWORK`, `LIGIS_CASPER_AGENT_ID`,
 `LIGIS_CASPER_CREDENTIAL_REGISTRY`. For live writes also set
 `LIGIS_CASPER_DEPLOYER_PUBKEY` and `LIGIS_CASPER_DEPLOYER_PRIVATE_KEY`.
+For the Casper self-issued check (`web/lib/verify.ts`) also set
+`LIGIS_CASPER_DEPLOYER_ACCOUNT_HASH` and `LIGIS_CASPER_DEPLOYER_EVM_ADDRESS`
+— without them the check logs a warning and is skipped (fail-open).
 
 ### Chain-agnostic reads + issuer desk (Monad-era product layer)
 
@@ -339,6 +342,14 @@ Required Vercel env vars for Casper reads:
   source `.env.d/steward.env` locally for writes.
 - `server-only` is a real web dep now — direct `tsx` tests of server modules
   fail without it.
+- Route-level tests run under `--conditions=react-server`
+  (`pnpm --filter @ligis/web test` runs the suite twice: default + react-server
+  for `route.test.ts`), where the `server-only` guard is a no-op so
+  `bodyToIntent` / `queryToIntent` / `runDecide` import for real.
+- `/api/gate` GET accepts the same mandate the form writes:
+  `mandatePayees` (comma-separated), `mandateMaxUsd`, `mandateExpectedUsd`.
+- Counters honor `LIGIS_COUNTERS_DIR` and default to `/tmp/.ligis` on Vercel
+  (ephemeral per instance — migrate to KV for durable counts).
 - `pnpm --dir web smoke:ssr` defaults `BASE_URL=http://127.0.0.1:3000` —
   other dev servers squat on 3000; run with
   `BASE_URL=http://127.0.0.1:3001` against the Ligis dev server.
@@ -684,10 +695,23 @@ the `/gate` telemetry waterfall. Tagline: "the gate has reflexes."
 ### Web demo sample credentials
 
 `scripts/seed-demo-credentials.ts` idempotently re-issues `kyc.basic`,
-`agent.commerce.escrow`, and `rwa.accredited` (1-year expiry) to the Pharos
-and Casper deployer wallets used as the `/gate` "verified agent" samples.
-Run `LIGIS_NETWORK=atlantic-testnet npx tsx scripts/seed-demo-credentials.ts
-[pharos|casper]` when they expire (next: ~2027-09-24).
+`agent.commerce.escrow`, and `rwa.accredited` (1-year expiry) to the demo
+subjects in `web/lib/demo-subjects.ts` (EVM: `0xd21a…`; Casper:
+`account-hash-c769…`) using the steward key — never the deployer key, which
+would create self-issued credentials the gate rejects. The script pins
+`LIGIS_NETWORK` per branch (pharos → `atlantic-testnet`, monad →
+`monad-testnet`) so a shell exporting one network can't seed the wrong chain,
+refuses to run when the steward wallet equals the demo subject, and exits 1
+if the result is still self-issued. Run when fixtures expire (next:
+~2027-09-24):
+
+```bash
+LIGIS_STEWARD_KEY=… npx tsx scripts/seed-demo-credentials.ts [pharos|monad|casper]
+# omit the arg to seed all three; the steward wallet needs gas on Pharos + Monad
+```
+
+Afterwards `pnpm smoke:demo-credentials` (now covering Pharos + Monad +
+Casper, incl. the Casper deployer-EVM self-issued check) must exit 0.
 
 **Monad fixtures** (see `web/lib/demo-subjects.ts`):
 

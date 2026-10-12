@@ -75,7 +75,9 @@ const ALLOWED_BUCKETS: ReadonlySet<CounterBucket> = new Set<CounterBucket>([
   "api:error",
 ]);
 
-const COUNTERS_DIR = join(homedir(), ".ligis");
+const COUNTERS_DIR =
+  process.env.LIGIS_COUNTERS_DIR ??
+  (process.env.VERCEL ? join("/tmp", ".ligis") : join(homedir(), ".ligis"));
 const COUNTERS_FILE = join(COUNTERS_DIR, "counters.jsonl");
 const PRUNE_DAYS = 30;
 const PRUNE_THRESHOLD_MS = PRUNE_DAYS * 24 * 60 * 60 * 1000;

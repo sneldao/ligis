@@ -122,6 +122,16 @@ export async function verifySubject(
       process.env.LIGIS_CASPER_DEPLOYER_ACCOUNT_HASH ?? undefined;
     const casperDeployerEvmAddress =
       process.env.LIGIS_CASPER_DEPLOYER_EVM_ADDRESS ?? undefined;
+    if (
+      isCasperChain(chain) &&
+      (!casperDeployerAccountHash || !casperDeployerEvmAddress)
+    ) {
+      console.warn(
+        "[verify] Casper self-issued check skipped: set " +
+          "LIGIS_CASPER_DEPLOYER_ACCOUNT_HASH and " +
+          "LIGIS_CASPER_DEPLOYER_EVM_ADDRESS (see AGENTS.md Vercel env vars).",
+      );
+    }
     const isSelfIssuedCasper =
       isCasperChain(chain) &&
       subject.toLowerCase() ===

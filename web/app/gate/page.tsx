@@ -34,6 +34,9 @@ type SearchParams = Promise<{
   situation?: string;
   amountUsd?: string;
   purpose?: string;
+  mandatePayees?: string;
+  mandateMaxUsd?: string;
+  mandateExpectedUsd?: string;
 }>;
 
 export const metadata = {
@@ -50,6 +53,7 @@ function gateParams(
   situation?: string,
   amountUsd?: number,
   purpose?: string,
+  mandate?: { payees?: string; maxUsd?: string; expectedUsd?: string },
 ): string {
   const params = new URLSearchParams();
   if (chain) params.set("chain", chain.id);
@@ -58,6 +62,10 @@ function gateParams(
   if (situation) params.set("situation", situation);
   if (amountUsd !== undefined) params.set("amountUsd", String(amountUsd));
   if (purpose) params.set("purpose", purpose);
+  if (mandate?.payees) params.set("mandatePayees", mandate.payees);
+  if (mandate?.maxUsd) params.set("mandateMaxUsd", mandate.maxUsd);
+  if (mandate?.expectedUsd)
+    params.set("mandateExpectedUsd", mandate.expectedUsd);
   return params.toString();
 }
 
@@ -109,10 +117,31 @@ export default async function VerifyPage({
 
   // Decision mode: when amountUsd and purpose are provided, run the full
   // pre-payment decision (decide()) via the client-side GateDecision component.
+  // Mandate (contracted terms) is optional: payees default to the subject,
+  // and blank fields leave the payee/amount checks skipped.
   const decisionAmountUsd = params.amountUsd
     ? parseFloat(params.amountUsd)
     : undefined;
   const decisionPurpose = params.purpose ?? undefined;
+  const mandatePayeesRaw = params.mandatePayees?.trim() || undefined;
+  const decisionMandate = {
+    payees:
+      mandatePayeesRaw
+        ?.split(",")
+        .map((s) => s.trim())
+        .filter(Boolean) ??
+      (subjectForVerdict ? [subjectForVerdict] : undefined),
+    maxUsd: params.mandateMaxUsd ? parseFloat(params.mandateMaxUsd) : undefined,
+    expectedUsd: params.mandateExpectedUsd
+      ? parseFloat(params.mandateExpectedUsd)
+      : undefined,
+  };
+  const hasMandate =
+    Boolean(mandatePayeesRaw) ||
+    (decisionMandate.maxUsd !== undefined &&
+      Number.isFinite(decisionMandate.maxUsd)) ||
+    (decisionMandate.expectedUsd !== undefined &&
+      Number.isFinite(decisionMandate.expectedUsd));
   const showDecision = Boolean(
     subjectForVerdict && capForVerdict && decisionAmountUsd && decisionPurpose,
   );
@@ -142,6 +171,13 @@ export default async function VerifyPage({
     ) : null;
 
   // Decision-mode share link (includes amount + purpose for full decide())
+  const decisionShareMandate = hasMandate
+    ? {
+        payees: mandatePayeesRaw,
+        maxUsd: params.mandateMaxUsd,
+        expectedUsd: params.mandateExpectedUsd,
+      }
+    : undefined;
   const decisionShareUrl =
     subjectForVerdict && capForVerdict
       ? `${SITE_URL}/gate?${gateParams(
@@ -151,6 +187,7 @@ export default async function VerifyPage({
           situation?.id,
           decisionAmountUsd,
           decisionPurpose,
+          decisionShareMandate,
         )}`
       : null;
 
@@ -172,6 +209,23 @@ export default async function VerifyPage({
               purpose={decisionPurpose!}
               capability={capForVerdict}
               situation={situation?.id}
+              mandate={
+                hasMandate
+                  ? {
+                      payees: decisionMandate.payees,
+                      maxUsd:
+                        decisionMandate.maxUsd !== undefined &&
+                        Number.isFinite(decisionMandate.maxUsd)
+                          ? decisionMandate.maxUsd
+                          : undefined,
+                      expectedUsd:
+                        decisionMandate.expectedUsd !== undefined &&
+                        Number.isFinite(decisionMandate.expectedUsd)
+                          ? decisionMandate.expectedUsd
+                          : undefined,
+                    }
+                  : undefined
+              }
             />
             {decisionShareUrl ? (
               <section className="mt-12">
@@ -335,6 +389,19 @@ export default async function VerifyPage({
         situationId={situation?.id}
         defaultSubject={rawSubject ?? defaultSubject}
         defaultCapability={defaultCapability}
+        defaultAmountUsd={params.amountUsd}
+        defaultPurpose={params.purpose}
+        defaultMandate={
+          params.mandatePayees ||
+          params.mandateMaxUsd ||
+          params.mandateExpectedUsd
+            ? {
+                payees: params.mandatePayees,
+                maxUsd: params.mandateMaxUsd,
+                expectedUsd: params.mandateExpectedUsd,
+              }
+            : undefined
+        }
         capabilityOptions={capabilities}
         sampleLinks={sampleLinks}
       >

@@ -20,12 +20,21 @@ import { chainSwitchHref, subjectChainMismatch } from "@/lib/subject-format";
 /**
  * Client shell for /gate: immediate "reading chain…" feedback on submit,
  * plus a live wrong-chain hint when the pasted subject belongs elsewhere.
+ *
+ * Two modes:
+ * - Credential mode: subject + permission → scoped read / resolve.
+ * - Decision mode: adds payee duplicate (defaults to subject), amount,
+ *   purpose, and optional mandate (contracted payees, cap, expected price)
+ *   → full four-signal decide() via GateDecision.
  */
 export function GateFormShell({
   chainId,
   situationId,
   defaultSubject,
   defaultCapability,
+  defaultAmountUsd,
+  defaultPurpose,
+  defaultMandate,
   capabilityOptions,
   sampleLinks,
   children,
@@ -35,6 +44,9 @@ export function GateFormShell({
   situationId?: string;
   defaultSubject: string;
   defaultCapability: string;
+  defaultAmountUsd?: string;
+  defaultPurpose?: string;
+  defaultMandate?: { payees?: string; maxUsd?: string; expectedUsd?: string };
   sampleLinks: ReactNode;
   capabilityOptions?: ReadonlyArray<{ id: string }>;
   children: ReactNode;
@@ -44,6 +56,20 @@ export function GateFormShell({
   const [reading, setReading] = useState(false);
   const [subjectDraft, setSubjectDraft] = useState(defaultSubject);
   const [capabilityDraft, setCapabilityDraft] = useState(defaultCapability);
+  const [decisionMode, setDecisionMode] = useState(
+    Boolean(defaultAmountUsd || defaultPurpose),
+  );
+  const [amountDraft, setAmountDraft] = useState(defaultAmountUsd ?? "");
+  const [purposeDraft, setPurposeDraft] = useState(defaultPurpose ?? "");
+  const [mandatePayeesDraft, setMandatePayeesDraft] = useState(
+    defaultMandate?.payees ?? "",
+  );
+  const [mandateMaxDraft, setMandateMaxDraft] = useState(
+    defaultMandate?.maxUsd ?? "",
+  );
+  const [mandateExpectedDraft, setMandateExpectedDraft] = useState(
+    defaultMandate?.expectedUsd ?? "",
+  );
 
   useEffect(() => {
     setReading(false);
@@ -52,7 +78,21 @@ export function GateFormShell({
   useEffect(() => {
     setSubjectDraft(defaultSubject);
     setCapabilityDraft(defaultCapability);
-  }, [defaultSubject, defaultCapability]);
+    setAmountDraft(defaultAmountUsd ?? "");
+    setPurposeDraft(defaultPurpose ?? "");
+    setMandatePayeesDraft(defaultMandate?.payees ?? "");
+    setMandateMaxDraft(defaultMandate?.maxUsd ?? "");
+    setMandateExpectedDraft(defaultMandate?.expectedUsd ?? "");
+    setDecisionMode(Boolean(defaultAmountUsd || defaultPurpose));
+  }, [
+    defaultSubject,
+    defaultCapability,
+    defaultAmountUsd,
+    defaultPurpose,
+    defaultMandate?.payees,
+    defaultMandate?.maxUsd,
+    defaultMandate?.expectedUsd,
+  ]);
 
   const chain = chainById(chainId);
   const liveMismatch = useMemo(() => {
@@ -71,12 +111,29 @@ export function GateFormShell({
     : null;
 
   const navigate = useCallback(
-    (subject: string, capability: string) => {
+    (input: {
+      subject: string;
+      capability: string;
+      amountUsd?: string;
+      purpose?: string;
+      mandatePayees?: string;
+      mandateMaxUsd?: string;
+      mandateExpectedUsd?: string;
+    }) => {
       const params = new URLSearchParams();
       if (chainId) params.set("chain", chainId);
-      params.set("subject", subject.trim());
-      params.set("capability", capability.trim());
+      params.set("subject", input.subject.trim());
+      params.set("capability", input.capability.trim());
       if (situationId) params.set("situation", situationId);
+      if (input.amountUsd?.trim())
+        params.set("amountUsd", input.amountUsd.trim());
+      if (input.purpose?.trim()) params.set("purpose", input.purpose.trim());
+      if (input.mandatePayees?.trim())
+        params.set("mandatePayees", input.mandatePayees.trim());
+      if (input.mandateMaxUsd?.trim())
+        params.set("mandateMaxUsd", input.mandateMaxUsd.trim());
+      if (input.mandateExpectedUsd?.trim())
+        params.set("mandateExpectedUsd", input.mandateExpectedUsd.trim());
       setReading(true);
       startTransition(() => {
         router.push(`/gate?${params.toString()}`);
@@ -101,7 +158,22 @@ export function GateFormShell({
             ? "gate:preset:injected"
             : "gate:custom";
     void counterAction("gate_run", bucket);
-    navigate(subject, capability);
+    if (!decisionMode) {
+      navigate({ subject, capability });
+      return;
+    }
+    const amountUsd = String(fd.get("amountUsd") ?? "").trim();
+    const purpose = String(fd.get("purpose") ?? "").trim();
+    if (!amountUsd || !purpose) return;
+    navigate({
+      subject,
+      capability,
+      amountUsd,
+      purpose,
+      mandatePayees: String(fd.get("mandatePayees") ?? ""),
+      mandateMaxUsd: String(fd.get("mandateMaxUsd") ?? ""),
+      mandateExpectedUsd: String(fd.get("mandateExpectedUsd") ?? ""),
+    });
   }
 
   const busy = pending || reading;
@@ -184,6 +256,106 @@ export function GateFormShell({
           >
             {busy ? "reading…" : "gate →"}
           </button>
+          <div className="sm:col-span-3">
+            <button
+              type="button"
+              onClick={() => setDecisionMode((v) => !v)}
+              aria-expanded={decisionMode}
+              className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            >
+              {decisionMode
+                ? "− credential check only"
+                : "+ pre-payment decision (amount · purpose · mandate)"}
+            </button>
+          </div>
+          {decisionMode ? (
+            <>
+              <label htmlFor="amountUsd" className="block space-y-2">
+                <span className="eyebrow">amount · usd</span>
+                <input
+                  id="amountUsd"
+                  name="amountUsd"
+                  inputMode="decimal"
+                  placeholder="1200"
+                  value={amountDraft}
+                  onChange={(e) => setAmountDraft(e.target.value)}
+                  disabled={busy}
+                  className="block w-full min-w-0 border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
+                />
+              </label>
+              <label htmlFor="purpose" className="block space-y-2">
+                <span className="eyebrow">purpose</span>
+                <input
+                  id="purpose"
+                  name="purpose"
+                  placeholder="Q4 renewal, per signed contract"
+                  value={purposeDraft}
+                  onChange={(e) => setPurposeDraft(e.target.value)}
+                  disabled={busy}
+                  className="block w-full min-w-0 border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
+                />
+              </label>
+              <div className="sm:col-span-3">
+                <p className="eyebrow">contracted terms · optional</p>
+                <div className="mt-3 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-3">
+                  <label htmlFor="mandatePayees" className="block space-y-2">
+                    <span className="font-mono text-[11px] text-ink-quiet">
+                      allowed payees (comma-separated)
+                    </span>
+                    <input
+                      id="mandatePayees"
+                      name="mandatePayees"
+                      placeholder="0x… (defaults to subject)"
+                      value={mandatePayeesDraft}
+                      onChange={(e) => setMandatePayeesDraft(e.target.value)}
+                      spellCheck={false}
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      disabled={busy}
+                      className="block w-full min-w-0 border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
+                    />
+                  </label>
+                  <label htmlFor="mandateMaxUsd" className="block space-y-2">
+                    <span className="font-mono text-[11px] text-ink-quiet">
+                      cap · max usd
+                    </span>
+                    <input
+                      id="mandateMaxUsd"
+                      name="mandateMaxUsd"
+                      inputMode="decimal"
+                      placeholder="10000"
+                      value={mandateMaxDraft}
+                      onChange={(e) => setMandateMaxDraft(e.target.value)}
+                      disabled={busy}
+                      className="block w-full min-w-0 border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
+                    />
+                  </label>
+                  <label
+                    htmlFor="mandateExpectedUsd"
+                    className="block space-y-2"
+                  >
+                    <span className="font-mono text-[11px] text-ink-quiet">
+                      contracted price · usd
+                    </span>
+                    <input
+                      id="mandateExpectedUsd"
+                      name="mandateExpectedUsd"
+                      inputMode="decimal"
+                      placeholder="1200"
+                      value={mandateExpectedDraft}
+                      onChange={(e) => setMandateExpectedDraft(e.target.value)}
+                      disabled={busy}
+                      className="block w-full min-w-0 border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
+                    />
+                  </label>
+                </div>
+                <p className="mt-2 font-serif text-sm italic text-ink-quiet">
+                  No contract on file? Leave blank — the payee and amount checks
+                  stay skipped and the credential is the whole answer.
+                </p>
+              </div>
+            </>
+          ) : null}
           {liveMismatch && switchHref ? (
             <div className="sm:col-span-3">
               <ChainSwitchHint mismatch={liveMismatch} href={switchHref} />

@@ -14,6 +14,7 @@
  * Public RPCs from assets/networks.json — no deployer keys required.
  */
 import { EvmAdapter } from "@ligis/adapter-evm";
+import { CasperAdapter } from "@ligis/adapter-casper";
 
 // Keep in sync with web/lib/demo-subjects.ts (duplicated so this script has
 // no web/ import path / server-only coupling).
@@ -66,12 +67,114 @@ const SAMPLES: Record<
       expect: "none",
     },
   ],
+  "casper-testnet": [
+    {
+      label: "verified agent",
+      subject:
+        "account-hash-c76927ed08eb9a3a2cca7ee0b730fb4cefa22551d3e5914e4d44d693762a8326",
+      capability: "kyc.basic",
+      expect: "go",
+    },
+    {
+      label: "unverified wallet",
+      subject:
+        "account-hash-0000000000000000000000000000000000000000000000000000000000000001",
+      capability: "kyc.basic",
+      expect: "none",
+    },
+  ],
 };
 
 const NETWORK_ENV: Record<string, string> = {
   "pharos-atlantic": "atlantic-testnet",
   "monad-testnet": "monad-testnet",
 };
+
+async function checkSample(
+  chainLabel: string,
+  sample: (typeof SAMPLES)[string][number],
+): Promise<string | null> {
+  const networkId = NETWORK_ENV[chainLabel];
+  // Casper reads use the CasperAdapter (env-driven config, no keys needed
+  // for reads); EVM chains use EvmAdapter pinned to their LIGIS_NETWORK.
+  if (chainLabel === "casper-testnet") {
+    return checkCasper(chainLabel, sample);
+  }
+  if (!networkId) return `no network mapping for ${chainLabel}`;
+  return checkEvm(chainLabel, networkId, sample);
+}
+
+async function checkCasper(
+  chainLabel: string,
+  sample: (typeof SAMPLES)[string][number],
+): Promise<string | null> {
+  const adapter = new CasperAdapter();
+  const result = await adapter.verifyCapability({
+    subject: sample.subject,
+    capability: sample.capability,
+  });
+  return evaluateResult(chainLabel, sample, result);
+}
+
+type VerifyLike = {
+  capable: boolean;
+  latest: {
+    issuer?: string | null;
+    revoked?: boolean;
+    expiresAt?: bigint | number | string;
+  } | null;
+};
+
+function evaluateResult(
+  chainLabel: string,
+  sample: (typeof SAMPLES)[string][number],
+  result: VerifyLike,
+): string | null {
+  const latest = result.latest;
+  const now = Math.floor(Date.now() / 1000);
+  const expired =
+    latest != null &&
+    Number(latest.expiresAt) > 0 &&
+    Number(latest.expiresAt) < now;
+
+  if (sample.expect === "go") {
+    if (!result.capable) {
+      return `${chainLabel} · ${sample.label}: expected GO, got STOP (revoked=${latest?.revoked} expired=${expired})`;
+    }
+    if (expired) {
+      return `${chainLabel} · ${sample.label}: GO but expiresAt is in the past — re-seed`;
+    }
+    // Check self-issued: the demo agent must not self-vouch.
+    // EVM: issuer === subject. Casper: the demo subject IS the deployer
+    // account-hash, so also compare issuer against the deployer EVM address.
+    const issuerLower = latest?.issuer?.toLowerCase();
+    const selfIssuedEvm =
+      !!issuerLower && issuerLower === sample.subject.toLowerCase();
+    const deployerEvm = process.env.LIGIS_CASPER_DEPLOYER_EVM_ADDRESS;
+    const selfIssuedCasper =
+      chainLabel === "casper-testnet" &&
+      !!issuerLower &&
+      !!deployerEvm &&
+      issuerLower === deployerEvm.toLowerCase();
+    if (selfIssuedEvm || selfIssuedCasper) {
+      return `${chainLabel} · ${sample.label}: SELF-ISSUED (issuer=${latest?.issuer}) — re-issue with steward key`;
+    }
+    return null;
+  }
+  if (sample.expect === "revoked") {
+    if (result.capable) {
+      return `${chainLabel} · ${sample.label}: expected revoked STOP, got GO — do not re-issue demo.metropolis.revocation`;
+    }
+    if (!latest?.revoked) {
+      return `${chainLabel} · ${sample.label}: expected revoked credential on-chain (revoked=${latest?.revoked})`;
+    }
+    return null;
+  }
+  if (result.capable) {
+    return `${chainLabel} · ${sample.label}: expected no credential, got GO`;
+  }
+  return null;
+}
 
 async function checkEvm(
   chainLabel: string,
@@ -86,42 +189,7 @@ async function checkEvm(
       subject: sample.subject,
       capability: sample.capability,
     });
-    const latest = result.latest;
-    const now = Math.floor(Date.now() / 1000);
-    const expired =
-      latest != null &&
-      Number(latest.expiresAt) > 0 &&
-      Number(latest.expiresAt) < now;
-
-    if (sample.expect === "go") {
-      if (!result.capable) {
-        return `${chainLabel} · ${sample.label}: expected GO, got STOP (revoked=${latest?.revoked} expired=${expired})`;
-      }
-      if (expired) {
-        return `${chainLabel} · ${sample.label}: GO but expiresAt is in the past — re-seed`;
-      }
-      // Check self-issued: the demo agent must not self-vouch
-      if (
-        latest.issuer &&
-        latest.issuer.toLowerCase() === sample.subject.toLowerCase()
-      ) {
-        return `${chainLabel} · ${sample.label}: SELF-ISSUED (issuer=${latest.issuer}) — re-issue with steward key`;
-      }
-      return null;
-    }
-    if (sample.expect === "revoked") {
-      if (result.capable) {
-        return `${chainLabel} · ${sample.label}: expected revoked STOP, got GO — do not re-issue demo.metropolis.revocation`;
-      }
-      if (!latest?.revoked) {
-        return `${chainLabel} · ${sample.label}: expected revoked credential on-chain (revoked=${latest?.revoked})`;
-      }
-      return null;
-    }
-    if (result.capable) {
-      return `${chainLabel} · ${sample.label}: expected no credential, got GO`;
-    }
-    return null;
+    return evaluateResult(chainLabel, sample, result);
   } finally {
     if (prev === undefined) delete process.env.LIGIS_NETWORK;
     else process.env.LIGIS_NETWORK = prev;
@@ -129,9 +197,16 @@ async function checkEvm(
 }
 
 async function main() {
-  const only = process.argv[2];
+  const only = process.argv[2]?.toLowerCase();
+  // Accept "pharos", "monad", "casper" shorthands plus full chain/network ids.
   const keys = only
-    ? Object.keys(SAMPLES).filter((k) => k === only || NETWORK_ENV[k] === only)
+    ? Object.keys(SAMPLES).filter(
+        (k) =>
+          k === only ||
+          NETWORK_ENV[k] === only ||
+          k.startsWith(only) ||
+          k.endsWith(only),
+      )
     : Object.keys(SAMPLES);
 
   if (keys.length === 0) {
@@ -141,11 +216,9 @@ async function main() {
 
   let failed = 0;
   for (const label of keys) {
-    const networkId = NETWORK_ENV[label];
-    if (!networkId) continue;
-    for (const sample of SAMPLES[label]) {
+    for (const sample of SAMPLES[label]!) {
       try {
-        const err = await checkEvm(label, networkId, sample);
+        const err = await checkSample(label, sample);
         if (err) {
           console.error(`FAIL  ${err}`);
           failed++;

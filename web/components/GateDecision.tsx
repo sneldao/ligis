@@ -100,7 +100,16 @@ export function GateDecision({
     return () => {
       controller.abort();
     };
-  }, [payee, amountUsd, purpose, capability, situation]);
+  }, [
+    payee,
+    amountUsd,
+    purpose,
+    capability,
+    situation,
+    mandate?.payees?.join(","),
+    mandate?.maxUsd,
+    mandate?.expectedUsd,
+  ]);
 
   if (loading) {
     return (
@@ -128,8 +137,16 @@ export function GateDecision({
 
   const go = result.verdict === "GO";
   const stopped = result.signals.filter((s) => s.status === "STOP");
+  const skipped = result.signals.filter((s) => s.status === "SKIPPED");
+  const jevOff =
+    skipped.some((s) => s.id === "in-scope") &&
+    skipped.every(
+      (s) =>
+        s.reason === undefined ||
+        /no contracted|layer disabled|not configured|skipped/i.test(s.reason),
+    );
   const reason = go
-    ? "All signals passed. The agent may proceed with this counterparty."
+    ? "All answered signals passed. The agent may proceed with this counterparty."
     : stopped.length > 0
       ? `Stopped by: ${stopped.map((s) => s.reason ?? s.id).join(", ")}. The agent must not proceed.`
       : "The trust check did not pass. The agent must not proceed.";
@@ -167,6 +184,12 @@ export function GateDecision({
         <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
           {reason}
         </p>
+        {go && jevOff ? (
+          <p className="mt-2 font-serif text-sm italic leading-relaxed text-ink-quiet">
+            Intent not judged — the Jev layer is off, so this GO covers the
+            credential and contracted terms only, not scope or prompt injection.
+          </p>
+        ) : null}
         <div className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 font-mono text-[11px] text-ink-quiet">
           <span>latency {result.latencyMs}ms</span>
           {result.costUsd !== undefined ? (
@@ -231,7 +254,7 @@ export function GateDecision({
           <p>Open this URL to re-run the same decision:</p>
           <code className="mt-2 block break-all rounded bg-paper-deep px-4 py-3 text-[11px] text-ink">
             {typeof window !== "undefined"
-              ? `${window.location.origin}/gate?subject=${encodeURIComponent(payee)}&amountUsd=${amountUsd}&purpose=${encodeURIComponent(purpose)}&capability=${encodeURIComponent(capability)}`
+              ? `${window.location.origin}/gate?subject=${encodeURIComponent(payee)}&amountUsd=${amountUsd}&purpose=${encodeURIComponent(purpose)}&capability=${encodeURIComponent(capability)}${mandate?.payees?.length ? `&mandatePayees=${encodeURIComponent(mandate.payees.join(","))}` : ""}${mandate?.maxUsd !== undefined ? `&mandateMaxUsd=${mandate.maxUsd}` : ""}${mandate?.expectedUsd !== undefined ? `&mandateExpectedUsd=${mandate.expectedUsd}` : ""}`
               : "Loading…"}
           </code>
         </div>
