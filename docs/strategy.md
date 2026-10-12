@@ -1,15 +1,24 @@
 # Ligis — Product Strategy & Roadmap
 
-> The trust layer for agent-to-agent commerce. Ligis aggregates external
-> verification signals into portable on-chain credentials, then sells
-> counterparty risk checks on the CROO Agent Store and OKX.AI Agent Store.
-> Built on 0G Compute and 0G Storage.
+> **A spend firewall for AI agents: every payment is checked against the
+> job before money moves.** Ligis aggregates external verification signals
+> into portable on-chain credentials, then uses them — alongside intent
+> checks — as one signal (verified payee) inside that decision. Distribution:
+> CROO Agent Store and OKX.AI Agent Store for agent-to-agent, a direct API
+> for agent owners. Built on 0G Compute and 0G Storage.
+>
+> Positioning, glossary, and measured claims live in
+> [`docs/positioning.md`](./positioning.md). This doc covers strategy,
+> status, roadmap, and competitive landscape — not what we say on the
+> landing.
 
 ## Status (2026-09-25)
 
-- **Live:** 5 paid services on the CROO Agent Store (`ligis.risk` $0.75,
-  `ligis.verify` $0.50, `ligis.issue` $2.00, `ligis.gate` $1.00,
-  `ligis.qualify` $2.50), provider under PM2, idempotent delivery with retry.
+- **Live:** 5 paid services on the CROO Agent Store (`ligis.risk` $0.50,
+  `ligis.verify` $0.25, `ligis.issue` $2.00, `ligis.gate` $0.25,
+  `ligis.qualify` $2.50 — one order saves vs. risk + verify + issue at $2.75
+  across three negotiations), provider under PM2, idempotent delivery with
+  retry.
 - **On-chain:** `AgentId` + `CredentialRegistry` + `GatedVault` on Casper
   Testnet; `PharosAgentID` + `CredentialRegistry` on Pharos Atlantic;
   GenLayer `JobEscrow` on Studio Next (61997).
@@ -41,19 +50,37 @@ address existing on-chain doesn't mean it's trustworthy.
 
 ## The Ligis solution
 
-Ligis is a **credential aggregator and risk scoring layer** for agent
-commerce. It does two things:
+Ligis is a **pre-payment decision service** for agent commerce. The wedge
+is the gate: a single API call that returns a GO, STOP, or UNKNOWN
+decision before an agent's wallet moves money to a stranger.
 
-1. **Issues credentials** by aggregating signals from external verifiers
-   (Self Protocol, World ID, EAS attestations, wallet history) and
-   minting unified on-chain credentials on Casper and Pharos.
-2. **Verifies and scores** counterparties by reading those credentials
-   on-chain and computing a pass/warn/fail verdict with a 0–100 risk
-   score.
+The decision is built from **four signals** evaluated concurrently:
 
-The credentials are portable (work across chains and platforms), signed
-with secp256k1, and enforced on-chain by smart contracts. Any agent or
-contract can verify them without trusting Ligis's server.
+1. Right payee — does this payment go where the agent intended to send it?
+2. Right amount — is the amount plausible for the job?
+3. In scope — is this request consistent with what the agent is allowed
+   to do?
+4. Verified payee — is there an on-chain credential that says the payee
+   is trustworthy?
+
+The fourth signal is what Ligis's credential pipeline produces, but it is
+**one of four, not the whole answer**. The pipeline still exists in full:
+
+- **Issues credentials** by aggregating signals from external verifiers
+  (Self Protocol, World ID, EAS attestations, wallet history) and minting
+  unified on-chain credentials on Casper and Pharos.
+- **Cross-chain portability** lets a credential issued on one chain
+  resolve as `verified payee` on the other, so a payee doesn't need to
+  re-onboard per registry.
+
+The credentials are signed with secp256k1 and enforced on-chain by smart
+contracts. Any agent or contract can verify them without trusting Ligis's
+server.
+
+Everything below — why aggregation solves cold start, the competitive
+landscape, complementary standards, the adjudication partner (GenLayer),
+the Steward loop — describes how the credential pipeline gets built strong
+enough to be a signal. None of it is the wedge. The wedge is the gate.
 
 ## Why aggregation solves the chicken-and-egg problem
 
@@ -244,14 +271,16 @@ the same EAS data.
 
 ### Pricing vs. transaction value
 
-$0.50 for verify, $0.75 for risk check, $1.00 for the gate. For a $5 task,
-that's 15% overhead. For a $0.50 task, it's 150%.
+$0.25 for verify, $0.50 for risk check, $0.25 for the gate. For a $5 task,
+that's 4% overhead. For a $0.50 task, it's 50% — still high but materially
+better than the pre-Phase-5 prices ($1.00 gate / $5 task was 20%).
 
 **Mitigation:** Ligis is only relevant for transactions above ~$5-10.
 Below that, the verification cost exceeds the risk. This is probably
 fine — small transactions are low-stakes. But it means Ligis targets
 the upper end of agent commerce, which may be a smaller slice of volume.
-Subscription pricing or CROO-bundled pricing could address this.
+Direct-API wallet plans ($29 / $99 / $499 per month, see
+`docs/positioning.md`) and CROO-bundled pricing could address this.
 
 ## Roadmap
 
@@ -324,12 +353,17 @@ Subscription pricing or CROO-bundled pricing could address this.
 
 ### Current: per-check pricing on CROO
 
-| Service         | Price | Margin                                                                                         |
-| --------------- | ----- | ---------------------------------------------------------------------------------------------- | --- | ------------ | ----- | --------------------------------------------------------------------- |
-| `ligis.risk`    | $0.75 | High — on-chain read + computation, no external API cost                                       |
-| `ligis.verify`  | $0.50 | High — single on-chain read                                                                    |
-| `ligis.issue`   | $2.00 | Cost depends on external verifier fees ($0.01-$0.25) + gas                                     |     | `ligis.gate` | $1.00 | High — bundled intent read (Jev) + credential read in one deliverable |
-| `ligis.qualify` | $2.50 | Medium — includes an issuance write (gas), priced below risk + issue bought separately ($2.75) |
+| Service         | Price | Margin                                                                                               |
+| --------------- | ----- | ---------------------------------------------------------------------------------------------------- |
+| `ligis.risk`    | $0.50 | High — on-chain read + computation, no external API cost                                             |
+| `ligis.verify`  | $0.25 | High — single on-chain read                                                                          |
+| `ligis.issue`   | $2.00 | Cost depends on external verifier fees ($0.01-$0.25) + gas                                           |
+| `ligis.gate`    | $0.25 | High — bundled intent read (Jev) + credential read in one deliverable                                |
+| `ligis.qualify` | $2.50 | Medium — includes an issuance write (gas); saves vs. risk + verify + issue bought separately ($2.75) |
+
+Pricing anchored at infrastructure cost, not premium, because `ligis.gate`
+runs on every payment. Direct API at $0.015/check + monthly wallet plans;
+see `docs/positioning.md` "Pricing model".
 
 Prices live in one place in code — `SERVICE_PRICE_USD` in
 `packages/croo-adapter/src/services.ts` — which builds the provider
@@ -434,3 +468,10 @@ pillar." That makes the adapter-0g checkpoint the critical path:
    agents. But KYC providers like Didit charge $0.25+. The economics
    need to work: Ligis charges $X for issuance, pays $Y to the verifier,
    keeps the spread.
+
+## InstaDomain-pattern roadmap
+
+- [ ] Bulk verify (multiple counterparties, one call)
+- [ ] Wire payment→issuance: a paid gate check auto-mints via `ligis.issue` (provisioning inside the tool)
+- [ ] Card rail (Stripe) next to x402/CROO for human buyers
+- [ ] Status endpoint per paid check; ENS-portable identity as the anti-lock-in story

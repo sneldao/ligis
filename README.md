@@ -1,163 +1,108 @@
 # Ligis
 
-> **The trust gate for autonomous payments — one on-chain read that says GO or STOP before your agent pays a stranger.**
-> **Live on Pharos + Casper Testnet. Autonomous steward loop + x402 payments + CROO CAP commerce working end-to-end.**
-> Decision models via Runware `/v1/systemone`: `typesafe:jev@latest` + `runware:laya@1` (FREE until Oct 12).
+> **A spend firewall for AI agents: every payment is checked against the job before money moves.**
+> **Right payee, right amount, in scope, plus a verified-payee credential read.**
+> **Live on Pharos + Casper + Monad. No client SDK, no tracking, fail-open intent layer.**
 
 [![CI](https://github.com/sneldao/ligis/actions/workflows/ci.yml/badge.svg)](https://github.com/sneldao/ligis/actions/workflows/ci.yml)
 
-**Casper Judge repro (1 command):** `npx tsx scripts/casper-final-demo.ts` — see [docs/archive/casper-final-round.md](docs/archive/casper-final-round.md).
+**The wedge.** A single API call — `POST /api/gate` — returns `GO` or
+`STOP` before your agent's wallet pays a stranger. Decisions are built
+from four signals — right payee, right amount, in scope, verified payee —
+evaluated concurrently, with the chain-agnostic credential read as one
+of them, never the whole answer. Positioning, glossary, and measured
+claims: [`docs/positioning.md`](docs/positioning.md).
 
-## Active hackathon submissions
-
-| Hackathon                          | Track                               | Demo                                                                                                                                                                     | Submission doc                                                 |
-| ---------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| **The Agent Arena (Vultr) 2026**   | Agent infrastructure & containment  | [ligis.vercel.app/arena](https://ligis.vercel.app/arena) — prompt-injected $60k payment stopped live by Jev + Vultr Serverless Inference judges                          | [`docs/agent-arena.md`](docs/agent-arena.md)                   |
-| **GenLayer Agent Tank 2026**       | Agent launch & commerce infra       | [60s demo (YouTube)](https://youtu.be/goACAqXjUxY) · [ligis.vercel.app/genlayer](https://ligis.vercel.app/genlayer) · JobEscrow `0x64eF9e...D0cB0F` on Studio Next 61997 | [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md)   |
-| **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure | Live gate (GO / revoked STOP / none), Envio full history, `pnpm demo:monad` on testnet _(browser writes pending)_                                                        | [`docs/metropolis-hackathon.md`](docs/metropolis-hackathon.md) |
-| **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement       | _(in progress)_                                                                                                                                                          | [`docs/monid-hackathon.md`](docs/monid-hackathon.md)           |
-| **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification  | _(in progress)_                                                                                                                                                          | [`docs/okx-ai.md`](docs/okx-ai.md)                             |
-
-**Completed (submitted, not winning):** Casper Agentic Buildathon 2026 — final round, see [`docs/archive/casper-final-round.md`](docs/archive/casper-final-round.md); CROO Agent Hackathon 2026 — provider still live on the Agent Store, see [`docs/archive/croo-hackathon-submission.md`](docs/archive/croo-hackathon-submission.md). 0G Bridge by AKINDO 2026 was never submitted — dropped.
-
-**One product, multiple proofs:** Casper contracts are the on-chain source of truth; CROO and OKX.AI are how other agents pay for verification before A2A commerce. GenLayer is the adjudication venue when delivery is disputed (Ligis still gates who may trade). 0G Compute and 0G Storage power the trust infrastructure. Same `CredentialRegistry` backs every marketplace.
-
-### GenLayer JobEscrow — gate → escrow → dispute → settle
-
-**Live on Studio Next (chain 61997):**
-[`0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`](https://explorer-studio-dev.genlayer.com/address/0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F)
+## Quick start
 
 ```bash
-# Full flow: Ligis gate → GenLayer create → deliver → dispute → resolve → claim
-pnpm demo:genlayer
+pnpm install
 
-# Gate only (no GenLayer / Python):
-pnpm demo:genlayer --dry-run
+# Mint an Agent ID on Pharos (default chain)
+PRIVATE_KEY=0x... pnpm start -- issue --token-uri "ipfs://bafy.../meta"
 
-# GenLayer-only with labeled mock GO (no Casper credential required):
-pnpm demo:genlayer --mock-gate
+# Read-only: does this agent hold a valid credential?
+pnpm start -- verify --subject 0x... --capability "agent.commerce.escrow"
 
-# Ligis gate proof (GO + STOP shapes, no RPC needed):
-pnpm demo:genlayer-gate
-LIGIS_LIVE_GATE=1 pnpm demo:genlayer-gate  # live Casper verifyCapability
+# Trust check before paying a stranger
+MONID_API_KEY=monid_... PRIVATE_KEY=0x... \
+  pnpm start -- trust check --counterparty 0x... \
+    --intent "pay for premium RWA data" --amount "10 USD" \
+    --capability data.premium
+
+# Run the autonomous Steward loop (boot → reason → gate → act → record)
+PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
+  pnpm start -- agent run --goal "open an escrow with counterparty X"
 ```
 
-Web UI: [ligis.vercel.app/genlayer](https://ligis.vercel.app/genlayer) — reads the
-deployed contract live (job state, gate receipt, lifecycle, verdict).
-
-Implementation: `packages/contracts-genlayer/contracts/JobEscrow.py` (Intelligent
-Contract) + `packages/adapter-genlayer/src/check-gate.ts` (Ligis gate bridge).
-Schema locked in [`docs/genlayer-interface-v1.md`](docs/genlayer-interface-v1.md);
-full plan in [`docs/genlayer-agent-tank.md`](docs/genlayer-agent-tank.md).
-
-## Demo videos
-
-### GenLayer Agent Tank (gate -> escrow -> dispute -> settle)
-
-[Watch the 60s demo (YouTube)](https://youtu.be/goACAqXjUxY)
-
-- Ligis gate on Casper -> GenLayer JobEscrow -> dispute -> AI-jury verdict,
-  with live captures of the deployed contract UI and the Studio Next explorer.
-  Source: [`videos/ligis-genlayer-tank/`](videos/ligis-genlayer-tank/).
-
-### Casper Agentic Buildathon (on-chain identity + x402)
-
-[Watch the 1:05 walkthrough (YouTube)](https://youtu.be/eoOQmAx7U7s)
-— also viewable on the [release page](https://github.com/sneldao/ligis/releases/tag/buildathon-2026).
-
-### CROO Agent Hackathon (CAP commerce + verification)
-
-[Watch the CROO walkthrough](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4)
-— CAP negotiate → pay → deliver, with Casper on-chain proof. Source: [`videos/ligis-croo-hackathon/`](videos/ligis-croo-hackathon/).
-
-The Casper video is composed in [`videos/ligis-buildathon-2026/`](videos/ligis-buildathon-2026/) using
-[HyperFrames](https://github.com/heygen-com/hyperframes) with live terminal
-captures of `casper-e2e-demo.ts` and `casper-x402-demo.ts`, real cspr.live
-transaction screenshots, and a 10-segment TTS voiceover.
-
-A chain-agnostic agent identity runtime: one `ChainAdapter` interface, two
-implementations (EVM/Pharos live, Casper/Odra live), and a Trust
-Steward that runs the same loop on either chain. Credentials are chain-neutral
-by design — `capabilityHash("kyc.basic")` produces the same 32-byte hash on
-every chain, which is what makes cross-chain credential portability possible.
-
-**The full autonomous loop on Casper:**
-
-1. **BOOT** — Agent mints its own identity (`AgentId.mint_self`) on Casper Testnet
-2. **REASON** — 0G Compute (or local fallback) maps the goal to required capabilities
-3. **GATE** — Checks `CredentialRegistry.is_capable` for each capability
-4. **ACT** — Issues missing credentials via signed EIP-712 `issue` calls
-5. **RECORD** — Anchors evidence manifest to 0G Storage + Casper (`set_token_uri`)
-
-**Then the agent pays for premium RWA data via x402:**
-
-1. Agent requests `GET /premium` → **402 Payment Required** (credential verified, payment needed)
-2. Agent signs `TransferWithAuthorization` (EIP-712 with Casper domain)
-3. Agent resubmits with `X-PAYMENT` header → **200 OK** with tokenized real-estate market data
-4. Settlement on Casper Testnet (on-chain tx)
-
-41 Foundry tests + 22 Odra tests + 133 TypeScript tests (25 suites) passing. 4 on-chain Skills + 2 helpers
-
-- Trust Steward Agent. CLI. MCP server. x402 Trust Gate. MIT.
-
----
+**Try the live gate:** <https://ligis.vercel.app/gate> — the same
+decision service, exposed as a UI with measured verdict headers.
 
 ## What this is
 
-Ligis gives every AI agent a portable, revocable on-chain identity (`PharosAgentID` ERC-721 on EVM, `AgentId` Odra contract on Casper) and EIP-712 capability credentials (`CredentialRegistry`). Credentials are signed off-chain with secp256k1; the EVM contracts verify signatures on-chain, and the Casper port now recovers the issuer address on-chain for both `issue` and `revoke` using the pure-Rust `k256` crate. Any contract can gate access in one line: `require(creds.isCapable(subject, keccak256("agent.commerce.escrow")), "not allowed")`.
-
-It ships **live on Pharos** — the identity layer the Pharos agent economy composes on today (Aegis, Pact, FaroLink, Maestro, x402). The Casper adapter (`@ligis/adapter-casper`) is fully implemented and **live on Casper Testnet** — all 8 `ChainAdapter` operations talk to Odra contracts via `casper-client`, the WASM contracts are deployed (AgentId + CredentialRegistry + GatedVault), and the smoke test passes end-to-end (mint → sign → submit → verify → revoke). The web frontend is chain-aware on all pages (`?chain=casper-testnet` is live). See [`docs/archive/casper-buildathon.md`](docs/archive/casper-buildathon.md) for the submission plan.
+Ligis is a pre-payment decision service for AI agents. The wedge is the
+gate; credentials, cross-chain portability, the Steward loop, CROO
+distribution, and the OKX.AI listing are the moat that makes one of the
+four signals — _verified payee_ — hold up under scrutiny. The full
+positioning (what we say, what we don't, what the words mean) lives in
+[`docs/positioning.md`](docs/positioning.md). This README is the
+operational entry point — install, run, deploy.
 
 ### Jev intent layer — the gate has reflexes
 
-The x402 Trust Gate annotates every decision (401/402/200) with a typed GO/STOP
-intent verdict from **Jev** (TypeSafe's System One model, routed free through
-the Vercel AI Gateway): scope consistency, amount plausibility, payee match,
-and request normality — four questions, one parallel call, ~350–650ms, billed
-at $0.00 during the promo. Fail-open: the credential check stays the source of
-truth.
+The x402 Trust Gate annotates every decision (401/402/200) with a typed
+GO/STOP intent verdict from **Jev** (TypeSafe's System One model, routed
+through the Vercel AI Gateway during the free promo, direct via
+`TYPESAFE_API_KEY` afterwards): scope consistency, amount plausibility,
+payee match, and request normality — four questions, one parallel call,
+~135–650 ms warm (measured in `scripts/jev-transport-smoke.lastrun.txt`),
+billed at $0.00 during the promo. Fail-open: a missing model becomes
+`SKIPPED`, never a silent GO.
 
 ```bash
-# Terminal 1 — gate with the intent layer on (key in .env.d/aigateway.env)
+# Terminal 1 — gate with the intent layer on
 set -a; source .env.d/casper.env .env.d/aigateway.env; set +a
 LIGIS_JEV_ENABLED=1 LIGIS_GATE_CREDENTIAL_TTL_MS=30000 pnpm x402:dev
 
-# Terminal 2 — stress it: legit / underpay / overpay / misdirected payee
+# Terminal 2 — stress it
 pnpm demo:jev
 ```
 
-Every response carries the verdict in headers — `x-jev-verdict`,
-`x-jev-confidence`, `x-jev-flags`, `x-jev-latency-ms`, `x-jev-cost-usd` — and
-`/gate` renders the live telemetry waterfall. See `AGENTS.md` ("Jev Intent
-Evaluation") for the full design.
-
-The layer is fail-open, which makes a dead upstream invisible: the gate keeps
-serving and every verdict silently becomes `SKIPPED`. The AI Gateway promo that
-makes the default route free ends **2026-09-25**, so there is a one-command
-smoke test that fails loudly instead:
+Every response carries `x-jev-verdict`, `x-jev-confidence`, `x-jev-flags`,
+`x-jev-latency-ms`, `x-jev-cost-usd`. `/gate` renders the live telemetry
+waterfall. The smoke test fails loudly if Jev stops answering (the promo
+window closes 2026-09-25):
 
 ```bash
 set -a; source .env.d/aigateway.env; set +a
 LIGIS_JEV_ENABLED=1 pnpm smoke:jev
-# → GO 0.950 / STOP 0.970 with flags, exit 0. Exits 1 when Jev stops answering,
-#   with the resolved route and the fix (gateway billing, or TYPESAFE_API_KEY
-#   + LIGIS_JEV_TRANSPORT=direct).
 ```
 
-Run it in CI or a cron — it touches no chain and needs no credential.
+## Decisioning stack
+
+When Jev is unavailable, the gate keeps serving payments and the verdict
+silently becomes `SKIPPED`. Reasoning falls back to **0G Compute**
+(default: Qwen 2.5 7B on Galileo) and, when that's also unavailable, to
+the in-process `LocalReasoner` (keyword-matched, labeled
+`model: "local-keyword-match"` in the deliverable). Prompts and model
+identifiers are read from `@ligis/core` config — there is no separate
+Runware endpoint in the live stack. See
+[`AGENTS.md`](AGENTS.md) "0G Compute" for the ledger-top-up command
+(Qwen 2.5 7B requires ≥ 1.0 OG in the provider's reserve before the first
+call).
 
 ## Skills
 
-| Skill               | What it does                                                                                                |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `ligis-issue`       | Mint an Agent ID NFT; issue an EIP-712 capability credential                                                |
-| `ligis-verify`      | Read-only: does a subject hold a valid credential?                                                          |
-| `ligis-revoke`      | Issuer revokes a credential (permanent)                                                                     |
-| `ligis-rotate`      | Move Agent ID to a new controller key (recovery)                                                            |
-| `ligis-hash`        | Helper: keccak256 a capability name                                                                         |
-| `ligis-sign`        | Helper: build + sign an EIP-712 credential off-chain                                                        |
-| `ligis trust check` | GO/STOP pre-payment decision for a counterparty: Monid risk + on-chain capability gate, with a cost receipt |
-| `ligis agent run`   | Trust Steward: boot → reason (0G Compute) → risk → gate → act → record (0G Storage)                         |
+| Skill               | What it does                                                 |
+| ------------------- | ------------------------------------------------------------ |
+| `ligis-issue`       | Mint an Agent ID NFT; issue an EIP-712 capability credential |
+| `ligis-verify`      | Read-only: does a subject hold a valid credential?           |
+| `ligis-revoke`      | Issuer revokes a credential (permanent)                      |
+| `ligis-rotate`      | Move Agent ID to a new controller key (recovery)             |
+| `ligis-hash`        | Helper: keccak256 a capability name                          |
+| `ligis-sign`        | Helper: build + sign an EIP-712 credential off-chain         |
+| `ligis trust check` | GO/STOP pre-payment decision for a counterparty              |
+| `ligis agent run`   | Trust Steward: boot → reason → risk → gate → act → record    |
 
 ## Deployed contracts
 
@@ -168,39 +113,9 @@ First deployment is live on **Pharos Atlantic testnet** (chainId 688689):
 | `PharosAgentID`      | `0xbd163Be6882CF6DE54bA10d726F4f619Bdc28a89` |
 | `CredentialRegistry` | `0x9E6eC93200E185c11423eb3A5150449D49d3473A` |
 
-## Web frontend
-
-A Next.js app (`web/`) deployed on Vercel provides a live Steward interface
-with SSE streaming of the full boot → reason → gate → act → record loop.
-
-**Three modes:**
-
-- **Simulated** — no env vars needed, uses realistic timing + fake tx hashes
-- **Live reads** — real `isCapableMulti` calls against Pharos Atlantic
-- **Live writes** — real `mintSelf`, `issue` (EIP-712), `setTokenURI` on-chain
-
-When `ZEROG_PRIVATE_KEY` is set, the REASON phase calls 0G Compute (Qwen 2.5 7B,
-TEE-verified LLM) and the RECORD phase uploads evidence manifests to 0G Storage.
-Write transactions bypass `eth_sendTransaction` (unsupported by the default
-Pharos RPC) by signing locally and sending via `eth_sendRawTransaction`.
-
-Agent profile pages (`/agent/<address>`) show capability history from
-`AgentCapabilityChanged` events with clickable PharosScan links.
-
-**Routes worth opening first:**
-
-| Route      | What it is                                                                                    |
-| ---------- | --------------------------------------------------------------------------------------------- |
-| `/arena`   | Prompt-injection attack on a paying agent, stopped live by the judge API (`/api/arena/judge`) |
-| `/field`   | Every registered agent as a generated specimen portrait                                       |
-| `/gate`    | Gate any wallet against any capability — GO / STOP with a stamped specimen                    |
-| `/steward` | The autonomous boot → reason → gate → act → record loop (SSE)                                 |
-| `/issuers` | Who can vouch for which capability                                                            |
-
-Each address in the UI carries the same deterministic specimen portrait as
-`/field`, so a wallet is recognizable across pages.
-
-See [`docs/setup.md`](docs/setup.md) for Vercel env var configuration.
+Casper Testnet: `AgentId` + `CredentialRegistry` + `GatedVault` —
+deployed and smoke-tested. See [`docs/setup.md`](docs/setup.md) for the
+deploy recipe.
 
 ## Chain support
 
@@ -212,209 +127,93 @@ MCP server consume the interface, not the implementation.
 | ------------------------- | ----------------------- | ----------------------------------- | -------------------------------------------------------------- |
 | **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`    | `packages/contracts-evm` (Solidity) | Live — deployed, tested, steward running                       |
 | **Casper Testnet**        | `@ligis/adapter-casper` | `packages/contracts-casper` (Odra)  | **Live** — contracts deployed, smoke test passing, web UI live |
+| **Monad Testnet**         | `@ligis/adapter-evm`    | `packages/contracts-evm` (Solidity) | Live — passkey issuer demo, GateStates walk                    |
 
 **Why this works across chains:**
 
-- **Capabilities are chain-neutral**: `capabilityHash("kyc.basic")` produces
-  the same `0x...32` on every chain because `@ligis/core` computes keccak256
-  off-chain and passes it to each adapter. The hash is the canonical id.
-- **Agent identity uses DIDs**: `did:ligis:<chain-id>:<chain-native-id>`.
-- **EIP-712 domain separation is per-chain**: the domain separator binds
-  the chain name + contract package hash, so a credential signed for one
-  chain cannot be replayed on another.
-- **The same secp256k1 key** can sign credentials for both chains — the
-  off-chain EIP-712 signature verifies against the same issuer address on
-  either chain.
+- Capabilities are chain-neutral: `capabilityHash("kyc.basic")` produces
+  the same `0x...32` on every chain because `@ligis/core` computes
+  keccak256 off-chain and passes it to each adapter. The hash is the
+  canonical id.
+- Agent identity uses DIDs: `did:ligis:<chain-id>:<chain-native-id>`.
+- EIP-712 domain separation is per-chain: the domain separator binds
+  the chain name + contract package hash, so a credential signed for
+  one chain cannot be replayed on another.
+- The same secp256k1 key can sign credentials for both chains — the
+  off-chain EIP-712 signature verifies against the same issuer address
+  on either chain.
 
-To bring up another chain: implement `ChainAdapter`, add the chain branch
-to `getAdapter()` in the CLI and MCP server, and (optionally) create
-`packages/contracts-<chain>`. See [`MONOREPO_STRUCTURE.md`](MONOREPO_STRUCTURE.md)
-for the full architecture.
-
-## Quick start
-
-```bash
-pnpm install
-
-# Mint an Agent ID on Pharos (default chain)
-PRIVATE_KEY=0x... pnpm start -- issue --token-uri "ipfs://bafy.../meta"
-
-# Verify a credential (read-only)
-pnpm start -- verify --subject 0x... --capability "agent.commerce.escrow"
-
-# Run the Trust Steward Agent
-PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
-  pnpm start -- agent run --goal "open an escrow with counterparty X"
-
-# Trust check a stranger before paying them (Monid risk + on-chain gate)
-MONID_API_KEY=monid_... PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
-  pnpm start -- trust check --counterparty 0x... --intent "pay for premium RWA data" \
-    --amount "10 USD" --capability data.premium
-
-# Casper (contracts deployed on Testnet — see docs/setup.md)
-pnpm setup:casper                    # generate 3 testnet wallets
-# → fund deployer at https://testnet.cspr.live/tools/faucet
-# → transfer CSPR to agent + issuer
-source .env.d/casper.env
-pnpm deploy:casper                   # install WASM contracts to Casper Testnet
-pnpm start -- --chain casper info
-pnpm start -- --chain casper verify --subject <account-hash> --capability kyc.basic
-npx tsx scripts/casper-smoke-test.ts   # end-to-end credential lifecycle test
-```
-
-## Demo: Autonomous Agent + x402 Payment on Casper
-
-```bash
-# 1. Run the Trust Steward loop (boot → reason → gate → act → record)
-source .env.d/casper.env
-source .env.d/zerog.env
-export PRIVATE_KEY=$LIGIS_CASPER_DEPLOYER_PRIVATE_KEY
-export LIGIS_CASPER_PUBLIC_KEY=$LIGIS_CASPER_DEPLOYER_PUBKEY
-npx tsx scripts/casper-e2e-demo.ts
-
-# 2. Start the x402 Trust Gate server (RWA oracle feed)
-export LIGIS_GATE_PAY_TO="00<your-account-hash>"
-export LIGIS_GATE_CAPABILITY="data.premium"
-npx tsx packages/x402-server/src/index.ts &
-
-# 3. Run the x402 payment demo (402 → sign → pay → 200 + real RWA data)
-npx tsx scripts/casper-x402-demo.ts
-
-# 4. Run the multi-agent coordination demo (Risk → Issuer → Treasury)
-npx tsx scripts/casper-multi-agent-demo.ts
-```
-
-The steward loop produces 3-4 on-chain transactions on Casper Testnet:
-
-- `mint_self` — Agent mints its own identity
-- `issue` — Self-issues each missing capability credential
-- `set_token_uri` — Anchors evidence manifest to 0G Storage
-
-The x402 flow produces 1 additional on-chain transaction. Two settlement modes:
-
-- **Facilitator** (`X402_SETTLEMENT_MODE=facilitator`): Real CEP-18
-  `transfer_with_authorization` via the CSPR.cloud x402 facilitator
-  (`/verify` → `/settle`). Requires `CSPR_CLOUD_TOKEN` and a CEP-18 token.
-- **Local** (`X402_SETTLEMENT_MODE=local`): Direct CSPR transfer (demo fallback).
-
-The RWA oracle feed delivers **real market data** from CoinGecko — live prices
-for Ondo, Centrifuge, Pendle, Maple, and Polymesh (tokenized RWA tokens).
-
-The **multi-agent demo** runs a three-agent swarm: Risk Agent evaluates
-counterparty risk from on-chain credential history → Issuer Agent issues
-credentials based on the risk verdict → Treasury Agent executes the x402
-payment. Produces 2+ additional on-chain transactions.
-
-## Browser-side Casper wallet (no relayer, user-funded)
-
-There is now a **browser-native Casper Testnet wallet** wired into the web
-steward. Every transaction — `mint_self`, `issue`, `set_token_uri` — is
-signed locally in the browser and submitted through a stateless CORS-proxy
-(`/api/casper-rpc`) to the public testnet RPC. **No signing relayer. The
-user funds their own gas.**
-
-How it works:
-
-1. Visit `?chain=casper-testnet` on the web app. The wallet tree
-   (`ConditionalProviders` → `WalletTree`) lazy-mounts only on Casper pages;
-   Pharos pages never load `casper-js-sdk`.
-2. Click **Connect Wallet** → generate a 32-byte secp256k1 secp256k1 scalar
-   in the browser via `@noble/curves/utils.randomSecretKey()`, derive the
-   Casper public key + account hash + EVM-style issuer address, and copy the
-   key to your clipboard / paste it back later.
-3. **Fund** at <https://testnet.cspr.live/tools/faucet> (one-time per account,
-   100 CSPR from the faucet).
-4. Click **Run Steward** → the `web/lib/casper-browser/steward.ts` loop runs
-   `mint_self → verifyCapability → signCredential + submitCredential → anchorEvidence`,
-   each one signed in-browser via `@noble/curves/secp256k1.sign(digest, scalar)`.
-   The off-chain EIP-712 credential digest is byte-identical to the server
-   adapter's (both use `@casper-ecosystem/casper-eip-712`'s `hashTypedData`,
-   both sign with secp256k1), so on-chain signature recovery round-trips to
-   the same EVM address the server's signer would produce.
-
-Two smoke tests live in `web/scripts/` for pre-judging validation:
-
-```bash
-pnpm --filter @ligis/web exec tsx web/scripts/smoke-wallet-crypto.ts
-# → asserts @noble/curves r,s,v parity with ethers.Wallet (EVM addr roundtrips)
-pnpm --filter @ligis/web exec tsx web/scripts/smoke-wallet-tx.ts
-# → builds a CSSPR-2.0 mint_self TransactionV1 and asserts `mint_self` is on
-# the wire bytes (does NOT submit; uses a placeholder package hash)
-```
-
-**No new Vercel env vars required.** The wallet UI reuses the existing
-**server-side** `LIGIS_CASPER_AGENT_ID` + `LIGIS_CASPER_CREDENTIAL_REGISTRY`
-(already set on Vercel for Casper reads) through `/api/casper-config`,
-a tiny server route that strips the `contract-package-` prefix and
-serves the bare hex hashes to the browser. Writes go through
-`/api/casper-rpc`, a stateless CORS byte-proxy. The proxy holds no keys
-and signs nothing — it's safe to expose publicly. So a wallet click
-that round-trips to testnet needs zero new env vars beyond what the
-chain-switching section already lists.
-
-Files in `web/lib/casper-browser/{keypair,eip712,operations,rpc,store,steward}.ts(x)`
-compose the wallet.
+To bring up another chain: implement `ChainAdapter`, add the chain
+branch to `getAdapter()` in the CLI and MCP server, and (optionally)
+create `packages/contracts-<chain>`. See
+[`MONOREPO_STRUCTURE.md`](MONOREPO_STRUCTURE.md) for the full
+architecture.
 
 ## CROO Agent Protocol (CAP) integration
 
-Ligis is listed as a callable agent on the [CROO Agent Store](https://agent.croo.network).
-Before one agent pays another, it can hire Ligis to run a **counterparty risk
-check** and receive a pass/warn/fail verdict plus a 0–100 risk score. The
-provider runs 24/7 in production (`pm2`-managed), so judges only need a
-requester — no need to run a provider yourself.
+Ligis is listed as a callable agent on the [CROO Agent
+Store](https://agent.croo.network). Before one agent pays another, it
+can hire Ligis to run a **counterparty check** and receive a pass/warn/fail
+verdict with a 0–100 risk score. The provider runs 24/7 in production
+(`pm2`-managed), so judges only need a requester — no need to run a
+provider yourself.
 
 **Judge repro (CROO Hackathon):**
 
 ```bash
-# Hire Ligis via CAP (hits the live provider)
 set -a && source .env.d/casper.env && source .env.d/croo.env && set +a && pnpm demo:croo
 ```
 
-> `source file.env` alone only sets shell-local variables — it does not
-> export them to the `node`/`pnpm` child process. `set -a` (allexport) makes
-> everything sourced after it exported automatically; `set +a` turns that
-> back off. Without it, `pnpm croo` fails immediately with `Missing required
-environment variable: CROO_SDK_KEY`.
+| Service         | Price | What you get                                                                                              | Input                                                                                                |
+| --------------- | ----- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `ligis.risk`    | $0.50 | Counterparty check — pass/warn/fail + 0–100 score                                                         | `{ subject, capabilities, issuer?, minTtlSeconds? }`                                                 |
+| `ligis.verify`  | $0.25 | On-chain credential verification                                                                          | `{ subject, capability, issuer? }`                                                                   |
+| `ligis.issue`   | $2.00 | Signed capability credential issuance — requires external evidence unless allowlisted                     | `{ subject, capability, expiresInSeconds?, externalAttestation? }`                                   |
+| `ligis.gate`    | $0.25 | Payment check — Jev intent verdict (GO/STOP + confidence + flags) alongside the on-chain credential check | `{ subject, capability, priceSmallestUnit, payTo, payment?, issuer?, tokenSymbol?, tokenDecimals? }` |
+| `ligis.qualify` | $2.50 | One order from not-credentialed to credentialed — check, issue, re-check, return both verdicts            | `{ subject, capabilities, evidence?, issuer?, minTtlSeconds?, expiresInSeconds? }`                   |
 
-| Service         | Price | What you get                                                                                                                                                     | Input                                                                                                |
-| --------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `ligis.risk`    | $0.75 | **Counterparty risk check** — pass/warn/fail + 0–100 score                                                                                                       | `{ subject, capabilities, issuer?, minTtlSeconds? }`                                                 |
-| `ligis.verify`  | $0.50 | On-chain credential verification                                                                                                                                 | `{ subject, capability, issuer? }`                                                                   |
-| `ligis.issue`   | $2.00 | Signed capability credential issuance — requires external evidence unless the capability is allowlisted                                                          | `{ subject, capability, expiresInSeconds?, externalAttestation? }`                                   |
-| `ligis.gate`    | $1.00 | **Trust Gate pre-flight** — Jev (TypeSafe System One) payment-intent verdict (GO/STOP + confidence + flags) alongside the on-chain credential check, in one call | `{ subject, capability, priceSmallestUnit, payTo, payment?, issuer?, tokenSymbol?, tokenDecimals? }` |
-| `ligis.qualify` | $2.50 | **One order from not-credentialed to credentialed** — check, issue what policy allows, re-check, and return both verdicts                                        | `{ subject, capabilities, evidence?, issuer?, minTtlSeconds?, expiresInSeconds? }`                   |
+Pricing reflects the live CROO Dashboard; rates move with `services.ts`.
+Phase 5 keeps `services.ts`, `croo-store-manifest.json`, and the CROO
+Dashboard in lockstep.
 
-All five services are live and tested end-to-end: issue → verify (`capable: true`) → risk check (`warn`, maturing to `pass` after 7 days). `ligis.gate` runs the same reflex the x402 Trust Gate uses on `/gate` — four typed Jev questions in one parallel call, fail-open, with the credential registry staying the source of truth.
+All five services are live and tested end-to-end. **`ligis.qualify`
+collapses the funnel into one order** — payment alone never mints
+trust, every issuance is evidence-gated or allowlist-gated, and a refusal
+is a structured deliverable (`{ issued: false, reason, detail }`), not
+an error. See [`AGENTS.md`](AGENTS.md) "CROO Provider Deployment" for
+the refusal shape and the `LIGIS_SELF_ISSUABLE_CAPABILITIES` semantics.
 
 A `fail` verdict doesn't dead-end the buyer: `ligis.risk` returns a
-`pathToTrust` block naming the missing capabilities, the recommended one-order
-route (`ligis.qualify`, cheaper than risk + issue bought separately), the
-fallback issuance route, and the chain the credential will land on — all prices
-and listing UUIDs read from the same catalog the listings are built from.
+`pathToTrust` block — missing capabilities, the recommended
+one-order route (`ligis.qualify`, cheaper than risk + issue separately),
+the fallback issuance route, and the chain the credential will land on.
 
-`ligis.qualify` collapses that funnel into a single $2.50 order, and it does
-the work under one rule: **payment alone never mints trust.** A capability is
-issued only against external evidence that passes policy (or a capability the
-operator has explicitly allowlisted as self-issuable — empty by default, so
-`kyc.basic` is not buyable). **`ligis.issue` enforces the identical rule**, so
-the gate can't be bypassed by hiring the cheaper service — which makes qualify a
-funnel collapse rather than a toll booth beside an open door. Refusals come back
-with the evidence shape that would unlock them, and a freshly minted credential
-reports as `warn` (maturing to `pass`), never as a fake clean pass.
+See [`docs/croo-integration.md`](docs/croo-integration.md),
+[`docs/okx-ai.md`](docs/okx-ai.md),
+[`docs/attestation-integrations.md`](docs/attestation-integrations.md),
+[`docs/strategy.md`](docs/strategy.md), and
+[`packages/croo-adapter/`](packages/croo-adapter/).
 
-See [`docs/croo-integration.md`](docs/croo-integration.md), [`docs/okx-ai.md`](docs/okx-ai.md), [`docs/attestation-integrations.md`](docs/attestation-integrations.md), [`docs/strategy.md`](docs/strategy.md), and [`packages/croo-adapter/`](packages/croo-adapter/).
+## Proofs
+
+See [`docs/proofs.md`](docs/proofs.md) for hackathon submissions, demo
+videos, and the on-chain deployment evidence chain — the Ligis → venue →
+outcome trail that backs every measured claim in
+[`docs/positioning.md`](docs/positioning.md).
 
 ## Documentation
 
 | Doc                                                          | What's in it                                                                          |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| [Agent Arena](docs/agent-arena.md)                           | Vultr Agent Arena submission: `/arena` demo, judges, env vars, checklist              |
+| [Positioning](docs/positioning.md)                           | Source of truth: pitch, signals, glossary, claims, privacy, pricing                   |
 | [Strategy](docs/strategy.md)                                 | Product strategy, competitive landscape, differentiation, roadmap, business model     |
 | [Architecture](docs/architecture.md)                         | Contract design, module structure, repository layout                                  |
-| [Attestation integrations](docs/attestation-integrations.md) | Self Protocol and EAS provenance, privacy boundaries, and rollout                     |
-| [Monorepo structure](MONOREPO_STRUCTURE.md)                  | Package layout, dependency graph, ChainAdapter interface, adding a new chain          |
+| [Agent Arena](docs/agent-arena.md)                           | Vultr Agent Arena submission: `/arena` demo, judges, env vars, checklist              |
 | [CROO Integration](docs/croo-integration.md)                 | CAP adapter, Agent Store listing, provider/requester usage                            |
 | [OKX.AI Integration](docs/okx-ai.md)                         | ASP strategy, services, demo plan, and submission checklist                           |
+| [Proofs](docs/proofs.md)                                     | Hackathon submissions, demo videos, on-chain deployment evidence                      |
+| [Attestation integrations](docs/attestation-integrations.md) | Self Protocol and EAS provenance, privacy boundaries, and rollout                     |
+| [Monorepo structure](MONOREPO_STRUCTURE.md)                  | Package layout, dependency graph, ChainAdapter interface, adding a new chain          |
 | [API Reference](docs/api.md)                                 | Service schemas, input/output examples, capability names, chains                      |
 | [Archive](docs/archive/)                                     | Completed hackathon submissions + unpublished drafts                                  |
 | [Trust Steward Agent](docs/trust-steward-agent.md)           | The autonomous loop, 0G integration, build phases                                     |

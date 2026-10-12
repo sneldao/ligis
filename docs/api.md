@@ -56,7 +56,7 @@ if (report.overallVerdict === "pass") {
 
 ### ligis.risk — Counterparty Risk Check
 
-**Price:** $0.75
+**Price:** $0.50
 
 Checks whether an agent holds the required credentials and returns a
 pass/warn/fail verdict with a 0–100 risk score.
@@ -169,7 +169,7 @@ pass/warn/fail verdict with a 0–100 risk score.
 
 ### ligis.verify — Credential Verification
 
-**Price:** $0.50
+**Price:** $0.25
 
 Single-capability on-chain verification. Returns whether a subject holds
 a valid credential for a given capability.
@@ -314,7 +314,47 @@ revocation status, and records provenance in the deliverable.
 
 ---
 
-### ligis.qualify — Credential Qualification
+### ligis.gate — Payment Check (Intent + Credential)
+
+**Price:** $0.25
+
+Pre-flight trust read for an agent payment, in one call: a Jev (TypeSafe System One) intent verdict — is the amount plausible, does the payee match, is the pattern normal — alongside an on-chain credential check on Casper or Pharos. Fail-open and typed; run it before money moves.
+
+#### Input
+
+```json
+{
+  "subject": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+  "capability": "agent.commerce.escrow",
+  "priceSmallestUnit": "4200000000",
+  "payTo": "0xabc…",
+  "tokenSymbol": "USDC",
+  "tokenDecimals": "6",
+  "issuer": "optional trusted issuer address",
+  "capabilityDescription": "premium RWA data subscription"
+}
+```
+
+#### Output
+
+```json
+{
+  "credential": { ... },
+  "intent": {
+    "verdict": "GO",
+    "confidence": 0.95,
+    "flags": [],
+    "latencyMs": 235
+  },
+  "proceed": true
+}
+```
+
+`ligis.gate` is the wedge service — it runs on every payment and its price anchors at infrastructure cost (Jev ≈ $0.0001 + provider overhead), not marketplace premium.
+
+---
+
+### ligis.qualify — Payment Qualification
 
 **Price:** $2.50
 

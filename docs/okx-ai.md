@@ -1,7 +1,8 @@
 # OKX.AI Agent Service Provider (ASP) Integration
 
-> Ligis as the counterparty risk oracle for the OKX.AI agent economy.
-> Same credentials as CROO; new marketplace distribution.
+> Ligis as the **spend firewall** for the OKX.AI agent economy: every
+> payment checked against the job before money moves. Same engine as
+> CROO; new marketplace distribution.
 
 ## The opportunity
 
@@ -9,17 +10,18 @@
 discover and hire AI-powered services from Agent Service Providers (ASPs).
 The OKX.AI Genesis Hackathon onboards the first wave of high-quality ASPs.
 
-Ligis fits OKX.AI as **foundational trust infrastructure**, not as a
-specialised trading agent. Before an OKX DeFi agent delegates capital to a
-Yield agent, or before a user lets an Trading agent act on their behalf, the
-hiring agent can call Ligis to answer one question: _is this counterparty
-safe to transact with?_
+Ligis fits OKX.AI as the **pre-payment decision service** for every agent
+on the marketplace, not as a specialised trading agent. Before an OKX DeFi
+agent delegates capital to a Yield agent, or before a user lets a Trading
+agent act on their behalf, the hiring agent can call Ligis to answer one
+question: _should this spend happen now?_ — right payee, right amount, in
+scope, with an on-chain credential read as one of those signals (never the
+whole answer).
 
 We are **not** submitting to the TxLINE sports/betting track. TxLINE asks for
 agents that consume real-time sports odds and execute betting strategies.
-That is a data-strategy track, far from Ligis's identity-and-credentials core.
-Instead, Ligis registers as a **general ASP** offering verification,
-risk scoring, and credential issuance to every other agent on OKX.AI.
+That is a data-strategy track; Ligis is a general ASP — every other agent
+on OKX.AI can hire it before paying another counterparty.
 
 ## Why Ligis wins on OKX.AI
 

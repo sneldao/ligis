@@ -32,13 +32,13 @@ Requester Agent                       CROO/CAP                      Ligis Provid
 
 Listed on the CROO Agent Store:
 
-| Service         | Price | What it proves                                              | On-chain action                                           | Deliverable                                                                                                          |
-| --------------- | ----- | ----------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `ligis.risk`    | $0.75 | Counterparty risk check                                     | `CredentialRegistry.isCapable` read(s)                    | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }`                                      |
-| `ligis.verify`  | $0.50 | On-chain credential verification                            | `CredentialRegistry.isCapable` read                       | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }`                             |
-| `ligis.issue`   | $2.00 | Credential issuance; optional EAS import                    | EAS read, then `CredentialRegistry.issue` write           | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt, provenance }`     |
-| `ligis.gate`    | $1.00 | Payment-intent verdict (Jev) alongside the credential check | `CredentialRegistry.isCapable` read (no write)            | `{ service, credential, intent: { verdict, confidence, flags, latencyMs }, proceed }`                                |
-| `ligis.qualify` | $2.50 | Check → policy-gated issuance → re-check, in one order      | `isCapable` read(s) + `CredentialRegistry.issue` write(s) | `{ service, qualified, entryVerdict, finalVerdict, issued, skipped, verificationPending, checks, pathToTrustRoute }` |
+| Service         | Price | What it proves                                         | On-chain action                                           | Deliverable                                                                                                          |
+| --------------- | ----- | ------------------------------------------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `ligis.risk`    | $0.50 | Counterparty risk check                                | `CredentialRegistry.isCapable` read(s)                    | `{ overallVerdict, riskScore, checks, summary, breakdown, signals, checkedAt }`                                      |
+| `ligis.verify`  | $0.25 | On-chain credential verification                       | `CredentialRegistry.isCapable` read                       | `{ service, capable, subject, capability, capabilityHash, latestCredential, checkedAt }`                             |
+| `ligis.issue`   | $2.00 | Credential issuance; optional EAS import               | EAS read, then `CredentialRegistry.issue` write           | `{ service, subject, capability, capabilityHash, issuer, issuedAt, expiresAt, txHash, submittedAt, provenance }`     |
+| `ligis.gate`    | $0.25 | Payment check: Jev verdict + credential check          | `CredentialRegistry.isCapable` read (no write)            | `{ service, credential, intent: { verdict, confidence, flags, latencyMs }, proceed }`                                |
+| `ligis.qualify` | $2.50 | Check → policy-gated issuance → re-check, in one order | `isCapable` read(s) + `CredentialRegistry.issue` write(s) | `{ service, qualified, entryVerdict, finalVerdict, issued, skipped, verificationPending, checks, pathToTrustRoute }` |
 
 Prices are defined once in `SERVICE_PRICE_USD`
 (`packages/croo-adapter/src/services.ts`), which builds the provider listings,
@@ -55,7 +55,7 @@ buyer knows exactly how to become eligible and return. `ligis.qualify` then
 does it in one order instead of three:
 
 ```
-ligis.risk        $0.75   fail → pathToTrust
+ligis.risk        $0.50   fail → pathToTrust
 ligis.qualify     $2.50   check → issue (evidence-gated) → re-check → warn
                   ──────  one negotiation, one payment, one deliverable
 ```
