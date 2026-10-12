@@ -50,6 +50,11 @@ and reach for typography, whitespace, and hairlines instead.
 - **Corners**: surfaces are square. The single sanctioned exception is the
   global dock (fully-rounded pill, rounded mobile drawer) — it is floating
   chrome, not a content surface. No other component may round its corners.
+  `rounded-full` on a CTA is banned: night-themed hero and arena CTAs are
+  square (filled `bg-fog` for primary) or terra-underlined text links for
+  secondary actions. `rounded-full` is allowed only as a status dot or a
+  status pill inside a verdict primitive (`scripts/lint-design.mjs`
+  enforces this).
 - **Motion**: at most one staggered reveal per page load (home uses
   `.landing-cascade`). Hovers shift colour or underline, never scale or
   translate. Accordion panels expand via `grid-template-rows` (not translate).
@@ -135,30 +140,36 @@ and reach for typography, whitespace, and hairlines instead.
 - Architecture diagrams are hand-typeset SVG with proper labels, never the
   output of an auto-layout tool.
 - **The wedge and its verb**: the product's differentiated wedge is _the gate_
-  — the single on-chain read an autonomous payment calls the instant before
-  money moves to a stranger. The product owns one verb, "gate the payment,"
-  not a category ("verifiable credentials"). Identity, credentials, the
-  Steward loop, cross-chain portability, and CROO are the _moat_ that feeds
-  the gate, not competing products. Surfaces frame themselves around the
-  decision moment, never around the architecture. The read is chain-agnostic
-  by default — a subject resolves across every registry it could live on
-  (union semantics: a credential recorded on any registry is a valid
-  credential), and the chain appears as _provenance_ under the verdict, not
-  as input. An explicit `?chain=` scopes the read for demos and debugging.
-  Concretely: the gate is
-  served at `/gate` (the verb in the URL); the moat surfaces — `/steward`,
-  `/capabilities`, `/issuers`, `/embed`, the CROO risk check, the agent
-  dossiers — exist to feed the gate, and must never be promoted as
-  competing products in nav, hero, or section headers. The field is a
-  demonstration of the live registry — a proof of the primitive — not a
-  competing product and not the wedge.
+  — the pre-payment decision service an autonomous wallet calls the instant
+  before money moves to a stranger. The product owns one verb, "gate the
+  payment," not a category ("verifiable credentials"). Identity, credentials,
+  the Steward loop, cross-chain portability, and CROO are the _moat_ that
+  feeds one of the gate's four signals, not competing products. Surfaces
+  frame themselves around the decision moment, never around the architecture.
+  The decision is built from intent signals (right payee, right amount, in
+  scope) plus a chain-agnostic credential read (verified payee), evaluated
+  concurrently and reported as one `Decision`. The credential read is
+  chain-agnostic by default — a payee resolves across every registry it
+  could live on (union semantics: a credential recorded on any registry is
+  a valid credential), and the chain appears as _provenance_ under the
+  verdict, not as input. An explicit `?chain=` scopes the read for demos
+  and debugging. Concretely: the gate is served at `/gate` (the verb in
+  the URL); the moat surfaces — `/steward`, `/capabilities`, `/issuers`,
+  `/embed`, the CROO risk check, the agent dossiers — exist to feed the
+  gate, and must never be promoted as competing products in nav, hero, or
+  section headers. The field is a demonstration of the live registry — a
+  proof of the primitive — not a competing product and not the wedge.
+  See `docs/positioning.md` for the source of truth on signals, glossary,
+  and claims.
 - **Verdict vocabulary**: a verification result is a transaction decision,
   rendered as `✓ GO` (sage) or `✗ STOP` (revoke) — never as
   "capable / not capable" (that is capability status, not a decision). The
-  stop case carries a plain-language reason ("No verifiable authorization
-  found — your agent should not proceed"). Every surface that shows a
-  verdict uses the same `GateVerdict` primitive so the product reads as one
-  thing everywhere it appears.
+  stop case carries a plain-language reason ("Payment doesn't match the
+  job the agent was hired to do — your agent should not proceed"). Every
+  surface that shows a verdict uses the same `GateVerdict` primitive so
+  the product reads as one thing everywhere it appears. A skipped signal
+  is `SKIPPED` with the reason, never elided; a verdict built on three
+  signals is the response, not a verdict padded with a fourth.
 
 ## Composition primitives
 
