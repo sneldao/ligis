@@ -6,7 +6,7 @@ import { getChain } from "@/lib/network";
 export const metadata = {
   title: "Build it in · Ligis",
   description:
-    "Call isCapable from any contract, agent, or script. No Ligis account, SDK, or API key.",
+    "One read from any contract, agent, or script: the gate returns GO or STOP. No Ligis account, SDK, or API key.",
 };
 
 const SNIPPET = `import { readContract } from "viem";

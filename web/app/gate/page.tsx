@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { ShareLinkCounter } from "@/components/ShareLinkCounter";
 import {
   CHAINS,
   getChain,
@@ -132,7 +133,7 @@ export default async function VerifyPage({
             <Suspense
               fallback={
                 <p className="font-serif text-lg italic text-ink-quiet">
-                  Reading chain…
+                  Reading registry…
                 </p>
               }
             >
@@ -180,6 +181,9 @@ export default async function VerifyPage({
 
   return (
     <main className="route-shell max-w-3xl">
+      <Suspense>
+        <ShareLinkCounter bucket="share:gate" />
+      </Suspense>
       <header className="route-header text-xs text-ink-quiet">
         <p className="eyebrow">Ligis · Gate</p>
         <span className="font-mono tabular text-ink-quiet">
@@ -356,6 +360,10 @@ export default async function VerifyPage({
         >
           ← Home
         </a>
+        <span className="font-serif italic text-ink-quiet">
+          Privacy: aggregate counters of which branches ran; no payee, amount,
+          or IP is logged.
+        </span>
         {scoped ? (
           <a
             href={chain.explorerUrl}

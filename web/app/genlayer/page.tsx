@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "GenLayer JobEscrow — Agent Tank",
+  title: "Escrow with dispute resolution · Ligis",
   description:
-    "Ligis gates who may trade. GenLayer adjudicates what happened when delivery is disputed. Live JobEscrow state on Studio Next (chain 61997).",
+    "Escrow with on-chain dispute resolution: AI-jury adjudication when delivery is disputed. Live JobEscrow on GenLayer Studio Next (chain 61997). Ligis gates who may trade.",
   robots: { index: true, follow: true },
 };
 

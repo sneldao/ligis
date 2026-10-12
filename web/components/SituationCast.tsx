@@ -1,32 +1,74 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Rule } from "@/components/Rule";
 import { VerdictMark } from "@/components/VerdictMark";
-import { SITUATIONS, type Situation } from "@/lib/situations";
+import {
+  DEFAULT_SITUATION_IDS,
+  SITUATIONS,
+  getSituation,
+  type Situation,
+} from "@/lib/situations";
 
 /**
  * Moment picker — exclusive accordion with a Blind↔Gated flip inside.
- * Keyboard: 1–5 selects a moment. On home (`sync`), selection updates the demo.
+ *
+ * By default, only the moments listed in `DEFAULT_SITUATION_IDS`
+ * (treasury, merchant) are rendered; the rest stay reachable via
+ * `?situation=<id>` (the page passes them through `extraMomentIds`),
+ * keeping the landing focused on the wedge while the long tail of
+ * moments (escrow, compliance, operator) remains shareable.
+ *
+ * Keyboard: 1–N selects a moment from the rendered list. On home
+ * (`sync`), selection updates the demo.
  */
 export function SituationCast({
   chainId,
   activeId,
+  extraMomentIds,
   mode = "link",
   onSelect,
 }: {
   /** Omit so moment links open the chain-agnostic gate. */
   chainId?: string;
   activeId?: string;
+  /** Extra moments to append to the default render (e.g. from `?situation=`). */
+  extraMomentIds?: string[];
   mode?: "link" | "sync";
   onSelect?: (situation: Situation) => void;
 }) {
   const groupId = useId();
+
+  // Default render = treasury + merchant. Anything passed via `extraMomentIds`
+  // is appended (deduped) so a deep-linked `?situation=escrow` still resolves.
+  const rendered = useMemo<readonly Situation[]>(() => {
+    const seen = new Set<string>();
+    const out: Situation[] = [];
+    for (const id of DEFAULT_SITUATION_IDS) {
+      const s = getSituation(id);
+      if (s && !seen.has(s.id)) {
+        seen.add(s.id);
+        out.push(s);
+      }
+    }
+    if (extraMomentIds) {
+      for (const id of extraMomentIds) {
+        if (seen.has(id)) continue;
+        const s = getSituation(id);
+        if (s) {
+          seen.add(s.id);
+          out.push(s);
+        }
+      }
+    }
+    return out;
+  }, [extraMomentIds]);
+
   const initial =
-    activeId && SITUATIONS.some((s) => s.id === activeId)
+    activeId && rendered.some((s) => s.id === activeId)
       ? activeId
-      : SITUATIONS[0]!.id;
+      : rendered[0]!.id;
   const [openId, setOpenId] = useState(initial);
 
   function select(s: Situation) {
@@ -48,16 +90,22 @@ export function SituationCast({
         return;
       }
       const n = Number(e.key);
-      if (n >= 1 && n <= SITUATIONS.length) {
+      if (n >= 1 && n <= rendered.length) {
         e.preventDefault();
-        const s = SITUATIONS[n - 1]!;
+        const s = rendered[n - 1]!;
         setOpenId(s.id);
         onSelect?.(s);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onSelect]);
+  }, [onSelect, rendered]);
+
+  const allDefault = rendered.every((s) =>
+    DEFAULT_SITUATION_IDS.includes(
+      s.id as (typeof DEFAULT_SITUATION_IDS)[number],
+    ),
+  );
 
   return (
     <section id="situations" className="scroll-mt-24" aria-labelledby={groupId}>
@@ -71,8 +119,20 @@ export function SituationCast({
       </header>
       <Rule className="mt-4" />
 
+      {!allDefault ? (
+        <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
+          Deep-linked moment ·{" "}
+          <Link
+            href={chainId ? `/?chain=${chainId}` : "/"}
+            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+          >
+            ← back to defaults
+          </Link>
+        </p>
+      ) : null}
+
       <ul className="mt-2" role="list">
-        {SITUATIONS.map((s, i) => {
+        {rendered.map((s, i) => {
           const open = openId === s.id;
           const gateHref = `/gate?${chainId ? `chain=${chainId}&` : ""}situation=${s.id}&capability=${s.capability}`;
 

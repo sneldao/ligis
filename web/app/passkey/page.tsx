@@ -5,9 +5,9 @@ import { PasskeyCeremony } from "./PasskeyCeremony";
 import { MONAD_TESTNET } from "@/lib/network";
 
 export const metadata = {
-  title: "Passkey — Ligis",
+  title: "Wallet-less credential issuance · Ligis",
   description:
-    "A passkey as a credential issuer on Monad. Touch ID signs; the on-chain P256 precompile verifies; the registry mints the credential. No seed phrase, no env file.",
+    "Wallet-less credential issuance: Touch ID signs; the on-chain P256 precompile verifies; the registry mints the credential. No seed phrase, no env file.",
 };
 
 export const dynamic = "force-dynamic";

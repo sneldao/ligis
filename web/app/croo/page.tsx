@@ -4,9 +4,9 @@ import { Snippet } from "@/components/Snippet";
 import { getChain } from "@/lib/network";
 
 export const metadata = {
-  title: "CROO · Ligis",
+  title: "Counterparty check before pay · Ligis",
   description:
-    "Ask Ligis for a counterparty risk report on CROO before your agent pays — score, verdict, and reasons.",
+    "Ask Ligis for a counterparty check on CROO before your agent pays — score, GO/STOP verdict, and the signals that decided it.",
 };
 
 const CROO_SNIPPET = [
@@ -84,10 +84,10 @@ export default async function CrooPage({
         <p className="eyebrow">Services</p>
         <Rule className="mt-3" />
         <p className="mt-5 font-serif text-base leading-relaxed text-ink-soft">
-          <code className="font-mono text-ink">ligis.risk</code> $0.75 ·{" "}
-          <code className="font-mono text-ink">ligis.verify</code> $0.50 ·{" "}
+          <code className="font-mono text-ink">ligis.risk</code> $0.50 ·{" "}
+          <code className="font-mono text-ink">ligis.verify</code> $0.25 ·{" "}
           <code className="font-mono text-ink">ligis.issue</code> $2.00 ·{" "}
-          <code className="font-mono text-ink">ligis.gate</code> $1.00 ·{" "}
+          <code className="font-mono text-ink">ligis.gate</code> $0.25 ·{" "}
           <code className="font-mono text-ink">ligis.qualify</code> $2.50
         </p>
       </section>

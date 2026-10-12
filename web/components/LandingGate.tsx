@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { GateStates } from "@/components/GateStates";
 import { Rule } from "@/components/Rule";
 import { SituationCast } from "@/components/SituationCast";
 import { VerifyDemo } from "@/components/VerifyDemo";
-import { SITUATIONS, type Situation } from "@/lib/situations";
+import { getSituation, type Situation } from "@/lib/situations";
 
 /**
  * Home product loop: pick a moment → walk the branch → run the live read.
  * Selection syncs capability and flashes a brief “synced” cue.
+ *
+ * The cast only renders the default moments by default; deep-linking via
+ * `?situation=<id>` (e.g. from a share link) appends that moment so the
+ * visitor lands on it without the landing changing for everyone else.
  */
 export function LandingGate({
   capabilities,
@@ -18,7 +23,18 @@ export function LandingGate({
   capabilities: { id: string; label: string }[];
   defaultSubject: string;
 }) {
-  const [situation, setSituation] = useState<Situation>(SITUATIONS[0]!);
+  const searchParams = useSearchParams();
+  const requestedSituation = searchParams?.get("situation") ?? undefined;
+  const extraMomentIds =
+    requestedSituation && getSituation(requestedSituation)
+      ? [requestedSituation]
+      : undefined;
+
+  const initial: Situation =
+    (requestedSituation && getSituation(requestedSituation)) ||
+    getSituation("treasury")!;
+
+  const [situation, setSituation] = useState<Situation>(initial);
   const [synced, setSynced] = useState(false);
 
   function onSelect(s: Situation) {
@@ -34,7 +50,12 @@ export function LandingGate({
 
   return (
     <div className="space-y-14 sm:space-y-16">
-      <SituationCast mode="sync" activeId={situation.id} onSelect={onSelect} />
+      <SituationCast
+        mode="sync"
+        activeId={situation.id}
+        extraMomentIds={extraMomentIds}
+        onSelect={onSelect}
+      />
 
       <section id="verify" className="scroll-mt-24">
         <header className="flex items-baseline justify-between gap-4">
@@ -51,7 +72,7 @@ export function LandingGate({
                 <span className="mx-2">·</span>
               </>
             ) : null}
-            <span className="text-ink">{situation.role.split(" / ")[0]}</span>
+            <span className="text-ink">{situation.role}</span>
             <span className="mx-2">·</span>
             <code className="normal-case tracking-normal">
               {situation.capability}
