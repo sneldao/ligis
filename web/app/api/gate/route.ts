@@ -18,6 +18,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { decide, type PaymentIntent } from "@/lib/decide";
+import { parseMandate } from "@/lib/mandate";
 import { resolveSubject } from "@/lib/resolve";
 
 export const runtime = "nodejs";
@@ -59,7 +60,9 @@ const MAX_USD = 1e9; // $1B upper bound; payments over this want /compose, not /
 const MAX_PURPOSE = 1_000;
 const MAX_MANDATE_PAYEES = 16;
 
-function bodyToIntent(body: Record<string, unknown>): PaymentIntent | string {
+export function bodyToIntent(
+  body: Record<string, unknown>,
+): PaymentIntent | string {
   const payee = asPayee(body.payee);
   if (!payee)
     return bad400(
@@ -105,41 +108,9 @@ function bodyToIntent(body: Record<string, unknown>): PaymentIntent | string {
   }
 
   const mandateRaw = body.mandate;
-  let mandate: PaymentIntent["mandate"] | undefined;
-  if (mandateRaw !== undefined && mandateRaw !== null) {
-    if (typeof mandateRaw !== "object")
-      return bad400("mandate must be an object");
-    const m = mandateRaw as Record<string, unknown>;
-    const out: PaymentIntent["mandate"] = {};
-    if (m.payees !== undefined) {
-      if (!Array.isArray(m.payees))
-        return bad400("mandate.payees must be an array");
-      if (m.payees.length > MAX_MANDATE_PAYEES) {
-        return bad400(
-          `mandate.payees must have ≤ ${MAX_MANDATE_PAYEES} entries`,
-        );
-      }
-      const arr: string[] = [];
-      for (const p of m.payees) {
-        const s = asString(p);
-        if (!s)
-          return bad400("mandate.payees entries must be non-empty strings");
-        arr.push(s);
-      }
-      out.payees = arr;
-    }
-    if (m.maxUsd !== undefined) {
-      const n = asNumber(m.maxUsd);
-      if (n === null || n <= 0) return bad400("mandate.maxUsd must be > 0");
-      out.maxUsd = n;
-    }
-    if (m.scope !== undefined) {
-      const s = asString(m.scope);
-      if (!s) return bad400("mandate.scope must be a non-empty string");
-      out.scope = s;
-    }
-    mandate = out;
-  }
+  const mandateOrError = parseMandate(mandateRaw);
+  if (typeof mandateOrError === "string") return bad400(mandateOrError);
+  const mandate: PaymentIntent["mandate"] = mandateOrError;
 
   return {
     payee,

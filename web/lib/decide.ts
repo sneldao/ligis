@@ -278,6 +278,8 @@ function checkMandate(intent: PaymentIntent): {
 
   // expectedUsd tolerance check: catches overbilling under the maxUsd cap.
   // A 90× overcharge that falls under the cap still triggers STOP.
+  // Anything at or below the quote (with tolerance) is compliant, including
+  // underpaying — you're paying less than the contract says you should.
   let expectedUsdSignal: Signal | null = null;
   if (
     intent.mandate.expectedUsd !== undefined &&
@@ -292,7 +294,8 @@ function checkMandate(intent: PaymentIntent): {
         1,
         `amount $${intent.amountUsd} exceeds contracted price $${intent.mandate.expectedUsd} (+${(EXPECTED_USD_TOLERANCE * 100).toFixed(0)}% tolerance)`,
       );
-    } else if (intent.amountUsd >= intent.mandate.expectedUsd) {
+    } else {
+      // Any amount up to expectedUsd * 1.10 is compliant — underpaying is fine.
       expectedUsdSignal = baseSignal(
         "right-amount",
         "GO",

@@ -4,11 +4,12 @@
  * situations on /gate check, so a visitor's first live verdict can be GO.
  *
  * Idempotent: verifies first and only issues what is missing or expired.
- * Credentials are issued for one year by the Pharos deployer key (same issuer
- * EVM address on both chains), subject = each chain's deployer wallet.
+ * Credentials are issued for one year by the steward key (NOT the deployer)
+ * so the demo agent is NOT self-issued. The steward key is a separate key
+ * that the operator uses for signing credentials.
  *
  * Usage:
- *   LIGIS_NETWORK=atlantic-testnet npx tsx scripts/seed-demo-credentials.ts [pharos|casper]
+ *   LIGIS_STEWARD_KEY=0x... npx tsx scripts/seed-demo-credentials.ts [pharos|casper]
  */
 import { readFileSync, existsSync } from "node:fs";
 import { CasperAdapter } from "@ligis/adapter-casper";
@@ -47,8 +48,18 @@ async function seed(
   for (const capability of CAPABILITIES) {
     const before = await adapter.verifyCapability({ subject, capability });
     if (before.capable) {
-      console.log(`  ${capability}: already GO`);
-      continue;
+      // Verify not self-issued
+      if (
+        before.latest.issuer &&
+        before.latest.issuer.toLowerCase() === subject.toLowerCase()
+      ) {
+        console.log(
+          `  ${capability}: SELF-ISSUED → will re-issue with steward key`,
+        );
+      } else {
+        console.log(`  ${capability}: already GO`);
+        continue;
+      }
     }
     const signed = await adapter.signCredential({
       issuerKey,
@@ -58,17 +69,35 @@ async function seed(
     });
     const { tx } = await adapter.submitCredential(signed);
     const after = await adapter.verifyCapability({ subject, capability });
-    console.log(
-      `  ${capability}: issued → ${after.capable ? "GO" : "STILL STOP"} · ${tx.explorerUrl}`,
-    );
+    // Verify the new credential is not self-issued
+    if (
+      after.latest.issuer &&
+      after.latest.issuer.toLowerCase() === subject.toLowerCase()
+    ) {
+      console.log(
+        `  ${capability}: RE-ISSUED but still self-issued! Issuer=${after.latest.issuer}`,
+      );
+    } else {
+      console.log(
+        `  ${capability}: issued → ${after.capable ? "GO" : "STILL STOP"} · ${tx.explorerUrl}`,
+      );
+    }
   }
 }
 
 async function main() {
-  loadEnvFiles(".env.d/casper.env", ".env.d/deployer.env");
-  const issuerKey = process.env.PHAROS_DEPLOYER_KEY;
+  loadEnvFiles(
+    ".env.d/casper.env",
+    ".env.d/steward.env",
+    ".env.d/deployer.env",
+  );
+  const issuerKey = process.env.LIGIS_STEWARD_KEY;
   if (!issuerKey)
-    throw new Error("PHAROS_DEPLOYER_KEY not set (.env.d/deployer.env)");
+    throw new Error(
+      "LIGIS_STEWARD_KEY not set (.env.d/steward.env). " +
+        "The seed script must NOT use the deployer key — it would create " +
+        "self-issued credentials that the gate rejects.",
+    );
   process.env.PRIVATE_KEY = issuerKey;
 
   const only = process.argv[2];

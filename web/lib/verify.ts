@@ -104,18 +104,35 @@ export async function verifySubject(
     const resolvedIssuer = hasCredential
       ? (view!.issuer as `0x${string}`)
       : ((view?.issuer as `0x${string}` | undefined) ?? null);
+
     // Self-issued check: if issuer === subject (case-insensitive), the
     // credential is not trustworthy regardless of its technical validity.
-    const selfIssued =
+    // On EVM chains, issuer and subject are both 0x hex addresses.
+    // On Casper, the issuer is stored as a 0x hex address (EVM-compatible)
+    // while the subject is account-hash-.... We compare by extracting the
+    // known deployer/steward identities.
+    const isSelfIssuedEvm =
       resolvedIssuer !== null &&
       resolvedIssuer.toLowerCase() === subject.toLowerCase();
+
+    // Casper: check against known deployer identity
+    const casperDeployer = (process.env as any).LIGIS_CASPER_DEPLOYER as
+      | string
+      | undefined;
+    const isSelfIssuedCasper = isCasperChain(chain)
+      ? casperDeployer
+        ? subject.toLowerCase() === casperDeployer.toLowerCase()
+        : false
+      : false;
+
+    const selfIssued = isSelfIssuedEvm || isSelfIssuedCasper;
     if (!capable) {
       return {
         ok: true,
         subject,
         capabilityId: cap.id,
         capabilityHash: cap.hash,
-        capable: selfIssued ? false : false,
+        capable: false,
         issuer: resolvedIssuer,
         expiresAt: hasCredential ? view!.expiresAt : null,
         revoked: hasCredential ? view!.revoked : false,
@@ -127,7 +144,7 @@ export async function verifySubject(
       subject,
       capabilityId: cap.id,
       capabilityHash: cap.hash,
-      capable: selfIssued ? false : true,
+      capable: !selfIssued,
       issuer: resolvedIssuer,
       expiresAt: view?.expiresAt ?? null,
       revoked: view?.revoked ?? false,

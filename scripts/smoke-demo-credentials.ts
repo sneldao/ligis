@@ -100,6 +100,13 @@ async function checkEvm(
       if (expired) {
         return `${chainLabel} · ${sample.label}: GO but expiresAt is in the past — re-seed`;
       }
+      // Check self-issued: the demo agent must not self-vouch
+      if (
+        latest.issuer &&
+        latest.issuer.toLowerCase() === sample.subject.toLowerCase()
+      ) {
+        return `${chainLabel} · ${sample.label}: SELF-ISSUED (issuer=${latest.issuer}) — re-issue with steward key`;
+      }
       return null;
     }
     if (sample.expect === "revoked") {
