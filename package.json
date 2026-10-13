@@ -17,7 +17,7 @@
     "croo": "node --enable-source-maps packages/croo-adapter/dist/src/cli/provider.js",
     "croo:dev": "tsx packages/croo-adapter/src/cli/provider.ts",
     "test": "bash scripts/forge.sh test -vvv",
-    "test:ts": "node --import tsx --test packages/*/test/**/*.test.ts web/test/**/*.test.ts",
+    "test:ts": "node --import tsx --test packages/*/test/**/*.test.ts && pnpm --filter @ligis/web test",
     "test:all": "bash scripts/forge.sh test -vvv && pnpm run test:ts",
     "audit:deps": "pnpm audit --audit-level high",
     "audit:deps:all": "pnpm audit",

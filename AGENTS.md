@@ -342,10 +342,11 @@ For the Casper self-issued check (`web/lib/verify.ts`) also set
   source `.env.d/steward.env` locally for writes.
 - `server-only` is a real web dep now — direct `tsx` tests of server modules
   fail without it.
-- Route-level tests run under `--conditions=react-server`
-  (`pnpm --filter @ligis/web test` runs the suite twice: default + react-server
-  for `route.test.ts`), where the `server-only` guard is a no-op so
-  `bodyToIntent` / `queryToIntent` / `runGateDecision` import for real.
+- The whole web suite runs under `--conditions=react-server`
+  (`pnpm --filter @ligis/web test`), where the `server-only` guard is a no-op so
+  `bodyToIntent` / `queryToIntent` / `runGateDecision` import for real. Root
+  `pnpm run test:ts` delegates to it rather than globbing `web/test/**` itself —
+  the `@/*` alias only resolves from the `web` cwd.
   (Intent parsing lives in `web/lib/gate-intent.ts` and execution in
   `web/lib/gate-run.ts` — not `route.ts`, where Next's generated route types
   reject non-route exports and break `next build`.)
