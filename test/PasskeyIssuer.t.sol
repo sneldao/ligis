@@ -10,10 +10,10 @@ contract PasskeyIssuerTest is Test {
     PasskeyIssuer internal issuer;
 
     address internal constant P256 = address(0x0100);
-    bytes32 internal constant RP_HASH = keccak256("ligis.test");
+    bytes32 internal constant RP_HASH = sha256("ligis.test");
     bytes32 internal constant KEY_ID = keccak256("cred-1");
-    uint256 internal constant QX = 0x1111;
-    uint256 internal constant QY = 0x2222;
+    uint256 internal constant QX = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296;
+    uint256 internal constant QY = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5;
     uint256 internal constant R = 0x3333;
     uint256 internal constant S = 0x4444;
 
@@ -26,6 +26,7 @@ contract PasskeyIssuerTest is Test {
     function setUp() public {
         registry = new CredentialRegistry();
         issuer = new PasskeyIssuer(RP_HASH);
+        issuer.setOriginHash(sha256("https://ligis.test"));
         vm.warp(1_750_000_000);
         issuer.registerPasskey(KEY_ID, QX, QY);
     }
@@ -134,6 +135,7 @@ contract PasskeyIssuerTest is Test {
         bytes32 revokeDigest = keccak256(
             abi.encodePacked(
                 "LigisPasskeyRevoke",
+                address(issuer),
                 address(registry),
                 subject,
                 CAP,
@@ -205,5 +207,142 @@ contract PasskeyIssuerTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(issuerKey, digest);
         registry.issue(eoa, subject, CAP, ISSUED, EXPIRES, 0, abi.encodePacked(r, s, v));
         assertTrue(registry.isCapable(subject, CAP));
+    }
+
+    function test_UnauthorizedRegistrationAndReplacement() public {
+        vm.startPrank(subject);
+        vm.expectRevert(PasskeyIssuer.NotOwner.selector);
+        issuer.registerPasskey(keccak256("public-signup"), QX, QY);
+        vm.expectRevert(PasskeyIssuer.NotOwner.selector);
+        issuer.registerPasskey(KEY_ID, QX, QY);
+        vm.stopPrank();
+    }
+
+    function test_DuplicateCannotOverwrite() public {
+        vm.expectRevert(abi.encodeWithSelector(PasskeyIssuer.DuplicatePasskey.selector, KEY_ID));
+        issuer.registerPasskey(KEY_ID, QX, QY);
+        (uint256 x, uint256 y) = issuer.passkeys(KEY_ID);
+        assertEq(x, QX);
+        assertEq(y, QY);
+    }
+
+    function test_InvalidPublicKeys() public {
+        bytes32 id = keccak256("new");
+        vm.expectRevert(PasskeyIssuer.InvalidPublicKey.selector);
+        issuer.registerPasskey(id, 0, 0);
+        vm.expectRevert(PasskeyIssuer.InvalidPublicKey.selector);
+        issuer.registerPasskey(id, 1, 2);
+        vm.expectRevert(PasskeyIssuer.InvalidPublicKey.selector);
+        issuer.registerPasskey(id, type(uint256).max, QY);
+        vm.expectRevert(PasskeyIssuer.InvalidKeyId.selector);
+        issuer.registerPasskey(bytes32(0), QX, QY);
+    }
+
+    function test_RemovalThenExplicitReEnrollment() public {
+        issuer.removePasskey(KEY_ID);
+        issuer.registerPasskey(KEY_ID, QX, QY);
+        (bytes memory sig,,) = _issueSignature(_issueDigest(0));
+        registry.issue(address(issuer), subject, CAP, ISSUED, EXPIRES, 0, sig);
+        assertTrue(registry.isCapable(subject, CAP));
+    }
+
+    function _expectInvalid(bytes memory auth, bytes memory json) internal {
+        _mockP256(sha256(abi.encodePacked(auth, sha256(json))));
+        assertEq(issuer.isValidSignature(_issueDigest(0), abi.encode(KEY_ID, auth, json, R, S)), bytes4(0xffffffff));
+    }
+
+    function test_WrongRpAndRequiredFlags() public {
+        bytes memory json = _clientDataJSON(_issueDigest(0));
+        _expectInvalid(abi.encodePacked(sha256("wrong-rp"), bytes1(0x05), uint32(1)), json);
+        _expectInvalid(abi.encodePacked(RP_HASH, bytes1(0x01), uint32(1)), json);
+        _expectInvalid(abi.encodePacked(RP_HASH, bytes1(0x04), uint32(1)), json);
+        _expectInvalid(abi.encodePacked(RP_HASH, bytes1(0x15), uint32(1)), json);
+        _expectInvalid(bytes("short"), json);
+    }
+
+    function test_WrongOriginTypeAndDuplicateFields() public {
+        bytes memory challenge = bytes(issuer.encodeChallenge(_issueDigest(0)));
+        _expectInvalid(_authData(), abi.encodePacked('{"type":"webauthn.get","challenge":"', challenge, '","origin":"https://evil.test"}'));
+        _expectInvalid(_authData(), abi.encodePacked('{"type":"webauthn.create","challenge":"', challenge, '","origin":"https://ligis.test"}'));
+        _expectInvalid(_authData(), abi.encodePacked('{"type":"webauthn.get","challenge":"', challenge, '","origin":"https://ligis.test","origin":"https://evil.test"}'));
+        _expectInvalid(_authData(), abi.encodePacked('{"type":"webauthn.get","challenge":"', challenge, '","origin":"https://ligis.test","crossOrigin":true}'));
+    }
+
+    function test_ReplayAndWrongChainRegistry() public {
+        (bytes memory sig,,) = _issueSignature(_issueDigest(0));
+        CredentialRegistry other = new CredentialRegistry();
+        vm.expectRevert(CredentialRegistry.InvalidSignature.selector);
+        other.issue(address(issuer), subject, CAP, ISSUED, EXPIRES, 0, sig);
+        uint256 originalChain = block.chainid;
+        vm.chainId(originalChain + 1);
+        vm.expectRevert(CredentialRegistry.InvalidSignature.selector);
+        registry.issue(address(issuer), subject, CAP, ISSUED, EXPIRES, 0, sig);
+        vm.chainId(originalChain);
+        registry.issue(address(issuer), subject, CAP, ISSUED, EXPIRES, 0, sig);
+        vm.expectRevert(CredentialRegistry.InvalidSignature.selector);
+        registry.issue(address(issuer), subject, CAP, ISSUED, EXPIRES, 0, sig);
+    }
+
+    function test_RemovedKeyCannotRevoke() public {
+        (bytes memory sig,,) = _issueSignature(_issueDigest(0));
+        registry.issue(address(issuer), subject, CAP, ISSUED, EXPIRES, 0, sig);
+        bytes32 digest = keccak256(abi.encodePacked("LigisPasskeyRevoke", address(issuer), address(registry), subject, CAP, uint256(0), block.chainid));
+        bytes memory auth = _authData();
+        bytes memory json = _clientDataJSON(digest);
+        _mockP256(sha256(abi.encodePacked(auth, sha256(json))));
+        issuer.removePasskey(KEY_ID);
+        vm.expectRevert(abi.encodeWithSelector(PasskeyIssuer.UnknownPasskey.selector, KEY_ID));
+        issuer.revokeCredential(address(registry), subject, CAP, 0, KEY_ID, auth, json, R, S);
+        assertTrue(registry.isCapable(subject, CAP));
+    }
+
+    function test_RevokeRejectsWrongRegistryChainAndReplay() public {
+        (bytes memory sig,,) = _issueSignature(_issueDigest(0));
+        registry.issue(address(issuer), subject, CAP, ISSUED, EXPIRES, 0, sig);
+        bytes32 digest = keccak256(abi.encodePacked("LigisPasskeyRevoke", address(issuer), address(registry), subject, CAP, uint256(0), block.chainid));
+        bytes memory auth = _authData();
+        bytes memory json = _clientDataJSON(digest);
+        _mockP256(sha256(abi.encodePacked(auth, sha256(json))));
+        vm.expectRevert(abi.encodeWithSelector(PasskeyIssuer.UnknownPasskey.selector, KEY_ID));
+        issuer.revokeCredential(address(0x1234), subject, CAP, 0, KEY_ID, auth, json, R, S);
+        uint256 chain = block.chainid;
+        vm.chainId(chain + 1);
+        vm.expectRevert(abi.encodeWithSelector(PasskeyIssuer.UnknownPasskey.selector, KEY_ID));
+        issuer.revokeCredential(address(registry), subject, CAP, 0, KEY_ID, auth, json, R, S);
+        vm.chainId(chain);
+        issuer.revokeCredential(address(registry), subject, CAP, 0, KEY_ID, auth, json, R, S);
+        vm.expectRevert(CredentialRegistry.AlreadyRevoked.selector);
+        issuer.revokeCredential(address(registry), subject, CAP, 0, KEY_ID, auth, json, R, S);
+    }
+
+    function test_CompactBrowserCrossOriginFalseAccepted() public {
+        bytes32 digest = _issueDigest(0);
+        bytes memory auth = _authData();
+        bytes memory json = abi.encodePacked('{"type":"webauthn.get","challenge":"', issuer.encodeChallenge(digest), '","origin":"https://ligis.test","crossOrigin":false}');
+        _mockP256(sha256(abi.encodePacked(auth, sha256(json))));
+        assertEq(issuer.isValidSignature(digest, abi.encode(KEY_ID, auth, json, R, S)), bytes4(0x1626ba7e));
+    }
+
+    function test_OriginConfigurationRequiresOwnerAndNonzeroHash() public {
+        vm.prank(subject);
+        vm.expectRevert(PasskeyIssuer.NotOwner.selector);
+        issuer.setOriginHash(sha256("https://evil.test"));
+        vm.expectRevert(PasskeyIssuer.InvalidContext.selector);
+        issuer.setOriginHash(bytes32(0));
+    }
+
+    function test_UnconfiguredOriginFailsClosed() public {
+        PasskeyIssuer unconfigured = new PasskeyIssuer(RP_HASH);
+        unconfigured.registerPasskey(KEY_ID, QX, QY);
+        (bytes memory sig,,) = _issueSignature(_issueDigest(0));
+        assertEq(unconfigured.isValidSignature(_issueDigest(0), sig), bytes4(0xffffffff));
+    }
+
+    function test_ChromiumSerializationSentinelAccepted() public {
+        bytes32 digest = _issueDigest(0);
+        bytes memory auth = _authData();
+        bytes memory json = abi.encodePacked('{"type":"webauthn.get","challenge":"', issuer.encodeChallenge(digest), '","origin":"https://ligis.test","crossOrigin":false,"other_keys_can_be_added_here":"do not compare clientDataJSON against a template. See https://goo.gl/yabPex"}');
+        _mockP256(sha256(abi.encodePacked(auth, sha256(json))));
+        assertEq(issuer.isValidSignature(digest, abi.encode(KEY_ID, auth, json, R, S)), bytes4(0x1626ba7e));
     }
 }

@@ -1,22 +1,14 @@
 import Link from "next/link";
 import { ChainBadge } from "@/components/ChainBadge";
-import { Snippet } from "@/components/Snippet";
 import { PasskeyCeremony } from "./PasskeyCeremony";
 import { MONAD_TESTNET } from "@/lib/network";
 
 export const metadata = {
-  title: "Wallet-less credential issuance · Ligis",
+  title: "Passkey operator onboarding · Ligis",
   description:
-    "Wallet-less credential issuance: Touch ID signs; the on-chain P256 precompile verifies; the registry mints the credential. No seed phrase, no env file.",
+    "Seedless sign-in is separate from issuer authority. Explore a guarded passkey operator workflow and ask the full payment risk gate.",
 };
-
 export const dynamic = "force-dynamic";
-
-const CLI = `# Same ceremony from the CLI (Node-generated P-256 key,
-# byte-identical calldata to what this page produces):
-set -a && source .env.d/deployer.env && set +a
-export PRIVATE_KEY=$PHAROS_DEPLOYER_KEY
-pnpm demo:monad-passkey`;
 
 export default function PasskeyPage() {
   return (
@@ -27,97 +19,64 @@ export default function PasskeyPage() {
           <ChainBadge chain={MONAD_TESTNET} />
           <Link
             href="/"
-            className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+            className="text-sm text-ink-soft underline decoration-rule underline-offset-4 hover:decoration-terra"
           >
             ← Home
           </Link>
         </div>
       </header>
-
       <section className="mt-14 max-w-3xl sm:mt-20">
         <h1 className="display text-5xl text-ink sm:text-6xl">
-          A fingerprint
+          A passkey signs.
           <br />
-          is the issuer.
+          An operator admits.
         </h1>
-        <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft sm:mt-10">
-          Your passkey signs a credential digest; Monad&rsquo;s native P256
-          precompile verifies it on-chain; the registry mints the credential.
-          The issuer is hardware — there is no key to leak.
+        <p className="mt-7 max-w-prose font-serif text-lg leading-relaxed text-ink-soft">
+          Seedless sign-in can create an embedded agent wallet. It does not
+          prove KYC, accreditation or commerce trust. Only the owner can admit a
+          P-256 key to the shared issuer desk. Every admitted key shares that
+          desk&apos;s authority.
         </p>
         <details className="group mt-6 border-y border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
-            <span className="group-open:hidden">How verification works +</span>
-            <span className="hidden group-open:inline">
-              Close verification details −
-            </span>
+          <summary className="cursor-pointer py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft">
+            Verification and readiness
           </summary>
-          <ol className="grid grid-cols-1 divide-y divide-rule border-t border-rule sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            <li className="space-y-2 py-4 sm:pr-6">
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-                01 · enroll
-              </p>
-              <p className="font-serif text-sm leading-relaxed text-ink-soft">
-                <span className="font-mono text-ink">
-                  navigator.credentials.create()
-                </span>{" "}
-                produces a P-256 keypair. Only the public key goes on-chain.
-              </p>
-            </li>
-            <li className="space-y-2 py-4 sm:px-6">
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-                02 · assert
-              </p>
-              <p className="font-serif text-sm leading-relaxed text-ink-soft">
-                The registry&rsquo;s EIP-712 digest becomes the WebAuthn
-                challenge. Your authenticator signs{" "}
-                <span className="font-mono text-ink">
-                  authData ‖ sha256(clientDataJSON)
-                </span>
-                .
-              </p>
-            </li>
-            <li className="space-y-2 py-4 sm:pl-6">
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
-                03 · verify
-              </p>
-              <p className="font-serif text-sm leading-relaxed text-ink-soft">
-                <span className="font-mono text-ink">PasskeyIssuer</span> calls
-                the <span className="font-mono text-ink">0x0100</span>{" "}
-                precompile (EIP-7951) — one on-chain read, no oracle, no
-                signature service.
-              </p>
-            </li>
-          </ol>
-        </details>
-      </section>
-
-      <section className="mt-12 sm:mt-16">
-        <PasskeyCeremony />
-      </section>
-
-      <section className="mt-12 max-w-3xl sm:mt-16">
-        <details className="group border-y border-rule">
-          <summary className="cursor-pointer list-none py-4 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
-            <span className="group-open:hidden">
-              Run the same ceremony locally +
-            </span>
-            <span className="hidden group-open:inline">
-              Hide CLI instructions −
-            </span>
-          </summary>
-          <div className="border-t border-rule-soft py-5">
-            <Snippet code={CLI} lang="sh" />
+          <div className="space-y-4 border-t border-rule py-5 font-serif text-sm leading-relaxed text-ink-soft">
+            <p>
+              The login passkey authenticates the provider account. A secp256k1
+              embedded-wallet key signs the transaction. A separate admitted
+              P-256 passkey signs the issuance or revocation digest, which the
+              issuer verifies through Monad&apos;s 0x0100 precompile.
+            </p>
+            <p>
+              The previous server steward paid gas. It was a relay, not a
+              passkey wallet, paymaster or ERC-4337 account. This page never
+              falls back to that funded relay.
+            </p>
+            <p>
+              Local source hardening does not change deployed bytecode. Live
+              writes stay disabled pending an authorized hardened issuer
+              deployment and trust cutover. Privy sponsorship configuration and
+              hackathon eligibility are not verified. WebAuthn alone does not
+              establish Mera eligibility.
+            </p>
+            <p>
+              The local fixture uses a real browser assertion and mocked
+              account, operator admission, sponsorship and receipts. It is not
+              production-ready or live chain proof.
+            </p>
           </div>
         </details>
       </section>
-
+      <section className="mt-12 sm:mt-16">
+        <PasskeyCeremony />
+      </section>
       <footer className="route-footer mt-20 text-xs text-ink-quiet sm:mt-32">
         <Link
-          href="/"
-          className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+          href="/gate"
+          className="text-ink-soft underline decoration-rule underline-offset-4 hover:decoration-terra"
         >
-          ← Home
+          Full payment risk gate →
         </Link>
         <span className="font-mono tabular">
           {MONAD_TESTNET.name.toLowerCase()} · chain {MONAD_TESTNET.chainId}
