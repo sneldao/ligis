@@ -324,9 +324,11 @@ contract PasskeyIssuerTest is Test {
     }
 
     function test_OriginConfigurationRequiresOwnerAndNonzeroHash() public {
+        // Hash before arming: a precompile call would consume the expectation.
+        bytes32 evilOriginHash = sha256("https://evil.test");
         vm.prank(subject);
         vm.expectRevert(PasskeyIssuer.NotOwner.selector);
-        issuer.setOriginHash(sha256("https://evil.test"));
+        issuer.setOriginHash(evilOriginHash);
         vm.expectRevert(PasskeyIssuer.InvalidContext.selector);
         issuer.setOriginHash(bytes32(0));
     }
