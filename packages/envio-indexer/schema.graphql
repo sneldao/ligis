@@ -32,3 +32,77 @@ type AgentCapabilityChanged {
   txHash: String!
   logIndex: Int!
 }
+
+# All standard IDs include chain + registry. A wallet can bind multiple IDs.
+type Erc8004Agent {
+  id: ID!
+  chainId: Int!
+  registry: String!
+  agentId: BigInt!
+  owner: String!
+  wallet: String!
+  agentURI: String!
+  blockNumber: BigInt!
+}
+
+# Immutable claims retain old wallets for discovery; RPC checks the current binding.
+type Erc8004WalletBinding {
+  id: ID!
+  chainId: Int!
+  registry: String!
+  agentId: BigInt!
+  wallet: String!
+  blockNumber: BigInt!
+  txHash: String!
+  logIndex: Int!
+}
+
+type Erc8004Feedback {
+  id: ID!
+  chainId: Int!
+  registry: String!
+  agentId: BigInt!
+  client: String!
+  feedbackIndex: BigInt!
+  value: BigInt!
+  valueDecimals: Int!
+  tag1: String!
+  tag2: String!
+  endpoint: String!
+  feedbackURI: String!
+  feedbackHash: String!
+  revoked: Boolean!
+  blockNumber: BigInt!
+  txHash: String!
+}
+
+type Erc8004FeedbackRevocation {
+  id: ID!
+  chainId: Int!
+  registry: String!
+  feedbackId: String!
+  blockNumber: BigInt!
+  txHash: String!
+}
+
+type Erc8004Response {
+  id: ID!
+  chainId: Int!
+  registry: String!
+  feedbackId: String!
+  responder: String!
+  responseURI: String!
+  responseHash: String!
+  blockNumber: BigInt!
+  txHash: String!
+}
+
+# Written by a block handler, NOT inferred from the most recent identity event.
+type Erc8004Coverage {
+  id: ID!
+  chainId: Int!
+  registry: String!
+  reputation: String!
+  fromBlock: BigInt!
+  toBlock: BigInt!
+}

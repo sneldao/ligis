@@ -10,7 +10,7 @@
 #        LIGIS_ENVIO_GRAPHQL_URL=http://localhost:8080/v1/graphql
 #      Or deploy to Envio Cloud and use the hosted URL (Metropolis free tier).
 name: ligis-credential-registry
-description: Indexes Ligis CredentialRegistry issue/revoke/capability events on Monad Testnet
+description: Indexes Ligis credentials and standard ERC-8004 identity/wallet/reputation events on Monad Testnet
 # Match web/lib/envio.ts subject/issuer filters (lowercase hex).
 address_format: lowercase
 contracts:
@@ -20,10 +20,30 @@ contracts:
       - event: CredentialIssued(address indexed issuer, address indexed subject, bytes32 indexed capabilityHash, uint256 nonce, uint64 issuedAt, uint64 expiresAt)
       - event: CredentialRevoked(address indexed issuer, address indexed subject, bytes32 indexed capabilityHash, uint256 nonce, uint64 revokedAt)
       - event: AgentCapabilityChanged(address indexed subject, bytes32 indexed capabilityHash, bool capable)
+  - name: IdentityRegistry
+    handler: src/EventHandlers.ts
+    events:
+      - event: Registered(uint256 indexed agentId, string agentURI, address indexed owner)
+      - event: MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey, string metadataKey, bytes metadataValue)
+      - event: URIUpdated(uint256 indexed agentId, string newURI, address indexed updatedBy)
+      - event: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+  - name: ReputationRegistry
+    handler: src/EventHandlers.ts
+    events:
+      - event: NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)
+      - event: FeedbackRevoked(uint256 indexed agentId, address indexed clientAddress, uint64 indexed feedbackIndex)
+      - event: ResponseAppended(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, address indexed responder, string responseURI, bytes32 responseHash)
 chains:
   - id: 10143 # Monad Testnet — HyperSync-backed, no paid RPC required
-    start_block: 63359400 # just before Ligis deploy (AgentId @ 63359413)
+    # Full standard-registry coverage. Do not start at the Ligis deployment:
+    # third-party agents may have registered earlier. No deployment is performed here.
+    start_block: 0
     contracts:
       - name: CredentialRegistry
         # v2 registry (ERC-1271 issuer path), deployed 2026-10-01.
         address: "0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a"
+        start_block: 63359400
+      - name: IdentityRegistry
+        address: "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+      - name: ReputationRegistry
+        address: "0x8004B663056A597Dffe9eCcC1965A193B7388713"

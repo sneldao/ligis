@@ -2,9 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Rule } from "@/components/Rule";
-import { GateVerdict } from "@/components/GateVerdict";
-import type { GateVerdictInput } from "@/components/GateVerdict";
-import { SubjectSpecimen } from "@/components/SubjectSpecimen";
 import { SignalStack } from "@/components/SignalStack";
 import { decisionToTrustSignals } from "@/lib/decision-receipt";
 import type { Decision } from "@/lib/decide";
@@ -17,17 +14,10 @@ import type { Decision } from "@/lib/decide";
  *
  * Privacy-light: no payee, amount, or IP is logged beyond the aggregate bucket.
  */
-export type GateDecisionResult = {
-  verdict: "GO" | "STOP" | "UNKNOWN";
-  signals: Array<{
-    id: string;
-    status: "GO" | "STOP" | "SKIPPED";
-    confidence: number;
-    reason?: string;
-  }>;
-  latencyMs: number;
-  costUsd?: number;
-};
+export type GateDecisionResult = Pick<
+  Decision,
+  "verdict" | "signals" | "latencyMs" | "costUsd"
+>;
 
 export type GateMandate = {
   payees?: string[];
@@ -124,11 +114,11 @@ export function GateDecision({
     return (
       <div className="mt-6 flex flex-col gap-4 border-l-2 border-rule pl-6">
         <p className="font-serif text-lg italic text-ink-quiet">
-          Reading registry
+          Reading payment evidence
           <span className="caret" aria-hidden />
         </p>
         <p className="font-mono text-[11px] text-ink-quiet">
-          one on-chain read · not a Ligis server
+          bounded server reads · no payment submitted
         </p>
       </div>
     );
@@ -145,6 +135,7 @@ export function GateDecision({
   if (!result) return null;
 
   const go = result.verdict === "GO";
+  const unknown = result.verdict === "UNKNOWN";
   const stopped = result.signals.filter((s) => s.status === "STOP");
   const skipped = result.signals.filter((s) => s.status === "SKIPPED");
   const jevOff =
@@ -156,38 +147,26 @@ export function GateDecision({
     );
   const reason = go
     ? "All answered signals passed. The agent may proceed with this counterparty."
-    : stopped.length > 0
-      ? `Stopped by: ${stopped.map((s) => s.reason ?? s.id).join(", ")}. The agent must not proceed.`
-      : "The trust check did not pass. The agent must not proceed.";
-
-  // Build GateVerdictInput from the Decision result
-  const payeeSignal = result.signals.find((s) => s.id === "right-payee");
-  const amountSignal = result.signals.find((s) => s.id === "right-amount");
-  const scopeSignal = result.signals.find((s) => s.id === "in-scope");
-  const credSignal = result.signals.find((s) => s.id === "verified-payee");
-
-  const hasCredential = credSignal?.status === "GO";
-  const credentialSubject = typeof payee === "string" ? payee : "";
-
-  const gateVerdict: GateVerdictInput = {
-    capable: hasCredential,
-    subject: credentialSubject,
-    capabilityId: capability,
-    issuer: null,
-    expiresAt: null,
-    revoked: false,
-  };
+    : unknown
+      ? "Required checks did not establish a safe answer. UNKNOWN is not approval; the agent must not proceed."
+      : stopped.length > 0
+        ? `Stopped by: ${stopped.map((s) => s.reason ?? s.id).join(", ")}. The agent must not proceed.`
+        : "The trust check did not pass. The agent must not proceed.";
 
   return (
     <div className="mt-6 space-y-8">
       {/* Main verdict */}
       <div
-        className={`border-l-2 pl-6 ${go ? "border-sage" : "border-revoke"}`}
+        className={`border-l-2 pl-6 ${go ? "border-sage" : unknown ? "border-rule" : "border-revoke"}`}
       >
         <p className="eyebrow">gate · pre-payment check</p>
         <p className="mt-3 display text-3xl text-ink-quiet sm:text-4xl">
-          <span className={go ? "text-sage" : "text-revoke"}>
-            {go ? "✓ GO" : "✗ STOP"}
+          <span
+            className={
+              go ? "text-sage" : unknown ? "text-ink-quiet" : "text-revoke"
+            }
+          >
+            {go ? "GO" : unknown ? "? UNKNOWN" : "STOP"}
           </span>
         </p>
         <p className="mt-4 font-serif text-base leading-relaxed text-ink-soft">
@@ -248,6 +227,33 @@ export function GateDecision({
                 <p className="mt-1 font-mono text-xs text-ink-quiet">
                   confidence {(s.confidence * 100).toFixed(0)}%
                 </p>
+              ) : null}
+              {s.id === "verified-payee" && s.evidence?.length ? (
+                <ul className="mt-3 space-y-3">
+                  {s.evidence.map((e, i) => (
+                    <li
+                      key={`${e.source}:${i}`}
+                      className="border-t border-rule pt-3"
+                    >
+                      <p className="font-mono text-[11px] text-ink-quiet">
+                        {e.source} · {e.status} · observed {e.observedAt}
+                      </p>
+                      <p className="mt-1 font-serif text-sm text-ink-soft">
+                        {e.reason}
+                      </p>
+                      {e.reference ? (
+                        <p className="mt-1 break-all font-mono text-[11px] text-ink-quiet">
+                          {e.reference}
+                        </p>
+                      ) : null}
+                      {e.limitations.length ? (
+                        <p className="mt-1 font-serif text-sm italic text-ink-quiet">
+                          Gaps: {e.limitations.join("; ")}.
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </div>
           ))}
