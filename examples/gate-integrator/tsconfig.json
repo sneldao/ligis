@@ -1,0 +1,14 @@
+{
+  "extends": "../../web/tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "plugins": [],
+    "types": ["node"],
+    "typeRoots": ["../../web/node_modules/@types"],
+    "paths": {
+      "@/*": ["../../web/*"]
+    }
+  },
+  "include": ["./*.ts", "../../web/next-env.d.ts"],
+  "exclude": ["node_modules"]
+}
