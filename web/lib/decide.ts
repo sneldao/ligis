@@ -26,10 +26,18 @@ import {
 // `SubjectResolution` is erased; production wires `resolveSubject` via
 // `DecideDeps`.
 import type { SubjectResolution } from "@/lib/resolve";
+import {
+  boundedRead,
+  evidenceTimeout,
+  unavailable,
+  type PayeeEvidence,
+  type PayeeEvidenceReader,
+  type EvidenceOptions,
+} from "./payee-evidence/types";
 
 // ─── public types (mirror docs/decide-api.md) ──────────────────────────
 
-export type VerdictStatus = "GO" | "STOP" | "SKIPPED";
+export type VerdictStatus = "GO" | "STOP" | "SKIPPED" | "UNKNOWN";
 
 export type Signal =
   | {
@@ -63,6 +71,8 @@ export type Signal =
       expiresAt?: string;
       revoked?: boolean;
       issuer?: string;
+      /** Source evidence is not a verdict and never claims a capability. */
+      evidence?: PayeeEvidence[];
       reason?: string;
       latencyMs?: number;
     };
@@ -129,8 +139,17 @@ export type DecideDeps = {
   resolveSubject: (
     payee: string,
     capability: string,
+    options?: EvidenceOptions,
   ) => Promise<SubjectResolution>;
   env?: NodeJS.ProcessEnv;
+  readPayeeEvidence?: PayeeEvidenceReader;
+  /** Protected server policy, never parsed from caller JSON. */
+  operatorPolicy?: {
+    requiredCapability?: string;
+    requiredSources?: PayeeEvidence["source"][];
+    eligibleSources?: Array<"ligis-credential" | "erc8004" | "nansen">;
+    mandate?: PaymentIntent["mandate"];
+  };
   /** Pluggable LLM judge for prompt-injection on `pageText`. */
   judgePageText?: (text: string) => {
     status: VerdictStatus;
@@ -260,14 +279,17 @@ function checkMandate(intent: PaymentIntent): {
   }
 
   let amountSignal: Signal | null = null;
-  if (intent.mandate.maxUsd && intent.amountUsd > intent.mandate.maxUsd) {
+  if (
+    intent.mandate.maxUsd !== undefined &&
+    intent.amountUsd > intent.mandate.maxUsd
+  ) {
     amountSignal = baseSignal(
       "right-amount",
       "STOP",
       1,
       `amount $${intent.amountUsd} exceeds mandate max $${intent.mandate.maxUsd}`,
     );
-  } else if (intent.mandate.maxUsd && intent.amountUsd > 0) {
+  } else if (intent.mandate.maxUsd !== undefined && intent.amountUsd > 0) {
     amountSignal = baseSignal(
       "right-amount",
       "GO",
@@ -356,13 +378,42 @@ export async function decide(
   const evaluate = deps.evaluateIntent ?? evaluatePaymentIntent;
   const resolve = deps.resolveSubject;
   const judge = deps.judgePageText ?? defaultJudgePageText;
+  const evidenceEnabled = env.LIGIS_PAYEE_EVIDENCE_ENABLED === "1";
+  const requiredCapability =
+    deps.operatorPolicy?.requiredCapability ??
+    env.LIGIS_PAYEE_REQUIRED_CAPABILITY?.trim();
+  const capability = requiredCapability || intent.capability;
+  const timeoutMs = evidenceTimeout(
+    Number(env.LIGIS_PAYEE_EVIDENCE_TIMEOUT_MS),
+  );
 
   const smallestUnit = BigInt(
     Math.max(0, Math.round(intent.amountUsd * 10 ** ASSUMED_USDC_DECIMALS)),
   ).toString();
 
   // Run mandate checks first — they're deterministic and cheap.
-  const mandateResult = checkMandate(intent);
+  const callerMandate = checkMandate(intent);
+  const operatorMandate = checkMandate({
+    ...intent,
+    mandate: deps.operatorPolicy?.mandate,
+  });
+  const mergeConstraint = (a: Signal | null, b: Signal | null) =>
+    a?.status === "STOP" ? a : b?.status === "STOP" ? b : (a ?? b);
+  const mandateResult = {
+    payeeSignal: mergeConstraint(
+      operatorMandate.payeeSignal,
+      callerMandate.payeeSignal,
+    ),
+    amountSignal: mergeConstraint(
+      operatorMandate.amountSignal,
+      callerMandate.amountSignal,
+    ),
+    expectedUsdSignal: mergeConstraint(
+      operatorMandate.expectedUsdSignal,
+      callerMandate.expectedUsdSignal,
+    ),
+    matchedPayee: operatorMandate.matchedPayee ?? callerMandate.matchedPayee,
+  };
 
   // Mandate-driven reference values beat intent values where set.
   // The gate advertises what the contract says; Jev compares the
@@ -377,14 +428,17 @@ export async function decide(
   // fall back to amountUsd (the actual payment — a compliant payment
   // against a cap should not read as underpayment).
   const advertisedPayTo = mandateResult.matchedPayee ?? intent.payee;
-  const referencePriceUsd = intent.mandate?.expectedUsd ?? intent.amountUsd;
+  const referencePriceUsd =
+    deps.operatorPolicy?.mandate?.expectedUsd ??
+    intent.mandate?.expectedUsd ??
+    intent.amountUsd;
   const contractPriceSmallestUnit = BigInt(
     Math.round(referencePriceUsd * 10 ** ASSUMED_USDC_DECIMALS),
   ).toString();
 
   const jevInput: JevIntentInput = {
     subject: intent.payee,
-    capability: intent.capability ?? "payment",
+    capability: capability ?? "payment",
     capabilityDescription: intent.purpose,
     gatePriceSmallestUnit: contractPriceSmallestUnit,
     tokenSymbol: "USDC",
@@ -396,15 +450,21 @@ export async function decide(
     },
   };
 
-  const [jevResult, credentialResult, pageJudgeResult] =
+  const [jevResult, credentialResult, pageJudgeResult, evidenceResult] =
     await Promise.allSettled([
       config.enabled
-        ? Promise.resolve().then(() => evaluate(jevInput, config))
+        ? evidenceEnabled
+          ? boundedRead(() => evaluate(jevInput, config), timeoutMs)
+          : Promise.resolve().then(() => evaluate(jevInput, config))
         : Promise.resolve(makeSkippedJev("layer disabled")),
-      intent.capability
-        ? Promise.resolve().then(() =>
-            resolve(intent.payee, intent.capability!),
-          )
+      capability
+        ? evidenceEnabled
+          ? boundedRead(
+              (signal) =>
+                resolve(intent.payee, capability, { timeoutMs, signal }),
+              timeoutMs,
+            )
+          : Promise.resolve().then(() => resolve(intent.payee, capability))
         : Promise.resolve({
             ok: false as const,
             error: "no capability supplied",
@@ -412,6 +472,26 @@ export async function decide(
       intent.pageText
         ? Promise.resolve().then(() => judge(intent.pageText!))
         : Promise.resolve(null),
+      evidenceEnabled
+        ? boundedRead(
+            (signal) =>
+              deps.readPayeeEvidence
+                ? deps.readPayeeEvidence(intent.payee, {
+                    env,
+                    timeoutMs,
+                    signal,
+                  })
+                : Promise.resolve([
+                    unavailable("erc8004", "ERC-8004 reader not configured"),
+                    unavailable(
+                      "x402-settlement",
+                      "no verified x402 settlement source configured",
+                    ),
+                    unavailable("nansen", "Nansen reader not configured"),
+                  ]),
+            timeoutMs + 100,
+          )
+        : Promise.resolve([] as PayeeEvidence[]),
     ]);
 
   const jev: JevIntentResult =
@@ -452,23 +532,244 @@ export async function decide(
       return combineSignals(null, jevSignal);
     }
     if (id === "verified-payee") {
+      if (evidenceEnabled) {
+        const external =
+          evidenceResult.status === "fulfilled"
+            ? evidenceResult.value
+            : [
+                unavailable("erc8004", "payee evidence reads did not answer"),
+                unavailable(
+                  "x402-settlement",
+                  "payee evidence reads did not answer",
+                ),
+                unavailable("nansen", "payee evidence reads did not answer"),
+              ];
+        return openWorldPayeeSignal(
+          credentialResult,
+          external,
+          capability,
+          requiredCapability,
+          deps,
+          env,
+        );
+      }
       return verifiedPayeeSignal(credentialResult);
     }
-    return buildSignal(id, jev, credentialResult, pageJudge);
+    const signal = buildSignal(id, jev, credentialResult, pageJudge);
+    return evidenceEnabled && signal.status === "SKIPPED"
+      ? {
+          ...signal,
+          status: "UNKNOWN",
+          reason: signal.reason ?? "intent evaluation did not answer",
+        }
+      : signal;
   });
 
-  const verdict = composeVerdict(signals);
+  const verdict = composeVerdict(signals, evidenceEnabled);
+  const provenance = buildProvenance(jev, credentialResult, pageJudge, config);
+  const payeeSignal = signals.find((s) => s.id === "verified-payee");
+  if (payeeSignal?.id === "verified-payee") {
+    for (const evidence of payeeSignal.evidence ?? []) {
+      provenance.push(
+        `${evidence.source} ${evidence.status}: ${evidence.reason}${evidence.reference ? ` (${evidence.reference})` : ""}`,
+      );
+    }
+  }
 
   return {
     verdict,
     signals,
     latencyMs: Date.now() - t0,
     costUsd: jev.costUsd,
-    provenance: buildProvenance(jev, credentialResult, pageJudge, config),
+    provenance,
   };
 }
 
 // ─── signal builders ────────────────────────────────────────────────────
+
+function credentialEvidence(
+  result: PromiseSettledResult<SubjectResolution>,
+  capability?: string,
+): PayeeEvidence {
+  const observedAt = new Date().toISOString();
+  const base: Pick<
+    PayeeEvidence,
+    "source" | "observedAt" | "limitations" | "reference"
+  > = {
+    source: "ligis-credential",
+    observedAt,
+    limitations: [],
+  };
+  if (!capability)
+    return {
+      ...base,
+      status: "unknown",
+      reason: "no capability supplied; no credential claim evaluated",
+    };
+  if (result.status === "rejected" || !result.value.ok) {
+    return {
+      ...base,
+      status: "unavailable",
+      reason: "credential source did not answer",
+    };
+  }
+  const r = result.value;
+  const verdicts = r.verdicts.length ? r.verdicts : [r.primary];
+  base.reference = verdicts
+    .map(
+      (v) =>
+        `${v.chain.id}:${v.outcome.ok ? v.outcome.capabilityHash : "unavailable"}`,
+    )
+    .join(",");
+  const reads = verdicts.flatMap((v) => (v.outcome.ok ? [v.outcome] : []));
+  // Do not select the strongest positive and hide a relevant negative on another rail.
+  if (
+    r.selfIssued ||
+    reads.some(
+      (out) =>
+        out.selfIssued ||
+        (out.issuer && out.issuer.toLowerCase() === r.subject.toLowerCase()),
+    )
+  ) {
+    return {
+      ...base,
+      status: "negative",
+      reason: "credential is self-issued; not trustworthy",
+    };
+  }
+  if (reads.some((out) => out.revoked)) {
+    return {
+      ...base,
+      status: "negative",
+      reason: "relevant credential has been revoked",
+    };
+  }
+  if (
+    reads.some(
+      (out) =>
+        out.issuer &&
+        out.issuer !== "0x0000000000000000000000000000000000000000" &&
+        !out.capable,
+    )
+  ) {
+    return {
+      ...base,
+      status: "negative",
+      reason:
+        "recorded credential is expired or does not grant the required capability",
+    };
+  }
+  if (verdicts.some((v) => !v.outcome.ok) || !r.primary.outcome.ok) {
+    return {
+      ...base,
+      status: "unavailable",
+      reason: "credential coverage includes unavailable chain reads",
+    };
+  }
+  if (
+    r.capable &&
+    reads.some(
+      (out) =>
+        out.capable &&
+        (out.capabilityId === capability ||
+          out.capabilityHash.toLowerCase() === capability.toLowerCase()),
+    )
+  ) {
+    return {
+      ...base,
+      status: "positive",
+      reason: `non-self-issued credential held on ${r.primary.chain.name}`,
+    };
+  }
+  return {
+    ...base,
+    status: "unknown",
+    reason: "successful credential reads found no matching trust record",
+  };
+}
+
+function openWorldPayeeSignal(
+  result: PromiseSettledResult<SubjectResolution>,
+  external: PayeeEvidence[],
+  capability: string | undefined,
+  requiredCapability: string | undefined,
+  deps: DecideDeps,
+  env: NodeJS.ProcessEnv,
+): Signal {
+  const credential = credentialEvidence(result, capability);
+  const evidence = [
+    credential,
+    ...external.filter((e) => e.source !== "ligis-credential"),
+  ];
+  const allowedSources: PayeeEvidence["source"][] = [
+    "ligis-credential",
+    "erc8004",
+    "x402-settlement",
+    "nansen",
+  ];
+  const configuredSources = (env.LIGIS_PAYEE_REQUIRED_SOURCES ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const invalidSource = configuredSources.some(
+    (s) => !allowedSources.includes(s as PayeeEvidence["source"]),
+  );
+  const requiredSources =
+    deps.operatorPolicy?.requiredSources ??
+    (configuredSources as PayeeEvidence["source"][]);
+  for (const source of requiredSources) {
+    if (!evidence.some((e) => e.source === source)) {
+      evidence.push(
+        unavailable(source, "required source returned no evidence record"),
+      );
+    }
+  }
+  const negative = evidence.find((e) => e.status === "negative");
+  const missingRequired = requiredSources.find((source) => {
+    const records = evidence.filter((e) => e.source === source);
+    return !records.length || records.some((e) => e.status !== "positive");
+  });
+  const eligible = deps.operatorPolicy?.eligibleSources ?? [
+    "ligis-credential",
+    "erc8004",
+  ];
+  // Settlement volume is never an independently eligible trust source.
+  const positive = evidence.find(
+    (e) =>
+      eligible.includes(e.source as (typeof eligible)[number]) &&
+      e.source !== "x402-settlement" &&
+      e.status === "positive",
+  );
+  let status: VerdictStatus = "UNKNOWN";
+  let reason = "no qualifying payee trust evidence; absence is not a rejection";
+  if (negative) {
+    status = "STOP";
+    reason = negative.reason;
+  } else if (requiredCapability && credential.status === "unknown") {
+    status = "STOP";
+    reason = `operator requires specific non-self-issued capability ${requiredCapability}; credential missing`;
+  } else if (invalidSource) {
+    reason = "operator required-source configuration is invalid";
+  } else if (credential.status === "unavailable") {
+    reason = credential.reason;
+  } else if (missingRequired) {
+    reason = `required evidence source ${missingRequired} did not establish a positive answer`;
+  } else if (requiredCapability && credential.status !== "positive") {
+    reason = `required capability ${requiredCapability} could not be verified`;
+  } else if (positive) {
+    status = "GO";
+    reason = positive.reason;
+  }
+  const strict = verifiedPayeeSignal(result);
+  return {
+    ...strict,
+    id: "verified-payee",
+    status,
+    confidence: status === "UNKNOWN" ? 0 : 1,
+    reason,
+    evidence,
+  };
+}
 
 function buildSignal(
   id: Signal["id"],
@@ -498,6 +799,8 @@ function buildSignal(
       );
     }
     if (inScopeFromPage.status === "GO") {
+      const jevSignal = jevSignalFor(jev, id);
+      if (jevSignal.status === "STOP") return jevSignal;
       return baseSignal(
         id,
         "GO",
@@ -529,6 +832,18 @@ function jevSignalFor(jev: JevIntentResult, signalId: Signal["id"]): Signal {
       flag.confidence,
       flag.label,
       jev.latencyMs || undefined,
+    );
+  }
+  if (
+    jev.verdict === "STOP" &&
+    signalId === "in-scope" &&
+    !jev.flags.some((f) => JEV_FLAG_TO_SIGNAL[f.id])
+  ) {
+    return baseSignal(
+      signalId,
+      "STOP",
+      jev.confidence,
+      "intent evaluator returned STOP without a recognized flag",
     );
   }
   return baseSignal(
@@ -633,15 +948,20 @@ function baseSignal(
  * no mandate). This prevents a single credential GO from silencing three
  * skipped signals into a misleading green light.
  */
-function composeVerdict(signals: Signal[]): Decision["verdict"] {
+function composeVerdict(
+  signals: Signal[],
+  evidenceEnabled = false,
+): Decision["verdict"] {
   if (signals.some((s) => s.status === "STOP")) return "STOP";
+  if (signals.some((s) => s.status === "UNKNOWN")) return "UNKNOWN";
+  if (evidenceEnabled && signals.some((s) => s.status !== "GO"))
+    return "UNKNOWN";
 
   const payee = signals.find((s) => s.id === "right-payee")!;
   const amount = signals.find((s) => s.id === "right-amount")!;
 
   // Both payee and amount must have answered (not been skipped) for GO.
-  const intentSignalsAnswered =
-    payee.status !== "SKIPPED" && amount.status !== "SKIPPED";
+  const intentSignalsAnswered = payee.status === "GO" && amount.status === "GO";
 
   if (!intentSignalsAnswered) return "UNKNOWN";
 

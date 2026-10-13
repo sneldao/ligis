@@ -1,302 +1,186 @@
 # Ligis `/api/gate` — decide API
 
-> The source-of-truth for the pre-payment decision service. Locks the
-> input/output wire shape, the four signals, and a handful of design
-> calls that have to be answered before `web/lib/decide.ts` (the
-> service) and `web/app/api/gate/route.ts` (the endpoint) can ship.
->
-> Companion to `docs/positioning.md` (the public pitch + privacy + pricing).
-> Where they overlap, this doc owns the **shape**; positioning.md owns the
-> **words**.
+Implementation: `web/lib/decide.ts` and `web/lib/gate-run.ts`. Arena still uses
+its own judge. This document describes tested behavior, not a future API plan.
 
-## What `decide()` is
+## Transport
 
-`decide()` is the function behind `POST /api/gate`. It takes a
-`PaymentIntent`, runs four signal checks concurrently, and returns a
-`Decision` — verdict plus the signal stack that produced it. The same
-function backs `/arena`'s prompt-injection demo (with an optional
-`pageText` slot for the LLM-judge layer) and the on-chain `/gate`
-surface, so the demo and the product share one code path.
-
-Positioning/glossary/claims live in `docs/positioning.md`; this doc
-only defines the wire shape.
-
-## Endpoint
-
-```
-POST /api/gate
-Content-Type: application/json
-```
-
-**Request body** — `PaymentIntent`:
+`POST /api/gate` accepts JSON. `GET /api/gate` accepts equivalent query fields.
+Both return a no-store `Decision`. **HTTP 200 means a decision was returned,
+not GO.** Read `verdict` or `X-Ligis-Gate-Verdict`; STOP and UNKNOWN must not
+authorize payment. The endpoint does not settle a payment.
 
 ```ts
 type PaymentIntent = {
-  /** The agent's account address or a stable known-vendor id. */
   payee: string;
-  /** Amount in USD; Jev reads it as "human readable", the gate as policy. */
   amountUsd: number;
-  /** Free text — what the agent was hired to do. Forwarded to Jev as
-      `capability.description`, so the model can compare intent vs. cap. */
   purpose: string;
-  /** Optional mandate from the agent's operator; not required for /gate. */
-  mandate?: {
-    payees?: string[]; // known-allowed payee addresses
-    maxUsd?: number; // ceiling for this payment
-    scope?: string; // restricted domain ("data-premium", "us-east-rwa")
-  };
-  /** Capability the payment targets, e.g. `data.premium`. Defaults to
-      `purpose` slug when omitted. Forwarded to `resolveSubject()`. */
   capability?: string;
-  /** Optional: gate /arena's LLM-judge slot to read page text. Required
-      for the prompt-injection demo; omitted for /gate. */
+  mandate?: {
+    payees?: string[];
+    maxUsd?: number;
+    expectedUsd?: number;
+    scope?: string;
+  };
   pageText?: string;
 };
 ```
 
-**Response body** — `Decision`:
+The parser requires a nonempty payee/purpose and finite positive amount.
+`capability` is not inferred from purpose. GET mandate fields are
+`mandatePayees` (comma-separated), `mandateMaxUsd`, `mandateExpectedUsd`.
+
+Caller JSON and query mandates are **unauthenticated claims**, useful for
+previews, not protected operator authorization. A wallet integration must
+authenticate its operator policy. `DecideDeps.operatorPolicy` is a
+server-owned injection seam; its mandate is independently enforced, and
+caller terms cannot relax it. No public request field sets this policy,
+trust-source configuration, or the evidence flag.
+
+## Four signals, always
 
 ```ts
 type VerdictStatus = "GO" | "STOP" | "SKIPPED" | "UNKNOWN";
-
-type Signal =
-  | {
-      id: "right-payee";
-      status: VerdictStatus;
-      confidence: number; // 0..1; 0 when SKIPPED
-      reason?: string; // human-readable short form
-      latencyMs?: number; // populated when status != SKIPPED
-    }
-  | {
-      id: "right-amount";
-      status: VerdictStatus;
-      confidence: number;
-      reason?: string;
-      latencyMs?: number;
-    }
-  | {
-      id: "in-scope";
-      status: VerdictStatus;
-      confidence: number;
-      reason?: string;
-      latencyMs?: number;
-    }
-  | {
-      id: "verified-payee";
-      status: VerdictStatus;
-      confidence: number; // 1.0 when credential held, otherwise graduated
-      /** Which chain returned the credential — provenance, not source. */
-      chain?: "casper-testnet" | "pharos-atlantic" | "monad-testnet";
-      capabilityHash?: string;
-      credentialId?: string; // e.g. token id for EAS, or attestation hash for EIP-712
-      expiresAt?: string; // ISO timestamp
-      revoked?: boolean;
-      issuer?: string;
-      reason?: string;
-      latencyMs?: number;
-    };
-
+type Signal = {
+  id: "right-payee" | "right-amount" | "in-scope" | "verified-payee";
+  status: VerdictStatus;
+  confidence: number; // 0..1, zero for unresolved checks
+  reason?: string;
+  latencyMs?: number;
+  // verified-payee only:
+  chain?: string;
+  capabilityHash?: string;
+  credentialId?: string;
+  expiresAt?: string;
+  revoked?: boolean;
+  issuer?: string;
+  evidence?: PayeeEvidence[];
+};
 type Decision = {
-  /** Aggregate verdict. STOP wins; UNKNOWN means no signal answered. */
   verdict: "GO" | "STOP" | "UNKNOWN";
-  /** Full signal stack, in the canonical order from positioning.md. */
-  signals: Signal[];
-  /** Total wall-clock latency for the parallel signal evaluations. */
+  signals: Signal[]; // canonical order shown above
   latencyMs: number;
-  /** Estimated USD cost — Jev's `provider_metadata.gateway.cost` (or derived
-      from input tokens at $0.042/MTok). */
-  costUsd?: number;
-  /** Each upstream that answered: `jev-1.13.0 (direct, 235ms)`,
-      `casper-testnet credential`, `pharos-atlantic credential`. */
+  costUsd?: number; // Jev's reported/derived cost, not a billing guarantee
   provenance: string[];
 };
 ```
 
-**Composition rule** (per positioning.md "A signal that the model could
-not evaluate is reported as `SKIPPED` with the reason"):
+| Signal         | Implemented behavior                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| right-payee    | Case-insensitive mandate allowlist. No contractual payee means SKIPPED, even when Jev compares the payment to itself.           |
+| right-amount   | Mandate ceiling and contracted price. Above `expectedUsd * 1.10` STOPs, even below the ceiling. No ceiling/quote means SKIPPED. |
+| in-scope       | Jev scope and request-normality flags; obvious page-injection patterns can also STOP. A page judge GO cannot mask Jev STOP.     |
+| verified-payee | Legacy capability credential check, or opt-in open-world evidence composition described below.                                  |
 
-- If **any** signal is `STOP` → `Decision.verdict = "STOP"`.
-- Else if **all** signals are `SKIPPED` (and there is no GO either) → `UNKNOWN`.
-- Else if at least one signal is `GO` → `GO`.
-- Otherwise → `UNKNOWN`.
+STOP from a mandate or model always wins. Jev is supplementary; it cannot
+relax an operator constraint. `amountUsd` is human-readable intent input.
+Its six-decimal USDC representation for Jev is **not** an on-chain payment
+binding or proof of settlement.
 
-`UNKNOWN` is a valid, surfaced answer — not a silent GO. It tells the
-operator "nothing answered, can't say it's safe." The header
-`x-jev-verdict` and a `provenance` line make that auditable.
+## Default: legacy credential mode
 
-## The four signals
+`LIGIS_PAYEE_EVIDENCE_ENABLED` defaults off. Only the exact string `1`
+enables evidence mode. Default mode preserves:
 
-| Signal ID        | Source                                                                 | What it answers                                                                 |
-| ---------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `right-payee`    | Jev's `payee_consistency` (noul ≤ 0.3)                                 | Does the payment's `payee` match the advertised collector?                      |
-| `right-amount`   | Jev's `amount_plausibility` (score ≤ 0.5)                              | Is `amountUsd` plausible for the capability's typical value?                    |
-| `in-scope`       | Jev's `scope` (choice ≠ consistent) + `request_normality` (noul ≤ 0.3) | Is the `purpose` + `capability` a normal pair, or does the pattern read as off? |
-| `verified-payee` | `resolveSubject()` chain-agnostic credential read                      | Is there a credential that says this payee is trustworthy?                      |
+- Missing credential → verified-payee STOP.
+- Revoked, expired, or self-issued credential → STOP.
+- Missing capability or failed credential read → SKIPPED.
+- STOP wins; payee and amount must both GO before aggregate GO.
+- Other SKIPPED signals remain neutral, as in the existing implementation.
+  In particular, a complete mandate with Jev disabled can still GO.
+- No external payee-evidence reader is invoked.
 
-The third signal intentionally **folds `request_normality` in with `scope`**
-so the public surface stays at four signals (matching positioning.md).
-If the operator layer needs to see them separately for debugging, that's
-fine — the Jev `flags[]` are echoed under `provenance` and the Jev
-layer's own headers (`x-jev-flags`).
+This compatibility behavior does not change the x402 server's credential
+access control. Evidence is not a replacement for an x402 access capability.
 
-## Design calls (need sign-off before `decide.ts` ships)
+## Opt-in open-world mode
 
-These four calls shape the implementation. Defaults proposed; flag any
-you want changed.
+Server-owned `LIGIS_PAYEE_EVIDENCE_ENABLED=1`:
 
-### Call 1: `Signal` shape — discriminated by `id`
+1. Jev, credential resolution, and external source reads dispatch concurrently.
+2. Successful credential reads with no matching record produce source
+   `unknown`, not a negative. The top-level verified-payee is UNKNOWN unless
+   another eligible source establishes trust.
+3. Read failures produce source `unavailable`, distinct from successful absence.
+   Credential-source unavailability always blocks a positive aggregate.
+4. Any relevant negative wins, including revoked/self-issued credentials on
+   another queried rail. Positives never mask negatives by selecting a maximum.
+5. All four top-level signals must GO for aggregate GO. UNKNOWN/SKIPPED cannot
+   silently become GO. Missing intent evaluation therefore remains UNKNOWN.
+6. `operatorPolicy.requiredCapability` (or server environment
+   `LIGIS_PAYEE_REQUIRED_CAPABILITY`) resolves that specific capability instead
+   of the caller's chosen one. Missing required credential STOPs; unavailable
+   required reads yield UNKNOWN. Identity, history, and reputation do not
+   grant KYC, accreditation, or any capability.
+7. `operatorPolicy.requiredSources` (or `LIGIS_PAYEE_REQUIRED_SOURCES`,
+   comma-separated source names) requires each selected source to be positive.
+   Missing, UNKNOWN, or unavailable required sources block GO. Invalid environment
+   source names also block GO. Default: no additional required source.
+8. Positive eligibility defaults to `ligis-credential` and qualifying
+   `erc8004` evidence. Nansen requires a server-owned `eligibleSources`
+   opt-in at integration. `x402-settlement` is never independently eligible,
+   even when its history is verified.
 
-**Proposed.** Each variant carries its own provenance (chain, hash,
-credential) where applicable. TypeScript discriminated union, exhaustively
-checked at consumer sites.
+Negative evidence from any supplied reader still STOPs. Optional source gaps
+remain visible in `evidence` and `provenance` even when another eligible source
+answers positively. Mark a source required if its unresolved answer must veto GO.
 
-**Alternative.** A flat `{ id, status, confidence }` record with optional
-provenance keys. Simpler types, less compiler help at consumption.
+```ts
+type PayeeEvidence = {
+  source: "ligis-credential" | "erc8004" | "x402-settlement" | "nansen";
+  status: "positive" | "negative" | "unknown" | "unavailable";
+  reason: string;
+  observedAt: string;
+  chainId?: number;
+  reference?: string;
+  limitations: string[];
+};
+```
 
-**I'd ship the discriminated version.** The discriminated union is
-~30 lines heavier in `decide.ts` but it stops random "treat `expiresAt`
-as `chain`" bugs at the consumer.
+Source status is not a gate verdict. See [payee-evidence.md](payee-evidence.md)
+for discovery, trusted-client policy, settlement provenance, and coverage limits.
 
-### Call 2: Arena shares the code path _partially_
+## Budgets, receipts, and privacy
 
-**Proposed.** `decide()` accepts an optional `pageText`. When present,
-the LLM-judge slot runs (Arena). When absent, only the Jev slot and the
-credential read run (`/gate`). One code path, two slots.
+`LIGIS_PAYEE_EVIDENCE_TIMEOUT_MS` defaults to 4000 ms, bounded to 1–10000.
+Each source is abort-aware; the orchestrator also bounds injected readers
+that ignore abort. Evidence orchestration has a 100 ms completion margin so
+per-source timeout records can be retained. Credential rails are individually
+bounded so an early revoked result is not erased by another rail's outage.
+Existing RPC/Jev transports cannot always cancel an already-dispatched legacy
+workflow. New evidence readers do not dispatch further reads after abort.
 
-**Why partial, not full.** `judgePayment()`'s LLM slot reads the agent's
-untrusted `pageText`. `/gate` doesn't have one. Replacing Arena's
-`judgePayment()` with `decide()` removes the demo of prompt injection —
-the very thing the page is built to demonstrate.
+No decision cache is added. Decisions are snapshots, not guarantees against
+revocation between the read and actual payment.
 
-**Alternative.** Two services: `decide()` for `/gate`, leave
-`judgePayment()` alone for `/arena`. More code, less sharing.
+`GateDecision` displays UNKNOWN distinctly from STOP and retains source
+reasons, timestamps, references, and gaps. Receipt mapping keeps all four
+signals, folds UNKNOWN/SKIPPED to `unknown`, and retains the original status
+and source evidence in metadata. Open-world reputation is a `risk` receipt
+signal, not a claimed capability.
 
-**I'd ship the partial-unification.** It removes ~one-third of arena's
-parallel-dispatch and rate-limit code, and the LLM slot stays a clearly
-optional input.
+Previews invoke no recorder and publish no ERC-8004 feedback. `runGateDecision`
+has a separate server-only authenticated-opt-in recorder injection for worker D;
+no route wires it. Enabling it requires actual authentication/consent and a
+coordinator update to `docs/positioning.md` and the matching `/embed` privacy
+promise. Aggregate verdict counters remain unchanged; payees and amounts are
+not passed to them.
 
-### Call 3: `verified-payee` is independent of `purpose`
+## Tests
 
-**Proposed.** `verified-payee: GO` means "this address holds a valid,
-un-revoked credential." It does **not** check whether the credential is
-the _right one for the intent_. The agent's owner is responsible for
-saying "I'm paying for X, here's the required `capability`," and the
-credential registry returns whether the payee holds it. If the agent's
-owner is sloppy and sends the wrong `capability` to a credentialed
-payee, the gate says GO and the wrong payment proceeds.
+Injected RPC, GraphQL, Jev, credential, and settlement doubles exercise
+absence/outage, non-demo identities, wallet changes, multiple IDs, pagination,
+decimal scaling, independence exclusions, negative precedence, protected
+policy, recorder opt-in, and no-history-only GO.
 
-**Alternative.** Strict coupling: `verified-payee` checks both
-"credential held" AND "credential matches the intent's purpose." This
-is closer to a typed RBAC model.
+```sh
+pnpm --filter @ligis/web test
+pnpm --filter @ligis/web typecheck
+pnpm lint:design
+pnpm --filter @ligis/envio-indexer codegen
+pnpm --filter @ligis/envio-indexer typecheck
+pnpm --filter @ligis/envio-indexer test
+pnpm --filter @ligis/web build
+```
 
-**I'd ship the looser version.** The four-signal design (right payee +
-right amount + in scope + verified payee) already enforces purpose fit
-through the `in-scope` Jev check + the operator's chosen capability. A
-tight `verified-payee` would re-derive that link in code and risk
-contradicting the Jev signal.
-
-### Call 4: No decision cache initially
-
-**Proposed.** No cache in `decide()`. `/gate` already has a 30-second
-credential TTL via the existing `LIGIS_GATE_CREDENTIAL_TTL_MS` env
-var. Jev at ~$0.0001/call (measured in `scripts/jev-transport-smoke.lastrun.txt`)
-is cheap enough that a decision cache doesn't pay back its complexity.
-
-**Alternative.** Lift `judgePayment()`'s `cachedVerdict()` block into
-`decide.ts`. Per-IP cache + rate limit. Reuses Arena's infrastructure
-but couples decide.ts to a memo layer.
-
-**I'd ship without the cache.** If week-two traffic says otherwise, add
-it. The cache key shape leaks intent across requests if anyone watches
-the Redis layer, so I'd rather defer than ship prematurely.
-
-## Risks I want flagged before code lands
-
-These are real architectural risks. Mitigation exists; just want them
-documented:
-
-### R1: Jev packs 4 questions into one verdict
-
-`@ligis/core/jev.ts`'s `evaluatePaymentIntent` returns one
-`JevIntentResult` with a flags list. The public `Decision` API needs
-three of those flags as separate signals (`right-payee`, `right-amount`,
-`in-scope`). That means **two composition layers**, one inside Jev and
-one at the `Decision` aggregator.
-
-**Mitigation.** Jev's verdict stays canonical. `decide.ts` maps
-`JevIntentResult.flags[]` → `Signal[]` deterministically (see
-`packages/core/src/jev.ts:composeVerdict` for the flag-ids). The
-`provenance` line exposes the raw Jev answer so the operator can
-disambiguate when a flag fires.
-
-### R2: Concurrent dispatch across heterogeneous services
-
-Jev, the chain-agnostic credential read, and (optionally) the LLM slot
-are three different upstreams with different latencies, rate limits,
-and failure modes. `Promise.allSettled` is the right primitive, but
-the aggregator must tolerate one upstream returning `SKIPPED` while the
-others succeed.
-
-**Mitigation.** Each signal is reported as `SKIPPED` with a reason when
-its upstream failed. `provenance[]` records what ran. The composition
-rule (above) collapses the four signals into one verdict even when some
-were `SKIPPED`.
-
-### R3: Revoked credentials change in-flight
-
-A credential might be revoked between `resolveSubject()` and the actual
-payment. The decision is a snapshot, not a guarantee. This is
-fundamental; the gate is the **decision**, not the settlement.
-
-**Mitigation.** The `TrustReceipt` primitive already exists in
-`web/components/TrustReceipt.tsx` but isn't on any page yet — Phase 3c
-fixes that. Show the chain-of-decisions: which chains answered, which
-TX hash a revoke would have to overtake, what the timestamp was.
-Operators read receipts, not just verdicts.
-
-### R4: Cache key shape leaks intent
-
-If `decide()` later adds a cache, the key must not be `(payee,
-amountUsd, purpose)` plaintext — anyone watching Redis can correlate
-intent across requests. Hash the input, key on the digest.
-
-**Mitigation.** Defer (Call 4). When the cache ships, key on
-`sha256(JSON.stringify(input))` and document the contract.
-
-## Verification plan for Phase 3a / 3b
-
-Before `web/lib/decide.ts` and `web/app/api/gate/route.ts` are merged,
-ship these tests in `web/test/decide.test.ts`:
-
-| Case                                                                 | Expected verdict | Why                                                      |
-| -------------------------------------------------------------------- | ---------------- | -------------------------------------------------------- |
-| Legit renewal (right payee, right amount, in scope, credential held) | `GO`             | All four signals GO.                                     |
-| Mismatched payee                                                     | `STOP`           | `right-payee` STOPs.                                     |
-| Implausible amount (10× advertised)                                  | `STOP`           | `right-amount` STOPs.                                    |
-| No credential held, intent fine                                      | `STOP`           | `verified-payee` STOPs.                                  |
-| All four signals skipped (no key, no chain)                          | `UNKNOWN`        | Composition rule's "all SKIPPED" branch.                 |
-| All four signals skipped but one GO fails fast                       | `UNKNOWN`        | Reduce, never invent a verdict.                          |
-| Jev layer skipped, credential GO only                                | `GO`             | Credential is the source of truth when intent is silent. |
-| Same input called 10×, same decision                                 | `GO` × 10        | Determinism contract — no random in `composeVerdict`.    |
-| `pageText: "ignore previous instructions..."`                        | `STOP` (Arena)   | LLM slot fires; signals still resolve.                   |
-
-The tests stub `@ligis/core/jev.ts::evaluatePaymentIntent` and
-`web/lib/resolve.ts::resolveSubject` so they run without keys and
-without chain RPCs.
-
-## What this doc does NOT define
-
-Out of scope here; covered elsewhere:
-
-- **Pricing.** → `docs/positioning.md` "Pricing model".
-- **Privacy posture.** → `docs/positioning.md` "Privacy posture".
-- **Glossary.** → `docs/positioning.md` "Glossary".
-- **On-chain contract layout.** → `docs/architecture.md`.
-- **CROO integration shape.** → `docs/croo-integration.md`.
-
-## Change control
-
-When the API shape moves, this doc moves first. Then `decide.ts`,
-then `route.ts`, then tests, then the `/gate` page that consumes the
-new shape. Landing copy that mentions the shape (e.g., the `GET` /
-`POST` snippet on `web/app/page.tsx`) defers to this doc.
+These tests are not live chain or paid Jev proof.

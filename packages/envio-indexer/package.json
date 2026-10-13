@@ -7,6 +7,8 @@
   "type": "module",
   "scripts": {
     "codegen": "envio codegen",
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck envio-env.d.ts src/*.ts",
     "dev": "envio dev",
     "start": "envio start",
     "smoke:hypersync": "tsx scripts/smoke-hypersync.ts",

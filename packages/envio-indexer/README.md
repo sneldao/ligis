@@ -1,108 +1,61 @@
-# Ligis × Envio — Monad Testnet CredentialRegistry indexer
+# Ligis Envio indexer — Monad testnet
 
-Free path for Metropolis: HyperIndex + HyperSync on chain `10143`, no paid RPC.
+HyperIndex 3.12.1 on chain 10143, with existing CredentialRegistry events and
+official ERC-8004 v2 identity/wallet/reputation events.
 
-## Live endpoint (VPS)
+## Local validation (no deployment or chain writes)
 
-HyperIndex runs on `nuncio-vultr` at `/opt/ligis-envio`:
-
-```text
-LIGIS_ENVIO_GRAPHQL_URL=http://144.202.117.160:18080/v1/graphql
+```sh
+pnpm --filter @ligis/envio-indexer codegen
+pnpm --filter @ligis/envio-indexer typecheck
+pnpm --filter @ligis/envio-indexer test
 ```
 
-Public Hasura role can read entities (no admin secret). Ports: Postgres
-`5435`, Hasura `18080` (avoids Coolify `8080` and directors-canvas `5433`).
-Indexer is enabled as systemd unit `ligis-envio-indexer` for reboot; Docker
-compose stack is `ligis-envio-postgres` + `ligis-envio-hasura`.
+Simulation tests exercise the actual handlers without a live RPC or token.
+Codegen writes ignored `.envio` files; do not commit generated build trees.
 
-Set the URL on Vercel (web production) and locally when exercising Monad
-issuer / capability history.
+## Scope
 
-## Why this exists
+| Contract/event                                              | Entity/behavior                                                 |
+| ----------------------------------------------------------- | --------------------------------------------------------------- |
+| CredentialIssued, CredentialRevoked, AgentCapabilityChanged | Existing credential history                                     |
+| IdentityRegistry Registered                                 | Scoped identity + initial wallet                                |
+| MetadataSet / agentWallet                                   | Packed 20-byte wallet claims, including unset                   |
+| Transfer                                                    | Ownership update; clears wallet, never infers wallet from owner |
+| URIUpdated                                                  | Agent URI update                                                |
+| ReputationRegistry NewFeedback                              | Signed value, decimals, tags, client, URI/hash references       |
+| FeedbackRevoked                                             | Revocation ledger + current feedback revocation                 |
+| ResponseAppended                                            | Response URI/hash ledger                                        |
+| Block handler                                               | Scoped coverage from block 0 through the processed block        |
 
-Monad's public RPC accepts `eth_getLogs` but caps each call at **100 blocks**.
-That is enough for a recent window in the web app; full issuer / capability
-history needs an indexer. Envio is first-class on Monad and is the $1k
-"Best use of Envio" bounty entry.
+IDs include chain and registry. Wallet claims are retained after changes,
+so a payee can discover historical candidates; the web reader must always
+confirm their current `getAgentWallet` on-chain.
 
-## Secrets (do not commit)
+Standard registries start at block 0. The credential contract retains its
+later start block at 63359400. Do not change the full-history start without
+updating `Erc8004Coverage` and preserving incomplete-coverage semantics.
 
-Store the HyperSync API token only in gitignored env:
+Configured addresses:
 
-```bash
-# ../../.env.d/envio.env  (mode 600, already gitignored via .env.d/)
-ENVIO_API_TOKEN=<from https://app.envio.dev/api-tokens>
-```
+- CredentialRegistry v2: `0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a`.
+- IdentityRegistry: `0x8004A818BFB912233c491871b3d84c89A494BD9e`.
+- ReputationRegistry: `0x8004B663056A597Dffe9eCcC1965A193B7388713`.
 
-On the VPS the same token lives in `/opt/ligis-envio/.env` (mode 600) as
-`ENVIO_API_TOKEN` plus `HASURA_GRAPHQL_ADMIN_SECRET`.
+## Integration and operations
 
-Load before local codegen / dev / smoke:
+The web gate uses server-owned `LIGIS_ENVIO_GRAPHQL_URL`. New tables must be
+available to its read-only role. It cursor-paginates scoped wallet claims and
+references, validates coverage against a finalized RPC snapshot, and confirms
+bindings/revocation on-chain. Old deployments without the new tables fall
+back to bounded RPC windows, not a false full-history result.
 
-```bash
-set -a && source ../../.env.d/envio.env && set +a
-```
+**This patch does not update the existing deployment or backfill any database.**
+Running `envio dev/start` or deploying a new indexer requires separate operator
+authorization and, for local databases, Docker. Secret names only:
+`ENVIO_API_TOKEN`, `HASURA_GRAPHQL_ADMIN_SECRET`. Do not expose an admin secret
+to the public web reader or commit secret values.
 
-Verified 2026-09-24: this token can call **HyperSync**
-(`monad-testnet.hypersync.xyz`) — height + log queries against
-`CredentialRegistry` succeed. It does **not** include HyperRPC product access
-(`*.rpc.hypersync.xyz`); that is fine — HyperIndex uses HyperSync, and the web
-app keeps the public Monad RPC for ordinary reads. Free-tier HyperSync can
-rate-limit; the indexer retries automatically.
-
-## Setup (free, local)
-
-**Requires Docker** for `envio dev` (local Postgres + Hasura). Without Docker,
-codegen still works; full sync needs Docker, the VPS stack above, or Envio Cloud.
-
-```bash
-# 1. Token in ../../.env.d/envio.env (see above)
-set -a && source ../../.env.d/envio.env && set +a
-
-# 2. CLI already listed as a package dep; or:
-pnpm add -D envio typescript
-
-# 3. Generate types
-pnpm codegen
-
-# 4. Run indexer (Docker required)
-pnpm dev
-# GraphQL default: http://localhost:8080/v1/graphql
-```
-
-Smoke the token without Docker:
-
-```bash
-set -a && source ../../.env.d/envio.env && set +a
-pnpm smoke:hypersync
-```
-
-Point the web app at the indexer:
-
-```bash
-# local
-export LIGIS_ENVIO_GRAPHQL_URL=http://localhost:8080/v1/graphql
-# production (Vercel) — same as live VPS endpoint above
-```
-
-## Handlers (Envio v3)
-
-`src/EventHandlers.ts` registers via `indexer.onEvent` from `envio` (not the
-removed `generated` package). `CredentialIssued` ABI param order must match
-the Solidity event: `nonce`, then `issuedAt`, then `expiresAt`.
-
-## What is indexed
-
-| Event                    | Entity                                     |
-| ------------------------ | ------------------------------------------ |
-| `CredentialIssued`       | issuer / subject / capability / block / tx |
-| `CredentialRevoked`      | same                                       |
-| `AgentCapabilityChanged` | subject / capable / block / tx             |
-
-Contract: `0x698e1C05d34e2b6d0B6eCd71f3fC9e84e64733c5` (`deployment.monad-testnet`).
-
-## Web wiring
-
-`web/lib/chain.ts` prefers Envio for `monad-testnet` when
-`LIGIS_ENVIO_GRAPHQL_URL` is set (`web/lib/envio.ts`). Otherwise it falls
-back to chunked public-RPC scans (100-block windows).
+For standard semantics, source provenance, trust policy, and limitations:
+[docs/payee-evidence.md](../../docs/payee-evidence.md). No sponsor eligibility
+or production rail coverage is claimed.
