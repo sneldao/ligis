@@ -436,6 +436,7 @@ summary:focus-visible {
   /* no-op outside [data-mode="incident"]; see selectors below */
 }
 
+[data-mode="incident"].night-grid,
 [data-mode="incident"] .night-grid {
   background-color: var(--color-night);
   background-image: radial-gradient(
@@ -445,6 +446,7 @@ summary:focus-visible {
   background-size: 22px 22px;
 }
 
+[data-mode="incident"].night-grid-fade,
 [data-mode="incident"] .night-grid-fade {
   mask-image: radial-gradient(
     ellipse 80% 70% at 50% 35%,
