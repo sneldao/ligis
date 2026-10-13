@@ -1,6 +1,8 @@
 import { Rule } from "@/components/Rule";
 import { VerdictMark } from "@/components/VerdictMark";
-import { signalCostUsd, type TrustSignal } from "@ligis/core";
+// @ligis/core/trust subpath, not the barrel — same fs-in-browser reason as
+// web/lib/casper-browser/steward.ts (GateDecision renders this client-side).
+import { signalCostUsd, type TrustSignal } from "@ligis/core/trust";
 
 /**
  * SignalStack — the trust signal ledger.

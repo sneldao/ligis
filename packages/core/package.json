@@ -13,6 +13,10 @@
     "./hash": {
       "import": "./dist/hash.js",
       "types": "./dist/hash.d.ts"
+    },
+    "./trust": {
+      "import": "./dist/trust.js",
+      "types": "./dist/trust.d.ts"
     }
   },
   "scripts": {
