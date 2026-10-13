@@ -1,188 +1,213 @@
 import { NextRequest } from "next/server";
-import { isAddress, type Address, type Hex } from "viem";
+import { type Hex } from "viem";
+import { fixtureEnabled, passkeyConfig } from "@/lib/passkey";
 import {
-  enrollPasskey,
-  isEnrolled,
-  issueCredential,
-  passkeyConfig,
-  prepareIssue,
-  prepareRevoke,
-  readIsCapable,
-  revokeCredential,
-} from "@/lib/passkey";
+  authenticatePasskeyUser,
+  fixtureAdmit,
+  fixtureLogin,
+  fixturePrepare,
+  fixtureSubmit,
+} from "@/lib/passkey-sponsor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const HEX32 = /^0x[0-9a-fA-F]{64}$/;
-const HEX = /^0x[0-9a-fA-F]*$/;
-
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
+  return Response.json(body, {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Cache-Control": "no-store" },
   });
 }
-
-function bad(message: string) {
-  return json({ error: message }, 400);
+function hex(value: unknown, length?: number): Hex {
+  if (
+    typeof value !== "string" ||
+    !/^0x(?:[0-9a-fA-F]{2})+$/.test(value) ||
+    value.length > 4098 ||
+    (length !== undefined && value.length !== 2 + length * 2)
+  ) {
+    throw new Error("Invalid hex");
+  }
+  return value as Hex;
 }
-
-function addr(v: unknown): Address | null {
-  return typeof v === "string" && isAddress(v) ? (v as Address) : null;
+function uint(value: unknown): bigint {
+  if (typeof value !== "string" || !/^\d{1,78}$/.test(value))
+    throw new Error("Invalid uint");
+  const number = BigInt(value);
+  if (number >= 1n << 256n) throw new Error("Invalid uint");
+  return number;
 }
-
-function hex(v: unknown, re: RegExp): Hex | null {
-  return typeof v === "string" && re.test(v) ? (v as Hex) : null;
+async function bodyOf(req: NextRequest): Promise<Record<string, unknown>> {
+  const reader = req.body?.getReader();
+  if (!reader) throw new Error("Missing body");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > 16_384) {
+      await reader.cancel();
+      throw new Error("Body too large");
+    }
+    chunks.push(value);
+  }
+  const parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    throw new Error("Invalid body");
+  return parsed;
 }
-
-function capabilityOf(v: unknown): string | null {
-  return typeof v === "string" && /^[a-z0-9._-]{1,64}$/i.test(v) ? v : null;
-}
-
-type Body = Record<string, unknown>;
 
 export async function POST(req: NextRequest) {
-  let body: Body;
+  let body: Record<string, unknown>;
   try {
-    body = (await req.json()) as Body;
+    body = await bodyOf(req);
   } catch {
-    return bad("Invalid JSON body");
+    return json(
+      { error: "Expected a JSON object no larger than 16 KiB." },
+      400,
+    );
   }
-  const action = typeof body.action === "string" ? body.action : "";
+  const action = body.action;
+  if (action === "config") return json(await passkeyConfig());
+  if (action === "enroll") {
+    return json(
+      {
+        error:
+          "Public enrollment is forbidden. Only the contract owner may admit an operator key. All admitted keys share issuer authority.",
+      },
+      403,
+    );
+  }
+  if (typeof action !== "string")
+    return json({ error: "Action required." }, 400);
+  const origin =
+    process.env.LIGIS_PASSKEY_ORIGIN ??
+    `https://${process.env.LIGIS_PASSKEY_RP_ID ?? "ligis.vercel.app"}`;
+  if (req.headers.get("origin") !== origin)
+    return json({ error: "Wrong serving origin." }, 403);
 
-  try {
-    switch (action) {
-      case "config": {
-        return json(await passkeyConfig());
-      }
-
-      case "prepareIssue": {
-        const subject = addr(body.subject);
-        const capability = capabilityOf(body.capability);
-        if (!subject) return bad("subject must be an EVM address");
-        if (!capability)
-          return bad("capability must be a dotted id like demo.passkey");
-        return json(await prepareIssue(subject, capability));
-      }
-
-      case "prepareRevoke": {
-        const subject = addr(body.subject);
-        const capHash = hex(body.capabilityHash, HEX32);
-        const nonce =
-          typeof body.nonce === "string" ? BigInt(body.nonce) : null;
-        if (!subject || !capHash || nonce === null) {
-          return bad("subject, capabilityHash, nonce required");
-        }
-        return json({ digest: prepareRevoke(subject, capHash, nonce) });
-      }
-
-      case "enroll": {
-        const keyId = hex(body.keyId, HEX32);
-        const qx = typeof body.qx === "string" ? BigInt(body.qx) : null;
-        const qy = typeof body.qy === "string" ? BigInt(body.qy) : null;
-        if (!keyId || qx === null || qy === null) {
-          return bad("keyId, qx, qy required");
-        }
-        if (await isEnrolled(keyId)) {
-          return json({ tx: null, alreadyEnrolled: true });
-        }
-        return json({ tx: await enrollPasskey(keyId, qx, qy) });
-      }
-
-      case "issue": {
-        const subject = addr(body.subject);
-        const capability = capabilityOf(body.capability);
-        const keyId = hex(body.keyId, HEX32);
-        const authenticatorData = hex(body.authenticatorData, HEX);
-        const clientDataJSON = hex(body.clientDataJSON, HEX);
-        if (
-          !subject ||
-          !capability ||
-          !keyId ||
-          !authenticatorData ||
-          !clientDataJSON
-        ) {
-          return bad(
-            "subject, capability, keyId, authenticatorData, clientDataJSON required",
-          );
-        }
-        const num = (k: string) =>
-          typeof body[k] === "string" ? BigInt(body[k] as string) : null;
-        const issuedAt = num("issuedAt");
-        const expiresAt = num("expiresAt");
-        const nonce = num("nonce");
-        const r = num("r");
-        const s = num("s");
-        if ([issuedAt, expiresAt, nonce, r, s].some((v) => v === null)) {
-          return bad("issuedAt, expiresAt, nonce, r, s required");
-        }
-        const out = await issueCredential({
-          subject,
-          capability,
-          issuedAt: issuedAt!,
-          expiresAt: expiresAt!,
-          nonce: nonce!,
-          keyId,
-          authenticatorData,
-          clientDataJSON,
-          r: r!,
-          s: s!,
+  if (!action.startsWith("fixture")) {
+    if (action === "identity") {
+      try {
+        await authenticatePasskeyUser(req.headers.get("authorization"));
+        return json({
+          authenticated: true,
+          admitted: false,
+          writeReady: false,
         });
-        return json(out);
-      }
-
-      case "revoke": {
-        const subject = addr(body.subject);
-        const capability = capabilityOf(body.capability);
-        const keyId = hex(body.keyId, HEX32);
-        const authenticatorData = hex(body.authenticatorData, HEX);
-        const clientDataJSON = hex(body.clientDataJSON, HEX);
-        const nonce =
-          typeof body.nonce === "string" ? BigInt(body.nonce) : null;
-        if (
-          !subject ||
-          !capability ||
-          !keyId ||
-          !authenticatorData ||
-          !clientDataJSON ||
-          nonce === null
-        ) {
-          return bad(
-            "subject, capability, nonce, keyId, authenticatorData, clientDataJSON required",
-          );
-        }
-        const r = typeof body.r === "string" ? BigInt(body.r) : null;
-        const s = typeof body.s === "string" ? BigInt(body.s) : null;
-        if (r === null || s === null) return bad("r, s required");
+      } catch {
         return json(
-          await revokeCredential({
-            subject,
-            capability,
-            nonce,
-            keyId,
-            authenticatorData,
-            clientDataJSON,
-            r,
-            s,
-          }),
+          {
+            error:
+              "Valid Privy authentication required. Authentication does not grant issuer authority.",
+          },
+          401,
         );
       }
-
-      case "status": {
-        const subject = addr(body.subject);
-        const capability = capabilityOf(body.capability);
-        if (!subject || !capability) return bad("subject, capability required");
-        return json({ capable: await readIsCapable(subject, capability) });
-      }
-
-      default:
-        return bad("unknown action");
     }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    // Surface the contract revert reason (InvalidSignature etc.) — it is the
-    // difference between "ceremony wrong" and "relayer wrong" in the UI.
-    return json({ error: msg.slice(0, 300) }, 500);
+    if (
+      !["prepareIssue", "prepareRevoke", "issue", "revoke", "status"].includes(
+        action,
+      )
+    ) {
+      return json({ error: "Unknown action." }, 400);
+    }
+    return json(
+      {
+        error:
+          "Live issuer/sponsorship unavailable. Read-only until authorized cutover and provider policy verification. No steward fallback.",
+        state: "unavailable",
+      },
+      503,
+    );
+  }
+  if (!fixtureEnabled())
+    return json({ error: "Local fixture is disabled." }, 404);
+  const token =
+    req.headers.get("authorization")?.replace(/^Fixture /, "") ?? null;
+  try {
+    switch (action) {
+      case "fixtureLogin":
+        return json(fixtureLogin());
+      case "fixtureAdmit":
+        return json(
+          fixtureAdmit(token, {
+            keyId: hex(body.keyId, 32),
+            qx: uint(body.qx),
+            qy: uint(body.qy),
+          }),
+        );
+      case "fixturePrepare":
+        if (body.operation !== "issue" && body.operation !== "revoke")
+          return json({ error: "Invalid operation." }, 400);
+        return json(fixturePrepare(token, body.operation));
+      case "fixtureSubmit": {
+        if (typeof body.operationId !== "string")
+          return json({ error: "Operation ID required." }, 400);
+        if (
+          Object.keys(body).some(
+            (key) =>
+              ![
+                "action",
+                "operationId",
+                "authenticatorData",
+                "clientDataJSON",
+                "r",
+                "s",
+                "scenario",
+              ].includes(key),
+          )
+        ) {
+          return json(
+            {
+              error:
+                "Caller-selected calldata, destination, chain and value are forbidden.",
+            },
+            400,
+          );
+        }
+        const scenario = body.scenario ?? "confirmed";
+        if (
+          ![
+            "confirmed",
+            "pending",
+            "reverted",
+            "read-failure",
+            "outage",
+          ].includes(String(scenario))
+        )
+          return json({ error: "Invalid fixture scenario." }, 400);
+        return json(
+          await fixtureSubmit(
+            token,
+            body.operationId,
+            {
+              authenticatorData: hex(body.authenticatorData),
+              clientDataJSON: hex(body.clientDataJSON),
+              r: uint(body.r),
+              s: uint(body.s),
+            },
+            origin,
+            String(scenario),
+          ),
+        );
+      }
+      default:
+        return json({ error: "Unknown fixture action." }, 400);
+    }
+  } catch (error) {
+    // Only controlled fixture errors are exposed; never echo provider/RPC requests.
+    const message = error instanceof Error ? error.message : "";
+    const safe =
+      /^(Fixture |Sponsor |Duplicate |Operator |Unknown, |Stale issuer |No active |Authenticated )/.test(
+        message,
+      );
+    return json(
+      {
+        error: safe ? message : "Invalid or unauthorized fixture request.",
+        fixture: true,
+      },
+      400,
+    );
   }
 }

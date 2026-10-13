@@ -19,10 +19,9 @@ interface ICredentialRegistryForRevoke {
 ///         this exact credential) and that the authenticator signed
 ///         `sha256(authenticatorData ‖ sha256(clientDataJSON))` under a registered key.
 ///
-///         Registration is open: enrollment is what makes a passkey able to authorize
-///         issuance, and consumers that need issuer-level trust should gate on
-///         `isCapableFromIssuer(subject, cap, address(this))` plus operator review.
-///         The owner can remove a compromised key and rotate the RP-ID hash.
+///         Only the owner admits keys. All admitted keys share this issuer's authority,
+///         including revocation, and are NOT isolated public-signup tenants.
+///         Rotation requires owner removal followed by explicit re-enrollment.
 contract PasskeyIssuer {
     address public constant P256_VERIFY = address(0x0100);
     bytes4 internal constant ERC1271_MAGIC = 0x1626ba7e;
@@ -38,17 +37,29 @@ contract PasskeyIssuer {
     mapping(bytes32 => Passkey) public passkeys;
 
     /// @notice Expected sha256 of the relying-party ID embedded in authenticatorData
-    ///         (e.g. sha256("ligis.vercel.app")). Binds assertions to this origin.
+    ///         (e.g. sha256("ligis.vercel.app")). The full origin is checked separately.
     bytes32 public rpIdHash;
+    /// @notice sha256 of the exact serving origin, including scheme and port.
+    /// Unconfigured originHash fails closed until the owner sets it.
+    bytes32 public originHash;
     address public owner;
+    uint256 internal constant P =
+        0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff;
+    uint256 internal constant B =
+        0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b;
 
     event PasskeyRegistered(bytes32 indexed keyId, uint256 qx, uint256 qy);
     event PasskeyRemoved(bytes32 indexed keyId);
 
     error NotOwner();
     error UnknownPasskey(bytes32 keyId);
+    error DuplicatePasskey(bytes32 keyId);
+    error InvalidPublicKey();
+    error InvalidContext();
+    error InvalidKeyId();
 
     constructor(bytes32 _rpIdHash) {
+        if (_rpIdHash == bytes32(0)) revert InvalidContext();
         rpIdHash = _rpIdHash;
         owner = msg.sender;
     }
@@ -56,6 +67,15 @@ contract PasskeyIssuer {
     // ---------- enrollment ----------
 
     function registerPasskey(bytes32 keyId, uint256 qx, uint256 qy) external {
+        if (msg.sender != owner) revert NotOwner();
+        if (keyId == bytes32(0)) revert InvalidKeyId();
+        if (passkeys[keyId].qx != 0 || passkeys[keyId].qy != 0) revert DuplicatePasskey(keyId);
+        // Reject infinity, out-of-field coordinates and points off the P-256 curve.
+        if (qx >= P || qy >= P || (qx == 0 && qy == 0)) revert InvalidPublicKey();
+        uint256 rhs = addmod(
+            addmod(mulmod(mulmod(qx, qx, P), qx, P), P - mulmod(3, qx, P), P), B, P
+        );
+        if (mulmod(qy, qy, P) != rhs) revert InvalidPublicKey();
         passkeys[keyId] = Passkey(qx, qy);
         emit PasskeyRegistered(keyId, qx, qy);
     }
@@ -68,7 +88,14 @@ contract PasskeyIssuer {
 
     function setRpIdHash(bytes32 _rpIdHash) external {
         if (msg.sender != owner) revert NotOwner();
+        if (_rpIdHash == bytes32(0)) revert InvalidContext();
         rpIdHash = _rpIdHash;
+    }
+
+    function setOriginHash(bytes32 _originHash) external {
+        if (msg.sender != owner) revert NotOwner();
+        if (_originHash == bytes32(0)) revert InvalidContext();
+        originHash = _originHash;
     }
 
     // ---------- ERC-1271 ----------
@@ -109,7 +136,7 @@ contract PasskeyIssuer {
     ) external {
         bytes32 revokeDigest = keccak256(
             abi.encodePacked(
-                "LigisPasskeyRevoke", registry, subject, capabilityHash, nonce, block.chainid
+                "LigisPasskeyRevoke", address(this), registry, subject, capabilityHash, nonce, block.chainid
             )
         );
         if (!_verifyAssertion(revokeDigest, keyId, authenticatorData, clientDataJSON, r, s)) {
@@ -128,6 +155,7 @@ contract PasskeyIssuer {
         uint256 r,
         uint256 s
     ) internal view returns (bool) {
+        if (originHash == bytes32(0)) return false;
         Passkey memory pk = passkeys[keyId];
         if (pk.qx == 0 && pk.qy == 0) return false;
 
@@ -139,14 +167,11 @@ contract PasskeyIssuer {
         }
         if (gotRpIdHash != rpIdHash) return false;
         uint8 flags = uint8(authenticatorData[32]);
-        if (flags & 0x01 == 0) return false; // user-presence flag required
+        if (flags & 0x05 != 0x05) return false; // require both presence AND verification
+        if (flags & 0x10 != 0 && flags & 0x08 == 0) return false; // invalid backup flags
 
         // clientDataJSON must be a webauthn.get carrying challenge = base64url(digest).
-        if (!_contains(clientDataJSON, '"type":"webauthn.get"')) return false;
-        bytes memory challenge = _extractChallenge(clientDataJSON);
-        bytes memory expected = bytes(encodeChallenge(digest));
-        if (challenge.length != expected.length) return false;
-        if (keccak256(challenge) != keccak256(expected)) return false;
+        if (!_validClientData(clientDataJSON, digest)) return false;
 
         bytes32 msgHash =
             sha256(abi.encodePacked(authenticatorData, sha256(clientDataJSON)));
@@ -189,44 +214,33 @@ contract PasskeyIssuer {
         return string(out);
     }
 
-    function _extractChallenge(bytes memory json) internal pure returns (bytes memory) {
-        bytes memory marker = bytes('"challenge":"');
-        for (uint256 i = 0; i + marker.length <= json.length; i++) {
-            bool matchAll = true;
-            for (uint256 j = 0; j < marker.length; j++) {
-                if (json[i + j] != marker[j]) {
-                    matchAll = false;
-                    break;
-                }
-            }
-            if (!matchAll) continue;
-            uint256 start = i + marker.length;
-            uint256 end = start;
-            while (end < json.length && json[end] != '"') end++;
-            bytes memory out = new bytes(end - start);
-            for (uint256 k = start; k < end; k++) out[k - start] = json[k];
-            return out;
+    /// @dev Deliberately supports only the compact browser serialization below,
+    /// with optional crossOrigin:false and Chromium's known serialization sentinel.
+    /// Rejects duplicate fields, nested substring tricks, escaped origins and
+    /// unrecognized extensions rather than parsing loosely.
+    function _validClientData(bytes memory json, bytes32 digest) internal view returns (bool) {
+        bytes memory prefix = abi.encodePacked(
+            '{"type":"webauthn.get","challenge":"', encodeChallenge(digest), '","origin":"'
+        );
+        if (json.length > 1024 || json.length <= prefix.length) return false;
+        for (uint256 i; i < prefix.length; i++) {
+            if (json[i] != prefix[i]) return false;
         }
-        return new bytes(0);
-    }
-
-    function _contains(bytes memory haystack, bytes memory needle)
-        internal
-        pure
-        returns (bool)
-    {
-        if (needle.length > haystack.length) return false;
-        for (uint256 i = 0; i + needle.length <= haystack.length; i++) {
-            bool matchAll = true;
-            for (uint256 j = 0; j < needle.length; j++) {
-                if (haystack[i + j] != needle[j]) {
-                    matchAll = false;
-                    break;
-                }
-            }
-            if (matchAll) return true;
+        uint256 end = prefix.length;
+        while (end < json.length && json[end] != '"') {
+            if (json[end] == "\\" || uint8(json[end]) < 0x20) return false;
+            end++;
         }
-        return false;
+        if (end == json.length) return false;
+        bytes memory origin = new bytes(end - prefix.length);
+        for (uint256 i; i < origin.length; i++) origin[i] = json[prefix.length + i];
+        if (sha256(origin) != originHash) return false;
+        bytes memory suffix = new bytes(json.length - end);
+        for (uint256 i; i < suffix.length; i++) suffix[i] = json[end + i];
+        return keccak256(suffix) == keccak256(bytes('"}'))
+            || keccak256(suffix) == keccak256(bytes('","crossOrigin":false}'))
+            || keccak256(suffix) == keccak256(bytes('","other_keys_can_be_added_here":"do not compare clientDataJSON against a template. See https://goo.gl/yabPex"}'))
+            || keccak256(suffix) == keccak256(bytes('","crossOrigin":false,"other_keys_can_be_added_here":"do not compare clientDataJSON against a template. See https://goo.gl/yabPex"}'));
     }
 
     function supportsInterface(bytes4 iid) external pure returns (bool) {

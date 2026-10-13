@@ -13,6 +13,7 @@ export function bytesToHex(b: ArrayBuffer | Uint8Array): Hex {
 }
 
 export function hexToBytes(h: Hex): Uint8Array {
+  if (!/^0x(?:[0-9a-fA-F]{2})*$/.test(h)) throw new Error("Invalid hex bytes.");
   const clean = h.slice(2);
   const out = new Uint8Array(clean.length / 2);
   for (let i = 0; i < out.length; i++) {
@@ -24,6 +25,7 @@ export function hexToBytes(h: Hex): Uint8Array {
 export function webauthnAvailable(): boolean {
   return (
     typeof window !== "undefined" &&
+    window.isSecureContext &&
     typeof window.PublicKeyCredential !== "undefined" &&
     !!navigator.credentials
   );
@@ -59,7 +61,7 @@ export async function createPasskey(
       pubKeyCredParams: [{ type: "public-key", alg: -7 }],
       authenticatorSelection: {
         residentKey: "preferred",
-        userVerification: "preferred",
+        userVerification: "required",
       },
       attestation: "none",
       timeout: 60_000,
@@ -68,6 +70,9 @@ export async function createPasskey(
   if (!cred) throw new Error("Passkey creation was cancelled.");
 
   const response = cred.response as AuthenticatorAttestationResponse;
+  if (response.getPublicKeyAlgorithm?.() !== -7) {
+    throw new Error("Expected an ES256 P-256 passkey.");
+  }
   const spki = response.getPublicKey?.();
   if (!spki) {
     throw new Error(
@@ -113,13 +118,32 @@ export async function signChallenge(
       allowCredentials: [
         { type: "public-key", id: hexToBytes(credentialId) as BufferSource },
       ],
-      userVerification: "preferred",
+      userVerification: "required",
       timeout: 60_000,
     },
   })) as PublicKeyCredential | null;
   if (!cred) throw new Error("Passkey assertion was cancelled.");
+  if (bytesToHex(cred.rawId).toLowerCase() !== credentialId.toLowerCase()) {
+    throw new Error("Authenticator returned a different passkey.");
+  }
 
   const response = cred.response as AuthenticatorAssertionResponse;
+  const client = JSON.parse(new TextDecoder().decode(response.clientDataJSON));
+  if (
+    client.type !== "webauthn.get" ||
+    client.origin !== window.location.origin ||
+    client.challenge !==
+      btoa(String.fromCharCode(...hexToBytes(challenge)))
+        .replaceAll("+", "-")
+        .replaceAll("/", "_")
+        .replaceAll("=", "") ||
+    client.crossOrigin === true
+  )
+    throw new Error("Assertion is not bound to this origin and challenge.");
+  const auth = new Uint8Array(response.authenticatorData);
+  if (auth.length < 37 || (auth[32] & 5) !== 5) {
+    throw new Error("User presence and verification are required.");
+  }
   const { r, s } = derToRs(response.signature);
   return {
     authenticatorData: bytesToHex(response.authenticatorData),
@@ -130,34 +154,37 @@ export async function signChallenge(
 }
 
 /** Parse an ASN.1 DER ECDSA signature into (r, s), each left-padded to 32 bytes. */
-function derToRs(der: ArrayBuffer): { r: bigint; s: bigint } {
+export function derToRs(der: ArrayBuffer): { r: bigint; s: bigint } {
   const b = new Uint8Array(der);
-  let i = 0;
-  const readLen = () => {
-    let len = b[i++];
-    if (len & 0x80) {
-      const n = len & 0x7f;
-      len = 0;
-      for (let k = 0; k < n; k++) len = (len << 8) | b[i++];
+  if (b.length < 8 || b[0] !== 0x30 || b[1] !== b.length - 2) {
+    throw new Error("Bad DER signature");
+  }
+  let i = 2;
+  const readInteger = () => {
+    if (b[i++] !== 0x02) throw new Error("Bad DER integer");
+    const len = b[i++];
+    if (!len || len > 33 || i + len > b.length)
+      throw new Error("Bad DER length");
+    const x = b.slice(i, i + len);
+    i += len;
+    if ((x[0] & 0x80) !== 0 || (len > 1 && x[0] === 0 && (x[1] & 0x80) === 0)) {
+      throw new Error("Non-canonical DER integer");
     }
-    return len;
+    const stripped = x[0] === 0 && x.length > 1 ? x.slice(1) : x;
+    if (stripped.length > 32) throw new Error("DER integer exceeds P-256 size");
+    const n = BigInt(toHex(stripped));
+    if (
+      n === 0n ||
+      n >= 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551n
+    ) {
+      throw new Error("Invalid P-256 signature scalar");
+    }
+    return n;
   };
-  if (b[i++] !== 0x30) throw new Error("Bad DER signature");
-  readLen(); // sequence length
-  if (b[i++] !== 0x02) throw new Error("Bad DER signature (r)");
-  const rLen = readLen();
-  const rBytes = b.slice(i, i + rLen);
-  i += rLen;
-  if (b[i++] !== 0x02) throw new Error("Bad DER signature (s)");
-  const sLen = readLen();
-  const sBytes = b.slice(i, i + sLen);
-  const to32 = (x: Uint8Array) => {
-    const stripped = x.length > 32 && x[0] === 0 ? x.slice(1) : x;
-    const out = new Uint8Array(32);
-    out.set(stripped, 32 - stripped.length);
-    return BigInt(`0x${toHex(out).slice(2)}`);
-  };
-  return { r: to32(rBytes), s: to32(sBytes) };
+  const r = readInteger();
+  const s = readInteger();
+  if (i !== b.length) throw new Error("Trailing DER bytes");
+  return { r, s };
 }
 
 // ---------- local persistence ----------
@@ -171,7 +198,13 @@ export function loadPasskey(rpId: string): StoredPasskey | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredPasskey;
-    return parsed.rpId === rpId ? parsed : null;
+    return parsed.rpId === rpId &&
+      /^0x(?:[0-9a-fA-F]{2})+$/.test(parsed.credentialId) &&
+      parsed.keyId === keccak256(parsed.credentialId) &&
+      /^\d+$/.test(parsed.qx) &&
+      /^\d+$/.test(parsed.qy)
+      ? parsed
+      : null;
   } catch {
     return null;
   }
