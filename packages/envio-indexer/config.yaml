@@ -35,15 +35,19 @@ contracts:
       - event: ResponseAppended(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, address indexed responder, string responseURI, bytes32 responseHash)
 chains:
   - id: 10143 # Monad Testnet — HyperSync-backed, no paid RPC required
-    # Full standard-registry coverage. Do not start at the Ligis deployment:
-    # third-party agents may have registered earlier. No deployment is performed here.
-    start_block: 0
+    # Earliest indexed event on any contract is IdentityRegistry.Registered at
+    # block 10,391,697 (found via HyperSync first-log scan). Start just below it
+    # to keep third-party agent registrations while staying inside the Envio
+    # Cloud Development plan limits — scanning from 0 exceeded them.
+    start_block: 10391600
     contracts:
       - name: CredentialRegistry
-        # v2 registry (ERC-1271 issuer path), deployed 2026-10-01.
+        # v2 registry (ERC-1271 issuer path). First on-chain event at 67,367,641.
         address: "0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a"
-        start_block: 63359400
+        start_block: 67367000
       - name: IdentityRegistry
         address: "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+        start_block: 10391600
       - name: ReputationRegistry
         address: "0x8004B663056A597Dffe9eCcC1965A193B7388713"
+        start_block: 10391600
