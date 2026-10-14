@@ -53,10 +53,15 @@ registry deployment is needed or performed.
 
 Envio now indexes registration, wallet metadata, ownership transfer, URI
 updates, reputation, revocations, and responses, alongside existing credentials.
-It starts standard registries at block 0 so pre-Ligis registrations are not
-silently lost; the credential contract keeps its later contract start block.
-A block handler records `Erc8004Coverage`, not the latest event timestamp.
-Changing this start block requires changing the coverage statement too.
+Standard registries start just below their earliest on-chain event (Identity /
+Reputation at 10,391,600 — first `Registered` log is at 10,391,697); the
+credential contract keeps its later contract start block (67,367,000).
+Coverage is read from the indexer's own `chain_metadata` sync cursor
+(`latest_processed_block` ≥ finalized head, `start_block` ≤ the chain's
+`earliestEventBlock`) — the same guarantee the retired per-block coverage
+writer provided, without a per-block write (which the Envio Cloud development
+plan counts as a processed event per block). Changing the indexer start block
+requires keeping it at or below the web chain's `earliestEventBlock`.
 
 The reader:
 
@@ -134,11 +139,34 @@ The injected adapter must validate the protocol evidence, not trust caller JSON.
 ## Worker D seams and privacy
 
 Shared `PayeeEvidence` is exported from `web/lib/payee-evidence/types.ts`.
-`readPayeeEvidence` accepts `readNansenEvidence(payee, options)` without an
-import of worker D's unmerged module. Options carry timeout, abort signal,
-environment, and optional chain context. No Nansen reader/key is configured
-here. Nansen positives require an explicit server policy eligibility opt-in;
-negative evidence and required-source gaps still affect composition.
+`readPayeeEvidence` now wires the real `readNansenEvidence` by default
+(`web/lib/payee-evidence/index.ts`); a caller can still inject its own reader.
+Server config, all default off: `LIGIS_NANSEN_ENABLED=1`, `NANSEN_API_KEY`,
+`LIGIS_PAYEE_EVIDENCE_CHAIN_ID` (the network this gate settles on), and the
+operator-confirmed `LIGIS_NANSEN_MONAD_CHAIN_ID`. Without a confirmed mapping
+the read answers `nansen-chain-unconfirmed`, and a payee whose intended network
+is not the confirmed Monad network answers `nansen-wrong-chain` — in both cases
+no provider call is made and no credits are spent. Labels stay `unknown`
+provenance; Nansen positives require an explicit server policy eligibility
+opt-in, and negative evidence and required-source gaps still affect
+composition.
+
+Live probe (2026-10-14, real key): the endpoint authenticates and our reader
+parses real provider data — `chain: "ethereum"` on a known exchange wallet
+returns `Binance` / `exchange` / `entity` labels. Empty responses cost nothing
+(`"No API credits were charged for this call"`).
+
+Nansen's Monad coverage is **mainnet**: `monad` = chain 143, live since
+2025-11-24, Nansen data from 14 May 2025, and `Yes` across Smart Money
+(netflow / DEX trades / holdings / historical), Token God Mode, and Profiler.
+The API has **no testnet chains at all** — its chain enum is `all, arbitrum,
+arc, avalanche, base, bnb, ethereum, hyperevm, hyperliquid, iotaevm, linea,
+mantle, monad, optimism, plasma, polygon, robinhood, sei, solana, sonic, tron`.
+So the confirmed mapping is `LIGIS_NANSEN_MONAD_CHAIN_ID=143`, and while this
+gate settles on Monad Testnet 10143 the leg answers `nansen-wrong-chain` and
+makes no call. Neither Pharos Atlantic nor Casper Testnet is covered either.
+Mainnet labels are not evidence about a testnet payee, and that is the point of
+the guard, not a bug to route around.
 
 `runGateDecision` exposes a separate recorder with an explicit
 `authenticatedOptIn` context; no public route supplies it. Previews do not

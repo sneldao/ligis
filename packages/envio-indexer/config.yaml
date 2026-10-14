@@ -36,9 +36,9 @@ contracts:
 chains:
   - id: 10143 # Monad Testnet — HyperSync-backed, no paid RPC required
     # Earliest indexed event on any contract is IdentityRegistry.Registered at
-    # block 10,391,697 (found via HyperSync first-log scan). Start just below it
-    # to keep third-party agent registrations while staying inside the Envio
-    # Cloud Development plan limits — scanning from 0 exceeded them.
+    # block 10,391,697 (found via HyperSync first-log scan). Start just below it:
+    # faster sync, and this start_block feeds the web's coverage check, so it
+    # must stay at or below the earliest block that can contain indexed events.
     start_block: 10391600
     contracts:
       - name: CredentialRegistry

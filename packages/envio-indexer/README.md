@@ -32,9 +32,13 @@ IDs include chain and registry. Wallet claims are retained after changes,
 so a payee can discover historical candidates; the web reader must always
 confirm their current `getAgentWallet` on-chain.
 
-Standard registries start at block 0. The credential contract retains its
-later start block at 63359400. Do not change the full-history start without
-updating `Erc8004Coverage` and preserving incomplete-coverage semantics.
+Standard registries start just below their earliest on-chain event
+(10,391,600; first `Registered` log is at 10,391,697). The credential
+contract retains its later start block. Coverage is surfaced via
+`chain_metadata.latest_processed_block` — there is deliberately no per-block
+coverage writer, because hosted Envio counts every `onBlock` invocation as a
+processed event (~60.5M blocks on 10143 vs the 100k development-plan soft
+cap). Do not raise start blocks above the earliest possible event block.
 
 Configured addresses:
 

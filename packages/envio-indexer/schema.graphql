@@ -96,13 +96,3 @@ type Erc8004Response {
   blockNumber: BigInt!
   txHash: String!
 }
-
-# Written by a block handler, NOT inferred from the most recent identity event.
-type Erc8004Coverage {
-  id: ID!
-  chainId: Int!
-  registry: String!
-  reputation: String!
-  fromBlock: BigInt!
-  toBlock: BigInt!
-}

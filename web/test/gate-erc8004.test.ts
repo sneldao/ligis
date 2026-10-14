@@ -108,13 +108,11 @@ test("paginated indexer discovers multiple scoped IDs and retains event referenc
   const graphql: Erc8004Graphql = async (query, v) => {
     if (query.includes("query Erc8004Coverage"))
       return {
-        Erc8004Coverage: [
+        chain_metadata: [
           {
-            chainId: 10143,
-            registry: chain.identity,
-            reputation: chain.reputation,
-            fromBlock: "0",
-            toBlock: "5",
+            chain_id: 10143,
+            start_block: 10391600,
+            latest_processed_block: 5,
           },
         ],
       };

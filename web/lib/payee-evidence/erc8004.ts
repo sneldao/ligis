@@ -41,6 +41,8 @@ export type Erc8004Chain = {
   identity: Address;
   reputation: Address;
   startBlock: bigint;
+  /** First block that can hold a relevant event; indexer start must be <= this. */
+  earliestEventBlock: bigint;
   explorer: string;
   /** Only hints, never exhaustive discovery. Chain + registry scope is mandatory. */
   seedAgentIds: bigint[];
@@ -52,6 +54,10 @@ export const MONAD_ERC8004: Erc8004Chain = {
   identity: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
   reputation: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
   startBlock: 0n,
+  // Earliest block that can contain indexed events: first Registered log on the
+  // standard registry (HyperSync first-log scan). The Envio deployment must
+  // start indexing at or below this or coverage is not complete.
+  earliestEventBlock: 10391697n,
   explorer: "https://testnet.monadscan.com",
   seedAgentIds: [1974n, 1975n],
   ligisScoringWriters: ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
@@ -207,12 +213,10 @@ type WalletRow = {
   registry: string;
   wallet: string;
 };
-type CoverageRow = {
-  chainId: number;
-  registry: string;
-  reputation: string;
-  fromBlock: string;
-  toBlock: string;
+type ChainMetadataRow = {
+  chain_id: number;
+  start_block: number | string;
+  latest_processed_block: number | string;
 };
 type ReferenceRow = {
   id: string;
@@ -239,30 +243,28 @@ async function discover(
   const maxPages = cap(options.maxPages, 5, 10);
   if (graphql) {
     try {
-      // Never claim coverage from the newest event. A block handler records sync progress.
+      // Never claim coverage from the newest event. The indexer's own sync
+      // cursor in chain_metadata records how far it has processed — the same
+      // value the retired per-block coverage writer used to emit, at zero cost.
       const coverage = (await graphql(
         `
-          query Erc8004Coverage($id: String!) {
-            Erc8004Coverage(where: { id: { _eq: $id } }) {
-              chainId
-              registry
-              reputation
-              fromBlock
-              toBlock
+          query Erc8004Coverage($chainId: Int!) {
+            chain_metadata(where: { chain_id: { _eq: $chainId } }) {
+              chain_id
+              start_block
+              latest_processed_block
             }
           }
         `,
-        { id: `${chain.chainId}:${chain.identity.toLowerCase()}` },
+        { chainId: chain.chainId },
         signal,
-      )) as { Erc8004Coverage: CoverageRow[] };
-      const c = coverage.Erc8004Coverage?.[0];
+      )) as { chain_metadata: ChainMetadataRow[] };
+      const c = coverage.chain_metadata?.[0];
       const covered = Boolean(
         c &&
-        c.chainId === chain.chainId &&
-        same(c.registry, chain.identity) &&
-        same(c.reputation, chain.reputation) &&
-        BigInt(c.fromBlock) <= chain.startBlock &&
-        BigInt(c.toBlock) >= block,
+        c.chain_id === chain.chainId &&
+        BigInt(c.start_block) <= chain.earliestEventBlock &&
+        BigInt(c.latest_processed_block) >= block,
       );
       let cursor = "";
       for (let page = 0; page < maxPages; page++) {
