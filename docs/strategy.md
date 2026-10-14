@@ -4,15 +4,16 @@
 > job before money moves.** Ligis aggregates external verification signals
 > into portable on-chain credentials, then uses them — alongside intent
 > checks — as one signal (verified payee) inside that decision. Distribution:
-> CROO Agent Store and OKX.AI Agent Store for agent-to-agent, a direct API
-> for agent owners. Built on 0G Compute and 0G Storage.
+> CROO Agent Store today for agent-to-agent, a direct API for agent owners;
+> OKX.AI is a planned second channel (Phase 3, not live). Built on 0G Compute
+> and 0G Storage.
 >
 > Positioning, glossary, and measured claims live in
 > [`docs/positioning.md`](./positioning.md). This doc covers strategy,
 > status, roadmap, and competitive landscape — not what we say on the
 > landing.
 
-## Status (2026-09-25)
+## Status (2026-10-14)
 
 - **Live:** 5 paid services on the CROO Agent Store (`ligis.risk` $0.50,
   `ligis.verify` $0.25, `ligis.issue` $2.00, `ligis.gate` $0.25,
@@ -21,18 +22,45 @@
   retry.
 - **On-chain:** `AgentId` + `CredentialRegistry` + `GatedVault` on Casper
   Testnet; `PharosAgentID` + `CredentialRegistry` on Pharos Atlantic;
-  GenLayer `JobEscrow` on Studio Next (61997).
+  `CredentialRegistry` on Monad testnet; GenLayer `JobEscrow` on Studio Next
+  (61997).
+- **Decision service:** `decide()` is the single pre-payment decision, wired to
+  `/api/gate` and `/gate`. Four signals compose STOP-wins, with per-signal
+  `UNKNOWN` so an upstream that did not answer can never read as approval.
+  `POST /api/gate` returns HTTP 200 for `GO`, `STOP` and `UNKNOWN` alike —
+  callers must validate the JSON verdict, never `response.ok`.
+- **Open-world payee assessment** (`LIGIS_PAYEE_EVIDENCE_ENABLED=1`,
+  default off): an unfamiliar payee is assessed from ERC-8004 registration and
+  proven x402 settlement evidence rather than requiring a Ligis credential.
+  Absence of evidence is `UNKNOWN`, not `GO`. Operator policy comes from
+  protected config and cannot be loosened by caller-supplied JSON. Strict
+  credential mode is unchanged. See [`docs/payee-evidence.md`](payee-evidence.md).
+- **Evidence and outcomes:** a Nansen adapter with an injectable transport, and
+  an opt-in, authenticated outcome recorder (`LIGIS_OUTCOMES_ENABLED=1`,
+  default off, fail-closed). Previews never record — decisions are not payment
+  outcomes. See [`docs/evidence-outcomes.md`](evidence-outcomes.md).
+- **Signing boundary:** `@ligis/wallet-plugin` refuses to sign an EIP-3009
+  authorization without a fresh, schema-valid `GO` for that exact operation
+  under protected operator policy. It is a **guarded adapter, not wallet-wide
+  enforcement** — the MetaMask Agent Wallet plugin lifecycle is sealed and
+  `oclif.hooks` manifests are rejected, so no plugin can install an
+  interceptor. See [`docs/wallet-enforcement.md`](wallet-enforcement.md).
+- **Onboarding:** passkey (WebAuthn/P256) issuance with operator authorization
+  guards, plus a default-off Privy sponsorship seam. Passkeys prove control of
+  a key, not a merchant's honesty — signup never mints trust.
 - **Mint policy:** `ligis.issue` and `ligis.qualify` both refuse to mint a
   capability from payment alone — external evidence that passes policy, or an
   explicit `LIGIS_SELF_ISSUABLE_CAPABILITIES` allowlist (empty by default).
-- **Intent layer:** Jev routes through the Vercel AI Gateway, **free only
-  through 2026-09-25**. `pnpm smoke:jev` proves the route answers (and fails
-  loudly when it stops) — run it after that date, then either attach
-  gateway billing or flip `LIGIS_JEV_TRANSPORT=direct` with `TYPESAFE_API_KEY`.
-- **Tests:** 41 Foundry + 22 Odra + 133 TypeScript (25 suites).
-- **Next:** Phase 3 (OKX.AI ASP) is the open one. The 0G Bridge by AKINDO
-  program was **never submitted and is dropped** (2026-09-25); deploying the
-  contracts on 0G Chain stays a future option via `@ligis/adapter-0g`, not a
+- **Intent layer:** Jev is on the **direct** route
+  (`LIGIS_JEV_TRANSPORT=direct`, `api.typesafe.ai`, model `jev-1.13.0`). The AI
+  Gateway promo ended 2026-09-25; the last `pnpm smoke:jev` (2026-09-26)
+  recorded two correct probes at ~$0.0001. Re-run it on a schedule — the layer
+  fails open, so a dead route is invisible without it.
+- **Tests:** 65 Foundry + 22 Odra + 297 TypeScript. Root `pnpm run test:ts`
+  covers every package suite plus the web suite.
+- **Next:** Phase 3 (OKX.AI ASP) is still the open one. The 0G Bridge by AKINDO
+  program was **never submitted and is dropped**; deploying the contracts on
+  0G Chain stays a future option via `@ligis/adapter-0g`, not a
   deadline-driven milestone. Replacement 0G channel identified: **0G Apollo
   Accelerator Cohort 2** (applications opening soon, program Nov–Feb) —
   see "0G: Apollo Cohort 2" for the deploy-prep checklist.
