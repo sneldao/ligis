@@ -1,0 +1,34 @@
+{
+  "name": "@ligis/wallet-plugin",
+  "version": "0.1.0",
+  "description": "Guarded payment adapter — refuses to sign an EIP-3009 authorization unless the Ligis gate returns a fresh, schema-valid GO for that exact operation under protected operator policy.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "ligis",
+    "wallet",
+    "x402",
+    "eip-3009",
+    "metamask"
+  ],
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
