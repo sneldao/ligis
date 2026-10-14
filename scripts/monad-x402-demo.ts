@@ -264,7 +264,12 @@ async function main() {
   // credential is live, so revoke every live nonce for this subject+capability
   // (all issued by the same owner key).
   const revokedTxs: string[] = [];
-  for (let n = 0n; n < 16n; n++) {
+  // The window must cover every nonce this subject has been issued, not a
+  // fixed 0..15 — repeated runs push the counter past that and the revoke leg
+  // silently finds nothing.
+  for (let n = 0n; n < 64n; n++) {
+    // The public Monad RPC is limited to ~15 req/s.
+    if (n > 0n) await new Promise((r) => setTimeout(r, 90));
     let c: [string, bigint, bigint, boolean, boolean];
     try {
       c = (await publicClient.readContract({
