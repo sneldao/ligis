@@ -517,12 +517,23 @@ edit, **not** the only place the kill switch appears.
 
 ## Deliverables checklist
 
+Submission copy, access instructions, and verified links live in
+[`docs/metropolis-submission.md`](metropolis-submission.md) — paste from there.
+
 - [ ] Project logo/graphic (JPG/PNG/WEBP, ≤3MB)
-- [ ] Public GitHub repo accessible by `metropolis@hackathon.monad.xyz`
+- [x] Public GitHub repo accessible by `metropolis@hackathon.monad.xyz`
+      (`sneldao/ligis`, public — verified 2026-10-14)
 - [ ] Technical demo video ≤3 min (live product, not slides)
 - [ ] Pitch video ≤2 min (team, problem, why)
-- [ ] Live product on Monad mainnet or testnet + access instructions
+- [x] Live product on Monad testnet + access instructions
+      (`https://ligis.vercel.app/gate`; HTTP 200 verified 2026-10-14)
 - [ ] Optional ≤30s advertisement (not judged)
+
+**2026-10-14:** the lifecycle demo was fixed to drive a real STOP — it revoked
+only its own newest nonce while `isCapable()` correctly fell back to an older
+live credential, and its subject also held a third-party credential it could
+never revoke. Both corrected; `npx tsx scripts/monad-lifecycle-demo.ts` now
+exits 0 with `gateBefore=true gateAfter=false` against live chain state.
 
 ## Suggested build order
 
