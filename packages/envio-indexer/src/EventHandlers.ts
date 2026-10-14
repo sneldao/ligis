@@ -5,14 +5,7 @@
  * `Contract.Event.handler` / `generated` package exports).
  */
 import { indexer } from "envio";
-import {
-  IDENTITY,
-  REPUTATION,
-  ZERO,
-  scopedId,
-  feedbackId,
-  metadataWallet,
-} from "./erc8004";
+import { ZERO, scopedId, feedbackId, metadataWallet } from "./erc8004";
 
 const txHashField = { transaction: ["hash"] } as const;
 
@@ -213,19 +206,10 @@ indexer.onEvent(
   },
 );
 
-indexer.onBlock(
-  { name: "erc8004-coverage", where: ({ chain }) => chain.id === 10143 },
-  async ({ block, context }) => {
-    context.Erc8004Coverage.set({
-      id: scopedId(context.chain.id, IDENTITY),
-      chainId: context.chain.id,
-      registry: IDENTITY,
-      reputation: REPUTATION,
-      fromBlock: 0n,
-      toBlock: BigInt(block.number),
-    });
-  },
-);
+// No per-block coverage writer: Envio counts every onBlock invocation toward
+// the hosted plan's processed-events soft cap (~60.5M blocks on 10143 vs the
+// 100k dev limit). The web reader checks `chain_metadata.latest_processed_block`
+// — the same sync cursor, maintained by the indexer at zero event cost.
 
 indexer.onEvent(
   {

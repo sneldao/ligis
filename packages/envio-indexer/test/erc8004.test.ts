@@ -31,13 +31,13 @@ test("real handlers retain wallet claims, clear transferred wallets, update URI,
   await index.process({
     chains: {
       10143: {
-        startBlock: 0,
-        endBlock: 6,
+        startBlock: 10391600,
+        endBlock: 10391606,
         simulate: [
           {
             contract: "IdentityRegistry",
             event: "Registered",
-            block: { number: 1 },
+            block: { number: 10391601 },
             params: {
               agentId: 424242n,
               agentURI: "ipfs://initial",
@@ -47,7 +47,7 @@ test("real handlers retain wallet claims, clear transferred wallets, update URI,
           {
             contract: "IdentityRegistry",
             event: "MetadataSet",
-            block: { number: 1 },
+            block: { number: 10391601 },
             params: {
               agentId: 424242n,
               metadataKey: "agentWallet",
@@ -57,13 +57,13 @@ test("real handlers retain wallet claims, clear transferred wallets, update URI,
           {
             contract: "IdentityRegistry",
             event: "Transfer",
-            block: { number: 2 },
+            block: { number: 10391602 },
             params: { tokenId: 424242n, from: OWNER, to: WALLET },
           },
           {
             contract: "IdentityRegistry",
             event: "URIUpdated",
-            block: { number: 3 },
+            block: { number: 10391603 },
             params: {
               agentId: 424242n,
               newURI: "ipfs://updated",
@@ -73,7 +73,7 @@ test("real handlers retain wallet claims, clear transferred wallets, update URI,
           {
             contract: "IdentityRegistry",
             event: "MetadataSet",
-            block: { number: 3 },
+            block: { number: 10391603 },
             params: {
               agentId: 424242n,
               metadataKey: "agentWallet",
@@ -83,7 +83,7 @@ test("real handlers retain wallet claims, clear transferred wallets, update URI,
           {
             contract: "ReputationRegistry",
             event: "NewFeedback",
-            block: { number: 4 },
+            block: { number: 10391604 },
             params: {
               agentId: 424242n,
               clientAddress: CLIENT,
@@ -100,7 +100,7 @@ test("real handlers retain wallet claims, clear transferred wallets, update URI,
           {
             contract: "ReputationRegistry",
             event: "FeedbackRevoked",
-            block: { number: 5 },
+            block: { number: 10391605 },
             params: {
               agentId: 424242n,
               clientAddress: CLIENT,
@@ -110,7 +110,7 @@ test("real handlers retain wallet claims, clear transferred wallets, update URI,
           {
             contract: "ReputationRegistry",
             event: "ResponseAppended",
-            block: { number: 6 },
+            block: { number: 10391606 },
             params: {
               agentId: 424242n,
               clientAddress: CLIENT,
@@ -140,11 +140,6 @@ test("real handlers retain wallet claims, clear transferred wallets, update URI,
   assert.equal(feedback.feedbackURI, "ipfs://proof");
   assert.equal((await index.Erc8004Response.getAll()).length, 1);
   assert.equal((await index.Erc8004FeedbackRevocation.getAll()).length, 1);
-  const coverage = await index.Erc8004Coverage.getOrThrow(
-    scopedId(10143, IDENTITY),
-  );
-  assert.equal(coverage.fromBlock, 0n);
-  assert.equal(coverage.toBlock, 6n);
 });
 
 test("transfer without subsequent binding does not substitute NFT owner as wallet", async () => {
@@ -152,19 +147,19 @@ test("transfer without subsequent binding does not substitute NFT owner as walle
   await index.process({
     chains: {
       10143: {
-        startBlock: 0,
-        endBlock: 2,
+        startBlock: 10391600,
+        endBlock: 10391602,
         simulate: [
           {
             contract: "IdentityRegistry",
             event: "Registered",
-            block: { number: 1 },
+            block: { number: 10391601 },
             params: { agentId: 99n, agentURI: "", owner: OWNER },
           },
           {
             contract: "IdentityRegistry",
             event: "Transfer",
-            block: { number: 2 },
+            block: { number: 10391602 },
             params: { tokenId: 99n, from: OWNER, to: WALLET },
           },
         ],
