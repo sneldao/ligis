@@ -54,8 +54,8 @@ the same fallback logic.
 ## Design constraints
 
 - **DRY** — one implementation of each on-chain op in `lib/`; CLI, MCP, and Agent all import from it.
-- **No contract changes** — 0G Storage is anchored via the existing `setTokenURI` / `MetadataUpdated` path. The 41 Foundry tests stay green.
-- **Testable** — `Reasoner` and `EvidenceStore` are interfaces. The agent is fully testable offline with mocks (133 TypeScript tests, 25 suites).
+- **No contract changes** — 0G Storage is anchored via the existing `setTokenURI` / `MetadataUpdated` path. The Foundry suite stays green (65 tests as of 2026-10-14).
+- **Testable** — `Reasoner` and `EvidenceStore` are interfaces. The agent is fully testable offline with mocks (297 TypeScript tests across the workspace as of 2026-10-14).
 - **Resilient** — if 0G Storage fails, the manifest is still returned with `storage: null`. The agent doesn't crash; it records what it can.
 
 ## Usage

@@ -1,5 +1,10 @@
 # Ligis API
 
+> This file documents the three **paid CROO services**. For the web decision
+> endpoint (`POST /api/gate`) see [`decide-api.md`](./decide-api.md) — note that
+> it returns HTTP 200 for `GO`, `STOP` and `UNKNOWN` alike, so a client must
+> validate the JSON verdict rather than `response.ok`.
+
 Ligis provides three services on the [CROO Agent Store](https://agent.croo.network).
 All services are accessed by hiring Ligis through the CROO protocol — your agent
 negotiates, pays, and receives a JSON deliverable.

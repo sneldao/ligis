@@ -9,12 +9,15 @@
  *   1. BOOT    — AgentId.mintSelf (skipped if the controller already holds an ID)
  *   2. ISSUE   — sign an EIP-712 credential off-chain, submit to CredentialRegistry
  *   3. GATE    — isCapable(subject, capability) → expect GO (true)
- *   4. REVOKE  — CredentialRegistry.revoke (issuer action)
+ *   4. REVOKE  — withdraw every live credential for subject+capability issued
+ *                by this controller (issuer action)
  *   5. RE-GATE — isCapable(subject, capability) → expect STOP (false)
  *
- * The credential is signed and revoked by the same key, so the issuer address
- * equals the controller. This is the self-issued demo path, not a third-party
- * attestation flow.
+ * The issuer is the controller key; the credential *subject* is a separate demo
+ * address. `isCapable()` counts credentials from every issuer and only an
+ * issuer can revoke its own, so a controller that also holds a third-party
+ * credential for the capability can never be driven to STOP. Keeping the subject
+ * distinct is what makes the revocation leg honest.
  *
  * Usage:
  *   set -a && source .env.d/deployer.env && set +a
@@ -22,6 +25,7 @@
  *
  * Optional env:
  *   LIGIS_MONAD_CAPABILITY   capability to exercise (default "kyc.basic")
+ *   LIGIS_MONAD_SUBJECT      credential subject (default 0x…decaf demo address)
  *   LIGIS_MONAD_RPC_URL      RPC override (default from assets/networks.json)
  *
  * Tx hashes are written to scripts/monad-lifecycle-demo.lastrun.txt so a
