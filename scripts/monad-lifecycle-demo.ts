@@ -28,14 +28,26 @@
  * submission document can link to verified explorer pages. Exits 0 on
  * success, 1 on any checked failure.
  */
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { capabilityHash } from "@ligis/core";
+import { readContract } from "viem/actions";
 
 const NETWORK = "monad-testnet";
 const EXPECTED_CHAIN_ID = 10143;
 const CAPABILITY = process.env.LIGIS_MONAD_CAPABILITY ?? "kyc.basic";
+// The credential subject is deliberately NOT the controller. isCapable() counts
+// credentials from every issuer, and only the issuer can revoke its own — so a
+// controller that also holds a third-party credential can never be driven to
+// STOP. A dedicated demo subject keeps the revocation leg honest and complete.
+const SUBJECT =
+  process.env.LIGIS_MONAD_SUBJECT ??
+  "0x00000000000000000000000000000000000decaf";
+
+const deployment = JSON.parse(
+  readFileSync(resolve(import.meta.dirname, "../assets/networks.json"), "utf8"),
+).deployment[NETWORK] as { credentialRegistry: string };
 
 const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
@@ -143,7 +155,7 @@ async function main(): Promise<void> {
   console.log(`${BOLD}[2] Issue — signed EIP-712 credential${RESET}`);
   const signed = await adapter.signCredential({
     issuerKey: process.env.PRIVATE_KEY as string,
-    subject: controller,
+    subject: SUBJECT,
     capability: CAPABILITY,
   });
   info("Issuer", signed.issuer);
@@ -163,7 +175,7 @@ async function main(): Promise<void> {
     `${BOLD}[3] Gate — the read an agent makes before it pays${RESET}`,
   );
   const before = await adapter.verifyCapability({
-    subject: controller,
+    subject: SUBJECT,
     capability: CAPABILITY,
   });
   info("isCapable()", String(before.capable));
@@ -177,22 +189,93 @@ async function main(): Promise<void> {
   console.log(
     `${BOLD}[4] Revoke — the issuer withdraws the credential${RESET}`,
   );
-  const revoked = await adapter.revokeCredential({
-    subject: controller,
-    capability: CAPABILITY,
-    nonce: signed.nonce,
-  });
-  txs.push({
-    step: "revoke",
-    hash: revoked.tx.hash,
-    explorerUrl: revoked.tx.explorerUrl ?? "",
-  });
-  ok(`Revoked (tx ${revoked.tx.hash.slice(0, 12)}…)`);
+  // Revoke EVERY live credential for this subject+capability, not just the one
+  // we just issued. CredentialRegistry.isCapable() falls back to the newest
+  // still-valid nonce when the latest is revoked, so revoking only our nonce
+  // leaves older live credentials and the gate correctly stays open.
+  const REGISTRY_ABI = [
+    {
+      type: "function",
+      name: "getCredential",
+      stateType: "view",
+      inputs: [
+        { name: "subject", type: "address" },
+        { name: "capabilityHash", type: "bytes32" },
+        { name: "nonce", type: "uint256" },
+      ],
+      outputs: [
+        {
+          name: "cred",
+          type: "tuple",
+          components: [
+            { name: "issuer", type: "address" },
+            { name: "issuedAt", type: "uint256" },
+            { name: "expiresAt", type: "uint256" },
+            { name: "revokedAt", type: "uint256" },
+            { name: "valid", type: "bool" },
+          ],
+        },
+      ],
+    },
+  ] as const;
+
+  const latestNonce = Number(signed.nonce);
+  let revokedCount = 0;
+  // Bounded to match the registry's own MAX_REVOKE_SCAN of 50.
+  for (
+    let nonce = latestNonce;
+    nonce >= 1 && nonce > latestNonce - 50;
+    nonce--
+  ) {
+    // The public Monad RPC is limited to ~15 req/s; pace the scan.
+    if (nonce !== latestNonce) await new Promise((r) => setTimeout(r, 150));
+    const view = (await readContract(adapter.ctx.publicClient, {
+      address: deployment.credentialRegistry as `0x${string}`,
+      abi: REGISTRY_ABI,
+      functionName: "getCredential",
+      args: [SUBJECT as `0x${string}`, capHash, BigInt(nonce)],
+    })) as readonly [string, bigint, bigint, bigint, boolean];
+    // viem returns a single tuple output as an object or a 1-tuple depending
+    // on how the ABI is declared; accept both shapes.
+    const record = Array.isArray(view)
+      ? {
+          issuer: (view as readonly unknown[])[0] as string,
+          revokedAt: (view as readonly unknown[])[3] as bigint,
+          valid: (view as readonly unknown[])[4] as boolean,
+        }
+      : (view as unknown as {
+          issuer: string;
+          revokedAt: bigint;
+          valid: boolean;
+        });
+    if (!record) continue;
+    // Only this controller's own credentials are ours to withdraw; a credential
+    // from another issuer makes revoke() revert with NotIssuer.
+    if (record.issuer.toLowerCase() !== controller.toLowerCase()) continue;
+    if (record.revokedAt !== 0n || !record.valid) continue;
+    const revoked = await adapter.revokeCredential({
+      subject: SUBJECT,
+      capability: CAPABILITY,
+      nonce,
+    });
+    revokedCount += 1;
+    txs.push({
+      step: `revoke#${nonce}`,
+      hash: revoked.tx.hash,
+      explorerUrl: revoked.tx.explorerUrl ?? "",
+    });
+    ok(`Revoked nonce ${nonce} (tx ${revoked.tx.hash.slice(0, 12)}…)`);
+  }
+  if (revokedCount === 0) {
+    fail("Found no live credential to revoke.");
+    process.exit(1);
+  }
+  info("Live credentials revoked", String(revokedCount));
 
   sep();
   console.log(`${BOLD}[5] Re-gate — the same read, after revocation${RESET}`);
   const after = await adapter.verifyCapability({
-    subject: controller,
+    subject: SUBJECT,
     capability: CAPABILITY,
   });
   info("isCapable()", String(after.capable));
@@ -220,6 +303,7 @@ async function main(): Promise<void> {
       `network=${NETWORK}`,
       `chainId=${chainId}`,
       `controller=${controller}`,
+      `subject=${SUBJECT}`,
       `capability=${CAPABILITY}`,
       `capabilityHash=${capHash}`,
       `gateBefore=${before.capable}`,
