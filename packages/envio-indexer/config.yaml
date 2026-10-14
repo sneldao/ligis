@@ -35,6 +35,10 @@ contracts:
       - event: ResponseAppended(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, address indexed responder, string responseURI, bytes32 responseHash)
 chains:
   - id: 10143 # Monad Testnet — HyperSync-backed, no paid RPC required
+    # Pin the HyperSync source explicitly: without it some hosted deployments
+    # stall silently on the RPC fallback (no rpc configured) at block -1.
+    hypersync_config:
+      url: "https://monad-testnet.hypersync.xyz"
     # Earliest indexed event on any contract is IdentityRegistry.Registered at
     # block 10,391,697 (found via HyperSync first-log scan). Start just below it:
     # faster sync, and this start_block feeds the web's coverage check, so it
