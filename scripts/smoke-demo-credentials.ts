@@ -115,6 +115,46 @@ const NETWORK_ENV: Record<string, string> = {
   "monad-testnet": "monad-testnet",
 };
 
+/**
+ * Public RPCs throttle shared CI IPs ("cu limit exceeded; Request too fast per
+ * second"), which looks identical to a broken fixture. Retry transport failures
+ * only — an expectation mismatch is returned as a string and never retried.
+ */
+const TRANSIENT_RPC_ERROR =
+  /too fast|rate ?limit|cu limit|429|-32005|RPC Request failed|request timeout|ETIMEDOUT|socket hang up|fetch failed/i;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function errorText(err: unknown): string {
+  const e = err as {
+    message?: string;
+    details?: string;
+    shortMessage?: string;
+  };
+  return [e?.message, e?.details, e?.shortMessage].filter(Boolean).join(" ");
+}
+
+async function checkSampleWithRetry(
+  chainLabel: string,
+  sample: (typeof SAMPLES)[string][number],
+  attempts = 3,
+): Promise<string | null> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await checkSample(chainLabel, sample);
+    } catch (err) {
+      const text = errorText(err);
+      if (attempt >= attempts || !TRANSIENT_RPC_ERROR.test(text)) throw err;
+      console.warn(
+        `retry ${attempt}/${attempts - 1}  ${chainLabel} · ${sample.label}: ${text.split("\n")[0].slice(0, 120)}`,
+      );
+      await sleep(1500 * attempt);
+    }
+  }
+}
+
 async function checkSample(
   chainLabel: string,
   sample: (typeof SAMPLES)[string][number],
@@ -243,7 +283,7 @@ async function main() {
   for (const label of keys) {
     for (const sample of SAMPLES[label]!) {
       try {
-        const err = await checkSample(label, sample);
+        const err = await checkSampleWithRetry(label, sample);
         if (err) {
           console.error(`FAIL  ${err}`);
           failed++;
@@ -254,7 +294,7 @@ async function main() {
         }
       } catch (e) {
         console.error(
-          `FAIL  ${label} · ${sample.label}: ${e instanceof Error ? e.message : String(e)}`,
+          `FAIL  ${label} · ${sample.label}: ${errorText(e).split("\n")[0].slice(0, 200)}`,
         );
         failed++;
       }
