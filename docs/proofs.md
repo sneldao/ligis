@@ -98,12 +98,12 @@ time of writing. When the live numbers shift (e.g., a new GatedVault
 deployment, a Casper upgrade), this doc moves with them so the measured
 claims in `docs/positioning.md` stay backed.
 
-| Chain               | Contracts                                               | Source of truth                                                  |
-| ------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
-| **Pharos Atlantic** | `PharosAgentID`, `CredentialRegistry`                   | `packages/contracts-evm/` + Vercel env vars                      |
-| **Casper Testnet**  | `AgentId`, `CredentialRegistry`, `GatedVault`           | `packages/contracts-casper/wasm/`, deploy recipe in `AGENTS.md`  |
-| **Monad Testnet**   | (passkey issuer demo; main registry deployment pending) | `packages/contracts-evm/` + `docs/integrate-monad.md`            |
-| **GenLayer Studio** | `JobEscrow` (Intelligent Contract)                      | `packages/contracts-genlayer/` + `docs/genlayer-interface-v1.md` |
+| Chain               | Contracts                                                                        | Source of truth                                                                    |
+| ------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Pharos Atlantic** | `PharosAgentID`, `CredentialRegistry`                                            | `packages/contracts-evm/` + Vercel env vars                                        |
+| **Casper Testnet**  | `AgentId`, `CredentialRegistry`, `GatedVault`                                    | `packages/contracts-casper/wasm/`, deploy recipe in `AGENTS.md`                    |
+| **Monad Testnet**   | `CredentialRegistry`, `AgentId`, `PasskeyIssuer`, ERC-8004 registries, x402 USDC | `assets/networks.json` → `deployment["monad-testnet"]` + `docs/integrate-monad.md` |
+| **GenLayer Studio** | `JobEscrow` (Intelligent Contract)                                               | `packages/contracts-genlayer/` + `docs/genlayer-interface-v1.md`                   |
 
 ## How to add a new proof
 
