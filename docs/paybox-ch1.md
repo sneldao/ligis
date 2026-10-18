@@ -624,9 +624,14 @@ The crime: [Blockaid](https://blockaid.io/blog/prompt-injection-via-tokens-the-d
   never commit it to `.env.d`.
 - `README.md` line "PayBox Ch.1: see docs/paybox-ch1.md" now points at a real brief; if we fall
   back to C, rewrite it as "Chapter 2 target" rather than leaving a Ch.1 claim.
-- Known repo proof-debt that could embarrass us on camera: `.github/workflows/demo-credentials.yml`
-  fails in 0s on every trigger (AGENTS.md says CI must exit 0), and `docs/proofs.md:103` still
-  says the Monad registry deployment is "pending" when `assets/networks.json` has it.
+- Repo proof-debt cleared on 2026-10-18. `.github/workflows/demo-credentials.yml` had been failing
+  in 0 s on every trigger because an unquoted `0x…` scalar stopped the workflow from _loading_ —
+  no jobs, no logs — and it had no Casper read path at all: `casper-client` was missing on the
+  runner, and the adapter reports a thrown read as "no credential", so the negative sample was
+  passing for the wrong reason. It now installs `casper-client` 5.0.1 and retries transient RPC
+  throttling; run `39079586534` is green in 2m21s with `ok casper-testnet · verified agent
+(kyc.basic → go)` in the log. `docs/proofs.md` no longer calls the Monad registry "pending" —
+  `assets/networks.json` has it deployed and `eth_getCode` returns bytecode.
 - `JevTelemetry` renders only when `NEXT_PUBLIC_LIGIS_GATE_URL` is set and reachable — the
   verdict waterfall is local-only on prod until that env var ships. Set it before filming it.
 - `docs/paybox-ch1.md` previously listed a "4-signal dial" as an asset; it does not exist. The
@@ -922,8 +927,10 @@ Sample arguments the hosted check runs (also the `Load tools` demo, and the film
 
 The counterparty GO case — same file, `payee` set to the contracted address: GO on payee, amount
 and credential, `SKIPPED · layer disabled` on scope, issuer and expiry printed from the on-chain
-record. Film STOP first, GO second; the grey `NO ANSWER` plate third only if something upstream
-actually fails during the take.
+record. That scope row is what the layer-off deployment returned **as filmed**; since 2026-10-18
+production answers it from Jev and the provenance reads `jev go …`, so re-measure the plate before
+quoting the old row again. Film STOP first, GO second; the grey `NO ANSWER` plate third only if
+something upstream actually fails during the take.
 
 **The capture, and what was done to it.** Screen recording of a live Grok session with the enabled
 plugin, 63.2 s, 2940×1912 @60. Graded into three cuts (1600×1000 @30, silent — X autoplays muted):
