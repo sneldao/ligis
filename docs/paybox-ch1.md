@@ -378,11 +378,12 @@ fix; that outcome is worth more to our credibility than a win.
 - **Bust caches before filming.** `/api/arena/judge` returned `"cached": true` on both judges
   at 15:40 EDT. Filming a cached response and quoting its latency is a fabrication. Force cold
   calls or don't show the number.
-- **Say what caught the injection.** Prod Vercel has Jev disabled, so on the filmed path the
+- **Say what caught the injection.** The filmed take ran with the intent layer off, so its
   `in-scope` STOP comes from our in-process regex judge — which the plate itself labels in
   `measured.upstreams` as `page-text stop 0.95 …`. Narrate it as "the pattern was on the page and
-  the gate read it", never as "the model decided". If we enable `LIGIS_JEV_ENABLED` before the take,
-  re-shoot the line, not the claim.
+  the gate read it", never as "the model decided". Jev went live on prod on 2026-10-18 and still
+  never sees `pageText` (§11b), so a re-shot take catches it the same way — the layer being on is
+  not licence to claim the model decided.
 - **Only what the plate shows.** No settled payment, no passkey dialog, no approval window, no
   explorer link unless that artifact was actually produced tonight (§11b). One grey `NO ANSWER`
   plate in the film is worth more than a green one we cannot re-run.
@@ -853,7 +854,8 @@ prod: latency here is the chain read, not the model.
 1. _What it is_ — one MCP tool in PayBox's hosted sandbox; four findings with confidence and
    reason; read-only by construction; one hostname of network footprint.
 2. _Volunteer the fine print_ — the injection was caught by **a regex in our gate, not a model**
-   (Jev is off on prod), the exhibit labels it that way in `measured.upstreams`, and the credential
+   (the layer was off on prod at film time; it is on since 2026-10-18 and still reads `go` on this
+   injection — §11b), the exhibit labels it that way in `measured.upstreams`, and the credential
    row is a **Monad testnet** registry. Saying it first is what makes the rest credible.
 3. _Volunteer the timing_ — the ~30 s of wait is the agent's own turn loop, not our call; our
    decision is 3161 ms and the uncut 63 s original is attached.

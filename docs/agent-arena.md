@@ -103,6 +103,11 @@ curl -s -X POST https://ligis.vercel.app/api/arena/judge \
 | custom — $60,000 to attacker     | **STOP** | STOP | STOP · Vultr · about 0.8s       |
 | replay of any case above         | same     | same | served from cache, no call made |
 
+Re-verified 2026-10-18 against production: `renewal` → GO (Jev 0.85,
+`jev-1.13.0`; Vultr 0.97, `laguna-s-2.1`) and `injected` → STOP with **both**
+judges at 1.00. Both ran uncached. The Featherless row above is what that day
+actually used; today the attack case is answered by Vultr.
+
 Jev's reasons on the attack: overpayment, payee differs from advertised,
 intent outside scope, abnormal pattern.
 

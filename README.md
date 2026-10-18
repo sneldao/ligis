@@ -3,6 +3,7 @@
 > **A spend firewall for AI agents: every payment is checked against the job before money moves.**
 > **Right payee, right amount, in scope, plus a verified-payee credential read.**
 > **Live on Pharos + Casper + Monad. No client SDK, no tracking, fail-open intent layer.**
+> **PayBox Ch.1:** see [`docs/paybox-ch1.md`](docs/paybox-ch1.md) — money-with-a-conscience vision.
 
 [![CI](https://github.com/sneldao/ligis/actions/workflows/ci.yml/badge.svg)](https://github.com/sneldao/ligis/actions/workflows/ci.yml)
 
@@ -51,17 +52,16 @@ operational entry point — install, run, deploy.
 ### Jev intent layer — the gate has reflexes
 
 The x402 Trust Gate annotates every decision (401/402/200) with a typed
-GO/STOP intent verdict from **Jev** (TypeSafe's System One model, routed
-through the Vercel AI Gateway during the free promo, direct via
-`TYPESAFE_API_KEY` afterwards): scope consistency, amount plausibility,
-payee match, and request normality — four questions, one parallel call,
-~135–650 ms warm (measured in `scripts/jev-transport-smoke.lastrun.txt`),
-billed at $0.00 during the promo. Fail-open: a missing model becomes
-`SKIPPED`, never a silent GO.
+GO/STOP intent verdict from **Jev** (TypeSafe's System One model — the AI
+Gateway's free window ended 2026-09-25, so production runs the **direct** route
+via `TYPESAFE_API_KEY`): scope consistency, amount plausibility, payee match,
+and request normality — four questions, one parallel call, 75–160 ms on prod,
+billed at ~$0.00005 per call. Fail-open: a missing model becomes `SKIPPED`,
+never a silent GO.
 
 ```bash
 # Terminal 1 — gate with the intent layer on
-set -a; source .env.d/casper.env .env.d/aigateway.env; set +a
+set -a; source .env.d/casper.env .env.d/typesafe.env; set +a
 LIGIS_JEV_ENABLED=1 LIGIS_GATE_CREDENTIAL_TTL_MS=30000 pnpm x402:dev
 
 # Terminal 2 — stress it
@@ -70,12 +70,15 @@ pnpm demo:jev
 
 Every response carries `x-jev-verdict`, `x-jev-confidence`, `x-jev-flags`,
 `x-jev-latency-ms`, `x-jev-cost-usd`. `/gate` renders the live telemetry
-waterfall. The smoke test fails loudly if Jev stops answering (the promo
-window closes 2026-09-25):
+waterfall. Fail-open means an outage is invisible, so two checks exist — the
+transport smoke test, and a watchdog that asks production's own gate whether
+its provenance reports a `jev` line that answered
+(`.github/workflows/jev-watchdog.yml`, daily 06:30 UTC):
 
 ```bash
-set -a; source .env.d/aigateway.env; set +a
-LIGIS_JEV_ENABLED=1 pnpm smoke:jev
+set -a; source .env.d/typesafe.env; set +a
+LIGIS_JEV_ENABLED=1 pnpm smoke:jev   # the route, from here
+pnpm watchdog:jev                    # prod itself, no key needed
 ```
 
 ## Decisioning stack

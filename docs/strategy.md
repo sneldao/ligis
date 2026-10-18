@@ -54,8 +54,12 @@
 - **Intent layer:** Jev is on the **direct** route
   (`LIGIS_JEV_TRANSPORT=direct`, `api.typesafe.ai`, model `jev-1.13.0`). The AI
   Gateway promo ended 2026-09-25; the last `pnpm smoke:jev` (2026-09-26)
-  recorded two correct probes at ~$0.0001. Re-run it on a schedule — the layer
-  fails open, so a dead route is invisible without it.
+  recorded two correct probes at ~$0.0001. The layer fails open, so a dead
+  route is invisible without a check — that check exists: `pnpm watchdog:jev`
+  (`scripts/jev-prod-watchdog.mjs`) asks production's own `/api/gate` whether its
+  provenance carries a `jev` line that actually answered, and
+  `.github/workflows/jev-watchdog.yml` runs it daily at 06:30 UTC. Live since
+  2026-10-18 on the Vercel deployment.
 - **Tests:** 65 Foundry + 22 Odra + 297 TypeScript. Root `pnpm run test:ts`
   covers every package suite plus the web suite.
 - **Next:** Phase 3 (OKX.AI ASP) is still the open one. The 0G Bridge by AKINDO
