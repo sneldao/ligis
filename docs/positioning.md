@@ -70,13 +70,13 @@ on four that includes a made-up number. Unknown is a valid answer.
 Every number we print must trace to a file in the repo. When the
 underlying measurement changes, the claim here changes with it.
 
-| Claim                                               | Measured                                                                                       | Source                                                      |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Jev intent check latency (warm)                     | ~135–650 ms                                                                                    | `scripts/jev-transport-smoke.lastrun.txt`, `pnpm smoke:jev` |
-| Jev intent check cost                               | ~$0.0001 per call (post-promo)                                                                 | same                                                        |
-| End-to-end gate cold start (Casper credential read) | ~2–3 s, first call after process start                                                         | `AGENTS.md` "Live verification (2026-09-23, AI Gateway)"    |
-| Fail-open on missing intent model                   | `SKIPPED`, never silent GO                                                                     | `web/lib/arena/judge.ts` (`skipped` reason is required)     |
-| Privacy posture                                     | server-aggregate only, no client SDK, no tracking, no database between visitor and chain state | `web/app/embed/page.tsx` — same promise carried forward     |
+| Claim                                               | Measured                                                                                       | Source                                                   |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Jev intent check latency                            | 75–160 ms on production (`direct`)                                                             | `pnpm watchdog:jev` provenance line, 2026-10-18          |
+| Jev intent check cost                               | ~$0.00005 per call                                                                             | same                                                     |
+| End-to-end gate cold start (Casper credential read) | ~2–3 s, first call after process start                                                         | `AGENTS.md` "Live verification (2026-09-23, AI Gateway)" |
+| Fail-open on missing intent model                   | `SKIPPED`, never silent GO                                                                     | `web/lib/arena/judge.ts` (`skipped` reason is required)  |
+| Privacy posture                                     | server-aggregate only, no client SDK, no tracking, no database between visitor and chain state | `web/app/embed/page.tsx` — same promise carried forward  |
 
 Banned: any unmeasured latency claim, "sub-second" without a source,
 "verifiable credentials" in taglines and meta descriptions. The next

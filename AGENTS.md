@@ -576,15 +576,16 @@ confidence, `input_tokens`), different base URL + credential. Select with
 `AI_GATEWAY_API_KEY` is set, else direct when `TYPESAFE_API_KEY` is set,
 else gateway so the skip reason names the key we want):
 
-- **AI Gateway (current default — free promo through 2026-09-25)**:
+- **AI Gateway (free promo ran through 2026-09-25)**:
   `POST https://ai-gateway.vercel.sh/typesafe/v1/systemone`, auth
   `AI_GATEWAY_API_KEY`, model slug `typesafe-ai/jev`. Responses carry
   `provider_metadata.gateway.cost` (billed USD) — used directly for
-  `X-Jev-Cost-Usd`, so during the promo it reads 0. **After 2026-09-25** the
-  free window closes: either attach billing/BYOK to the gateway key, or flip
-  to the direct route (`TYPESAFE_API_KEY` + `LIGIS_JEV_TRANSPORT=direct`).
-  Because the layer is fail-open, a dead route looks like nothing at all at
-  runtime — verify with `pnpm smoke:jev` (below) rather than assuming.
+  `X-Jev-Cost-Usd`, so it read 0 during the promo. That window is closed:
+  either attach billing/BYOK to the gateway key, or use the direct route
+  (`TYPESAFE_API_KEY` + `LIGIS_JEV_TRANSPORT=direct`) — which is what the
+  Vercel deployment has run since 2026-10-18. Because the layer is fail-open,
+  a dead route looks like nothing at all at runtime — verify with
+  `pnpm smoke:jev` (below) rather than assuming.
 - **TypeSafe direct**: `POST https://api.typesafe.ai/v1/systemone`, auth
   `TYPESAFE_API_KEY` (console.typesafe.ai, early access), model `jev-latest`
   (response reports the versioned id — log it). Cost derived from input
@@ -634,7 +635,7 @@ records the last run, including billed USD (a non-zero cost on the real
 gateway means the promo is over).
 
 ```bash
-set -a; source .env.d/aigateway.env; set +a
+set -a; source .env.d/typesafe.env; set +a   # or .env.d/aigateway.env for the gateway route
 LIGIS_JEV_ENABLED=1 pnpm smoke:jev
 ```
 
@@ -646,6 +647,19 @@ npx tsx scripts/jev-stub.ts &   # :4099, model jev-stub-1.0
 LIGIS_JEV_ENABLED=1 LIGIS_JEV_API_KEY=stub \
   LIGIS_JEV_API_URL=http://localhost:4099/v1/systemone pnpm smoke:jev
 ```
+
+### Prod watchdog (`pnpm watchdog:jev`)
+
+`smoke:jev` proves the route from a machine that holds a key; it says nothing
+about the deployment. `scripts/jev-prod-watchdog.mjs` asks production's own
+`POST /api/gate` and reads its provenance: it fails when no line starts
+`jev `, when the verdict word after `jev ` is `skipped`, or when the
+parenthesised group has a third comma-separated part (the abstain shape —
+`jev skipped (direct, 0ms, layer disabled)`). It deliberately ignores the gate
+verdict itself, so an expiring fixture does not look like an outage.
+`.github/workflows/jev-watchdog.yml` runs the parser self-test and then this
+daily at 06:30 UTC — no secrets, no install step, ~$0.00005 of the server's key
+per run.
 
 ### Placement (differs from the original sketch)
 
@@ -670,8 +684,9 @@ cached GO can lag a revocation by up to the TTL — keep prod use deliberate.
 ### Config
 
 - `LIGIS_JEV_ENABLED=1` (default off — the layer is opt-in)
-- `AI_GATEWAY_API_KEY` (gateway route — current default) or `TYPESAFE_API_KEY`
-  (direct route); `LIGIS_JEV_API_KEY` overrides either
+- `AI_GATEWAY_API_KEY` (gateway route — what `auto` prefers when both keys
+  exist) or `TYPESAFE_API_KEY` (direct route — what the Vercel deployment is
+  configured for); `LIGIS_JEV_API_KEY` overrides either
 - `LIGIS_JEV_TRANSPORT` = gateway | direct | auto (default auto)
 - `LIGIS_JEV_API_URL` / `LIGIS_JEV_MODEL` — override the resolved route's
   URL / model slug (gateway defaults: …/typesafe/v1/systemone +
@@ -699,8 +714,8 @@ live verdict waterfall on `/gate`.
 ### Stress demo
 
 ```bash
-LIGIS_JEV_ENABLED=1 AI_GATEWAY_API_KEY=... pnpm x402:dev    # terminal 1 (gateway, free promo)
-# or: LIGIS_JEV_ENABLED=1 TYPESAFE_API_KEY=sk-... pnpm x402:dev  (direct)
+LIGIS_JEV_ENABLED=1 TYPESAFE_API_KEY=... pnpm x402:dev   # terminal 1 (direct — the prod route)
+# or: LIGIS_JEV_ENABLED=1 AI_GATEWAY_API_KEY=... pnpm x402:dev  (gateway, promo closed)
 pnpm demo:jev                                                # terminal 2
 ```
 
@@ -739,6 +754,18 @@ cost reported as $0.00, so the free window was still open. Recorded in
 `scripts/jev-transport-smoke.lastrun.txt`. Re-run the smoke test on or after
 2026-09-25: a non-zero billed cost there means billing started, an exit 1 means
 the route is dead and the gate is quietly credential-only.
+
+### Live verification (2026-10-18, Vercel production — direct route)
+
+`LIGIS_JEV_ENABLED=1`, `LIGIS_JEV_TRANSPORT=direct` and a TypeSafe key are set on
+the deployment; env vars added after a deployment do not bind to it, so this
+needed a Clean Redeploy. Production provenance now reads
+`jev go jev-1.13.0 (direct, 127ms)`, measured $0.00004918 per call at 75–160 ms
+inside a ~1.0–2.4 s decision dominated by the credential read. Enabling it did
+**not** make Jev catch the filmed injection — the layer never receives
+`pageText` (`jevInput`, `web/lib/decide.ts:439`), and its `in-scope` confidence
+on those probes was 0.515–0.545, under the 0.6 bar; see `docs/paybox-ch1.md`
+§11b. `pnpm watchdog:jev` is what keeps this from silently rotting.
 
 ### Marketing notes
 
@@ -793,11 +820,17 @@ Submission doc: `docs/agent-arena.md`. Scenario data lives in
   and Vultr Serverless Inference (`https://api.vultrinference.com/v1`,
   OpenAI-compatible). Any STOP ⇒ STOP; no answers ⇒ `UNKNOWN`. An unavailable
   judge reports `status: "skipped"` with a reason — never a silent GO.
-- Env: `VULTR_INFERENCE_API_KEY` (required for the Vultr judge),
-  `VULTR_INFERENCE_MODEL` (optional pin; otherwise first chat model from
-  `/v1/models`).
+- Env: `VULTR_API_KEY` then `VULTR_INFERENCE_API_KEY` (first non-empty wins;
+  without either the Vultr judge reports `skipped`), `VULTR_INFERENCE_MODEL`
+  (default `laguna-s-2.1` — the cheapest non-reasoning chat model, not a
+  `/v1/models` lookup). Featherless is the second entry in `LLM_PROVIDERS`
+  (`web/lib/arena/judge.ts:210`) and answers when Vultr has no key or is backed
+  off.
 - Verified 2026-09-26: renewal → GO (Jev 0.815), injected → STOP (Jev 1.00);
   Vultr skipped because the key was not set.
+- Verified 2026-10-18 against production, uncached: renewal → GO (Jev 0.85,
+  Vultr 0.97 `laguna-s-2.1`), injected → STOP with **both** judges at 1.00. The
+  September skip was configuration, not a limit.
 
 ## Web motion + specimen system
 
