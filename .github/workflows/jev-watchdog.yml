@@ -1,0 +1,23 @@
+name: Jev watchdog
+
+# The gate's intent layer is fail-open: a dead route or unusable key makes every
+# verdict SKIPPED while the gate keeps answering normally. Production therefore
+# looks healthy when the layer is gone. This asks production once a day whether
+# its own provenance says the model answered. No secrets, no install — plain node.
+on:
+  schedule:
+    - cron: "30 6 * * *" # daily 06:30 UTC
+  workflow_dispatch:
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Parser self-test
+        run: node scripts/jev-prod-watchdog.mjs --self-test
+      - name: Assert the intent layer is answering on production
+        run: node scripts/jev-prod-watchdog.mjs

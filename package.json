@@ -34,6 +34,7 @@
     "demo:genlayer-gate": "tsx scripts/genlayer-gate-demo.ts",
     "demo:jev": "tsx scripts/jev-stress-demo.ts",
     "smoke:jev": "tsx scripts/jev-transport-smoke.ts",
+    "watchdog:jev": "node scripts/jev-prod-watchdog.mjs",
     "demo:monad": "tsx scripts/monad-lifecycle-demo.ts",
     "demo:monad-steward": "tsx scripts/monad-steward-smoke.ts",
     "demo:monad-passkey": "tsx scripts/monad-passkey-issue.ts",
