@@ -1,5 +1,22 @@
 # Ligis — Agent Notes
 
+## Security floor
+
+CI blocks `main` on any remaining **high/critical** npm advisory:
+`node scripts/security-audit.mjs` (self-test: `--self-test`, raw list:
+`pnpm run audit:deps:all`). Fix rules:
+
+- **Direct dep** → normal version bump.
+- **Transitive** → add a `pnpm.overrides` floor (root `package.json`), e.g.
+  `"follow-redirects": ">=1.16.1"`. Floors are `>=` security floors, not
+  pins — Dependabot bumps above them are legitimate (see dependabot.yml).
+- **Unfixable transitive** (no reachable patch) → dismiss by policy in BOTH
+  `.github/dependabot.yml` (`ignore`) and `scripts/security-audit.mjs`
+  (`DISMISSED`) — the lists are mirrored; CI blocks on a dismissal that
+  exists in only one file. Current dismissals: uuid (GHSA-w5hq-g745-h8pq),
+  decode-uri-component (GHSA-vcc3-ghjq-m6fr) — wallet-SDK client-side
+  transitives.
+
 ## Casper Contract Build
 
 The Casper contracts use Odra 2.8.1 and require a nightly Rust toolchain.

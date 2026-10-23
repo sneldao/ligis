@@ -54,8 +54,10 @@ jobs:
       - name: DESIGN.md lint (web)
         run: pnpm lint:design
 
-      - name: Audit dependencies
-        run: pnpm run audit:deps
+      - name: Audit dependencies (security floor, parser self-test first)
+        run: |
+          node scripts/security-audit.mjs --self-test
+          node scripts/security-audit.mjs
 
       - name: Build workspace
         run: pnpm build

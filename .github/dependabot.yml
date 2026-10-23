@@ -15,6 +15,10 @@ updates:
     # both are client-side transitives of wallet-connector SDKs, neither is in
     # our dependency surface, and the upstream ranges make no fix reachable.
     # These remain open, dismissed-by-policy alerts — not fixed ones.
+    #
+    # ⚠️ This list is MIRRORED in scripts/security-audit.mjs (DISMISSED), which
+    # enforces the high/critical floor in CI. Add an ignore here and the same
+    # GHSAs there, or CI will block on the dismissed advisory.
     ignore:
       # uuid: missing buffer bounds check in v3/v5/v6 when `buf` is provided.
       # Pinned to ^8 by @metamask/sdk (via @gemini-wallet/core -> wagmi
