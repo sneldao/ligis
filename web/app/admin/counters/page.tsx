@@ -2,6 +2,7 @@ import "server-only";
 
 import { aggregateAsync, backendKind } from "@/lib/counters";
 import { Rule } from "@/components/Rule";
+import { checkAdminAuth } from "@/lib/admin-auth";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -10,32 +11,6 @@ export const metadata = {
   description: "Optional firewall counters. Privacy-light, aggregate-only.",
   robots: { index: false, follow: false },
 };
-
-/**
- * Auth gate for /admin/counters.
- * - In production (NODE_ENV === "production", no LIGIS_ADMIN_TOKEN): fails
- *   closed (403) — don't leave admin pages wide open.
- * - With LIGIS_ADMIN_TOKEN set: requires ?token= query param.
- * - Local dev (no token, dev env): open.
- * Uses query param instead of Authorization header so browsers can
- * navigate directly without CORS/preflight issues.
- */
-const ADMIN_TOKEN = process.env.LIGIS_ADMIN_TOKEN ?? "";
-const IS_PROD = process.env.NODE_ENV === "production";
-
-function checkAuth(searchParams: URLSearchParams): {
-  ok: boolean;
-  reason?: string;
-} {
-  // Fail closed in production when no token is configured.
-  if (IS_PROD && !ADMIN_TOKEN)
-    return { ok: false, reason: "admin token not configured" };
-  if (!ADMIN_TOKEN) return { ok: true };
-  const token = searchParams.get("token");
-  if (!token) return { ok: false, reason: "missing token" };
-  if (token !== ADMIN_TOKEN) return { ok: false, reason: "invalid token" };
-  return { ok: true };
-}
 
 /**
  * `/admin/counters` — operator surface for the privacy-light counters
@@ -71,7 +46,7 @@ export default async function CountersPage({
   // Auth gate: when LIGIS_ADMIN_TOKEN is set, require ?token= query param.
   // Fails closed in production; silently allows in local dev.
   const params = await searchParams;
-  const authCheck = checkAuth(
+  const authCheck = checkAdminAuth(
     new URLSearchParams(params as Record<string, string>),
   );
   if (!authCheck.ok) {

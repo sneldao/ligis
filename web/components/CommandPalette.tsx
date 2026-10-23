@@ -90,6 +90,12 @@ const STATIC: Command[] = [
     href: "/styleguide",
   },
   {
+    id: "operator",
+    label: "Operator",
+    hint: "/operator · firewall desk",
+    href: "/operator",
+  },
+  {
     id: "admin",
     label: "Counters",
     hint: "/admin/counters · privacy-light aggregate",
