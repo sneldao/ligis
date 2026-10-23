@@ -3,5 +3,10 @@
   "installCommand": "cd .. && npx -y pnpm@10.33.2 install --frozen-lockfile",
   "buildCommand": "cd .. && npx -y pnpm@10.33.2 --filter '@ligis/web...' run build",
   "outputDirectory": ".next",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "**": {
+      "runtime": "nodejs24.x"
+    }
+  }
 }

@@ -698,23 +698,38 @@ it("reports every failure when the whole chain dies", async () => {
 
 it("honours one overall deadline across the chain", async () => {
   resetJevCooldowns();
-  // Primary never resolves on its own — it only rejects when aborted.
-  const hanging = async (_url: string, init?: RequestInit): Promise<Response> =>
-    new Promise((_resolve, reject) => {
-      init?.signal?.addEventListener("abort", () =>
-        reject(new Error("The operation timed out")),
-      );
-    });
-  const start = Date.now();
-  const result = await evaluatePaymentIntent(
-    BASE_INPUT,
-    { ...CONFIG, timeoutMs: 150 },
-    hanging,
-  );
-  const elapsed = Date.now() - start;
-  assert.equal(result.verdict, "SKIPPED");
-  assert.ok(elapsed < 1000, `took ${elapsed}ms — expected ~150ms`);
-  assert.match(result.skippedReason ?? "", /unreachable|deadline/);
+  // The `AbortSignal.timeout` handle is unref'd on Node 22 (CI). This is the
+  // only test whose promise settles solely on that deadline firing, and a bare
+  // test process has no other active handle — so on Node 22 the event loop
+  // drains before the 150ms deadline and the hanging fetch below is never
+  // aborted (runner reports `cancelledByParent`). A ref'd keep-alive timer
+  // keeps the loop alive so the deadline can fire. In production the HTTP
+  // server socket is always an active handle, so this is test-only.
+  const keepAlive = setInterval(() => {}, 50);
+  try {
+    // Primary never resolves on its own — it only rejects when aborted.
+    const hanging = async (
+      _url: string,
+      init?: RequestInit,
+    ): Promise<Response> =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () =>
+          reject(new Error("The operation timed out")),
+        );
+      });
+    const start = Date.now();
+    const result = await evaluatePaymentIntent(
+      BASE_INPUT,
+      { ...CONFIG, timeoutMs: 150 },
+      hanging,
+    );
+    const elapsed = Date.now() - start;
+    assert.equal(result.verdict, "SKIPPED");
+    assert.ok(elapsed < 1000, `took ${elapsed}ms — expected ~150ms`);
+    assert.match(result.skippedReason ?? "", /unreachable|deadline/);
+  } finally {
+    clearInterval(keepAlive);
+  }
 });
 
 it("keeps single-route failure reasons exact (no chain decoration)", async () => {

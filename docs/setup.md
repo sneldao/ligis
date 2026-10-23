@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Node.js** 20+
+- **Node.js** 24 (pinned in `.nvmrc` — CI, Vercel, and local all run 24; `nvm use` in the repo root)
 - **Foundry** — install: `curl -L https://foundry.paradigm.xyz | bash && source ~/.zshenv && foundryup`
   > If another `forge` CLI shadows Foundry's, the npm scripts use `scripts/forge.sh` which finds Foundry's forge at `~/.foundry/bin/forge` automatically.
 
