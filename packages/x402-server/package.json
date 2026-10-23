@@ -20,7 +20,7 @@
     "@ligis/adapter-casper": "workspace:*",
     "@ligis/core": "workspace:*",
     "@noble/curves": "^1.6.0",
-    "@noble/hashes": "^1.5.0",
+    "@noble/hashes": "^2.4.0",
     "hono": "^4.6.0"
   },
   "devDependencies": {
