@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",
-    "@0gfoundation/0g-storage-ts-sdk": "^1.2.6",
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.12",
     "@ligis/core": "workspace:*",
     "ethers": "^6.13.1"
   },
