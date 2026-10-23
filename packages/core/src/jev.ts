@@ -25,15 +25,27 @@
  *     `usage.input_tokens` at Jev's published input price ($0.042/MTok),
  *     output tokens free.
  *
- * Two interchangeable routes with identical wire shapes (Choice/Score/Noul,
- * confidence, input_tokens) — only base URL, credential, and model slug
- * differ (see loadJevConfig):
+ * Three routes, resolved in order — the primary from LIGIS_JEV_TRANSPORT,
+ * then any fallbacks from LIGIS_JEV_FALLBACK (see loadJevConfig):
  *
  *   gateway (default): POST https://ai-gateway.vercel.sh/typesafe/v1/systemone
  *     auth AI_GATEWAY_API_KEY, model `typesafe-ai/jev`. Free promo through
  *     2026-09-25 — after that, flip to direct or keep the gateway with billing.
  *   direct: POST https://api.typesafe.ai/v1/systemone
  *     auth TYPESAFE_API_KEY, model `jev-latest`.
+ *   novita-vl: POST https://api.novita.ai/v3/autotrust/v1/decide
+ *     auth NOVITA_API_KEY (or LIGIS_JEV_NOVITA_API_KEY), model
+ *     `autotrust/jev-27b-vl`. AutoTrust JEV-27B-VL — free ~14-day partner
+ *     promo, then metered (input tokens only). Different protocol: ONE
+ *     question per request, so this route fans the four trust questions out
+ *     to four parallel requests and synthesizes the same Choice/Score/Noul
+ *     answers before verdict composition.
+ *
+ * The chain: each route is tried in order under ONE overall deadline
+ * (config.timeoutMs is the budget for the whole chain, not per route). A
+ * route fails → the next is tried; all fail → SKIPPED. HTTP 401/403/429
+ * (Novita's NOT_ENOUGH_BALANCE family included) arms a 60s per-route
+ * cooldown so a dead promo or bad key costs zero network calls.
  *
  * Consumers: the x402 Trust Gate (packages/x402-server, judges /premium
  * payment requests) and the CROO adapter's `ligis.gate` service
@@ -93,67 +105,182 @@ export interface JevIntentResult {
   /** Present only when verdict is SKIPPED — why the layer stood down. */
   skippedReason?: string;
   inputTokens?: number;
+  /** Route that produced the verdict (set on GO/STOP, never on SKIPPED). */
+  route?: JevRouteName;
+  /** Per-route outcomes in order, present only when >1 route was configured. */
+  attempts?: { route: JevRouteName; outcome: string }[];
+}
+
+export type JevRouteName = "gateway" | "direct" | "novita-vl";
+
+/** A single upstream route in the evaluation chain. */
+export interface JevRoute {
+  name: JevRouteName;
+  /** systemone = TypeSafe multi-question; novita-decide = one question per request. */
+  protocol: "systemone" | "novita-decide";
+  apiKey: string;
+  apiUrl: string;
+  model: string;
 }
 
 export interface JevConfig {
   enabled: boolean;
-  /** Which upstream serves the request — same wire shapes, different URL/key. */
-  transport: "gateway" | "direct";
+  /** Primary upstream — the first route tried in the chain. */
+  transport: JevRouteName;
   apiKey: string;
   apiUrl: string;
   model: string;
   /** Minimum flag confidence for a flag to fire. */
   minConfidence: number;
+  /**
+   * Overall deadline for the ENTIRE route chain (primary + fallbacks),
+   * not per route.
+   */
   timeoutMs: number;
   /** When true, the server may refuse (403) on a confident STOP. Default off. */
   enforce: boolean;
+  /** Fallback routes, tried in order after the primary. Built from LIGIS_JEV_FALLBACK. */
+  fallbacks?: JevRoute[];
+  /**
+   * Novita input price ($/MTok), from LIGIS_JEV_NOVITA_INPUT_USD_PER_MTOK.
+   * Unset → novita-vl costUsd is undefined (Novita publishes no unit price;
+   * never apply TypeSafe's JEV_INPUT_USD_PER_MTOK to it).
+   */
+  novitaInputUsdPerMTok?: number;
 }
 
 const GATEWAY_API_URL = "https://ai-gateway.vercel.sh/typesafe/v1/systemone";
 const GATEWAY_MODEL = "typesafe-ai/jev";
 const DIRECT_API_URL = "https://api.typesafe.ai/v1/systemone";
 const DIRECT_MODEL = "jev-latest";
+const NOVITA_API_URL = "https://api.novita.ai/v3/autotrust/v1/decide";
+const NOVITA_MODEL = "autotrust/jev-27b-vl";
+
+const ROUTE_NAMES: ReadonlySet<string> = new Set([
+  "gateway",
+  "direct",
+  "novita-vl",
+]);
+
+/** The novita-vl route's credential + endpoint + slug from the env. */
+function novitaRouteFromEnv(env: NodeJS.ProcessEnv): JevRoute {
+  return {
+    name: "novita-vl",
+    protocol: "novita-decide",
+    apiKey: env.LIGIS_JEV_NOVITA_API_KEY ?? env.NOVITA_API_KEY ?? "",
+    apiUrl: env.LIGIS_JEV_NOVITA_API_URL ?? NOVITA_API_URL,
+    model: env.LIGIS_JEV_NOVITA_MODEL ?? NOVITA_MODEL,
+  };
+}
+
+/** A route description from its own route-specific env vars, or null if unknown. */
+function routeFromName(name: string, env: NodeJS.ProcessEnv): JevRoute | null {
+  switch (name) {
+    case "gateway":
+      return {
+        name: "gateway",
+        protocol: "systemone",
+        apiKey: env.AI_GATEWAY_API_KEY ?? "",
+        apiUrl: GATEWAY_API_URL,
+        model: GATEWAY_MODEL,
+      };
+    case "direct":
+      return {
+        name: "direct",
+        protocol: "systemone",
+        apiKey: env.TYPESAFE_API_KEY ?? "",
+        apiUrl: DIRECT_API_URL,
+        model: DIRECT_MODEL,
+      };
+    case "novita-vl":
+      return novitaRouteFromEnv(env);
+    default:
+      return null;
+  }
+}
 
 /**
  * Transport resolution:
- *   LIGIS_JEV_TRANSPORT=gateway|direct|auto (default auto).
+ *   LIGIS_JEV_TRANSPORT=gateway|direct|novita-vl|auto (default auto).
  *   auto → gateway when AI_GATEWAY_API_KEY is set (the free route), else
  *   direct when TYPESAFE_API_KEY is set, else gateway so the skip reason
- *   names the credential we actually want.
+ *   names the credential we actually want. novita-vl is explicit-only —
+ *   auto never picks it.
  * LIGIS_JEV_API_KEY overrides the credential for whichever route is active;
  * LIGIS_JEV_API_URL / LIGIS_JEV_MODEL still override URL and model slug.
+ * LIGIS_JEV_FALLBACK is a comma-separated chain of route names tried after
+ * the primary (each built from its own credential; keyless, unknown,
+ * duplicate, and primary-name entries are dropped).
  */
 export function loadJevConfig(env: NodeJS.ProcessEnv = process.env): JevConfig {
   const requested = (env.LIGIS_JEV_TRANSPORT ?? "auto").toLowerCase();
   const hasGatewayKey = Boolean(env.AI_GATEWAY_API_KEY);
   const hasDirectKey = Boolean(env.TYPESAFE_API_KEY);
-  const transport: "gateway" | "direct" =
-    requested === "gateway" || requested === "direct"
-      ? requested
-      : hasGatewayKey
-        ? "gateway"
-        : hasDirectKey
-          ? "direct"
-          : "gateway";
-  const apiKey =
-    env.LIGIS_JEV_API_KEY ??
-    (transport === "gateway" ? env.AI_GATEWAY_API_KEY : env.TYPESAFE_API_KEY) ??
-    "";
+  const transport: JevRouteName = ROUTE_NAMES.has(requested)
+    ? (requested as JevRouteName)
+    : hasGatewayKey
+      ? "gateway"
+      : hasDirectKey
+        ? "direct"
+        : "gateway";
+
+  let apiKey: string;
+  let apiUrl: string;
+  let model: string;
+  if (transport === "novita-vl") {
+    const novita = novitaRouteFromEnv(env);
+    apiKey = env.LIGIS_JEV_API_KEY ?? novita.apiKey;
+    apiUrl = env.LIGIS_JEV_API_URL ?? novita.apiUrl;
+    model = env.LIGIS_JEV_MODEL ?? novita.model;
+  } else {
+    apiKey =
+      env.LIGIS_JEV_API_KEY ??
+      (transport === "gateway"
+        ? env.AI_GATEWAY_API_KEY
+        : env.TYPESAFE_API_KEY) ??
+      "";
+    apiUrl =
+      env.LIGIS_JEV_API_URL ??
+      (transport === "gateway" ? GATEWAY_API_URL : DIRECT_API_URL);
+    model =
+      env.LIGIS_JEV_MODEL ??
+      (transport === "gateway" ? GATEWAY_MODEL : DIRECT_MODEL);
+  }
+
+  let fallbacks: JevRoute[] | undefined;
+  if (env.LIGIS_JEV_FALLBACK !== undefined) {
+    const seen = new Set<string>([transport]);
+    const list: JevRoute[] = [];
+    for (const raw of env.LIGIS_JEV_FALLBACK.split(",")) {
+      const name = raw.trim().toLowerCase();
+      if (!ROUTE_NAMES.has(name) || seen.has(name)) continue;
+      seen.add(name);
+      const route = routeFromName(name, env);
+      if (route?.apiKey) list.push(route);
+    }
+    if (list.length > 0) fallbacks = list;
+  }
+
   return {
     enabled: env.LIGIS_JEV_ENABLED === "1",
     transport,
     apiKey,
-    apiUrl:
-      env.LIGIS_JEV_API_URL ??
-      (transport === "gateway" ? GATEWAY_API_URL : DIRECT_API_URL),
-    model:
-      env.LIGIS_JEV_MODEL ??
-      (transport === "gateway" ? GATEWAY_MODEL : DIRECT_MODEL),
+    apiUrl,
+    model,
     minConfidence: Number(env.LIGIS_JEV_MIN_CONFIDENCE ?? "0.6"),
     // Jev answers in 70–500ms; the headroom covers event-loop contention from
-    // the gate's synchronous casper-client reads on cold requests.
+    // the gate's synchronous casper-client reads on cold requests. This is
+    // the budget for the whole route chain, not per route.
     timeoutMs: Number(env.LIGIS_JEV_TIMEOUT_MS ?? "4000"),
     enforce: env.LIGIS_JEV_ENFORCE === "1",
+    ...(fallbacks ? { fallbacks } : {}),
+    ...(env.LIGIS_JEV_NOVITA_INPUT_USD_PER_MTOK !== undefined
+      ? {
+          novitaInputUsdPerMTok: Number(
+            env.LIGIS_JEV_NOVITA_INPUT_USD_PER_MTOK,
+          ),
+        }
+      : {}),
   };
 }
 
@@ -354,6 +481,12 @@ function composeVerdict(
   input: JevIntentInput,
   latencyMs: number,
   config: JevConfig,
+  /**
+   * Route-supplied cost: undefined = derive below (gateway metadata or
+   * TypeSafe's input price); null = force undefined (route has no published
+   * price); a number = that cost verbatim.
+   */
+  costOverride?: number | null,
 ): JevIntentResult {
   const answers = data.answers ?? {};
   const minConf = config.minConfidence ?? FLAG_MIN_CONFIDENCE_FALLBACK;
@@ -405,16 +538,21 @@ function composeVerdict(
 
   // Prefer the gateway's billed cost (authoritative, handles free-promo zero
   // and surcharges); fall back to input tokens at the published input price.
+  // A route may override this entirely (novita-vl prices only input tokens
+  // at an env-configured rate — never TypeSafe's).
   const gatewayCost =
     data.provider_metadata?.gateway?.cost ??
     data.providerMetadata?.gateway?.cost;
   const parsedGatewayCost =
     gatewayCost !== undefined && gatewayCost !== "" ? Number(gatewayCost) : NaN;
-  const costUsd = Number.isFinite(parsedGatewayCost)
-    ? parsedGatewayCost
-    : typeof data.usage?.input_tokens === "number"
-      ? (data.usage.input_tokens * JEV_INPUT_USD_PER_MTOK) / 1_000_000
-      : undefined;
+  const costUsd =
+    costOverride !== undefined
+      ? (costOverride ?? undefined)
+      : Number.isFinite(parsedGatewayCost)
+        ? parsedGatewayCost
+        : typeof data.usage?.input_tokens === "number"
+          ? (data.usage.input_tokens * JEV_INPUT_USD_PER_MTOK) / 1_000_000
+          : undefined;
 
   if (flags.length > 0) {
     const confidence = Math.max(...flags.map((f) => f.confidence));
@@ -475,6 +613,294 @@ function skipped(reason: string, t0: number): JevIntentResult {
   };
 }
 
+// ---------- Route cooldown (per-route circuit breaker) ----------
+
+const COOLDOWN_MS = 60_000;
+const cooldowns = new Map<string, { until: number; status: number }>();
+
+/** Test hook: clear all armed route cooldowns. */
+export function resetJevCooldowns(): void {
+  cooldowns.clear();
+}
+
+/** Statuses that arm the cooldown — auth, balance/budget (Novita's 403
+ * NOT_ENOUGH_* family is how a spent promo reports itself), rate limits. */
+const COOLDOWN_STATUSES = new Set([401, 403, 429]);
+
+function missingKeyReason(name: JevRouteName): string {
+  return name === "gateway"
+    ? "missing AI_GATEWAY_API_KEY"
+    : name === "direct"
+      ? "missing TYPESAFE_API_KEY"
+      : "missing NOVITA_API_KEY";
+}
+
+// ---------- Novita decide adapter (one question per request) ----------
+
+interface NovitaDecideResponse {
+  kind?: string;
+  options?: string[];
+  probabilities?: number[];
+  choice_index?: number;
+  choice?: string;
+  model?: string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+}
+
+interface NovitaQuestionPlan {
+  key: string;
+  kind: "choice" | "noul";
+  /** Expected option labels (choice only) — validated 1:1 against the response. */
+  options?: string[];
+}
+
+const NOVITA_PLAN: NovitaQuestionPlan[] = [
+  {
+    key: "scope",
+    kind: "choice",
+    options: ["consistent", "inconsistent", "unclear"],
+  },
+  {
+    key: "amount_plausibility",
+    kind: "choice",
+    options: ["implausible", "questionable", "plausible"],
+  },
+  { key: "payee_consistency", kind: "noul" },
+  { key: "request_normality", kind: "noul" },
+];
+
+/** Render each buildQuestions() entry as the single `question` string the
+ * decide endpoint takes: instructions plus criteria inline. */
+function novitaQuestions(): (NovitaQuestionPlan & { question: string })[] {
+  const questions = buildQuestions() as Record<
+    string,
+    { instructions?: string; criteria?: unknown }
+  >;
+  return NOVITA_PLAN.map((plan) => {
+    const src = questions[plan.key] ?? {};
+    const instructions = src.instructions ?? "";
+    let suffix = "";
+    if (plan.kind === "choice") {
+      if (Array.isArray(src.criteria)) {
+        // score-type criteria are already "Label — description" strings.
+        suffix = ` Options: ${src.criteria.join("; ")}`;
+      } else if (src.criteria && typeof src.criteria === "object") {
+        suffix = ` Options: ${Object.entries(src.criteria)
+          .map(([label, text]) => `${label} — ${text}`)
+          .join("; ")}`;
+      }
+    } else if (src.criteria && typeof src.criteria === "object") {
+      const c = src.criteria as Record<string, string>;
+      if (c.yes || c.no) {
+        suffix = ` Answer true if: ${c.yes}; false if: ${c.no}`;
+      }
+    }
+    return { ...plan, question: `${instructions}${suffix}` };
+  });
+}
+
+/** Turn a decide response into the TypeSafe-shaped answer composeVerdict
+ * already consumes. Throws on any unparseable shape — the caller treats a
+ * throw as a route failure. */
+function synthesizeNovitaAnswer(
+  plan: NovitaQuestionPlan,
+  data: NovitaDecideResponse,
+): JevAnswer {
+  const options = data.options;
+  const probs = data.probabilities;
+  if (
+    !Array.isArray(options) ||
+    !Array.isArray(probs) ||
+    options.length !== probs.length ||
+    probs.some((p) => typeof p !== "number" || Number.isNaN(p))
+  ) {
+    throw new Error("missing options/probabilities");
+  }
+
+  if (plan.kind === "noul") {
+    const idx = options.indexOf("true");
+    if (idx === -1) throw new Error("noul options missing 'true'");
+    return { type: "noul", noul: probs[idx]! };
+  }
+
+  // Choice — every expected label must be present.
+  const expected = plan.options ?? [];
+  if (expected.some((label) => !options.includes(label))) {
+    throw new Error("choice options missing expected label");
+  }
+  const argmax = probs.indexOf(Math.max(...probs));
+
+  if (plan.key === "amount_plausibility") {
+    // Expected index on the 0..2 scale TypeSafe's score answer uses
+    // (0=implausible … 2=plausible) — composeVerdict flags at score <= 0.5.
+    const legendIndex = new Map(expected.map((label, i) => [label, i]));
+    let score = 0;
+    for (let j = 0; j < options.length; j++) {
+      score += probs[j]! * (legendIndex.get(options[j]!) ?? 0);
+    }
+    const legend: Record<string, string> = {};
+    const probabilities: Record<string, number> = {};
+    for (let i = 0; i < expected.length; i++) {
+      legend[String(i)] = expected[i]!;
+      const idx = options.indexOf(expected[i]!);
+      probabilities[String(i)] = idx === -1 ? 0 : probs[idx]!;
+    }
+    return {
+      type: "score",
+      score,
+      legend,
+      probabilities,
+      confidence: probs[argmax]!,
+    };
+  }
+
+  const probabilities: Record<string, number> = {};
+  for (let j = 0; j < options.length; j++) {
+    probabilities[options[j]!] = probs[j]!;
+  }
+  return {
+    type: "choice",
+    choice: options[argmax]!,
+    probabilities,
+    confidence: probs[argmax]!,
+  };
+}
+
+// ---------- Route execution ----------
+
+type RouteOutcome =
+  | { ok: true; data: JevResponse; costUsd?: number | null }
+  | { ok: false; reason: string; status?: number };
+
+function errMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+async function callSystemone(
+  route: JevRoute,
+  input: JevIntentInput,
+  signal: AbortSignal,
+  fetchImpl: FetchLike,
+): Promise<RouteOutcome> {
+  let res: Response;
+  try {
+    res = await fetchImpl(route.apiUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${route.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: route.model,
+        state: buildState(input),
+        questions: buildQuestions(),
+      }),
+      signal,
+    });
+  } catch (err) {
+    return { ok: false, reason: `jev unreachable: ${errMessage(err)}` };
+  }
+  if (!res.ok) {
+    return { ok: false, reason: `jev HTTP ${res.status}`, status: res.status };
+  }
+  let data: JevResponse;
+  try {
+    data = (await res.json()) as JevResponse;
+  } catch {
+    return { ok: false, reason: "jev returned malformed JSON" };
+  }
+  if (!data.answers || typeof data.answers !== "object") {
+    return { ok: false, reason: "jev response missing answers" };
+  }
+  return { ok: true, data };
+}
+
+async function callNovita(
+  route: JevRoute,
+  input: JevIntentInput,
+  config: JevConfig,
+  signal: AbortSignal,
+  fetchImpl: FetchLike,
+): Promise<RouteOutcome> {
+  const plans = novitaQuestions();
+  const state = buildState(input);
+
+  let responses: Response[];
+  try {
+    responses = await Promise.all(
+      plans.map((plan) =>
+        fetchImpl(route.apiUrl, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${route.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: route.model,
+            kind: plan.kind,
+            state,
+            question: plan.question,
+            ...(plan.options ? { options: plan.options } : {}),
+            thinking: "off",
+          }),
+          signal,
+        }),
+      ),
+    );
+  } catch (err) {
+    return { ok: false, reason: `jev unreachable: ${errMessage(err)}` };
+  }
+
+  for (const res of responses) {
+    if (!res.ok) {
+      return {
+        ok: false,
+        reason: `jev HTTP ${res.status}`,
+        status: res.status,
+      };
+    }
+  }
+
+  let datas: NovitaDecideResponse[];
+  try {
+    datas = (await Promise.all(
+      responses.map((res) => res.json()),
+    )) as NovitaDecideResponse[];
+  } catch {
+    return { ok: false, reason: "jev returned malformed JSON" };
+  }
+
+  const answers: Record<string, JevAnswer> = {};
+  try {
+    plans.forEach((plan, i) => {
+      answers[plan.key] = synthesizeNovitaAnswer(plan, datas[i]!);
+    });
+  } catch {
+    return { ok: false, reason: "jev response missing answers" };
+  }
+
+  const inputTokens = datas.reduce(
+    (sum, d) => sum + (d.usage?.prompt_tokens ?? 0),
+    0,
+  );
+  const data: JevResponse = {
+    model: datas[0]?.model,
+    answers,
+    usage: { input_tokens: inputTokens },
+  };
+  // Novita bills input tokens only and publishes no unit price: cost is
+  // undefined unless the operator configured a rate — never TypeSafe's.
+  const costUsd =
+    config.novitaInputUsdPerMTok !== undefined
+      ? (inputTokens * config.novitaInputUsdPerMTok) / 1_000_000
+      : null;
+  return { ok: true, data, costUsd };
+}
+
 // ---------- Entry point ----------
 
 export async function evaluatePaymentIntent(
@@ -485,52 +911,99 @@ export async function evaluatePaymentIntent(
   const t0 = Date.now();
 
   if (!config.enabled) return skipped("layer disabled", t0);
-  if (!config.apiKey)
-    return skipped(
-      config.transport === "gateway"
-        ? "missing AI_GATEWAY_API_KEY"
-        : "missing TYPESAFE_API_KEY",
-      t0,
+
+  const primary: JevRoute = {
+    name: config.transport,
+    protocol: config.transport === "novita-vl" ? "novita-decide" : "systemone",
+    apiKey: config.apiKey,
+    apiUrl: config.apiUrl,
+    model: config.model,
+  };
+  const routes: JevRoute[] = [primary, ...(config.fallbacks ?? [])];
+  const multi = routes.length > 1;
+  const attempts: { route: JevRouteName; outcome: string }[] = [];
+
+  for (const route of routes) {
+    if (!route.apiKey) {
+      const reason = missingKeyReason(route.name);
+      if (!multi) return skipped(reason, t0);
+      attempts.push({ route: route.name, outcome: reason });
+      continue;
+    }
+
+    const cooldown = cooldowns.get(`${route.name}|${route.apiUrl}`);
+    if (cooldown && cooldown.until > Date.now()) {
+      if (!multi) {
+        return skipped(
+          `${route.name} in cooldown after HTTP ${cooldown.status}`,
+          t0,
+        );
+      }
+      attempts.push({ route: route.name, outcome: "cooldown" });
+      continue;
+    }
+
+    // config.timeoutMs is the budget for the whole chain — each attempt
+    // gets whatever is left.
+    const remaining = config.timeoutMs - (Date.now() - t0);
+    if (remaining <= 0) break;
+
+    const outcome =
+      route.protocol === "novita-decide"
+        ? await callNovita(
+            route,
+            input,
+            config,
+            AbortSignal.timeout(remaining),
+            fetchImpl,
+          )
+        : await callSystemone(
+            route,
+            input,
+            AbortSignal.timeout(remaining),
+            fetchImpl,
+          );
+
+    if (!outcome.ok) {
+      if (
+        outcome.status !== undefined &&
+        COOLDOWN_STATUSES.has(outcome.status)
+      ) {
+        cooldowns.set(`${route.name}|${route.apiUrl}`, {
+          until: Date.now() + COOLDOWN_MS,
+          status: outcome.status,
+        });
+      }
+      attempts.push({ route: route.name, outcome: outcome.reason });
+      if (!multi) return skipped(outcome.reason, t0);
+      continue;
+    }
+
+    const result = composeVerdict(
+      outcome.data,
+      input,
+      Date.now() - t0,
+      config,
+      outcome.costUsd,
     );
-
-  let res: Response;
-  try {
-    res = await fetchImpl(config.apiUrl, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        state: buildState(input),
-        questions: buildQuestions(),
-      }),
-      signal: AbortSignal.timeout(config.timeoutMs),
-    });
-  } catch (err) {
-    return skipped(
-      `jev unreachable: ${err instanceof Error ? err.message : String(err)}`,
-      t0,
-    );
+    result.route = route.name;
+    if (multi) {
+      attempts.push({ route: route.name, outcome: "ok" });
+      result.attempts = attempts;
+    }
+    return result;
   }
 
-  if (!res.ok) {
-    return skipped(`jev HTTP ${res.status}`, t0);
+  if (multi) {
+    const reason = `all routes failed — ${attempts
+      .map((a) => `${a.route}: ${a.outcome}`)
+      .join("; ")}`;
+    const result = skipped(reason, t0);
+    result.attempts = attempts;
+    return result;
   }
-
-  let data: JevResponse;
-  try {
-    data = (await res.json()) as JevResponse;
-  } catch {
-    return skipped("jev returned malformed JSON", t0);
-  }
-
-  if (!data.answers || typeof data.answers !== "object") {
-    return skipped("jev response missing answers", t0);
-  }
-
-  return composeVerdict(data, input, Date.now() - t0, config);
+  // Single route with nothing left of the budget before its first attempt.
+  return skipped("jev evaluation deadline exceeded", t0);
 }
 
 // ---------- Response headers ----------
@@ -544,6 +1017,9 @@ export function jevHeaders(r: JevIntentResult): Record<string, string> {
     "x-jev-model": r.model ?? "",
     "x-jev-flags": r.flags.map((f) => f.id).join(","),
   };
+  if (r.route) {
+    headers["x-jev-route"] = r.route;
+  }
   if (r.costUsd !== undefined) {
     headers["x-jev-cost-usd"] = r.costUsd.toFixed(8);
   }
@@ -563,6 +1039,7 @@ export function jevSummary(r: JevIntentResult) {
       confidence: Number(f.confidence.toFixed(3)),
     })),
     latencyMs: r.latencyMs,
+    ...(r.route ? { route: r.route } : {}),
     ...(r.costUsd !== undefined
       ? { costUsd: Number(r.costUsd.toFixed(8)) }
       : {}),

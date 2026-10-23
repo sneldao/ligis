@@ -124,6 +124,16 @@ function printRoute(config: ReturnType<typeof loadJevConfig>): void {
   console.log(`endpoint:   ${config.apiUrl}`);
   console.log(`model:      ${config.model}`);
   console.log(`credential: ${config.apiKey ? mask(config.apiKey) : "MISSING"}`);
+  const fallbacks = config.fallbacks ?? [];
+  if (fallbacks.length > 0) {
+    console.log(
+      `chain:      ${config.transport} → ${fallbacks
+        .map((r) => `${r.name} (${r.apiKey ? mask(r.apiKey) : "NO KEY"})`)
+        .join(" → ")}`,
+    );
+  } else {
+    console.log(`chain:      ${config.transport} (no fallbacks configured)`);
+  }
   console.log("");
 }
 
@@ -134,8 +144,14 @@ function printResult(probe: Probe, result: JevIntentResult): void {
     `  ${probe.id.padEnd(13)} → ${result.verdict.padEnd(8)} ` +
       `conf=${result.confidence.toFixed(3)} ` +
       `${String(result.latencyMs)}ms cost=${cost} ` +
-      `model=${result.model ?? "?"}`,
+      `model=${result.model ?? "?"}` +
+      (result.route ? ` route=${result.route}` : ""),
   );
+  if (result.attempts) {
+    for (const attempt of result.attempts) {
+      console.log(`      attempt: ${attempt.route} → ${attempt.outcome}`);
+    }
+  }
   for (const flag of result.flags) {
     console.log(
       `      flag: ${flag.id} (${flag.label}) conf=${flag.confidence.toFixed(3)}`,
@@ -156,8 +172,18 @@ function remedy(config: ReturnType<typeof loadJevConfig>): void {
       "  → no credential for the resolved route: " +
         (config.transport === "gateway"
           ? "set AI_GATEWAY_API_KEY (dashboard) or TYPESAFE_API_KEY (direct)"
-          : "set TYPESAFE_API_KEY"),
+          : config.transport === "novita-vl"
+            ? "set NOVITA_API_KEY"
+            : "set TYPESAFE_API_KEY"),
     );
+  } else if (config.transport === "novita-vl") {
+    console.log(
+      "  → the Novita AutoTrust promo is ~14 days; when it ends the route " +
+        "returns 403 NOT_ENOUGH_* and falls through with a cooldown. Check " +
+        "the key, or chain it behind another route:",
+    );
+    console.log("      NOVITA_API_KEY=nv-... LIGIS_JEV_TRANSPORT=novita-vl");
+    console.log("      LIGIS_JEV_FALLBACK=direct   (+ TYPESAFE_API_KEY)");
   } else if (config.transport === "gateway") {
     console.log(
       "  → the AI Gateway promo ended 2026-09-25. Either attach billing/BYOK " +
