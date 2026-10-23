@@ -22,6 +22,12 @@ import {
   CREDENTIAL_REGISTRY_ABI,
   PHAROS_AGENT_ID_ABI,
 } from "@ligis/adapter-evm";
+import {
+  reasonerSpecFromEnv,
+  resolveReasonerChain,
+  type Reasoner,
+  type ReasoningResult,
+} from "@ligis/core";
 import type { StewardEvent } from "./steward-events";
 
 // 0G SDKs (CJS — use createRequire for ESM compat)
@@ -214,6 +220,44 @@ async function zeroGReason(
   );
 
   return { text, verified: verified === true, model: meta.model };
+}
+
+// ---------- Reasoner chain ----------
+//
+// LIGIS_REASONER_CHAIN picks the steward's brain: ordered fallback across
+// `zerog`, `local`, and OpenAI-compatible presets (`qwen-max`, `kimi`,
+// `openai-compat`). Local helpers are wrapped as `Reasoner`s so the same
+// core machinery drives them — `localReason` text is re-encoded as the JSON
+// shape `parseReasoning` expects.
+
+const zeroGReasoner: Reasoner = {
+  reason: async (prompt: string): Promise<ReasoningResult> => ({
+    ...(await zeroGReason(prompt)),
+    provider: "0g",
+  }),
+};
+
+const localPolicyReasoner: Reasoner = {
+  reason: async (prompt: string): Promise<ReasoningResult> => {
+    const goal = prompt.match(/Goal:\s*(.+)$/s)?.[1]?.trim() ?? prompt;
+    const result = localReason(goal);
+    return {
+      text: JSON.stringify({
+        capabilities: result.capabilities.map((c) => c.id),
+        reasoning: result.reasoning,
+      }),
+      verified: false,
+      model: "local-keyword-match",
+      provider: "local",
+    };
+  },
+};
+
+function stewardReasoner(): Reasoner {
+  return resolveReasonerChain(reasonerSpecFromEnv(), {
+    zerog: () => (process.env.ZEROG_PRIVATE_KEY ? zeroGReasoner : null),
+    local: () => localPolicyReasoner,
+  });
 }
 
 // ---------- 0G Storage (evidence) ----------
@@ -437,24 +481,23 @@ export async function* stewardLoop(
   let requiredCaps: CapabilityRef[];
   let reasonModel: string | undefined;
   let reasonVerified: boolean | undefined;
-  let reasonSource: "0g" | "local" = "local";
+  let reasonSource: string = "local";
 
-  const hasZeroG = !!process.env.ZEROG_PRIVATE_KEY;
-
-  if (live && hasZeroG) {
-    // 0G Compute: TEE-verified LLM inference
+  if (live) {
+    // Reasoner chain: LIGIS_REASONER_CHAIN (default zerog,local). The local
+    // policy engine is the last entry, so this only throws when the chain is
+    // misconfigured — and even then we degrade to local below.
     try {
       const prompt = buildReasoningPrompt(goal, ctx.chain.name);
-      const result = await zeroGReason(prompt);
+      const result = await stewardReasoner().reason(prompt);
       const parsed = parseReasoning(result.text, goal);
       reasoning = parsed.reasoning || result.text;
       requiredCaps = parsed.capabilities;
       reasonModel = result.model;
       reasonVerified = result.verified;
-      reasonSource = "0g";
+      reasonSource = result.provider;
     } catch (err) {
-      // Fallback to local policy if 0G Compute fails
-      reasoning = `(0G Compute unavailable: ${err instanceof Error ? err.message : String(err)}. Using local policy.) `;
+      reasoning = `(Reasoning providers unavailable: ${err instanceof Error ? err.message : String(err)}. Using local policy.) `;
       const fallback = localReason(goal);
       reasoning += fallback.reasoning;
       requiredCaps = fallback.capabilities;
@@ -464,7 +507,6 @@ export async function* stewardLoop(
     const fallback = localReason(goal);
     reasoning = fallback.reasoning;
     requiredCaps = fallback.capabilities;
-    reasonSource = "local";
   }
 
   for (const chunk of reasoning.split(/(\s+)/)) {

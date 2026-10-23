@@ -50,7 +50,9 @@ export function StewardSummary({
           {state.summary.model ?? "—"} ·{" "}
           {state.summary.source === "0g"
             ? "0G Compute · TEE-verified"
-            : "local keyword match"}
+            : !state.summary.source || state.summary.source === "local"
+              ? "local keyword match"
+              : state.summary.source}
         </dd>
         <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           capabilities

@@ -38,7 +38,9 @@ const CHAIN = 10143;
 const PAYER = "0x2222222222222222222222222222222222222222";
 const PAYEE = "0x1111111111111111111111111111111111111111";
 const ASSET = "0x3333333333333333333333333333333333333333";
-const NOW = 1_760_000_000_000;
+// `now` injected into the guard is ms-epoch; authorization fields are unix seconds.
+const NOW_MS = 1_760_000_000_000;
+const NOW = 1_760_000_000;
 
 const gateUrl = process.env.LIGIS_GATE_URL;
 const usingLiveGate = Boolean(gateUrl);
@@ -104,7 +106,7 @@ const guard = createPaymentGuard({
   policy,
   transport,
   commandId: "ligis:pay",
-  now: () => NOW,
+  now: () => NOW_MS,
   signer: async (request) => {
     signerCalls += 1;
     return `0xfixture-signature-${signerCalls}-for-${request.message.to.slice(0, 10)}…`;
@@ -124,8 +126,8 @@ function authorization(
       from: PAYER,
       to: PAYEE,
       value: "5000000",
-      validAfter: String(NOW - 60_000),
-      validBefore: String(NOW + 120_000),
+      validAfter: String(NOW - 60),
+      validBefore: String(NOW + 120),
       nonce: `0x${scenarioIndex.toString(16).padStart(2, "0").repeat(32)}`,
       ...overrides,
     },
@@ -248,7 +250,7 @@ const strictPolicy = createPaymentGuard({
   policy: { ...policy, requiredCapability: "agent.commerce.escrow" },
   transport,
   commandId: "ligis:pay",
-  now: () => NOW,
+  now: () => NOW_MS,
   signer: async () => {
     signerCalls += 1;
     return "0xfixture";

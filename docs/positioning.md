@@ -65,6 +65,12 @@ A signal that the model could not evaluate is reported as `SKIPPED` with
 the reason. A verdict built on three signals is more honest than one built
 on four that includes a made-up number. Unknown is a valid answer.
 
+**These four are the four, and they stay the four until a fifth is built and
+measured.** The planned extension — a _private, ZK-proven_ counterparty history
+alongside the public registry evidence — is researched in
+`docs/zk-reputation-evidence.md` and is not part of this product today. No
+landing line, sales answer, or meta description may imply it.
+
 ## Claims, with sources
 
 Every number we print must trace to a file in the repo. When the
@@ -161,6 +167,9 @@ together in `SERVICE_PRICE_USD` (`packages/croo-adapter/src/services.ts`),
 
 ## What defers here
 
+- **Private / ZK-proven counterparty history** → `docs/zk-reputation-evidence.md`
+  (researched 2026-10-21; not built, not in the four signals, and this doc is
+  unchanged until it ships and is measured).
 - **Competitive landscape** → `docs/strategy.md` (kept; not a positioning
   doc concern).
 - **Roadmap and program status** → `docs/strategy.md` (kept; not a

@@ -7,7 +7,7 @@ export type State = {
   reasonText: string;
   reasonModel?: string;
   reasonVerified?: boolean;
-  reasonSource?: "0g" | "local";
+  reasonSource?: string;
   capabilities: Array<{
     name: string;
     capable: boolean;
@@ -31,7 +31,7 @@ export type State = {
     subject?: string;
     minted?: boolean;
     model?: string;
-    source?: "0g" | "local";
+    source?: string;
   } | null;
   error: string | null;
   events: StewardEvent[];

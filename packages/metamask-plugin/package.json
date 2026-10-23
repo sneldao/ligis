@@ -1,0 +1,77 @@
+{
+  "name": "@ligis/metamask-plugin",
+  "version": "0.1.0",
+  "description": "Ligis guarded-pay plugin for MetaMask Agent Wallet — refuses to sign an EIP-3009 authorization unless the Ligis gate returns a fresh GO for that exact operation",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "oclif-plugin",
+    "ligis",
+    "x402",
+    "metamask"
+  ],
+  "files": [
+    "dist",
+    "oclif.manifest.json"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && oclif manifest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepack": "tsc -p tsconfig.json && oclif manifest",
+    "clean": "rm -rf dist"
+  },
+  "oclif": {
+    "bin": "mm",
+    "commands": "./dist/commands",
+    "topicSeparator": " ",
+    "topics": {
+      "ligis": {
+        "description": "Ligis trust-gate commands — gate-checked agent payments"
+      }
+    }
+  },
+  "mm": {
+    "schemaVersion": 1,
+    "minCliVersion": ">=6.2.0",
+    "capabilities": [],
+    "commands": [
+      {
+        "id": "ligis:pay",
+        "capabilities": [
+          "wallet-submit",
+          "wallet-read"
+        ],
+        "dataAccess": [
+          "accounts"
+        ]
+      },
+      {
+        "id": "ligis:assess",
+        "capabilities": [
+          "wallet-read"
+        ],
+        "dataAccess": [
+          "accounts"
+        ]
+      }
+    ]
+  },
+  "peerDependencies": {
+    "@metamask/agent-wallet": ">=6.2.0"
+  },
+  "dependencies": {
+    "@ligis/wallet-plugin": "workspace:*"
+  },
+  "devDependencies": {
+    "@metamask/agent-wallet": "^7.2.0",
+    "@oclif/core": "4.14.0",
+    "@types/node": "^26.4.0",
+    "oclif": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

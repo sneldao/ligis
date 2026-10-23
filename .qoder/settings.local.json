@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cd /Users/udingethe/Dev/ligis && git --no-pager diff web/components/WalletChip.tsx)"
+      "Bash(cd /Users/udingethe/Dev/ligis && git --no-pager diff web/components/WalletChip.tsx)",
+      "Bash(cd /Users/udingethe/Dev/ligis && git status --short | head -40 && echo \"--- untracked/recent docs ---\" && ls -lt docs | head -20)"
     ]
   }
 }

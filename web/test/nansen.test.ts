@@ -4,6 +4,7 @@ import {
   readNansenEvidence,
   type NansenOptions,
 } from "../lib/payee-evidence/nansen";
+import { nansenConfigFromEnv, readPayeeEvidence } from "../lib/payee-evidence";
 
 const payee = `0x${"1".repeat(40)}`;
 const options: NansenOptions = {
@@ -129,4 +130,111 @@ test("Taxonomy is preserved but exchange, smart money and alleged risk names nev
   assert.equal(result.status, "unknown");
   assert.deepEqual(result.taxonomy, data);
   assert.equal(result.observedAt, "2026-10-13T00:00:00.000Z");
+});
+
+const liveEnv: NodeJS.ProcessEnv = {
+  NODE_ENV: "test",
+  LIGIS_NANSEN_ENABLED: "1",
+  NANSEN_API_KEY: "fixture-key-not-live",
+  LIGIS_NANSEN_MONAD_CHAIN_ID: "10143",
+  LIGIS_PAYEE_EVIDENCE_CHAIN_ID: "10143",
+};
+
+test("env wiring defaults off and only a positive chain id counts as confirmed", () => {
+  const off = nansenConfigFromEnv({ NODE_ENV: "test" });
+  assert.equal(off.enabled, false);
+  assert.equal(off.apiKey, "");
+  assert.equal(off.confirmedMonadChainId, undefined);
+
+  const on = nansenConfigFromEnv(liveEnv);
+  assert.equal(on.enabled, true);
+  assert.equal(on.confirmedMonadChainId, 10143);
+  assert.equal(on.chainId, 10143);
+
+  for (const value of ["0", "-1", "abc", ""]) {
+    assert.equal(
+      nansenConfigFromEnv({
+        ...liveEnv,
+        LIGIS_NANSEN_MONAD_CHAIN_ID: value,
+      }).confirmedMonadChainId,
+      undefined,
+    );
+  }
+});
+
+test("an intended network is never inferred from the confirmed mapping", () => {
+  const noContext = nansenConfigFromEnv({
+    ...liveEnv,
+    LIGIS_PAYEE_EVIDENCE_CHAIN_ID: undefined,
+  });
+  assert.equal(noContext.chainId, undefined);
+  assert.equal(noContext.confirmedMonadChainId, 10143);
+  // A caller-declared context wins over the operator default.
+  assert.equal(nansenConfigFromEnv(liveEnv, {}, 143).chainId, 143);
+});
+
+test("the live gate wiring calls the provider once and still grants no trust", async () => {
+  let calls = 0;
+  const read = await readPayeeEvidence(payee, {
+    env: liveEnv,
+    // Off-scope chain id keeps the ERC-8004 leg inert: this test proves the
+    // Nansen leg, not a live indexer read.
+    erc8004: { chainId: 1 },
+    nansen: {
+      transport: async () => {
+        calls += 1;
+        return Response.json({
+          data: [{ label: "Smart Money", category: "entity", kind: ["fund"] }],
+        });
+      },
+      now: () => new Date("2026-10-14T00:00:00Z"),
+    },
+  });
+  const nansen = read.find((e) => e.source === "nansen");
+  assert.equal(calls, 1);
+  assert.equal(nansen?.status, "unknown");
+  assert.equal(nansen?.reason, "nansen-labels-not-risk-verdict");
+  assert.equal(nansen?.chainId, 10143);
+});
+
+test("an unconfirmed chain mapping never reaches the provider", async () => {
+  let calls = 0;
+  const read = await readPayeeEvidence(payee, {
+    env: {
+      NODE_ENV: "test",
+      LIGIS_NANSEN_ENABLED: "1",
+      NANSEN_API_KEY: "fixture-key-not-live",
+    },
+    erc8004: { chainId: 1 },
+    nansen: {
+      transport: async () => {
+        calls += 1;
+        return Response.json({ data: [] });
+      },
+    },
+  });
+  assert.equal(calls, 0);
+  assert.equal(
+    read.find((e) => e.source === "nansen")?.reason,
+    "nansen-chain-unconfirmed",
+  );
+});
+
+test("mainnet labels are never served as evidence about a testnet payee", async () => {
+  let calls = 0;
+  const read = await readPayeeEvidence(payee, {
+    env: { ...liveEnv, LIGIS_NANSEN_MONAD_CHAIN_ID: "143" },
+    erc8004: { chainId: 1 },
+    nansen: {
+      transport: async () => {
+        calls += 1;
+        return Response.json({ data: [] });
+      },
+    },
+  });
+  assert.equal(calls, 0);
+  assert.equal(
+    read.find((e) => e.source === "nansen")?.reason,
+    "nansen-wrong-chain",
+  );
 });

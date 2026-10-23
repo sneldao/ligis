@@ -298,6 +298,33 @@ If 0G Compute is unavailable (network issues, service down), the CLI and
 web steward automatically fall back to `LocalReasoner` (keyword-based
 matching). The fallback is labeled in output as `model: "local-keyword-match"`.
 
+### Reasoner chain (`LIGIS_REASONER_CHAIN`)
+
+Every steward surface — CLI, MCP server, and web (`steward.ts` +
+`steward-casper.ts`) — resolves its `Reasoner` through
+`resolveReasonerChain(spec, registry)` in `@ligis/core`
+(`src/reasoner-select.ts`). Spec is a comma-separated ordered fallback;
+`--reasoner` flag > `LIGIS_REASONER_CHAIN` > `LIGIS_REASONER` > default
+`zerog,local`. Entries:
+
+- `zerog` (aliases `0g`, `0g-compute`) — 0G Compute TEE inference; skipped
+  when `ZEROG_PRIVATE_KEY` is unset (`tryLoadZeroGConfig()`)
+- `local` — `LocalReasoner` keyword matching
+- `qwen-max` (aliases `qwen`, `qwen3-max`, `qwen-3.8-max`) — Alibaba Model
+  Studio via OpenAI-compatible endpoint; needs `DASHSCOPE_API_KEY`
+  (or `ALIBABA_API_KEY`), optional `LIGIS_QWEN_MODEL` / `LIGIS_QWEN_BASE_URL`
+- `kimi` (alias `moonshot`) — Moonshot AI; needs `MOONSHOT_API_KEY`,
+  optional `LIGIS_KIMI_MODEL` / `LIGIS_KIMI_BASE_URL` (`.cn` keys need the
+  `.cn` endpoint)
+- `openai-compat` — any OpenAI-compatible provider; needs
+  `OPENAI_COMPAT_API_KEY` + `OPENAI_COMPAT_BASE_URL` + `OPENAI_COMPAT_MODEL`
+
+`OpenAICompatReasoner` always reports `verified: false` — only 0G's TEE path
+is verifiable — and echoes the served model id, so receipts show e.g.
+`provider: "alibaba-dashscope"`. Unknown chain names throw; unconfigured
+entries are skipped. `LIGIS_REASONER_TIMEOUT_MS` sets the remote timeout
+(default 30s).
+
 ### Web Chain Switching (Pharos ↔ Casper)
 
 The web frontend supports switching between Pharos Atlantic and Casper Testnet
@@ -843,3 +870,38 @@ Submission doc: `docs/agent-arena.md`. Scenario data lives in
   routes get it by using those structures. All motion is gated by
   `prefers-reduced-motion: no-preference`.
 - Don't use ✓/✗ glyphs in display text — the display font lacks them.
+
+## MetaMask Agent Wallet plugin (`packages/metamask-plugin`)
+
+Real oclif plugin for `mm` (agent-wallet 7.2.0): `mm ligis pay` signs an
+EIP-3009 authorization through `ctx.walletExecutor` only after a fresh
+schema-valid gate GO; `mm ligis assess` is the same binding without signing
+(`requiresAuth=false` — runs logged-out with `--from`). Scope is
+command-scoped, not wallet-wide — the host lifecycle is sealed
+(`docs/wallet-enforcement.md`).
+
+- SDK types quirk: the `/plugin` subpath `.d.ts` uses extensionless relative
+  imports → the package compiles under `moduleResolution: Bundler`;
+  `@metamask/agent-sdk/*` is bundled-not-published, shimmed in
+  `src/agent-sdk-shims.d.ts`. Declaration emit is off (TS2742, pnpm paths).
+- Validity fields `validAfter`/`validBefore` are unix **seconds**
+  (EIP-3009 on-chain unit); the guard converts its ms-epoch `now` once in
+  `parseOperation`. `decisionConfidence` ignores `SKIPPED` signals.
+- Policy is operator-side: `LIGIS_WALLET_POLICY` (inline JSON),
+  `LIGIS_WALLET_POLICY_FILE`, or `--policy <path>` — never from the agent.
+
+Local dev link + live demo (recorded 2026-10-14, GO and STOP both live
+against `https://ligis.vercel.app/api/gate`):
+
+```bash
+mm config set experimentalPlugins true
+mm config set experimentalAllowUnverifiedInstalls true
+mm plugins link "$PWD/packages/metamask-plugin" --accept-permissions
+# Monad testnet demo asset: Ligis test USDC 0x16f6bD0c285a630fe72275909c0f5815d276E2f4
+LIGIS_WALLET_POLICY_FILE=./policy.json mm ligis assess --chain-id 10143 \
+  --payee 0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec --value 5000000 \
+  --asset 0x16f6bD0c285a630fe72275909c0f5815d276E2f4 --from 0x1111... --json
+```
+
+`mm ligis pay` additionally needs `mm login` (MetaMask account auth) — not
+yet exercised end-to-end.

@@ -119,7 +119,12 @@ Server-owned `LIGIS_PAYEE_EVIDENCE_ENABLED=1`:
 8. Positive eligibility defaults to `ligis-credential` and qualifying
    `erc8004` evidence. Nansen requires a server-owned `eligibleSources`
    opt-in at integration. `x402-settlement` is never independently eligible,
-   even when its history is verified.
+   even when its history is verified. The Nansen leg is configured by
+   `LIGIS_NANSEN_ENABLED=1`, `NANSEN_API_KEY`, the operator-confirmed
+   `LIGIS_NANSEN_MONAD_CHAIN_ID`, and the intended network
+   `LIGIS_PAYEE_EVIDENCE_CHAIN_ID`. Without a confirmed mapping, or when the
+   payee's intended network is not that Monad network, the leg reports
+   `nansen-chain-unconfirmed` / `nansen-wrong-chain` and spends no credits.
 
 Negative evidence from any supplied reader still STOPs. Optional source gaps
 remain visible in `evidence` and `provenance` even when another eligible source

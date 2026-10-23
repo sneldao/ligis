@@ -27,8 +27,7 @@ Sources: [Build a plugin](https://docs.metamask.io/agent-wallet/plugins/build-a-
 **Consequence.** The plugin model has no interception hook, so no honest
 implementation can claim to block signing for the whole wallet. What it _can_
 do — and what this package does — is refuse inside the guarded command, and
-document every path that bypasses it. A bounty entry is **not** claimed: the
-hackathon rules were behind a login page and were not verified.
+document every path that bypasses it.
 
 ## Install and run
 
@@ -168,7 +167,10 @@ package also provides its own `build`, `typecheck`, and `test` scripts.
 
 ## Not claimed
 
-No Snap or plugin was published, no bounty submitted, no hosted resource
-created, no branch pushed for this work, and no funds spent. Live signing has
-not been exercised — every demonstration uses disposable fixture identities and
-an injected signer.
+No npm release, no hosted resource created, no branch pushed for this work,
+and no funds spent. Wallet-backed signing in the host has not been exercised —
+`ligis:pay` requires `mm login` (MetaMask account auth), and the in-host
+demonstration covered `ligis:assess` only: a live `GO` and a live `STOP`
+against `https://ligis.vercel.app/api/gate`, captured 2026-10-14 with
+`mm plugins link` on agent-wallet 7.2.0. The signature path is covered by unit
+tests over an injected signer, not a real wallet.

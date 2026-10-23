@@ -6,6 +6,10 @@
  * nonce, validity window — is derived here, hashed into a fingerprint, and
  * re-checked immediately before signing. Mutating any bound field changes the
  * fingerprint, which invalidates the approval.
+ *
+ * `validAfter`/`validBefore` are unix **seconds**, matching EIP-3009 on-chain
+ * semantics — the values checked here are exactly what settles on-chain.
+ * `now` is the usual ms-epoch clock (`Date.now()`); it is converted once.
  */
 
 import { createHash } from "node:crypto";
@@ -159,13 +163,14 @@ export function parseOperation(
   if (validBefore <= validAfter) {
     throw new OperationError("authorization validity window is empty");
   }
-  if (validBefore <= BigInt(now)) {
+  const nowSeconds = BigInt(Math.floor(now / 1000));
+  if (validBefore <= nowSeconds) {
     throw new OperationError("authorization has already expired");
   }
-  if (validAfter > BigInt(now)) {
+  if (validAfter > nowSeconds) {
     throw new OperationError("authorization is not yet valid");
   }
-  const windowSeconds = Number((validBefore - validAfter) / 1000n);
+  const windowSeconds = Number(validBefore - validAfter);
   if (windowSeconds > policy.maxValiditySeconds) {
     throw new OperationError(
       `authorization window ${windowSeconds}s exceeds the operator limit ${policy.maxValiditySeconds}s`,

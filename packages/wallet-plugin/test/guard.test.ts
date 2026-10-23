@@ -8,7 +8,9 @@ import {
   type Transport,
 } from "../src/index.js";
 
-const NOW = 1_760_000_000_000;
+// `now` injected into the guard is ms-epoch; authorization fields are unix seconds.
+const NOW_MS = 1_760_000_000_000;
+const NOW = 1_760_000_000;
 const PAYEE = "0x1111111111111111111111111111111111111111";
 const PAYER = "0x2222222222222222222222222222222222222222";
 const USDC = "0x3333333333333333333333333333333333333333";
@@ -38,8 +40,8 @@ function operation(
       from: PAYER,
       to: PAYEE,
       value: "5000000",
-      validAfter: String(NOW - 60_000),
-      validBefore: String(NOW + 120_000),
+      validAfter: String(NOW - 60),
+      validBefore: String(NOW + 120),
       nonce: NONCE,
     },
     domain: {
@@ -101,7 +103,7 @@ function harness(
   const guard = createPaymentGuard({
     policy: options.policyOverride ?? policy,
     transport,
-    now: () => NOW,
+    now: () => NOW_MS,
     signer: async () => {
       state.signCalls += 1;
       if (options.signerThrows) throw new Error("user rejected");
@@ -224,6 +226,30 @@ describe("guarded payment: every non-GO answer refuses", () => {
     const result = await h.guard.enforce(operation());
     assert.ok(!result.ok && result.code === "decision-malformed");
     assert.equal(h.signCalls, 0);
+  });
+
+  it("SKIPPED signals do not poison the confidence floor", async () => {
+    const h = harness({
+      respond: () => ({
+        status: 200,
+        json: async () => ({
+          verdict: "GO",
+          signals: [
+            { id: "right-payee", status: "GO", confidence: 1 },
+            {
+              id: "in-scope",
+              status: "SKIPPED",
+              confidence: 0,
+              reason: "layer disabled",
+            },
+          ],
+          latencyMs: 1,
+        }),
+      }),
+    });
+    const result = await h.guard.enforce(operation());
+    assert.equal(result.ok, true);
+    assert.equal(h.signCalls, 1);
   });
 
   it("a GO below the operator confidence floor refuses", async () => {
@@ -386,7 +412,7 @@ describe("guarded payment: the decision is bound to the operation", () => {
     const h = harness();
     const result = await h.guard.enforce(
       operation({
-        authorization: { validBefore: String(NOW + 3_600_000) } as never,
+        authorization: { validBefore: String(NOW + 3_600) } as never,
       }),
     );
     assert.ok(!result.ok && result.code === "unsupported-operation");
@@ -398,7 +424,7 @@ describe("guarded payment: the decision is bound to the operation", () => {
     const expired = await h.guard.enforce(
       operation({
         authorization: {
-          validAfter: String(NOW - 600_000),
+          validAfter: String(NOW - 600),
           validBefore: String(NOW - 1),
         } as never,
       }),
@@ -407,8 +433,8 @@ describe("guarded payment: the decision is bound to the operation", () => {
     const future = await h.guard.enforce(
       operation({
         authorization: {
-          validAfter: String(NOW + 1000),
-          validBefore: String(NOW + 60_000),
+          validAfter: String(NOW + 1),
+          validBefore: String(NOW + 60),
         } as never,
       }),
     );

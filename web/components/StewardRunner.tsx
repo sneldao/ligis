@@ -185,7 +185,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
     lines.push(`Mode: ${state.summary.live ? "live on-chain" : "simulated"}`);
     if (state.summary.model)
       lines.push(
-        `Reasoning: ${state.summary.model} (${state.summary.source === "0g" ? "0G Compute · TEE-verified" : "local"})`,
+        `Reasoning: ${state.summary.model} (${state.summary.source === "0g" ? "0G Compute · TEE-verified" : (state.summary.source ?? "local")})`,
       );
     lines.push(`Gated: ${state.summary.gated ? "yes" : "no"}`);
     lines.push(`Capabilities:`);
@@ -406,6 +406,11 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                   ) : state.reasonSource === "local" && status === "done" ? (
                     <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
                       local keyword match
+                    </span>
+                  ) : state.reasonSource && status === "done" ? (
+                    <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-terra">
+                      {state.reasonSource} ·{" "}
+                      {state.reasonModel ?? "unknown model"}
                     </span>
                   ) : null}
                   <p className="max-w-prose font-serif text-base leading-relaxed text-ink">

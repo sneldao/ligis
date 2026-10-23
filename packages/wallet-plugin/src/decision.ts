@@ -98,10 +98,17 @@ export function parseDecision(payload: unknown): GateDecision | null {
   };
 }
 
-/** Lowest reported confidence across signals, used for the operator threshold. */
+/**
+ * Lowest reported confidence across signals that actually answered. SKIPPED
+ * means "layer disabled / didn't evaluate" and carries confidence 0 — counting
+ * it would let a disabled layer veto every GO. All-skipped or empty answers 0.
+ */
 export function decisionConfidence(decision: GateDecision): number {
-  if (decision.signals.length === 0) return 0;
-  return Math.min(...decision.signals.map((signal) => signal.confidence));
+  const answered = decision.signals.filter(
+    (signal) => signal.status !== "SKIPPED",
+  );
+  if (answered.length === 0) return 0;
+  return Math.min(...answered.map((signal) => signal.confidence));
 }
 
 export async function fetchDecision(

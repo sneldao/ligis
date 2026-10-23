@@ -15,8 +15,23 @@
  */
 import "server-only";
 import { CasperAdapter } from "@ligis/adapter-casper";
-import { KNOWN_CAPABILITIES, buildReasoningPrompt, parseReasoning } from "@ligis/agent-logic";
-import { ZeroGCompute, ZeroGStorage, loadZeroGConfig, loadZeroGStorageConfig } from "@ligis/zerog";
+import {
+  KNOWN_CAPABILITIES,
+  LocalReasoner,
+  buildReasoningPrompt,
+  parseReasoning,
+} from "@ligis/agent-logic";
+import {
+  reasonerSpecFromEnv,
+  resolveReasonerChain,
+  type Reasoner,
+} from "@ligis/core";
+import {
+  ZeroGCompute,
+  ZeroGStorage,
+  tryLoadZeroGConfig,
+  loadZeroGStorageConfig,
+} from "@ligis/zerog";
 import { CASPER_TESTNET } from "./network";
 
 const EXPLORER = CASPER_TESTNET.explorerUrl;
@@ -47,12 +62,24 @@ function encode(event: StewardEvent): Uint8Array {
 const GOAL_KEYWORDS: Array<{ pattern: RegExp; caps: string[] }> = [
   { pattern: /escrow|hold.*fund|custod/i, caps: ["agent.commerce.escrow"] },
   { pattern: /swap|trade|exchange.*token/i, caps: ["agent.commerce.swap"] },
-  { pattern: /bridge|cross.chain|transfer.*chain/i, caps: ["agent.commerce.bridge"] },
-  { pattern: /recurring|subscription|mandate|recurring.*payment/i, caps: ["agent.commerce.recurring"] },
-  { pattern: /x402|http.*payment|pay.*per.*request/i, caps: ["agent.commerce.x402"] },
+  {
+    pattern: /bridge|cross.chain|transfer.*chain/i,
+    caps: ["agent.commerce.bridge"],
+  },
+  {
+    pattern: /recurring|subscription|mandate|recurring.*payment/i,
+    caps: ["agent.commerce.recurring"],
+  },
+  {
+    pattern: /x402|http.*payment|pay.*per.*request/i,
+    caps: ["agent.commerce.x402"],
+  },
   { pattern: /kyc|identity.*verif|accred/i, caps: ["kyc.basic"] },
   { pattern: /accredited|investor|rwa|real.*world/i, caps: ["rwa.accredited"] },
-  { pattern: /premium.*data|data.*feed|oracle|market.*data/i, caps: ["data.premium"] },
+  {
+    pattern: /premium.*data|data.*feed|oracle|market.*data/i,
+    caps: ["data.premium"],
+  },
   { pattern: /cex|retail.*trad|exchange/i, caps: ["trade.cex-retail"] },
 ];
 
@@ -96,9 +123,17 @@ export async function* stewardLoopCasper(
       tokenId = String(result.agentId);
       minted = true;
       subject = controller;
-      yield { type: "tx", phase: "BOOT", name: "mint_self", txHash: result.tx.hash };
+      yield {
+        type: "tx",
+        phase: "BOOT",
+        name: "mint_self",
+        txHash: result.tx.hash,
+      };
     } catch (err) {
-      yield { type: "error", message: `Boot failed: ${err instanceof Error ? err.message : String(err)}` };
+      yield {
+        type: "error",
+        message: `Boot failed: ${err instanceof Error ? err.message : String(err)}`,
+      };
       return;
     }
   } else {
@@ -116,21 +151,38 @@ export async function* stewardLoopCasper(
   let reasoning: string;
   let requiredCaps = KNOWN_CAPABILITIES.slice(0, 2);
 
-  const hasZeroG = !!process.env.ZEROG_PRIVATE_KEY;
-
-  if (live && hasZeroG) {
+  if (live) {
+    // Reasoner chain: LIGIS_REASONER_CHAIN (default zerog,local). Unconfigured
+    // providers are skipped; a failing one falls through to the next.
+    const degraded: string[] = [];
     try {
-      const zerog = new ZeroGCompute(loadZeroGConfig());
+      const reasoner: Reasoner = resolveReasonerChain(
+        reasonerSpecFromEnv(),
+        {
+          zerog: () => {
+            const config = tryLoadZeroGConfig();
+            return config ? new ZeroGCompute(config) : null;
+          },
+          local: () => new LocalReasoner(),
+        },
+        {
+          onSkip: (name) => degraded.push(name),
+          onFallback: (name) => degraded.push(name),
+        },
+      );
       const prompt = buildReasoningPrompt(goal);
-      const result = await Promise.race([
-        zerog.reason(prompt),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000)),
-      ]);
+      const result = await reasoner.reason(prompt);
       const parsed = parseReasoning(result.text);
       reasoning = parsed.reasoning || result.text;
-      requiredCaps = parsed.capabilities.length > 0 ? parsed.capabilities : requiredCaps;
+      requiredCaps =
+        parsed.capabilities.length > 0 ? parsed.capabilities : requiredCaps;
+      if (degraded.length > 0) {
+        reasoning =
+          `(${degraded.join(", ")} unavailable; used ${result.provider}.) ` +
+          reasoning;
+      }
     } catch (err) {
-      reasoning = `(0G Compute unavailable: ${err instanceof Error ? err.message : String(err)}. Using local policy.) `;
+      reasoning = `(Reasoning providers unavailable: ${err instanceof Error ? err.message : String(err)}. Using local policy.) `;
       const fallback = localReason(goal);
       reasoning += fallback.reasoning;
       requiredCaps = fallback.capabilities;
@@ -151,14 +203,23 @@ export async function* stewardLoopCasper(
   // === 3. GATE ===
   yield { type: "phase", phase: "GATE", status: "start" };
 
-  const capResults: Array<{ name: string; hash: string; capable: boolean; selfIssued: boolean; issueTxHash?: string }> = [];
+  const capResults: Array<{
+    name: string;
+    hash: string;
+    capable: boolean;
+    selfIssued: boolean;
+    issueTxHash?: string;
+  }> = [];
   let allGated = true;
 
   for (const cap of requiredCaps) {
     let capable = false;
     if (canWrite) {
       try {
-        const check = await adapter.verifyCapability({ subject, capability: cap.name });
+        const check = await adapter.verifyCapability({
+          subject,
+          capability: cap.name,
+        });
         capable = check.capable;
       } catch {
         capable = false;
@@ -168,7 +229,12 @@ export async function* stewardLoopCasper(
       capable = false;
     }
     if (!capable) allGated = false;
-    capResults.push({ name: cap.name, hash: cap.hash, capable, selfIssued: false });
+    capResults.push({
+      name: cap.name,
+      hash: cap.hash,
+      capable,
+      selfIssued: false,
+    });
     yield {
       type: "capability",
       phase: "GATE",
@@ -184,7 +250,8 @@ export async function* stewardLoopCasper(
   // === 4. ACT ===
   yield { type: "phase", phase: "ACT", status: "start" };
 
-  const issuerKey = process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY ?? process.env.PRIVATE_KEY;
+  const issuerKey =
+    process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY ?? process.env.PRIVATE_KEY;
 
   for (let i = 0; i < capResults.length; i++) {
     const cap = capResults[i];
@@ -210,13 +277,25 @@ export async function* stewardLoopCasper(
           selfIssued: true,
           issueTxHash: submitted.tx.hash,
         };
-        yield { type: "tx", phase: "ACT", name: cap.name, txHash: submitted.tx.hash };
+        yield {
+          type: "tx",
+          phase: "ACT",
+          name: cap.name,
+          txHash: submitted.tx.hash,
+        };
       } catch (err) {
-        yield { type: "error", message: `Failed to issue ${cap.name}: ${err instanceof Error ? err.message : String(err)}` };
+        yield {
+          type: "error",
+          message: `Failed to issue ${cap.name}: ${err instanceof Error ? err.message : String(err)}`,
+        };
       }
     } else {
       await sleep(300);
-      const fakeHash = "SIMULATED-0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      const fakeHash =
+        "SIMULATED-0x" +
+        Array.from({ length: 64 }, () =>
+          Math.floor(Math.random() * 16).toString(16),
+        ).join("");
       cap.selfIssued = true;
       cap.capable = true;
       cap.issueTxHash = fakeHash;
@@ -271,7 +350,9 @@ export async function* stewardLoopCasper(
         action: {
           type: "self-issue-gate-record",
           gated: allGated,
-          txHashes: capResults.map((c) => c.issueTxHash).filter(Boolean) as string[],
+          txHashes: capResults
+            .map((c) => c.issueTxHash)
+            .filter(Boolean) as string[],
         },
         anchoredTokenUri: "",
         recordedAt: Math.floor(Date.now() / 1000),
@@ -303,8 +384,16 @@ export async function* stewardLoopCasper(
     }
   } else {
     await sleep(500);
-    rootHash = "SIMULATED-0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-    anchorTx = "SIMULATED-0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+    rootHash =
+      "SIMULATED-0x" +
+      Array.from({ length: 64 }, () =>
+        Math.floor(Math.random() * 16).toString(16),
+      ).join("");
+    anchorTx =
+      "SIMULATED-0x" +
+      Array.from({ length: 64 }, () =>
+        Math.floor(Math.random() * 16).toString(16),
+      ).join("");
     tokenUri = `0g://${rootHash}`;
   }
 

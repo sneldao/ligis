@@ -19,12 +19,17 @@
  *
  * Global flags:
  *   --chain <evm|casper>   chain to target (default: evm)
+ *   --reasoner <a[,b…]>   steward reasoner chain (zerog, local, qwen-max,
+ *                         kimi, openai-compat); ordered fallback. Also via
+ *                         LIGIS_REASONER_CHAIN / LIGIS_REASONER.
  */
 
 import {
   buildTrustReceipt,
   capabilityHash,
   loadConfig,
+  reasonerSpecFromEnv,
+  resolveReasonerChain,
   type ChainAdapter,
   type Reasoner,
   type RiskProvider,
@@ -44,7 +49,7 @@ import {
 import {
   ZeroGCompute,
   ZeroGStorage,
-  loadZeroGConfig,
+  tryLoadZeroGConfig,
   loadZeroGStorageConfig,
 } from "@ligis/zerog";
 import { renderTrustReceipt } from "./receipt.js";
@@ -254,26 +259,33 @@ interface TrustFlowOpts {
   riskThreshold?: number;
 }
 
-/** 0G Compute reasoner with the local keyword fallback. */
+/**
+ * Resolve the steward's reasoner chain. `--reasoner a,b` overrides
+ * `LIGIS_REASONER_CHAIN` / `LIGIS_REASONER`; default is `zerog,local`.
+ * Unconfigured providers are skipped; unresolvable chains throw.
+ */
 async function getReasoner(): Promise<Reasoner> {
-  try {
-    const reasoner = new ZeroGCompute(loadZeroGConfig());
-    // Test connectivity by attempting a simple reason call
-    const test = await Promise.race([
-      reasoner.reason('Reply with: {"capabilities":[],"reasoning":"ok"}'),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 15000),
-      ),
-    ]);
-    void test; // connectivity confirmed
-    return reasoner;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error(
-      `  [steward] 0G Compute unavailable (${msg}), using local keyword reasoner.`,
-    );
-    return new LocalReasoner();
-  }
+  const spec = arg("reasoner") ?? reasonerSpecFromEnv();
+  return resolveReasonerChain(
+    spec,
+    {
+      zerog: () => {
+        const config = tryLoadZeroGConfig();
+        return config ? new ZeroGCompute(config) : null;
+      },
+      local: () => new LocalReasoner(),
+    },
+    {
+      onSkip: (name) =>
+        console.error(
+          `  [steward] reasoner '${name}' not configured, skipping.`,
+        ),
+      onFallback: (name, error) =>
+        console.error(
+          `  [steward] reasoner '${name}' failed (${error instanceof Error ? error.message : String(error)}), trying next.`,
+        ),
+    },
+  );
 }
 
 /**

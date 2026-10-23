@@ -14,15 +14,20 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { capabilityHash, type ChainAdapter } from "@ligis/core";
+import {
+  capabilityHash,
+  reasonerSpecFromEnv,
+  resolveReasonerChain,
+  type ChainAdapter,
+} from "@ligis/core";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
 import { ZeroGAdapter } from "@ligis/adapter-0g";
-import { TrustSteward } from "@ligis/agent-logic";
+import { LocalReasoner, TrustSteward } from "@ligis/agent-logic";
 import {
   ZeroGCompute,
   ZeroGStorage,
-  loadZeroGConfig,
+  tryLoadZeroGConfig,
   loadZeroGStorageConfig,
 } from "@ligis/zerog";
 
@@ -280,7 +285,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       case "ligis-run-steward": {
         const adapter = getAdapter(chain);
-        const reasoner = new ZeroGCompute(loadZeroGConfig());
+        // Same chain semantics as the CLI: LIGIS_REASONER_CHAIN picks
+        // ordered providers; unconfigured ones are skipped.
+        const reasoner = resolveReasonerChain(reasonerSpecFromEnv(), {
+          zerog: () => {
+            const config = tryLoadZeroGConfig();
+            return config ? new ZeroGCompute(config) : null;
+          },
+          local: () => new LocalReasoner(),
+        });
         const store = new ZeroGStorage(loadZeroGStorageConfig());
         const steward = new TrustSteward(adapter, reasoner, store);
         return ok(

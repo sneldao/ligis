@@ -213,6 +213,70 @@ World ID.
 Full Agent Tank plan (parallel workstreams, portal requirements, non-goals):
 [`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md).
 
+## Market structure and the canonical question (researched 2026-10-21)
+
+Four search queries, 2026-10-21. The question this section answers: _trust
+credentials are crowded, and "canonical or bust" — where does Ligis stand?_
+
+### Three layers, three competitive dynamics
+
+| Layer                                | Who is in it (2026)                                                                                                                                                                                                                                                                        | Dynamic                                                            | Our position                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| **Standards & rails**                | W3C VC + DIDs v1.0 · **EAS** ("primitive for portable, verifiable truth") · **x402** (Coinbase + Cloudflare; 140M+ txns, v2 Dec 2025; x402 Foundation Sept 2025) · **AP2** (Google, 100+ partners, built on W3C VCs) · Visa Intelligent Commerce · Mastercard Agent Pay · **MPP** (Stripe) | Winner-take-most. Integration wins it, not quality.                | **Conform. Never compete.**                                              |
+| **Credential apps with user graphs** | Karma, Gitcoin, Billions Network, ZK Passport, Privado ID, ZK Registry                                                                                                                                                                                                                     | Winner-take-most on distribution, and on whose graph is canonical. | **Don't compete.** The graph is the moat and we don't have the audience. |
+| **Policy / decision layer**          | No incumbent standard. Visa IC, AP2 and x402 all assume a _trusted_ merchant or payee.                                                                                                                                                                                                     | **Open.**                                                          | **This is where we already sit.**                                        |
+
+The finding that decides the shape of everything else: **closed attestation
+systems are dead ends due to data fragmentation.** The reason interoperable
+attestation schemas win is that more apps using them make the graph more
+valuable, and vice versa. A vertical only its own users can read is the
+failure mode, not a strategy.
+
+### "Canonical or bust" — the answer, for our layer
+
+Being _the_ credential of record is winner-take-most: EAS is taking that
+position by being **schema-compatible**, not by being the best attestation.
+But being _the thing every gate accepts_ is a different position, and it is not
+the same competition.
+
+A ZK reputation proof is verifiable by anyone against a root anyone can read,
+with no dependency on the issuer's consent. If a gate wants to accept it, it
+can — nothing has to be forked and nobody's permission is required. **The
+metric to optimise is composability, not canonicality.** The alignment risks
+follow from that:
+
+| Risk                                                                                | Answer                                                                                                                                                          |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The space is standardised _away_ from us (AP2 / W3C VC define agent credentials)    | **Conform.** Express the proof as a VC whose subject is a ZK proof; anchor the root as an EAS attestation. The proof is the substance; the container is theirs. |
+| A canonical issuer set excludes us                                                  | **Multi-issuer.** A subject holds credentials from many issuers; no single issuer can exclude a subject that has others.                                        |
+| We are excluded from the canonical graph                                            | **Nothing to fork.** The proof stands alone against a public root.                                                                                              |
+| The real risk: **we build a closed vertical and get left behind by our own design** | Ship the primitive open, from day one.                                                                                                                          |
+
+### What this changes for Ligis
+
+- **The `verified payee` signal needs a second mode.** Every source in the
+  current stack is presence-based and public. Presence is cheap to mint;
+  history is not. A gate that can read both is the only gate that can tell a
+  credential from a counterparty. Analysis and cost:
+  [`docs/zk-reputation-evidence.md`](zk-reputation-evidence.md).
+- **The primitive belongs in the gate, not in one issuer.** The reference
+  implementation is in `latep` (Stellar, issuer-agnostic as of 2026-10-21);
+  the consumer is a gate — ours. That is the _"third-party-issued,
+  on-chain-verifiable attestation about the counterparty"_ wedge from
+  `docs/paybox-ch1.md` §0, expressed as a proof rather than a registry entry.
+- **The differentiator gets sharper, not weaker.** The competitor set in the
+  decision layer is thin precisely because nobody has standardised it.
+  Standardising it ourselves is a risk; occupying it with a working gate is
+  the position.
+
+### What we are not doing
+
+- Not competing to be the canonical reputation credential, and not building a
+  reputation score that only Ligis can read.
+- Not making the gate depend on a proof path that has not been measured.
+- Not shipping a fifth signal before it exists and is measured —
+  `docs/positioning.md` is unchanged.
+
 ## Differentiation
 
 ### 1. Aggregation, not origination

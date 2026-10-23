@@ -64,6 +64,15 @@ export function loadZeroGConfig(): ZeroGConfig {
   };
 }
 
+/** ZeroGConfig, or null when ZEROG_PRIVATE_KEY isn't set (reasoner chains). */
+export function tryLoadZeroGConfig(): ZeroGConfig | null {
+  try {
+    return loadZeroGConfig();
+  } catch {
+    return null;
+  }
+}
+
 // ---------- Implementation ----------
 
 export class ZeroGCompute implements Reasoner {

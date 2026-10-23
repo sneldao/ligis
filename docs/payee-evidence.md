@@ -4,6 +4,27 @@ Implemented for the opt-in gate read, default off. Reputation is evidence
 about a payee, **not a capability**. `SubjectResolution.capable` still means
 a specific valid, non-self-issued Ligis credential.
 
+## Public vs. private reputation — the distinction that matters
+
+Everything this doc covers is **public reputation**: a registry entry, keyed to
+an address, whose issuance history anyone can read and correlate. It answers
+_"is this subject registered and credentialed?"_ — **presence**.
+
+It does not answer _"does this subject have a proven record of keeping their
+word, and can I check it without learning who they are?"_ — **history**.
+
+The distinction is not academic. The cost of minting a capability credential
+is low, so a presence-based signal degrades toward _"someone holds a key"_ as
+the ecosystem grows. A history-based signal cannot be minted; it has to be
+earned, one interaction at a time. The two are complementary, not competing —
+and the gate wants both: **public for discovery and audit, private for the
+actual accept/deny decision.** A gate that reads only public reputation can be
+farmed; a gate that reads only private reputation becomes a black box.
+
+A private, ZK-proven reputation source is researched in
+[`docs/zk-reputation-evidence.md`](zk-reputation-evidence.md). **It is not
+built, and nothing in this doc depends on it.**
+
 ## Official sources checked on 2026-10-13
 
 - Draft ERC-8004 specification:

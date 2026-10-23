@@ -1,0 +1,479 @@
+{
+  "commands": {
+    "ligis:assess": {
+      "aliases": [],
+      "args": {
+        "chain-id": {
+          "description": "EVM chain id the payment authorizes (e.g. 10143 for Monad testnet)",
+          "name": "chain-id",
+          "required": false
+        },
+        "payee": {
+          "description": "Payment recipient address (0x…)",
+          "name": "payee",
+          "required": false
+        },
+        "value": {
+          "description": "Amount in base units, decimal (e.g. 5000000 = 5 USDC at 6 decimals)",
+          "name": "value",
+          "required": false
+        },
+        "asset": {
+          "description": "EIP-3009 token contract (the verifyingContract)",
+          "name": "asset",
+          "required": false
+        },
+        "from": {
+          "description": "Payer address (default: the wallet's selected EVM account)",
+          "name": "from",
+          "required": false
+        },
+        "domain-name": {
+          "description": "EIP-712 domain name of the token (default: USD Coin)",
+          "name": "domain-name",
+          "required": false
+        },
+        "domain-version": {
+          "description": "EIP-712 domain version of the token (default: 2)",
+          "name": "domain-version",
+          "required": false
+        },
+        "valid-for": {
+          "description": "Validity window in seconds (default 300)",
+          "name": "valid-for",
+          "required": false
+        },
+        "nonce": {
+          "description": "0x-prefixed 32-byte nonce (default: random)",
+          "name": "nonce",
+          "required": false
+        },
+        "purpose": {
+          "description": "Stated purpose — forwarded to the gate as the agent request",
+          "name": "purpose",
+          "required": false
+        },
+        "policy": {
+          "description": "Path to the operator policy JSON (else LIGIS_WALLET_POLICY / _FILE)",
+          "name": "policy",
+          "required": false
+        },
+        "mandate-max-usd": {
+          "description": "Agent mandate: tighten the per-payment USD cap",
+          "name": "mandate-max-usd",
+          "required": false
+        },
+        "mandate-max-seconds": {
+          "description": "Agent mandate: shorten the validity window (seconds)",
+          "name": "mandate-max-seconds",
+          "required": false
+        },
+        "mandate-capability": {
+          "description": "Agent mandate: add a required payee capability",
+          "name": "mandate-capability",
+          "required": false
+        }
+      },
+      "description": "Ask the Ligis gate whether this payment would pass, without signing anything.",
+      "flags": {
+        "format": {
+          "char": "f",
+          "description": "Output format: text | json | toon (defaults to text in TTY, json when piped)",
+          "name": "format",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "options": ["text", "json", "toon"],
+          "type": "option"
+        },
+        "json": {
+          "description": "Shorthand for --format=json",
+          "name": "json",
+          "allowNo": false,
+          "type": "boolean"
+        },
+        "toon": {
+          "description": "Shorthand for --format=toon",
+          "name": "toon",
+          "allowNo": false,
+          "type": "boolean"
+        },
+        "verbose": {
+          "char": "v",
+          "description": "Show debug logs on stderr. Use this for troubleshooting",
+          "name": "verbose",
+          "allowNo": false,
+          "type": "boolean"
+        },
+        "chain-id": {
+          "description": "EVM chain id the payment authorizes (e.g. 10143 for Monad testnet)",
+          "name": "chain-id",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "payee": {
+          "description": "Payment recipient address (0x…)",
+          "name": "payee",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "value": {
+          "description": "Amount in base units, decimal (e.g. 5000000 = 5 USDC at 6 decimals)",
+          "name": "value",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "asset": {
+          "description": "EIP-3009 token contract (the verifyingContract)",
+          "name": "asset",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "from": {
+          "description": "Payer address (default: the wallet's selected EVM account)",
+          "name": "from",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "domain-name": {
+          "description": "EIP-712 domain name of the token (default: USD Coin)",
+          "name": "domain-name",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "domain-version": {
+          "description": "EIP-712 domain version of the token (default: 2)",
+          "name": "domain-version",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "valid-for": {
+          "description": "Validity window in seconds (default 300)",
+          "name": "valid-for",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "nonce": {
+          "description": "0x-prefixed 32-byte nonce (default: random)",
+          "name": "nonce",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "purpose": {
+          "description": "Stated purpose — forwarded to the gate as the agent request",
+          "name": "purpose",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "policy": {
+          "description": "Path to the operator policy JSON (else LIGIS_WALLET_POLICY / _FILE)",
+          "name": "policy",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "mandate-max-usd": {
+          "description": "Agent mandate: tighten the per-payment USD cap",
+          "name": "mandate-max-usd",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "mandate-max-seconds": {
+          "description": "Agent mandate: shorten the validity window (seconds)",
+          "name": "mandate-max-seconds",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "mandate-capability": {
+          "description": "Agent mandate: add a required payee capability",
+          "name": "mandate-capability",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        }
+      },
+      "hasDynamicHelp": false,
+      "hiddenAliases": [],
+      "id": "ligis:assess",
+      "pluginAlias": "@ligis/metamask-plugin",
+      "pluginName": "@ligis/metamask-plugin",
+      "pluginType": "core",
+      "strict": true,
+      "enableJsonFlag": false,
+      "requiresAuth": true,
+      "requiresInit": true,
+      "requiresFees": false,
+      "byokPasswordFlags": {
+        "password": {
+          "description": "Password to unlock the BYOK mnemonic (BYOK mode only)",
+          "env": "MM_PASSWORD",
+          "input": [],
+          "multiple": false,
+          "type": "option"
+        }
+      },
+      "walletTimeoutFlags": {
+        "wallet-timeout": {
+          "description": "Seconds to wait per wallet job (MFA/signing), max 600; overrides config walletTimeoutSeconds",
+          "min": 1,
+          "max": 600,
+          "input": [],
+          "multiple": false,
+          "type": "option"
+        }
+      },
+      "STRUCTURED_FORMATS": {},
+      "isESM": true,
+      "relativePath": ["dist", "commands", "ligis", "assess.js"]
+    },
+    "ligis:pay": {
+      "aliases": [],
+      "args": {
+        "chain-id": {
+          "description": "EVM chain id the payment authorizes (e.g. 10143 for Monad testnet)",
+          "name": "chain-id",
+          "required": false
+        },
+        "payee": {
+          "description": "Payment recipient address (0x…)",
+          "name": "payee",
+          "required": false
+        },
+        "value": {
+          "description": "Amount in base units, decimal (e.g. 5000000 = 5 USDC at 6 decimals)",
+          "name": "value",
+          "required": false
+        },
+        "asset": {
+          "description": "EIP-3009 token contract (the verifyingContract)",
+          "name": "asset",
+          "required": false
+        },
+        "from": {
+          "description": "Payer address (default: the wallet's selected EVM account)",
+          "name": "from",
+          "required": false
+        },
+        "domain-name": {
+          "description": "EIP-712 domain name of the token (default: USD Coin)",
+          "name": "domain-name",
+          "required": false
+        },
+        "domain-version": {
+          "description": "EIP-712 domain version of the token (default: 2)",
+          "name": "domain-version",
+          "required": false
+        },
+        "valid-for": {
+          "description": "Validity window in seconds (default 300)",
+          "name": "valid-for",
+          "required": false
+        },
+        "nonce": {
+          "description": "0x-prefixed 32-byte nonce (default: random)",
+          "name": "nonce",
+          "required": false
+        },
+        "purpose": {
+          "description": "Stated purpose — forwarded to the gate as the agent request",
+          "name": "purpose",
+          "required": false
+        },
+        "policy": {
+          "description": "Path to the operator policy JSON (else LIGIS_WALLET_POLICY / _FILE)",
+          "name": "policy",
+          "required": false
+        },
+        "mandate-max-usd": {
+          "description": "Agent mandate: tighten the per-payment USD cap",
+          "name": "mandate-max-usd",
+          "required": false
+        },
+        "mandate-max-seconds": {
+          "description": "Agent mandate: shorten the validity window (seconds)",
+          "name": "mandate-max-seconds",
+          "required": false
+        },
+        "mandate-capability": {
+          "description": "Agent mandate: add a required payee capability",
+          "name": "mandate-capability",
+          "required": false
+        }
+      },
+      "description": "Gate-checked payment: signs an EIP-3009 authorization only after the Ligis gate returns a fresh GO bound to this exact operation.",
+      "flags": {
+        "format": {
+          "char": "f",
+          "description": "Output format: text | json | toon (defaults to text in TTY, json when piped)",
+          "name": "format",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "options": ["text", "json", "toon"],
+          "type": "option"
+        },
+        "json": {
+          "description": "Shorthand for --format=json",
+          "name": "json",
+          "allowNo": false,
+          "type": "boolean"
+        },
+        "toon": {
+          "description": "Shorthand for --format=toon",
+          "name": "toon",
+          "allowNo": false,
+          "type": "boolean"
+        },
+        "verbose": {
+          "char": "v",
+          "description": "Show debug logs on stderr. Use this for troubleshooting",
+          "name": "verbose",
+          "allowNo": false,
+          "type": "boolean"
+        },
+        "chain-id": {
+          "description": "EVM chain id the payment authorizes (e.g. 10143 for Monad testnet)",
+          "name": "chain-id",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "payee": {
+          "description": "Payment recipient address (0x…)",
+          "name": "payee",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "value": {
+          "description": "Amount in base units, decimal (e.g. 5000000 = 5 USDC at 6 decimals)",
+          "name": "value",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "asset": {
+          "description": "EIP-3009 token contract (the verifyingContract)",
+          "name": "asset",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "from": {
+          "description": "Payer address (default: the wallet's selected EVM account)",
+          "name": "from",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "domain-name": {
+          "description": "EIP-712 domain name of the token (default: USD Coin)",
+          "name": "domain-name",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "domain-version": {
+          "description": "EIP-712 domain version of the token (default: 2)",
+          "name": "domain-version",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "valid-for": {
+          "description": "Validity window in seconds (default 300)",
+          "name": "valid-for",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "nonce": {
+          "description": "0x-prefixed 32-byte nonce (default: random)",
+          "name": "nonce",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "purpose": {
+          "description": "Stated purpose — forwarded to the gate as the agent request",
+          "name": "purpose",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "policy": {
+          "description": "Path to the operator policy JSON (else LIGIS_WALLET_POLICY / _FILE)",
+          "name": "policy",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "mandate-max-usd": {
+          "description": "Agent mandate: tighten the per-payment USD cap",
+          "name": "mandate-max-usd",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "mandate-max-seconds": {
+          "description": "Agent mandate: shorten the validity window (seconds)",
+          "name": "mandate-max-seconds",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        },
+        "mandate-capability": {
+          "description": "Agent mandate: add a required payee capability",
+          "name": "mandate-capability",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "type": "option"
+        }
+      },
+      "hasDynamicHelp": false,
+      "hiddenAliases": [],
+      "id": "ligis:pay",
+      "pluginAlias": "@ligis/metamask-plugin",
+      "pluginName": "@ligis/metamask-plugin",
+      "pluginType": "core",
+      "strict": true,
+      "enableJsonFlag": false,
+      "requiresAuth": true,
+      "requiresInit": true,
+      "requiresFees": false,
+      "byokPasswordFlags": {
+        "password": {
+          "description": "Password to unlock the BYOK mnemonic (BYOK mode only)",
+          "env": "MM_PASSWORD",
+          "input": [],
+          "multiple": false,
+          "type": "option"
+        }
+      },
+      "walletTimeoutFlags": {
+        "wallet-timeout": {
+          "description": "Seconds to wait per wallet job (MFA/signing), max 600; overrides config walletTimeoutSeconds",
+          "min": 1,
+          "max": 600,
+          "input": [],
+          "multiple": false,
+          "type": "option"
+        }
+      },
+      "STRUCTURED_FORMATS": {},
+      "isESM": true,
+      "relativePath": ["dist", "commands", "ligis", "pay.js"]
+    }
+  },
+  "version": "0.1.0"
+}

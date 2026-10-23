@@ -206,24 +206,25 @@ outcome trail that backs every measured claim in
 
 ## Documentation
 
-| Doc                                                          | What's in it                                                                          |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| [Positioning](docs/positioning.md)                           | Source of truth: pitch, signals, glossary, claims, privacy, pricing                   |
-| [Strategy](docs/strategy.md)                                 | Product strategy, competitive landscape, differentiation, roadmap, business model     |
-| [Architecture](docs/architecture.md)                         | Contract design, module structure, repository layout                                  |
-| [Agent Arena](docs/agent-arena.md)                           | Vultr Agent Arena submission: `/arena` demo, judges, env vars, checklist              |
-| [CROO Integration](docs/croo-integration.md)                 | CAP adapter, Agent Store listing, provider/requester usage                            |
-| [OKX.AI Integration](docs/okx-ai.md)                         | ASP strategy, services, demo plan, and submission checklist                           |
-| [Proofs](docs/proofs.md)                                     | Hackathon submissions, demo videos, on-chain deployment evidence                      |
-| [Attestation integrations](docs/attestation-integrations.md) | Self Protocol and EAS provenance, privacy boundaries, and rollout                     |
-| [Monorepo structure](MONOREPO_STRUCTURE.md)                  | Package layout, dependency graph, ChainAdapter interface, adding a new chain          |
-| [API Reference](docs/api.md)                                 | Service schemas, input/output examples, capability names, chains                      |
-| [Archive](docs/archive/)                                     | Completed hackathon submissions + unpublished drafts                                  |
-| [Trust Steward Agent](docs/trust-steward-agent.md)           | The autonomous loop, 0G integration, build phases                                     |
-| [Security](docs/security.md)                                 | Non-custodial design, EIP-712 replay protection                                       |
-| [Setup](docs/setup.md)                                       | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify |
-| [SKILL.md](SKILL.md)                                         | Director entry point for AI agents                                                    |
-| [References](references/)                                    | Per-skill command specs (issue, verify, revoke, rotate, hash, sign, composability)    |
+| Doc                                                          | What's in it                                                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| [Positioning](docs/positioning.md)                           | Source of truth: pitch, signals, glossary, claims, privacy, pricing                                           |
+| [Strategy](docs/strategy.md)                                 | Product strategy, competitive landscape, differentiation, roadmap, business model                             |
+| [Architecture](docs/architecture.md)                         | Contract design, module structure, repository layout                                                          |
+| [Agent Arena](docs/agent-arena.md)                           | Vultr Agent Arena submission: `/arena` demo, judges, env vars, checklist                                      |
+| [CROO Integration](docs/croo-integration.md)                 | CAP adapter, Agent Store listing, provider/requester usage                                                    |
+| [OKX.AI Integration](docs/okx-ai.md)                         | ASP strategy, services, demo plan, and submission checklist                                                   |
+| [Proofs](docs/proofs.md)                                     | Hackathon submissions, demo videos, on-chain deployment evidence                                              |
+| [Attestation integrations](docs/attestation-integrations.md) | Self Protocol and EAS provenance, privacy boundaries, and rollout                                             |
+| [ZK reputation evidence](docs/zk-reputation-evidence.md)     | Research note: private, ZK-proven counterparty history as a second evidence mode — **not built, not claimed** |
+| [Monorepo structure](MONOREPO_STRUCTURE.md)                  | Package layout, dependency graph, ChainAdapter interface, adding a new chain                                  |
+| [API Reference](docs/api.md)                                 | Service schemas, input/output examples, capability names, chains                                              |
+| [Archive](docs/archive/)                                     | Completed hackathon submissions + unpublished drafts                                                          |
+| [Trust Steward Agent](docs/trust-steward-agent.md)           | The autonomous loop, 0G integration, build phases                                                             |
+| [Security](docs/security.md)                                 | Non-custodial design, EIP-712 replay protection                                                               |
+| [Setup](docs/setup.md)                                       | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify                         |
+| [SKILL.md](SKILL.md)                                         | Director entry point for AI agents                                                                            |
+| [References](references/)                                    | Per-skill command specs (issue, verify, revoke, rotate, hash, sign, composability)                            |
 
 ## License
 

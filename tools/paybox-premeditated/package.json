@@ -7,7 +7,7 @@
     "node": "24.x",
     "pnpm": "11.11.0"
   },
-  "packageManager": "pnpm@11.11.0",
+  "packageManager": "pnpm@10.33.2",
   "scripts": {
     "dev": "tsx src/plugin.ts",
     "build": "esbuild src/plugin.ts --bundle --platform=node --format=esm --target=node24 --minify --outfile=dist/plugin.mjs",

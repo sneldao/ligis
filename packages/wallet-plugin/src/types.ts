@@ -66,6 +66,7 @@ export type AuthorizationRequest = {
     from: string;
     to: string;
     value: string;
+    /** Unix seconds — the EIP-3009 on-chain unit, not milliseconds. */
     validAfter: string;
     validBefore: string;
     nonce: string;
@@ -90,6 +91,7 @@ export type ParsedOperation = {
   valueBaseUnits: string;
   /** Whole-USD value derived from the configured decimals and peg. */
   amountUsd: number;
+  /** Unix seconds. */
   validAfter: number;
   validBefore: number;
   /** 32-byte nonce, lowercase hex. */

@@ -15,7 +15,12 @@
 
 export { createPaymentGuard } from "./guard.js";
 export type { GuardDeps, PaymentGuard } from "./guard.js";
-export { parseDecision, decisionConfidence } from "./decision.js";
+export {
+  parseDecision,
+  decisionConfidence,
+  fetchDecision,
+} from "./decision.js";
+export type { DecisionResult } from "./decision.js";
 export {
   baseUnitsToUsd,
   fingerprintOf,

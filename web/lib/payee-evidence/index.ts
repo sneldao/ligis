@@ -1,5 +1,6 @@
 import "server-only";
 import { readErc8004Evidence, type Erc8004Options } from "./erc8004";
+import { readNansenEvidence, type NansenOptions } from "./nansen";
 import {
   readSettlementEvidence,
   type SettlementBinding,
@@ -23,11 +24,45 @@ export type {
 
 export type PayeeEvidenceOptions = EvidenceOptions & {
   erc8004?: Erc8004Options;
+  nansen?: NansenOptions;
   settlementBinding?: SettlementBinding;
   settlementSource?: SettlementSource;
-  /** Worker D can inject its reader without importing an unmerged module. */
+  /** Test/coordinate seam: replace the env-configured reader wholesale. */
   readNansenEvidence?: EvidenceReader;
 };
+
+const positiveInt = (value: string | undefined): number | undefined => {
+  const n = Number(value?.trim());
+  return Number.isSafeInteger(n) && n > 0 ? n : undefined;
+};
+
+/**
+ * Nansen offers one Monad chain, named `monad`, and its response carries no
+ * chain id, so mainnet-vs-testnet cannot be proven from the API. The operator
+ * must confirm the mapping; without it — or without an intended network for
+ * this payee — the reader answers `nansen-chain-unconfirmed` and never calls
+ * the provider. Never fall back to the confirmed id: labels from one network
+ * are not evidence about another. The intended network comes from the caller's
+ * evidence context, or from the operator-declared chain this gate settles on.
+ */
+export function nansenConfigFromEnv(
+  env: NodeJS.ProcessEnv,
+  overrides: NansenOptions = {},
+  contextChainId?: number,
+): NansenOptions {
+  return {
+    ...overrides,
+    enabled: overrides.enabled ?? env.LIGIS_NANSEN_ENABLED === "1",
+    apiKey: overrides.apiKey ?? env.NANSEN_API_KEY?.trim() ?? "",
+    confirmedMonadChainId:
+      overrides.confirmedMonadChainId ??
+      positiveInt(env.LIGIS_NANSEN_MONAD_CHAIN_ID),
+    chainId:
+      overrides.chainId ??
+      contextChainId ??
+      positiveInt(env.LIGIS_PAYEE_EVIDENCE_CHAIN_ID),
+  };
+}
 
 export async function readPayeeEvidence(
   payee: string,
@@ -59,11 +94,17 @@ export async function readPayeeEvidence(
     [
       "nansen",
       options.readNansenEvidence ??
-        (async () =>
-          unavailable(
-            "nansen",
-            "Nansen reader not configured",
-            options.chainId,
+        (() =>
+          readNansenEvidence(
+            payee,
+            nansenConfigFromEnv(
+              options.env ?? process.env,
+              {
+                ...options.nansen,
+                timeoutMs: Math.max(1, timeoutMs - 50),
+              },
+              options.chainId,
+            ),
           )),
     ],
   ];
