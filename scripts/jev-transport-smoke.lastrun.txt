@@ -1,24 +1,24 @@
 {
-  "ranAt": "2026-09-26T20:48:51.706Z",
-  "transport": "direct",
-  "endpoint": "https://api.typesafe.ai/v1/systemone",
-  "model": "jev-1.13.0",
+  "ranAt": "2026-10-23T14:53:05.094Z",
+  "transport": "gateway",
+  "endpoint": "https://ai-gateway.vercel.sh/typesafe/v1/systemone",
+  "model": "typesafe-ai/jev",
   "billedUsd": 0.00010492,
   "probes": [
     {
       "id": "legit",
       "expected": "GO",
       "verdict": "GO",
-      "confidence": 0.95,
-      "latencyMs": 235,
+      "confidence": 0.73,
+      "latencyMs": 919,
       "flags": []
     },
     {
       "id": "misdirected",
       "expected": "STOP",
       "verdict": "STOP",
-      "confidence": 0.96,
-      "latencyMs": 135,
+      "confidence": 0.97,
+      "latencyMs": 258,
       "flags": [
         "scope-mismatch",
         "payee-mismatch",
