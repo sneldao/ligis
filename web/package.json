@@ -28,7 +28,7 @@
     "@privy-io/node": "0.35.0",
     "@privy-io/react-auth": "3.48.1",
     "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
+    "@react-three/fiber": "^9.8.2",
     "@use-gesture/react": "^10.3.1",
     "casper-js-sdk": "^5.0.0",
     "ethers": "^6.13.1",
