@@ -25,6 +25,10 @@
     "./demo": {
       "import": "./dist/demo-registry.js",
       "types": "./dist/demo-registry.d.ts"
+    },
+    "./sample": {
+      "import": "./dist/sample.js",
+      "types": "./dist/sample.d.ts"
     }
   },
   "scripts": {

@@ -12,7 +12,8 @@
     "start": "next start",
     "pretypecheck": "cd .. && pnpm --filter @ligis/zerog --filter @ligis/circuits-zcash build",
     "typecheck": "tsc --noEmit",
-    "test": "node --conditions=react-server --import tsx --test test/*.test.ts"
+    "test": "node --conditions=react-server --import tsx --test test/*.test.ts",
+    "demo:zk": "node --conditions=react-server --import tsx scripts/zk-gate-demo.ts"
   },
   "dependencies": {
     "@0gfoundation/0g-compute-ts-sdk": "^0.8.4",
