@@ -5,6 +5,10 @@ import { Rule } from "@/components/Rule";
 import { SignalStack } from "@/components/SignalStack";
 import { decisionToTrustSignals } from "@/lib/decision-receipt";
 import type { Decision, PaymentAmount } from "@/lib/decide";
+import {
+  ZkCredentialResultView,
+  ZkProofAttach,
+} from "@/components/ZkCredentialPanel";
 
 /**
  * GateDecision — client-side decision runner.
@@ -52,6 +56,43 @@ export function GateDecision({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [zkBusy, setZkBusy] = useState(false);
+
+  // One-shot submit with a zk proof. Not an effect: a verified proof burns
+  // its nullifier, so a re-render/StrictMode double-run would be a replay.
+  async function runWithProof(zkProof: unknown) {
+    abortRef.current?.abort();
+    setZkBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/gate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          payee,
+          amountUsd,
+          purpose,
+          capability,
+          mandate,
+          ...(payment ?? {}),
+          zkProof,
+        }),
+      });
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      if (!res.ok) throw new Error(data.error ?? res.statusText);
+      setResult({
+        verdict: data.verdict,
+        signals: data.signals,
+        latencyMs: data.latencyMs,
+        costUsd: data.costUsd,
+      });
+      setRawDecision(data as Decision);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setZkBusy(false);
+    }
+  }
 
   useEffect(() => {
     abortRef.current?.abort();
@@ -267,6 +308,12 @@ export function GateDecision({
           ))}
         </div>
       </div>
+
+      {/* ZK credential presentation (Zecathon Week 2) */}
+      {rawDecision?.zkCredential ? (
+        <ZkCredentialResultView zk={rawDecision.zkCredential} />
+      ) : null}
+      <ZkProofAttach onSubmit={runWithProof} busy={zkBusy} />
 
       {/* Share link */}
       <details className="group border-t border-rule pt-4">

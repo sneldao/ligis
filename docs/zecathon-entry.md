@@ -102,6 +102,17 @@ rewritten.
 | Not revealed      | issuer DID, subject address, credential ID, subject balance |
 | Replay protection | nullifier per (capability, context)                         |
 
+### Gate wiring (shipped)
+
+`POST /api/gate` accepts `zkProof` (`{ proof, contextLabel, publicInputs }`).
+Demo: set `LIGIS_ZK_TRUSTED_ROOTS` to the root printed by
+`pnpm --filter @ligis/circuits-zcash prove:sample`, generate a fresh proof
+with `-- --payee <utest1…> --nonce <n> --json out.json`, paste it into
+`/gate` → "Attach zk credential proof". First submit: `verified · GO`; the
+same proof again: `rejected · STOP` (replay). Where `bb` is not installed
+(e.g. Vercel) the panel reads `unverified · UNKNOWN` and the proof does not
+count. Proving system shipped: Noir + UltraHonk (not Groth16/Halo2).
+
 ## Fallback path (Day 14 checkpoint)
 
 If the ZK circuit is not compiling by Day 14, Week 1's viewing-key selective
@@ -135,7 +146,8 @@ to run this entry without conflict.
 - [x] `ZcashChainAdapter` in `@ligis/core` behind `ChainAdapter` boundary (`packages/core/src/zcash.ts`)
 - [x] Shielded ZEC payment readable via viewing key / light client (`z_listreceivedbyaddress` 512-byte memo codec + nullifier replay store)
 - [x] Gate returns `GO` / `STOP` / `UNKNOWN` for shielded ZEC intents (`web/lib/chain-zcash.ts`, `web/lib/resolve.ts`, `/gate` presets)
-- [x] ZK circuit compiling — `packages/circuits-zcash` (Noir + UltraHonk; Poseidon Merkle membership + nullifier; sample proof verifies locally). Not yet wired into `/api/gate`; registry root is computed off-chain, anchoring is open
+- [x] ZK circuit compiling — `packages/circuits-zcash` (Noir + UltraHonk; Poseidon Merkle membership + nullifier; sample proof verifies locally). registry root is computed off-chain, anchoring is open
+- [x] ZK proof verified in `/api/gate` — optional `zkProof` on `POST`, `bb verify` against the committed vk, trusted roots from `LIGIS_ZK_TRUSTED_ROOTS`, (context, nullifier) replay → `STOP`, missing toolchain → explicit `unverified`/`UNKNOWN`; result shown as `Decision.zkCredential` and on `/gate` ("Attach zk credential proof"). See `docs/decide-api.md` § ZK credential proofs
 - [ ] End-to-end demo: gate → proof → shielded ZEC on Zcash testnet
 - [ ] Demo video (2 min max)
 - [ ] Zcash testnet tx hash showing shielded transfer after Ligis `GO`

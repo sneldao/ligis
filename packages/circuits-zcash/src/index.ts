@@ -6,21 +6,24 @@
  * Merkle nodes. Build the registry tree here from CredentialRegistry state,
  * publish/anchor its root, and hand a holder their witness.
  */
-import { keccak_256 } from "@noble/hashes/sha3";
 import { buildPoseidon } from "circomlibjs";
+import { TREE_DEPTH, fieldHex, toField } from "./fields.js";
+
+export * from "./fields.js";
+export {
+  PINNED_BB,
+  encodePublicInputs,
+  resolveBb,
+  verifyMembershipProof,
+  type BbResolution,
+  type VerifyOutcome,
+} from "./verify.js";
 
 export {
   proveAndVerify,
   resolveToolchain,
   type Toolchain,
 } from "./toolchain.js";
-
-/** BN254 scalar field modulus. Every circuit input is reduced into it. */
-export const FIELD_MODULUS =
-  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
-
-/** Must match `global DEPTH` in circuit/src/main.nr. */
-export const TREE_DEPTH = 16;
 
 type Poseidon = (inputs: bigint[]) => bigint;
 let poseidonPromise: Promise<Poseidon> | undefined;
@@ -31,45 +34,6 @@ export function getPoseidon(): Promise<Poseidon> {
     (p) => (inputs: bigint[]) => p.F.toObject(p(inputs)) as bigint,
   );
   return poseidonPromise;
-}
-
-export function toField(v: bigint | number | string): bigint {
-  const n = typeof v === "bigint" ? v : BigInt(v);
-  return ((n % FIELD_MODULUS) + FIELD_MODULUS) % FIELD_MODULUS;
-}
-
-export function fieldHex(v: bigint): `0x${string}` {
-  return `0x${toField(v).toString(16).padStart(64, "0")}`;
-}
-
-function keccakField(bytes: Uint8Array): bigint {
-  let hex = "";
-  for (const b of keccak_256(bytes)) hex += b.toString(16).padStart(2, "0");
-  return toField(BigInt(`0x${hex}`));
-}
-
-/**
- * Capability hash as a circuit field: `uint256(keccak256(name)) mod p`.
- * Accepts the 0x-prefixed bytes32 that `@ligis/core` `capabilityHash()`
- * and the EVM CredentialRegistry use, or a human-readable name.
- */
-export function capabilityField(capability: string): bigint {
-  if (/^0x[0-9a-fA-F]{64}$/.test(capability))
-    return toField(BigInt(capability));
-  return keccakField(new TextEncoder().encode(capability));
-}
-
-/** Issuer EVM address as a field element. */
-export function issuerField(address: string): bigint {
-  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
-    throw new TypeError(`issuer must be an EVM address: ${address}`);
-  }
-  return BigInt(address);
-}
-
-/** Gate/presentation context (e.g. `gate:<id>:<intent-hash>`) as a field. */
-export function contextField(label: string): bigint {
-  return keccakField(new TextEncoder().encode(label));
 }
 
 export type CredentialLeafInput = {
@@ -179,15 +143,6 @@ export type CircuitInputs = {
   leaf_index: bigint;
   merkle_path: bigint[];
 };
-
-/** Public inputs in circuit declaration order (bb's `public_inputs`). */
-export const PUBLIC_INPUT_ORDER = [
-  "registry_root",
-  "capability_hash",
-  "context",
-  "current_time",
-  "nullifier",
-] as const satisfies ReadonlyArray<keyof CircuitInputs>;
 
 /** Assemble a holder's witness for credential `index` in `tree`. */
 export async function buildInputs(args: {

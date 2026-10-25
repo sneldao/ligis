@@ -14,9 +14,17 @@ Background: [`docs/zk-reputation-evidence.md`](../../docs/zk-reputation-evidence
 
 ## Status
 
-Scaffold. Compiles, `nargo test` passes, and a sample proof is generated and
-verified locally with UltraHonk. **Not wired into `/api/gate` or the four
-signals yet**, and the registry root is computed off-chain (see _Root_ below).
+Compiles, `nargo test` passes, and a sample proof is generated and verified
+locally with UltraHonk. `/api/gate` verifies proofs server-side via
+`@ligis/circuits-zcash/verify` (`bb` + committed `src/vk.ts`) — see
+[`docs/decide-api.md`](../../docs/decide-api.md) § ZK credential proofs. The
+registry root is computed off-chain (see _Root_ below) and trusted via
+`LIGIS_ZK_TRUSTED_ROOTS`.
+
+Entry points: `.` (prover side, Poseidon/tree), `./fields` (pure field +
+context-label helpers), `./verify` (`resolveBb`, `verifyMembershipProof`).
+After editing `main.nr`, run `pnpm write:vk` and `prove:sample -- --fixture`
+(regenerates `test/fixtures/membership-proof.json` used by web tests).
 
 ## Inputs
 
@@ -84,7 +92,9 @@ public inputs are proving-system-agnostic.
 pnpm --filter @ligis/circuits-zcash build          # tsc → dist/
 pnpm --filter @ligis/circuits-zcash build:circuit  # nargo compile
 pnpm --filter @ligis/circuits-zcash test           # nargo test (6) + TS tests (tree + e2e proof)
-pnpm --filter @ligis/circuits-zcash prove:sample   # sample tree → proof → verify → tamper/replay checks
+pnpm --filter @ligis/circuits-zcash prove:sample   # sample tree → proof → verify → tamper check
+pnpm --filter @ligis/circuits-zcash prove:sample -- --payee <addr> --nonce n1 --json /tmp/zk.json  # gate zkProof
+pnpm --filter @ligis/circuits-zcash write:vk       # regenerate src/vk.ts
 ```
 
 `circuit/Prover.toml` is the deterministic sample witness written by

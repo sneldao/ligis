@@ -1,5 +1,5 @@
 /**
- * Deterministic sample registry for tests and `pnpm prove:sample`.
+ * Deterministic sample registry for tests, fixtures, and `pnpm prove:sample`.
  * Secrets here are public test fixtures — never real key material.
  */
 import {
@@ -8,6 +8,7 @@ import {
   capabilityField,
   contextField,
   credentialLeaf,
+  gateContextLabel,
   identityCommitment,
   issuerField,
   type CircuitInputs,
@@ -15,14 +16,28 @@ import {
 
 export const SAMPLE_CAPABILITY = "agent.commerce.escrow";
 export const SAMPLE_ISSUER = "0x6C500B3968C54789b518D01066Aed2990d44c068";
+/** `ZCASH_DEMO_VERIFIED_SUBJECT` from @ligis/core. */
+export const SAMPLE_PAYEE =
+  "utest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8qp9x2m";
 export const SAMPLE_NOW = 1_761_350_400n; // 2025-10-25T00:00:00Z
-export const SAMPLE_EXPIRES = 1_824_422_400n; // 2027-10-25T00:00:00Z
+export const SAMPLE_EXPIRES = 1_924_992_000n; // 2031-01-01T00:00:00Z
 export const SAMPLE_HOLDER_INDEX = 2;
 
 export async function sampleRegistry(
-  context = "ligis-gate:zecathon-demo:intent-1",
+  opts: {
+    payee?: string;
+    capability?: string;
+    nonce?: string;
+    currentTime?: bigint;
+  } = {},
 ) {
-  const cap = capabilityField(SAMPLE_CAPABILITY);
+  const capability = opts.capability ?? SAMPLE_CAPABILITY;
+  const contextLabel = gateContextLabel(
+    opts.payee ?? SAMPLE_PAYEE,
+    capability,
+    opts.nonce ?? "demo-1",
+  );
+  const cap = capabilityField(capability);
   const issuer = issuerField(SAMPLE_ISSUER);
   const secrets = [0x1001n, 0x2002n, 0xa11ce5ec12e7n, 0x4004n, 0x5005n];
   const leaves = await Promise.all(
@@ -48,8 +63,8 @@ export async function sampleRegistry(
       expiresAt: SAMPLE_EXPIRES,
       nonce: BigInt(SAMPLE_HOLDER_INDEX),
     },
-    context: contextField(context),
-    currentTime: SAMPLE_NOW,
+    context: contextField(contextLabel),
+    currentTime: opts.currentTime ?? SAMPLE_NOW,
   });
-  return { tree, inputs, holderSecret };
+  return { tree, inputs, holderSecret, contextLabel };
 }

@@ -9,6 +9,14 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./fields": {
+      "import": "./dist/fields.js",
+      "types": "./dist/fields.d.ts"
+    },
+    "./verify": {
+      "import": "./dist/verify.js",
+      "types": "./dist/verify.d.ts"
     }
   },
   "scripts": {
@@ -17,7 +25,8 @@
     "test": "pnpm run test:circuit && node --import tsx --test test/*.test.ts",
     "test:circuit": "cd circuit && nargo test",
     "prove:sample": "tsx scripts/prove-sample.ts",
-    "clean": "rm -rf dist circuit/target"
+    "clean": "rm -rf dist circuit/target",
+    "write:vk": "tsx scripts/write-vk.ts"
   },
   "toolchain": {
     "nargo": "1.0.0-beta.22",

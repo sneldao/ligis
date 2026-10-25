@@ -41,6 +41,14 @@ import {
   tokenDecimals,
   type PaymentAmount,
 } from "./payment-asset";
+import {
+  evaluateZkCredential,
+  type ZkCredentialResult,
+  type ZkDeps,
+  type ZkProofInput,
+} from "./zk-credential";
+
+export type { ZkCredentialResult, ZkProofInput } from "./zk-credential";
 
 export type {
   BaseUnits,
@@ -140,6 +148,12 @@ export type PaymentIntentBase = {
       a conservative in-process regex judge; full Arena LLM judge lives in
       `judgePayment()` and is unchanged. */
   pageText?: string;
+  /**
+   * Optional ZK credential presentation (`@ligis/circuits-zcash`). Verified
+   * server-side; the result is reported as `Decision.zkCredential` and folds
+   * into `verified-payee` (STOP on rejection, UNKNOWN when unverifiable).
+   */
+  zkProof?: ZkProofInput;
 };
 
 export type Decision = {
@@ -154,6 +168,8 @@ export type Decision = {
   /** Each upstream that ran, e.g. `jev go jev-1.13.0 (direct, 235ms)`,
       `pharos-atlantic credential`. */
   provenance: string[];
+  /** Present only when the intent carried a `zkProof`. */
+  zkCredential?: ZkCredentialResult;
 };
 
 /**
@@ -184,6 +200,9 @@ export type DecideDeps = {
     eligibleSources?: Array<"ligis-credential" | "erc8004" | "nansen">;
     mandate?: PaymentIntent["mandate"];
   };
+  /** ZK proof verifier + nullifier store + trusted roots. When absent, a
+   *  supplied `zkProof` is reported UNKNOWN ("not configured"). */
+  zk?: ZkDeps;
   /** Pluggable LLM judge for prompt-injection on `pageText`. */
   judgePageText?: (text: string) => {
     status: VerdictStatus;
@@ -483,6 +502,24 @@ export async function decide(
     },
   };
 
+  const zkPromise: Promise<ZkCredentialResult | undefined> = intent.zkProof
+    ? evaluateZkCredential(
+        intent.zkProof,
+        { payee: intent.payee, capability },
+        deps.zk,
+      ).catch(
+        (err): ZkCredentialResult => ({
+          status: "UNKNOWN",
+          verification: "unverified",
+          reason:
+            `zk verification errored: ${err instanceof Error ? err.message : String(err)}`.slice(
+              0,
+              300,
+            ),
+        }),
+      )
+    : Promise.resolve(undefined);
+
   const [jevResult, credentialResult, pageJudgeResult, evidenceResult] =
     await Promise.allSettled([
       config.enabled
@@ -598,6 +635,12 @@ export async function decide(
       : signal;
   });
 
+  const zkCredential = await zkPromise;
+  if (zkCredential) {
+    const i = signals.findIndex((sig) => sig.id === "verified-payee");
+    signals[i] = applyZkCredential(signals[i]!, zkCredential);
+  }
+
   const verdict = composeVerdict(signals, evidenceEnabled);
   const provenance = buildProvenance(jev, credentialResult, pageJudge, config);
   const payeeSignal = signals.find((s) => s.id === "verified-payee");
@@ -609,6 +652,11 @@ export async function decide(
     }
   }
 
+  if (zkCredential) {
+    provenance.push(
+      `zk-credential ${zkCredential.verification} ${zkCredential.status.toLowerCase()}${zkCredential.verifier ? ` (${zkCredential.verifier}, ${zkCredential.latencyMs}ms)` : ""}: ${zkCredential.reason}`,
+    );
+  }
   provenance.push(
     `payment ${formatBaseUnits(intent.tokenSymbol, intent.amountBaseUnits)} (${intent.amountBaseUnits} base units) on ${intent.chainId} via ${railFor(intent)}`,
   );
@@ -619,6 +667,41 @@ export async function decide(
     latencyMs: Date.now() - t0,
     costUsd: jev.costUsd,
     provenance,
+    ...(zkCredential ? { zkCredential } : {}),
+  };
+}
+
+/**
+ * Fold a ZK credential result into `verified-payee`. STOP always wins; a
+ * verified proof can answer GO when no public read already said STOP; an
+ * unverifiable proof never upgrades anything and, unless the public
+ * credential already answered GO, leaves the signal UNKNOWN (not a pass).
+ */
+function applyZkCredential(signal: Signal, zk: ZkCredentialResult): Signal {
+  if (signal.id !== "verified-payee") return signal;
+  if (zk.status === "STOP") {
+    return {
+      ...signal,
+      status: "STOP",
+      confidence: 1,
+      reason: `zk credential proof rejected: ${zk.reason}`,
+    };
+  }
+  if (signal.status === "STOP") return signal;
+  if (zk.status === "GO") {
+    return {
+      ...signal,
+      status: "GO",
+      confidence: 1,
+      reason: `zk credential proof verified: ${zk.reason}`,
+    };
+  }
+  if (signal.status === "GO") return signal;
+  return {
+    ...signal,
+    status: "UNKNOWN",
+    confidence: 0,
+    reason: `zk proof supplied but unverified: ${zk.reason}`,
   };
 }
 

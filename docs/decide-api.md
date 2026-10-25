@@ -36,6 +36,7 @@ type PaymentIntent = PaymentAmount & {
     scope?: string;
   };
   pageText?: string;
+  zkProof?: ZkProofInput; // POST only — see "ZK credential proofs"
 };
 ```
 
@@ -164,6 +165,74 @@ type PayeeEvidence = {
 
 Source status is not a gate verdict. See [payee-evidence.md](payee-evidence.md)
 for discovery, trusted-client policy, settlement provenance, and coverage limits.
+
+## ZK credential proofs (opt-in, POST only)
+
+Implementation: `web/lib/zk-credential.ts` (policy), `web/lib/zk-verifier.ts`
+(wiring), `packages/circuits-zcash` (Noir circuit, `bb` verifier, committed
+verification key). A payee proves it holds an unexpired credential for the
+gate's capability in a trusted registry tree, without revealing which
+credential, issuer, or subject.
+
+```ts
+type ZkProofInput = {
+  proof: `0x${string}`; // UltraHonk proof bytes (~14.6 KB)
+  contextLabel: string; // ligis-gate:v1:<payee lowercased>:<capability>:<nonce>
+  publicInputs: {
+    registry_root: string; // 0x field
+    capability_hash: string; // keccak256(capability) mod p
+    context: string; // keccak256(contextLabel) mod p
+    current_time: string; // unix seconds the proof was made for
+    nullifier: string; // H(secret, capability_hash, context)
+  };
+};
+```
+
+Generate one with
+`pnpm --filter @ligis/circuits-zcash prove:sample -- --payee <addr> --nonce <n> --json out.json`
+and send it as `zkProof` (too large for a GET query string). Checks, in order:
+
+| Check         | Fails as                                                                              |
+| ------------- | ------------------------------------------------------------------------------------- |
+| trusted roots | none configured → `UNKNOWN`; root not listed → `STOP`                                 |
+| capability    | no capability on the intent → `UNKNOWN`; `capability_hash` ≠ gate capability → `STOP` |
+| context       | label not naming this payee + capability, or not hashing to `context` → `STOP`        |
+| freshness     | `current_time` > now+60s or older than `LIGIS_ZK_MAX_PROOF_AGE_S` (600) → `STOP`      |
+| replay        | (context, nullifier) already recorded → `STOP`                                        |
+| proof         | `bb verify` rejects → `STOP`; `bb` missing/incompatible/timeout → `UNKNOWN`           |
+| record        | nullifier store unavailable → `UNKNOWN`                                               |
+
+The result is returned as `Decision.zkCredential`
+(`{ status, verification: "verified" | "rejected" | "unverified", reason, registryRoot, nullifier, context, currentTime, verifier?, latencyMs? }`),
+as a `zk-credential …` provenance line, and folded into `verified-payee`:
+a rejected proof forces `STOP`; a verified proof answers `GO` unless the
+public read already said `STOP`; an **unverified proof never counts** — it
+leaves `verified-payee` `UNKNOWN` (so the verdict is `UNKNOWN`) unless the
+public credential already answered `GO`. There is no silent pass.
+
+**Trusted root.** The EVM `CredentialRegistry` has no on-chain Merkle root.
+The gate trusts exactly the roots in `LIGIS_ZK_TRUSTED_ROOTS`
+(comma-separated 0x hex), which the operator sets to the root built off-chain
+from registry events with `CredentialTree` (`prove:sample` prints the sample
+root). Rotating the tree = adding the new root and later removing the old one.
+An on-chain root anchor is future work.
+
+**Replay.** A verified proof's (context, nullifier) is recorded atomically;
+reuse in that context is `STOP`. The store is Upstash/Vercel-KV
+(`SET NX`, key prefix `LIGIS_ZK_NULLIFIER_KEY`, default `ligis:zk-nullifier`)
+when `KV_REST_API_URL` + `KV_REST_API_TOKEN` are set; otherwise a
+process-local set (single-process only — not replay-safe across serverless
+instances). Unverified or rejected proofs do not burn the nullifier.
+
+**Verifier.** `bb` must match the pinned build (`5.0.0-nightly.20260522`). The
+gate uses `LIGIS_ZK_BB_BIN` when set (only that path), else
+`~/.bb-versions/<pinned>/bb`, else `bb` on PATH. Vercel has no `bb`, so
+proofs there report `unverified`. ~20–60 ms per verify locally.
+
+**Binding limit.** The circuit does not commit to the payee's address; the
+payee binding is the context label inside the nullifier. A holder of any
+valid credential could present for another payee's label. Binding the
+Zcash address commitment into the leaf is the Week 3 fix.
 
 ## Budgets, receipts, and privacy
 

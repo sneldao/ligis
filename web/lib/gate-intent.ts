@@ -15,6 +15,7 @@ import type { PaymentIntent } from "./decide";
 import { parseMandate } from "./mandate";
 import { parsePaymentAmount, type PaymentAmount } from "./payment-asset";
 import { detectSubjectKind } from "./subject-format";
+import { parseZkProof, type ZkProofInput } from "./zk-credential";
 
 const HEX = /^0x[0-9a-fA-F]{40}$/;
 const CASPER_ACCT = /^account-hash-[0-9a-f]{64}$/;
@@ -98,6 +99,13 @@ export function bodyToIntent(
   if (typeof mandateOrError === "string") return bad400(mandateOrError);
   const mandate: PaymentIntent["mandate"] = mandateOrError;
 
+  let zkProof: ZkProofInput | undefined;
+  if (body.zkProof !== undefined) {
+    const parsed = parseZkProof(body.zkProof);
+    if (typeof parsed === "string") return bad400(parsed);
+    zkProof = parsed;
+  }
+
   const amountOrError = parseIntentAmount(payee, amountUsd, {
     tokenSymbol: body.tokenSymbol,
     chainId: body.chainId,
@@ -112,6 +120,7 @@ export function bodyToIntent(
     mandate,
     capability,
     pageText: pageText ?? undefined,
+    ...(zkProof ? { zkProof } : {}),
     ...amountOrError,
   };
 }

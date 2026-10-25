@@ -5,12 +5,12 @@
   "type": "module",
   "packageManager": "pnpm@10.33.2",
   "scripts": {
-    "predev": "cd .. && pnpm --filter @ligis/core --filter @ligis/agent-logic --filter @ligis/zerog --filter @ligis/adapter-casper --filter @ligis/adapter-evm run build",
+    "predev": "cd .. && pnpm --filter @ligis/core --filter @ligis/agent-logic --filter @ligis/zerog --filter @ligis/adapter-casper --filter @ligis/adapter-evm --filter @ligis/circuits-zcash run build",
     "dev": "next dev --turbopack",
-    "prebuild": "cd .. && pnpm --filter @ligis/core --filter @ligis/agent-logic --filter @ligis/zerog --filter @ligis/adapter-casper --filter @ligis/adapter-evm run build",
+    "prebuild": "cd .. && pnpm --filter @ligis/core --filter @ligis/agent-logic --filter @ligis/zerog --filter @ligis/adapter-casper --filter @ligis/adapter-evm --filter @ligis/circuits-zcash run build",
     "build": "next build --webpack",
     "start": "next start",
-    "pretypecheck": "cd .. && pnpm --filter @ligis/zerog build",
+    "pretypecheck": "cd .. && pnpm --filter @ligis/zerog --filter @ligis/circuits-zcash build",
     "typecheck": "tsc --noEmit",
     "test": "node --conditions=react-server --import tsx --test test/*.test.ts"
   },
@@ -21,6 +21,7 @@
     "@ligis/adapter-casper": "workspace:*",
     "@ligis/adapter-evm": "workspace:*",
     "@ligis/agent-logic": "workspace:*",
+    "@ligis/circuits-zcash": "workspace:*",
     "@ligis/core": "workspace:*",
     "@ligis/zerog": "workspace:*",
     "@noble/curves": "^1.6.0",

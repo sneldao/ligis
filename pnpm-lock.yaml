@@ -415,6 +415,9 @@ importers:
       "@ligis/agent-logic":
         specifier: workspace:*
         version: link:../packages/agent-logic
+      "@ligis/circuits-zcash":
+        specifier: workspace:*
+        version: link:../packages/circuits-zcash
       "@ligis/core":
         specifier: workspace:*
         version: link:../packages/core

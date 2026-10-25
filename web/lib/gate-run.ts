@@ -16,6 +16,7 @@ import { resolveSubject as resolveSubjectProd } from "./resolve";
 import type { SubjectResolution } from "./resolve";
 import { readPayeeEvidence } from "./payee-evidence";
 import { boundedRead, evidenceTimeout } from "./payee-evidence/types";
+import { zkDepsFromEnv } from "./zk-verifier";
 
 export type GateRunResult =
   | { ok: true; decision: Decision }
@@ -29,6 +30,8 @@ export async function runGateDecision(
     evaluateIntent?: DecideDeps["evaluateIntent"];
     readPayeeEvidence?: DecideDeps["readPayeeEvidence"];
     operatorPolicy?: DecideDeps["operatorPolicy"];
+    /** ZK verifier/nullifier/roots override (tests). Defaults to env wiring. */
+    zk?: DecideDeps["zk"];
     /** Coordinator/D seam. Not invoked by previews, and never loaded implicitly.
      * The caller must authenticate consent and update privacy docs before opting in.
      */
@@ -55,6 +58,7 @@ export async function runGateDecision(
       evaluateIntent: opts?.evaluateIntent,
       readPayeeEvidence: opts?.readPayeeEvidence ?? readPayeeEvidence,
       operatorPolicy: opts?.operatorPolicy,
+      zk: intent.zkProof ? (opts?.zk ?? zkDepsFromEnv(env)) : undefined,
     });
     // No route supplies this opt-in. Recording failure cannot alter a decision.
     if (opts?.recorder?.authenticatedOptIn) {

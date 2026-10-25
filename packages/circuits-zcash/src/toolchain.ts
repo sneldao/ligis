@@ -7,13 +7,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  PUBLIC_INPUT_ORDER,
-  toProverToml,
-  type CircuitInputs,
-} from "./index.js";
+import { toProverToml, type CircuitInputs } from "./index.js";
+import { PUBLIC_INPUT_ORDER } from "./fields.js";
+import { PINNED_BB } from "./verify.js";
 
-const PINNED_BB = "5.0.0-nightly.20260522";
 const CIRCUIT_NAME = "ligis_credential_membership";
 
 export const CIRCUIT_DIR = join(
