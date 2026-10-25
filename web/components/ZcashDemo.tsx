@@ -49,7 +49,7 @@ const RECORDED_OLD_ROOT =
 const RECORDED_NULLIFIER =
   "0x2cdcb677ef248532e793c77c786db7b6778db55d504b6a25b6d9d1ea14df5739";
 const RECORDED_SHIELDED_TXID =
-  "7f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e";
+  "d2b389c8fd108561f3cdc45cfcb373e7474dbb8804368fcd560135f9cb443f90";
 
 function recordedRunFor(
   id: Exclude<StepId, "check">,
@@ -519,9 +519,9 @@ export function ZcashDemo({
             That&rsquo;s the whole story.
           </p>
           <p className="mt-2 max-w-xl font-serif text-base leading-relaxed text-ink-soft">
-            The agent paid a shielded payee only after a private proof, and
-            refused a replay and a revoked credential, without anyone learning
-            who the payee is.
+            The demo checks a private credential proof and tests replay and
+            revocation handling. It does not send a payment. Public demo secrets
+            are used throughout.
           </p>
           <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.16em]">
             <Link
@@ -593,18 +593,17 @@ function StepResult({
       <DecisionVerdict decision={decision} eyebrow="gate · decision" />
       {step === "prove" && decision.verdict === "GO" ? (
         <div className="border-l-2 border-ink pl-6">
-          <p className="eyebrow">shielded zec release · orchard / sapling</p>
+          <p className="eyebrow">authorization demo · no payment sent</p>
           <p className="mt-2 font-serif text-base leading-relaxed text-ink-soft">
-            With a <span className="text-ink">GO</span> decision and the
-            one-time nullifier claimed, the agent releases{" "}
-            <span className="text-ink">0.25 ZEC (25,000,000 zatoshis)</span>{" "}
-            into the Zcash shielded pool with a 512-byte encrypted{" "}
-            <code className="font-mono text-xs">LIGIS:v1:</code> memo. Sender,
-            recipient, and amount stay encrypted on-chain.
+            This step demonstrates a gate decision, not a wallet transfer. A
+            separate faucet-funded testnet receipt contains a{" "}
+            <code className="font-mono text-xs">LIGIS:v1:</code> memo and 1 TAZ
+            in an Ironwood note. It is not the payment described above and does
+            not authenticate the issuer named in its memo.
           </p>
           <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-[11px] text-ink-quiet">
             <dt>pool</dt>
-            <dd>Orchard / Sapling shielded note (25,000,000 zatoshis)</dd>
+            <dd>Separate Ironwood receipt · 1 TAZ · public fixture keys</dd>
             <dt>nullifier</dt>
             <dd className="tabular">
               {shortHash(
@@ -614,7 +613,8 @@ function StepResult({
             </dd>
             <dt>testnet ref</dt>
             <dd className="tabular">
-              {shortHash(`0x${RECORDED_SHIELDED_TXID}`)} (fixture note)
+              {shortHash(`0x${RECORDED_SHIELDED_TXID}`)} (block 4,540,356 ·
+              confirmed on testnet.zec.rocks)
             </dd>
           </dl>
         </div>

@@ -1,13 +1,18 @@
-# Ligis × Zcash Shielded Gate — Demo Last Run
-timestamp: 2026-10-25T04:06:03.342Z
-track: Shielded Payments ($15,000) + Grand Prize ($20,000)
+# Zcash Testnet live selective-disclosure read
+timestamp: 2026-10-25T17:25:12.556Z
 network: zcash-testnet
-payee: utest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8qp9x2m
-capability: agent.commerce.escrow
-amount: 0.25 ZEC (~$10 USD)
-nullifier: 0x112f1e21602ec6c11db209da3245e50b6ec4e541094ed96c82341fbb652e30f4
-txid: 9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e
-firstGateVerdict: GO
-replayGateVerdict: STOP
-nullifierSpent: true
-explorer: https://testnet.zcashexplorer.app/transactions/9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e
+lightwalletd: https://testnet.zec.rocks:443
+txid: d2b389c8fd108561f3cdc45cfcb373e7474dbb8804368fcd560135f9cb443f90
+reportedMinedHeight: 4540356
+chainTip: 4540938
+pool: ironwood
+disclosedAmountZat: 100000000
+disclosedAmountTAZ: 1
+memo: LIGIS:v1:{"capability":"agent.commerce.escrow","issuer":"0x9E6eC93200E185c11423eb3A5150449D49d3473A","issuedAt":"1761350400","expiresAt":"1824422400","nullifier":"0x1111111111111111111111111111111111111111111111111111111111111111"}
+inputActionNullifier: 0x6743c460f674cdb17cb8abd425fc9063b68dd75a709d8e3a8c46350980540a00
+issuerAuthenticated: false
+capabilityGrantedByMemo: false
+paymentBroadcastByThisRun: false
+chainInclusionTrust: lightwalletd (no independent SPV proof)
+keys: public deterministic test fixtures; no confidentiality from observers with these keys
+note: faucet-funded receipt, not a post-GO payment; memo issuer field is sender-controlled

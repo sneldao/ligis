@@ -1,6 +1,7 @@
 # Ligis — Zecathon entry: shielded ZEC, gated in private
 
-> **Status: Weeks 1–3 shipped (`packages/circuits-zcash`, `/api/gate`, `/zcash`).**
+> **Status: local ZK gate, opt-in WASM verifier, and live testnet note disclosure implemented. Post-GO wallet transfer and deployed WASM verification pending.**
+> See [current live status and security boundaries](zcash-live-status.md).
 > This doc is the tactical path and architecture for our Zecathon submission.
 > It does not change [`docs/positioning.md`](positioning.md) — the four signals
 > stay the four. Zcash shielded credential presentation is an additive channel
@@ -12,8 +13,9 @@
 ## The wedge, in one sentence
 
 **Shielded ZEC should not move until a private credential proof says it can.**
-Ligis gates Zcash shielded payments so the amount, the payee, and the
-credential itself never leak — before, during, or after the transfer.
+The prototype checks private credential presentations before a proposed payment.
+The gate knows the payment intent, including payee and amount. On-chain shielding
+does not hide those fields from the gate or from holders of a disclosed viewing key.
 
 ## What Zecathon is (and isn't)
 
@@ -164,12 +166,12 @@ In accordance with Zecathon rules (_"All code written during the build window. L
    - Proof pipeline: UltraHonk proving via Barretenberg (`bb`), committed verification key (`src/vk.ts`), and server-side verification (`src/verify.ts`).
    - Root builder (`src/registry.ts`): Poseidon tree generation from credential events, EIP-191 subject-to-identity-commitment registrations, and manifest signing.
    - On-chain anchor: steward-signed root manifest anchored on Monad Testnet at block `74058241` ([`0x91f64222...`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f)).
-2. **`packages/core/src/zcash.ts` (100% net-new):**
+2. **`packages/core/src/zcash.ts` and `zcash-lwd.ts` (build-window work):**
    - ZIP-316 Bech32m and F4Jumble decoder for Unified Addresses (`utest1...`) and Unified Incoming Viewing Keys (`uivktest1...`).
    - 512-byte `LIGIS:v1:` memo encoder/decoder for encrypted Zcash note memos.
    - Zero-dependency HTTP/2 gRPC lightclient connecting to `https://testnet.zec.rocks:443` (`CompactTxStreamer`).
    - In-band Orchard and Ironwood note trial decryption (`Pallas` point scalar multiplication + `BLAKE2b` KDF + `ChaCha20-Poly1305` AEAD).
-   - In-memory and KV nullifier replay store (`isSpent`, `markSpent`).
+   - Process-local replay bookkeeping; the web ZK gate has a separate KV store.
 3. **Web User Experience & Guided Demo (100% net-new):**
    - Guided 4-step privacy tour (`web/app/zcash/page.tsx` + `web/components/ZcashDemo.tsx`).
    - Gate API ZK proof evaluation (`web/lib/zk-verifier.ts`, `POST /api/gate` with `zkProof`, `GET /api/zk/root`).
@@ -206,7 +208,8 @@ In accordance with Zecathon rules (_"All code written during the build window. L
 - [x] Published registry root the gate can trust — `build-root` (CredentialRegistry events via read-only `eth_getLogs`, or fixture) → manifest; gate trusts `LIGIS_ZK_ROOT_MANIFEST` (root re-derived, staleness → `UNKNOWN`) or pinned roots; `GET /api/zk/root`; subject → identity-commitment mapping by EIP-191-signed registration
 - [x] Offline end-to-end ZK gate demo — `pnpm demo:zcash-zk` (`scripts/zcash-zk-demo.lastrun.txt`)
 - [x] On-chain root anchor & steward-signed root manifest — `signRootManifest()` + `checkManifest()` EIP-191 verification (`LIGIS_ZK_ROOT_SIGNER`), anchored on Monad Testnet at block `74058241` ([`0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f))
-- [x] Guided 4-step web demo (`/zcash`) + post-`GO` shielded ZEC release receipt (`pnpm demo:zcash-web`, `pnpm demo:zcash`)
+- [x] Guided 4-step credential demo (`/zcash`); recorded fallback is labelled
+- [ ] Wallet-controlled post-GO shielded transfer (the faucet receipt is separate)
 - [x] README: "how to run the gate" (`README.md` § Zecathon)
 - [x] Honest risks documented (latency, verifier availability, root freshness window, anonymity set, KV durability)
 - [x] Live Zcash testnet broadcast txid & confirmed on-chain note (`d2b389c8fd108561f3cdc45cfcb373e7474dbb8804368fcd560135f9cb443f90`, confirmed at block `4,540,356` on `testnet.zec.rocks:443`)

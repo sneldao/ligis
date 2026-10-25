@@ -50,7 +50,13 @@ decision service, exposed as a UI with measured verdict headers.
 
 ### Zecathon — Shielded Zcash Gate & Zero-Knowledge Credentials
 
-> **Zecathon 2026 Submission:** Shielded Payments ($15,000) · Grand Prize ($20,000) · Cross-Chain ($15,000)  
+Current implementation and limits: [Zcash live status](docs/zcash-live-status.md).
+Live note decryption works; the faucet receipt is not a post-GO payment.
+An opt-in UltraHonk WASM verifier passes local tests; deployment verification
+and a wallet executor remain pending.
+
+> Intended track: Shielded Payments. Grand Prize is an additional award.
+> Eligibility requires organizer confirmation because Ligis predates the build window.
 > **Build Window:** Sep 28 – Oct 28, 2026 · 23:59 UTC  
 > **Net-new Zcash code authored during the build window:** `packages/circuits-zcash/` (Noir UltraHonk circuit, Poseidon Merkle tree, verifier), `packages/core/src/zcash.ts` (ZIP-316 Bech32m/F4Jumble, lightwalletd client, Pallas ECDH note trial-decryption, 512B memo codec), and `web/app/zcash/` (guided 4-step privacy demo). Pre-existing EVM/Casper registries serve strictly as upstream libraries.
 

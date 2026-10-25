@@ -33,14 +33,14 @@ describe("Zcash shielded gate integration (Week 1)", () => {
     assert.equal(mismatch.suggestedChainId, "zcash-testnet");
   });
 
-  it("resolves verified, replayed-nullifier, and unverified shielded Zcash subjects", async () => {
+  it("does not grant credentials from built-in fixtures by default", async () => {
     const goRes = await resolveSubject(
       ZCASH_DEMO_VERIFIED_SUBJECT,
       "agent.commerce.escrow",
     );
     assert.equal(goRes.ok, true);
     if (goRes.ok) {
-      assert.equal(goRes.capable, true);
+      assert.equal(goRes.capable, false);
       assert.equal(goRes.primary.chain.id, "zcash-testnet");
       assert.equal(
         goRes.primary.outcome.ok && goRes.primary.outcome.revoked,
@@ -57,7 +57,7 @@ describe("Zcash shielded gate integration (Week 1)", () => {
       assert.equal(replayRes.capable, false);
       assert.equal(
         replayRes.primary.outcome.ok && replayRes.primary.outcome.revoked,
-        true,
+        false,
       );
     }
 
@@ -75,7 +75,7 @@ describe("Zcash shielded gate integration (Week 1)", () => {
     }
   });
 
-  it("evaluates the 4-signal gate decision (GO, replay STOP, unverified STOP) for shielded ZEC intents", async () => {
+  it("stops shielded intents without authenticated credentials in default mode", async () => {
     const baseMandate = {
       payees: [
         ZCASH_DEMO_VERIFIED_SUBJECT,
@@ -99,11 +99,11 @@ describe("Zcash shielded gate integration (Week 1)", () => {
     );
     assert.equal(goDecision.ok, true);
     if (goDecision.ok) {
-      assert.equal(goDecision.decision.verdict, "GO");
+      assert.equal(goDecision.decision.verdict, "STOP");
       const vp = goDecision.decision.signals.find(
         (s) => s.id === "verified-payee",
       );
-      assert.equal(vp?.status, "GO");
+      assert.equal(vp?.status, "STOP");
       if (vp?.id === "verified-payee") {
         assert.equal(vp.chain, "zcash-testnet");
       }
@@ -128,7 +128,7 @@ describe("Zcash shielded gate integration (Week 1)", () => {
       );
       assert.equal(vp?.status, "STOP");
       if (vp?.id === "verified-payee") {
-        assert.equal(vp.revoked, true);
+        assert.equal(vp.revoked, false);
       }
     }
   });

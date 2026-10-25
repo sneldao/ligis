@@ -27,6 +27,7 @@ import type {
   VerifyResult,
 } from "./adapter.js";
 import { formatDid } from "./did.js";
+import type { LiveAttestation, ZcashLightClient } from "./zcash-lwd.js";
 import { capabilityHash, isHexBytes32, parseCapability } from "./hash.js";
 import type {
   Bytes32,
@@ -307,15 +308,23 @@ export class InMemoryZcashNullifierStore implements ZcashNullifierStore {
 
 /** Verified shielded Zcash agent holding `agent.commerce.escrow` and `kyc.basic` via viewing-key disclosure. */
 export const ZCASH_DEMO_VERIFIED_SUBJECT =
-  "utest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8qp9x2m";
+  "utest1e35c2ayfrjk6zjzrqsl8nsrpnqfcxl6t0njmu4gmxw78379mqwth3szguwwteltya2my8t9795stpdpsxccxl00xhzea9wmtzx4rwj9ddavysydxpk300a67vsutjfqwjm36w4a4gama7kldyvu3r9929pcxkt5r3etrwfjpfvqryfgr";
+
+/** Unified Incoming Viewing Key for `ZCASH_DEMO_VERIFIED_SUBJECT` (decrypts `ZCASH_DEMO_CONFIRMED_TXID`). */
+export const ZCASH_DEMO_VERIFIED_UIVK =
+  "uivktest1eedd60g75nttawzcu0gqwkgqh7069qkeddf78kn5ymqaufls27jdrpklqrxtkvpn3d65quzr2e7h726ca0xjtzcmple2l4d58k2xv5y8j55a77tqdelca3h29vxext5ek7q9uc3u2yyr3snwa0lpegr0yjdpwtxt395td8r9wq3nupsdufynzh7c7c3jp757rlyyepg8rp9mkc684fjpextgr52zm5hmd5ap6d8v8a2uwyu4puk";
+
+/** Real shielded Zcash Testnet transaction carrying the encrypted `LIGIS:v1:` memo (confirmed at block 4,540,356). */
+export const ZCASH_DEMO_CONFIRMED_TXID =
+  "d2b389c8fd108561f3cdc45cfcb373e7474dbb8804368fcd560135f9cb443f90";
 
 /** Shielded Zcash presentation whose nullifier has already been spent (replay attack → STOP). */
 export const ZCASH_DEMO_REPLAYED_SUBJECT =
-  "utest1s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw08wk3r5n";
+  "utest1r0jlaacmqk25tgzzww76q9wmypek2dtsvpkvl9kg2l3uzje689vc4zcumtrr6udkj23nvw8zd8rwc8zacnujem3wtv6q4xdm9ffjpr7ecs5mnvsz7wrluwh7fcn525jch4mhhrqcespfsj2u0dqzftjzxvmjhnr85rrptczduv4wafxh";
 
 /** Unverified Zcash shielded wallet with no disclosure or proof (→ STOP). */
 export const ZCASH_DEMO_UNVERIFIED_SUBJECT =
-  "utest1ce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54kh9ac4v2x";
+  "utest1r0huypn2lfel0p4g70sfekgjepwnlr8amklf7qld5uzk8nxmaq3nqpf3ljxl8hym4zy7nm0p6cruadrdrqxsf6avpgkl4axam0zhm4l36ytqyseduag4lzww7r44y9hv9am6uvztl7542cxjnnh0fw300r0jmx2m2fsr9wa69qnmekje";
 
 export const ZCASH_DEMO_SPENT_NULLIFIER: Bytes32 =
   "0x9999999999999999999999999999999999999999999999999999999999999999";
@@ -333,34 +342,32 @@ const DEFAULT_DEMO_DISCLOSURES: readonly ZcashViewingKeyDisclosure[] = [
   {
     mode: "viewing-key",
     subject: ZCASH_DEMO_VERIFIED_SUBJECT,
-    viewingKey:
-      "uivktest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8k9m",
+    viewingKey: ZCASH_DEMO_VERIFIED_UIVK,
     capability: "agent.commerce.escrow",
     issuer: ZCASH_DEMO_STEWARD_ISSUER,
     issuedAt: "1761350400", // 2025-10-25T00:00:00Z
     expiresAt: "1824422400", // 2027-10-25T00:00:00Z
     nullifier: ZCASH_DEMO_VALID_NULLIFIER_ESCROW,
-    amountZatoshis: "25000000", // 0.25 ZEC
-    txid: "7f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e",
+    amountZatoshis: "100000000", // 1.0 TAZ (confirmed at block 4,540,356)
+    txid: ZCASH_DEMO_CONFIRMED_TXID,
   },
   {
     mode: "viewing-key",
     subject: ZCASH_DEMO_VERIFIED_SUBJECT,
-    viewingKey:
-      "uivktest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8k9m",
+    viewingKey: ZCASH_DEMO_VERIFIED_UIVK,
     capability: "kyc.basic",
     issuer: ZCASH_DEMO_STEWARD_ISSUER,
     issuedAt: "1761350400",
     expiresAt: "1824422400",
     nullifier: ZCASH_DEMO_VALID_NULLIFIER_KYC,
-    amountZatoshis: "25000000",
-    txid: "7f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e",
+    amountZatoshis: "100000000",
+    txid: ZCASH_DEMO_CONFIRMED_TXID,
   },
   {
     mode: "viewing-key",
     subject: ZCASH_DEMO_REPLAYED_SUBJECT,
     viewingKey:
-      "uivktest1s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw08r3p",
+      "uivktest1nrnn7y54s9qn3y5m7mg6x9ymu2xwwsj3yxcja8ew0jxz5frwqhvhkrm07af76prstkmxa09zt5gx4d5udgkn80cl543jfluq7ekw32mmvxs9vwqj3029vzcnmczgd9unf08ufsk2vl7yhwwmwrmwguzgks6vj88evmznrx440tptfcjp5pe4x7sqfg6aqhaqfk0f4mc2nfk0fl8u9wdvdqnf4m84nlrdxw84y4d9rnw7ykkx4n8",
     capability: "agent.commerce.escrow",
     issuer: ZCASH_DEMO_STEWARD_ISSUER,
     issuedAt: "1761350400",
@@ -373,7 +380,7 @@ const DEFAULT_DEMO_DISCLOSURES: readonly ZcashViewingKeyDisclosure[] = [
     mode: "viewing-key",
     subject: ZCASH_DEMO_REPLAYED_SUBJECT,
     viewingKey:
-      "uivktest1s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw08r3p",
+      "uivktest1nrnn7y54s9qn3y5m7mg6x9ymu2xwwsj3yxcja8ew0jxz5frwqhvhkrm07af76prstkmxa09zt5gx4d5udgkn80cl543jfluq7ekw32mmvxs9vwqj3029vzcnmczgd9unf08ufsk2vl7yhwwmwrmwguzgks6vj88evmznrx440tptfcjp5pe4x7sqfg6aqhaqfk0f4mc2nfk0fl8u9wdvdqnf4m84nlrdxw84y4d9rnw7ykkx4n8",
     capability: "kyc.basic",
     issuer: ZCASH_DEMO_STEWARD_ISSUER,
     issuedAt: "1761350400",
@@ -390,6 +397,8 @@ export interface ZcashChainAdapterOptions {
   network?: "zcash-testnet" | "zcash-mainnet";
   rpcUrl?: string;
   rpcTransport?: ZcashRpcTransport;
+  /** Light client for live reads (default: lightwalletd at `LIGIS_ZCASH_LWD_URL` when set). */
+  lightClient?: ZcashLightClient;
   nullifierStore?: ZcashNullifierStore;
   /** Pluggable Week 2 ZK proof verifier; defaults to structural + non-empty proof check. */
   verifyZkProof?: (presentation: ZcashZkPresentation) => Promise<boolean>;
@@ -405,6 +414,7 @@ export class ZcashChainAdapter implements ChainAdapter {
   readonly explorerUrl: string;
 
   private readonly rpc?: ZcashRpcTransport;
+  private readonly lwd?: ZcashLightClient;
   private readonly nullifiers: ZcashNullifierStore;
   private readonly presentations = new Map<string, ZcashPresentation>();
   private readonly verifyZk?: (
@@ -432,6 +442,8 @@ export class ZcashChainAdapter implements ChainAdapter {
             rpcPassword: process.env.LIGIS_ZCASH_RPC_PASSWORD,
           })
         : undefined);
+
+    this.lwd = opts.lightClient;
 
     this.nullifiers =
       opts.nullifierStore ??
@@ -464,6 +476,59 @@ export class ZcashChainAdapter implements ChainAdapter {
       this.presentationKey(presentation.subject, capHash),
       presentation,
     );
+  }
+
+  /** Latest block height from the configured light client, or null. */
+  async latestHeight(): Promise<number | null> {
+    return this.lwd ? this.lwd.getLatestHeight() : null;
+  }
+
+  /**
+   * Fetch and decrypt a Zcash note with a disclosed viewing key.
+   * Returns an untrusted memo claim without registering a credential.
+   * Issuer authentication must be performed separately before authorization.
+   * The light server supplies inclusion height; this is not an SPV proof.
+   */
+  async readLiveAttestation(opts: {
+    subject: string;
+    viewingKey: string;
+    txid: string;
+  }): Promise<LiveAttestation & { presentation: ZcashViewingKeyDisclosure }> {
+    if (!this.lwd) {
+      throw new Error(
+        "no Zcash light client configured (set LIGIS_ZCASH_LWD_URL or pass lightClient)",
+      );
+    }
+    if (!isZcashViewingKey(opts.viewingKey)) {
+      throw new Error("invalid Zcash unified incoming viewing key");
+    }
+    const { readNotesForAddress } = await import("./zcash-lwd.js");
+    const notes = await readNotesForAddress({
+      client: this.lwd,
+      txid: opts.txid,
+      ua: opts.subject.trim(),
+      uivk: opts.viewingKey.trim(),
+    });
+    for (const n of notes) {
+      const memo = parseZcashMemoAttestation(n.memo);
+      if (!memo) continue;
+      const presentation: ZcashViewingKeyDisclosure = {
+        mode: "viewing-key",
+        subject: opts.subject.trim(),
+        viewingKey: opts.viewingKey.trim(),
+        capability: memo.capability,
+        issuer: memo.issuer,
+        issuedAt: memo.issuedAt,
+        expiresAt: memo.expiresAt,
+        nullifier: memo.nullifier,
+        amountZatoshis: n.valueZat.toString(),
+        txid: n.txid,
+      };
+      // Memo fields are sender-controlled claims, not issuer authentication.
+      // Reading a note must never grant a capability.
+      return { ...n, presentation };
+    }
+    throw new Error("no note addressed to subject carries a LIGIS:v1 memo");
   }
 
   /**

@@ -113,21 +113,21 @@ const SAMPLES: Record<
     {
       label: "shielded payee",
       subject:
-        "utest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8qp9x2m",
+        "utest1e35c2ayfrjk6zjzrqsl8nsrpnqfcxl6t0njmu4gmxw78379mqwth3szguwwteltya2my8t9795stpdpsxccxl00xhzea9wmtzx4rwj9ddavysydxpk300a67vsutjfqwjm36w4a4gama7kldyvu3r9929pcxkt5r3etrwfjpfvqryfgr",
       capability: "agent.commerce.escrow",
       expect: "go",
     },
     {
       label: "replayed nullifier",
       subject:
-        "utest1s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw08wk3r5n",
+        "utest1r0jlaacmqk25tgzzww76q9wmypek2dtsvpkvl9kg2l3uzje689vc4zcumtrr6udkj23nvw8zd8rwc8zacnujem3wtv6q4xdm9ffjpr7ecs5mnvsz7wrluwh7fcn525jch4mhhrqcespfsj2u0dqzftjzxvmjhnr85rrptczduv4wafxh",
       capability: "agent.commerce.escrow",
       expect: "revoked",
     },
     {
       label: "unverified shielded",
       subject:
-        "utest1ce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54kh9ac4v2x",
+        "utest1r0huypn2lfel0p4g70sfekgjepwnlr8amklf7qld5uzk8nxmaq3nqpf3ljxl8hym4zy7nm0p6cruadrdrqxsf6avpgkl4axam0zhm4l36ytqyseduag4lzww7r44y9hv9am6uvztl7542cxjnnh0fw300r0jmx2m2fsr9wa69qnmekje",
       capability: "kyc.basic",
       expect: "none",
     },

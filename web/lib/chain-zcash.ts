@@ -9,12 +9,19 @@ import {
   type IssuanceLog,
 } from "./chain";
 import type { Hex } from "./chain-casper";
+import { LightwalletdClient } from "@ligis/core/zcash-lwd";
 
 let _adapter: ZcashChainAdapter | null = null;
 
 function adapter(): ZcashChainAdapter {
   if (!_adapter) {
-    _adapter = new ZcashChainAdapter({ network: "zcash-testnet" });
+    const lwdUrl =
+      process.env.LIGIS_ZCASH_LWD_URL ?? "https://testnet.zec.rocks:443";
+    _adapter = new ZcashChainAdapter({
+      network: "zcash-testnet",
+      includeDemoFixtures: process.env.LIGIS_ZCASH_DEMO_FIXTURES === "1",
+      lightClient: new LightwalletdClient(lwdUrl, 3_000),
+    });
   }
   return _adapter;
 }
@@ -29,7 +36,12 @@ export async function readAgentId(): Promise<bigint> {
 }
 
 export async function readBlockNumber(): Promise<bigint> {
-  return 0n;
+  try {
+    const height = await adapter().latestHeight();
+    return height && height > 0 ? BigInt(height) : 0n;
+  } catch {
+    return 0n;
+  }
 }
 
 export async function readTotalSupply(): Promise<bigint> {

@@ -97,6 +97,10 @@ export async function verifyMembershipProof(
   pub: MembershipPublicInputs,
   opts: { env?: Record<string, string | undefined>; timeoutMs?: number } = {},
 ): Promise<VerifyOutcome> {
+  if ((opts.env ?? process.env).LIGIS_ZK_VERIFIER === "wasm") {
+    const { verifyMembershipProofWasm } = await import("./verify-wasm.js");
+    return verifyMembershipProofWasm(proof, pub);
+  }
   const bb = await resolveBb(opts.env);
   if (!bb.ok) return { status: "unavailable", detail: bb.reason };
   const verifier = `bb ${bb.version} ultra_honk`;

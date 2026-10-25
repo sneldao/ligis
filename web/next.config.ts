@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd(), ".."),
+  serverExternalPackages: ["@aztec/bb.js"],
   // Security + caching headers
   async headers() {
     return [
@@ -17,16 +18,17 @@ const nextConfig: NextConfig = {
       {
         // Embed widget can be framed anywhere
         source: "/embed/:path*",
-        headers: [
-          { key: "X-Frame-Options", value: "ALLOWALL" },
-        ],
+        headers: [{ key: "X-Frame-Options", value: "ALLOWALL" }],
       },
       {
         // Static assets are immutable — they're content-hashed.
         // Long cache reduces repeat-visit load time.
         source: "/_next/static/:path*",
         headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
         ],
       },
     ];
