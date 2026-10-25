@@ -1,0 +1,147 @@
+mode: fixture
+ran_at: 2026-10-25T15:38:29.516Z
+beneficiary: ben-demo-a
+transfers: f403f0b5-5634-4fd1-9fe7-9aec35fe4a09, 386a37c2-9a38-4a8a-abe9-813d5883c73c, 5809a2b9-36b4-480e-af3f-080177c0147e, fc384f59-1e0b-4385-a247-5a4dad14e3d0
+invariant_failures: 0
+
+=== transcript ===
+Ligis procurement controller demo — mode: fixture
+
+=== Scenario A: The supplier that changed its terms ===
+
+  Invoice INV-A1: $650 against a $500 PO (10% tolerance)
+  Proposed action : pay Supplier A $650
+  Evidence checked:
+    [pass   ] order: purchase order PO-A found (supplier Supplier A)
+    [pass   ] expiry: purchase order valid until 2099-01-01T00:00:00Z
+    [pass   ] currency: currency USD matches order
+    [pass   ] supplier-destination: payout destination matches the approved supplier (verified at rail)
+    [skipped] supplier-identity: order does not require verified supplier identity
+    [skipped] approval: no valid approval bound to this request
+    [review ] price: amount 650 exceeds authorized 500 + 10% tolerance (550); requires human approval
+    [pass   ] duplicate-invoice: invoice INV-A1 has not been paid
+    [pass   ] prior-attempt: no prior attempts for this invoice
+    [pass   ] order-cumulative: cumulative 0 + 650 within order limit 550
+    [pass   ] mandate: mandate mand-proc covers amount (5000 available)
+  Decision        : REVIEW — amount 650 exceeds authorized 500 + 10% tolerance (550); requires human approval
+  Sandbox outcome : no Airwallex call made
+
+  Invoice INV-A2: $500 to a CHANGED payout destination
+  Proposed action : pay Supplier A $500
+  Evidence checked:
+    [pass   ] order: purchase order PO-A found (supplier Supplier A)
+    [pass   ] expiry: purchase order valid until 2099-01-01T00:00:00Z
+    [pass   ] currency: currency USD matches order
+    [fail   ] supplier-destination: payout destination changed since approval; supplier must be re-approved
+    [skipped] supplier-identity: order does not require verified supplier identity
+    [pass   ] price: amount 500 within authorized 500
+    [skipped] approval: no approval required
+    [pass   ] duplicate-invoice: invoice INV-A2 has not been paid
+    [pass   ] prior-attempt: no prior attempts for this invoice
+    [pass   ] order-cumulative: cumulative 0 + 500 within order limit 550
+    [pass   ] mandate: mandate mand-proc covers amount (5000 available)
+  Decision        : STOP — payout destination changed since approval; supplier must be re-approved
+  Sandbox outcome : no Airwallex call made
+  Meanwhile, the beneficiary record at the rail is edited (same id, new bank details)…
+
+  Invoice INV-A3: correct request, but the rail-side beneficiary was tampered
+  Proposed action : pay Supplier A $500
+  Evidence checked:
+    [pass   ] order: purchase order PO-A found (supplier Supplier A)
+    [pass   ] expiry: purchase order valid until 2099-01-01T00:00:00Z
+    [pass   ] currency: currency USD matches order
+    [fail   ] supplier-destination: beneficiary record at the payout rail no longer matches the approved destination; supplier must be re-approved
+    [skipped] supplier-identity: order does not require verified supplier identity
+    [pass   ] price: amount 500 within authorized 500
+    [skipped] approval: no approval required
+    [pass   ] duplicate-invoice: invoice INV-A3 has not been paid
+    [pass   ] prior-attempt: no prior attempts for this invoice
+    [pass   ] order-cumulative: cumulative 0 + 500 within order limit 550
+    [pass   ] mandate: mandate mand-proc covers amount (5000 available)
+  Decision        : STOP — beneficiary record at the payout rail no longer matches the approved destination; supplier must be re-approved
+  Sandbox outcome : no Airwallex call made
+  Supplier re-verified; beneficiary record restored.
+  Finance approves the $650 invoice…
+
+  Resubmitted INV-A1 with approval bound to $650
+  Proposed action : pay Supplier A $650
+  Evidence checked:
+    [pass   ] order: purchase order PO-A found (supplier Supplier A)
+    [pass   ] expiry: purchase order valid until 2099-01-01T00:00:00Z
+    [pass   ] currency: currency USD matches order
+    [pass   ] supplier-destination: payout destination matches the approved supplier (verified at rail)
+    [skipped] supplier-identity: order does not require verified supplier identity
+    [pass   ] approval: amount covered by approval b9acd636-9d73-4654-bdad-a6de707ffad8 from cfo@acme
+    [pass   ] price: amount 650 above tolerance but within approved amount 650
+    [pass   ] duplicate-invoice: invoice INV-A1 has not been paid
+    [pass   ] prior-attempt: no prior attempts for this invoice
+    [pass   ] order-cumulative: cumulative 0 + 650 within order limit 650
+    [pass   ] mandate: mandate mand-proc covers amount (5000 available)
+  Decision        : GO — all checks passed
+  Sandbox outcome : transfer f403f0b5-5634-4fd1-9fe7-9aec35fe4a09 → PAID
+
+=== Scenario B: The ambiguous transfer ===
+  create timed out client-side — attempt cc31c12d-b5cf-4f7c-9314-a1758583e066 is UNKNOWN
+
+  Agent retries the same invoice before reconciling
+  Proposed action : pay Supplier A $300 (retry)
+  Evidence checked:
+    [pass   ] order: purchase order PO-B found (supplier Supplier A)
+    [pass   ] expiry: purchase order valid until 2099-01-01T00:00:00Z
+    [pass   ] currency: currency USD matches order
+    [pass   ] supplier-destination: payout destination matches the approved supplier (verified at rail)
+    [skipped] supplier-identity: order does not require verified supplier identity
+    [pass   ] price: amount 300 within authorized 300
+    [skipped] approval: no approval required
+    [pass   ] duplicate-invoice: invoice INV-B1 has not been paid
+    [fail   ] prior-attempt: prior attempt unresolved; reconcile before retrying
+    [pass   ] order-cumulative: cumulative 0 + 300 within order limit 330
+    [pass   ] mandate: mandate mand-proc covers amount (4050 available)
+  Decision        : STOP — prior attempt unresolved; reconcile before retrying
+  Sandbox outcome : no Airwallex call made
+
+  Retry after the original transfer failed
+  Proposed action : pay Supplier A $300 (replacement)
+  Evidence checked:
+    [pass   ] order: purchase order PO-B found (supplier Supplier A)
+    [pass   ] expiry: purchase order valid until 2099-01-01T00:00:00Z
+    [pass   ] currency: currency USD matches order
+    [pass   ] supplier-destination: payout destination matches the approved supplier (verified at rail)
+    [skipped] supplier-identity: order does not require verified supplier identity
+    [pass   ] price: amount 300 within authorized 300
+    [skipped] approval: no approval required
+    [pass   ] duplicate-invoice: invoice INV-B1 has not been paid
+    [pass   ] prior-attempt: prior attempt cc31c12d-b5cf-4f7c-9314-a1758583e066 ended CANCELLED; this payment replaces it
+    [pass   ] order-cumulative: cumulative 0 + 300 within order limit 330
+    [pass   ] mandate: mandate mand-proc covers amount (4350 available)
+  Decision        : GO — all checks passed
+  Sandbox outcome : transfer 5809a2b9-36b4-480e-af3f-080177c0147e (request_id 559c4a41-38fc-4c49-9099-f255a239b20b); replaces attempt cc31c12d-b5cf-4f7c-9314-a1758583e066
+  Incident record:
+    attempt cc31c12d-b5cf-4f7c-9314-a1758583e066: state=CANCELLED failure_type=INVALID_ACCOUNT_NAME_OR_NUMBER
+    attempt dcf02de0-0874-4669-8275-737302acd84b: state=PAID replaces=cc31c12d-b5cf-4f7c-9314-a1758583e066
+
+=== Scenario C: The constrained treasury ===
+  Airwallex USD balance: 2050.00; reserve floor: 500.00
+  FUND   obl-crit $1000: critical obligation due 2026-10-27 fits available balance (550.00 remaining after)
+  REVIEW obl-norm $700: normal obligation does not fit available balance (550.00 left); needs human review
+  DEFER  obl-def $600: deferrable obligation does not fit available balance (550.00 of 1550.00 left)
+
+  Funded obligation obl-crit (PO-C1)
+  Proposed action : pay $1000
+  Evidence checked:
+    [pass   ] order: purchase order PO-C1 found (supplier Supplier A)
+    [pass   ] expiry: purchase order valid until 2099-01-01T00:00:00Z
+    [pass   ] currency: currency USD matches order
+    [pass   ] supplier-destination: payout destination matches the approved supplier (verified at rail)
+    [skipped] supplier-identity: order does not require verified supplier identity
+    [pass   ] price: amount 1000 within authorized 1200
+    [skipped] approval: no approval required
+    [pass   ] duplicate-invoice: invoice INV-obl-crit has not been paid
+    [pass   ] prior-attempt: no prior attempts for this invoice
+    [pass   ] order-cumulative: cumulative 0 + 1000 within order limit 1320
+    [pass   ] mandate: mandate mand-proc covers amount (4050 available)
+  Decision        : GO — all checks passed
+  Sandbox outcome : transfer fc384f59-1e0b-4385-a247-5a4dad14e3d0 → IN_FLIGHT
+  Transfer fc384f59-1e0b-4385-a247-5a4dad14e3d0 settled → PAID
+
+Transfers created: 4

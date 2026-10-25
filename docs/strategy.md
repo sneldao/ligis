@@ -157,7 +157,38 @@ and any other agent marketplace.
 
 ## Competitive landscape
 
-### Direct competitors
+### Agent spend controls (adjacent — the table stakes we build on)
+
+These products already sell the basic "agent spend firewall" proposition.
+Per-agent limits, recipient rules, approvals, signed mandates and audit
+trails are **not** Ligis differentiators. Descriptions are from each
+vendor's public docs, read 2026-10-25.
+
+| Product                      | What their public material describes                                                                                                                                                                       | Where Ligis aims to differ (to validate)                                                                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Conto**                    | Policy engine per agent: spend limits, time windows, recipient allow/block lists and trust scores, approval workflows with quorum/escalation, managed or agent-held wallets, x402/MPP rules, audit record. | Policies evaluate a payment request against rules. Ligis evaluates it against the purchase order and that invoice's prior attempts and settlement state. |
+| **Rigid**                    | Agent-bound virtual cards under signed, revocable mandates (merchant lock, MCC/country, per-txn cap, budget, validity), enforced on the card authorization path; AP2-style grammar.                        | Card-authorization scope. Ligis targets bank payouts to suppliers (changed destination, duplicate invoice, ambiguous retry), not card authorizations.    |
+| **Airwallex** (rail/partner) | Agentic banking APIs (AgentOS, MCP, CLI), card spend controls, payouts with `request_id` idempotency.                                                                                                      | Ligis is not a rail. It runs on Airwallex and holds the payout credentials so its verdict is enforced on the transfer call.                              |
+
+**Open validation question:** how deeply do Conto, Rigid and Airwallex
+support order-to-payment evidence (order/invoice matching, payout-destination
+change detection, retry reconciliation)? Until that is checked with their
+products, not just their docs, the difference is a hypothesis.
+
+### Validation plan (before claiming a business model)
+
+1. **Problem frequency.** Ask 10 finance/AP operators and 5 agent-platform
+   builders how often they see duplicate payments, changed supplier bank
+   details, and out-of-mandate agent purchases, and what each costs.
+2. **Willingness to pay.** Would they pay for a separate authorization
+   layer, or do they expect Airwallex or their ERP to provide it? Test the
+   per-controlled-payment hypothesis in `docs/positioning.md`.
+3. **Integration value.** Can the same controller sit in front of more
+   than one rail (Airwallex first, then stablecoin/x402 payouts) and more
+   than one agent runtime? If it only works for one Airwallex workflow, it
+   is a feature, not a product.
+
+### Credential / reputation competitors
 
 | Project                   | Model                                                                  | Gap vs Ligis                                                                                                         |
 | ------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |

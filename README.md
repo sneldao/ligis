@@ -1,13 +1,22 @@
 # Ligis
 
-> **A spend firewall for AI agents: every payment is checked against the job before money moves.**
-> **Right payee, right amount, in scope, plus a verified-payee credential read.**
-> **Live on Pharos + Casper + Monad. No client SDK, no tracking, fail-open intent layer.**
+> **Evidence-based payment control for autonomous finance.**
+> **Ligis makes sure finance agents pay for what the business actually authorized, not simply what an agent requests.**
+> **Order-bound checks (supplier destination, price tolerance, duplicate invoice, unresolved retry, mandate) enforced on the Airwallex payout path.**
+> **Airwallex hackathon:** see [`docs/airwallex-submission.md`](docs/airwallex-submission.md).
+> **Also live:** the stateless pre-payment gate on Pharos + Casper + Monad (right payee, right amount, in scope, verified payee).
 > **PayBox Ch.1:** see [`docs/paybox-ch1.md`](docs/paybox-ch1.md) — money-with-a-conscience vision.
 
 [![CI](https://github.com/sneldao/ligis/actions/workflows/ci.yml/badge.svg)](https://github.com/sneldao/ligis/actions/workflows/ci.yml)
 
-**The wedge.** A single API call — `POST /api/gate` — returns `GO` or
+**The product.** A business records what it agreed to buy. Its agent asks
+Ligis to pay against that order, and `packages/procurement` checks the
+request against the order and its payment history, returning `GO`, `STOP`
+or `REVIEW`. Ligis's executor holds the Airwallex credentials and calls
+`transfers/create` only on `GO`. Each decision is linked to its transfer
+and final settlement state. Run it: `pnpm demo:airwallex`.
+
+**The stateless gate.** A single API call — `POST /api/gate` — returns `GO` or
 `STOP` before your agent's wallet pays a stranger. Decisions are built
 from four signals — right payee, right amount, in scope, verified payee —
 evaluated concurrently, with the chain-agnostic credential read as one
@@ -41,6 +50,10 @@ decision service, exposed as a UI with measured verdict headers.
 
 ### Zecathon — Shielded Zcash Gate & Zero-Knowledge Credentials
 
+> **Zecathon 2026 Submission:** Shielded Payments ($15,000) · Grand Prize ($20,000) · Cross-Chain ($15,000)  
+> **Build Window:** Sep 28 – Oct 28, 2026 · 23:59 UTC  
+> **Net-new Zcash code authored during the build window:** `packages/circuits-zcash/` (Noir UltraHonk circuit, Poseidon Merkle tree, verifier), `packages/core/src/zcash.ts` (ZIP-316 Bech32m/F4Jumble, lightwalletd client, Pallas ECDH note trial-decryption, 512B memo codec), and `web/app/zcash/` (guided 4-step privacy demo). Pre-existing EVM/Casper registries serve strictly as upstream libraries.
+
 Before an agent releases shielded ZEC to a `utest1…` / `u1…` address, the payee proves in zero knowledge (Noir + Barretenberg UltraHonk, depth-16 Poseidon Merkle tree) that it holds an unexpired, unrevoked Ligis credential bound to its own Zcash address inside a steward-signed, on-chain-anchored `CredentialRegistry` root — without revealing its EVM/Casper wallet, which issuer vouched for it, or which leaf it owns.
 
 ```bash
@@ -50,11 +63,11 @@ pnpm demo:zcash-web          # open http://localhost:3000/zcash (or visit https:
 # 2. One-command CLI ZK gate demo (publish root → prove → GO → replay/redirect/revoke STOP)
 pnpm demo:zcash-zk           # writes scripts/zcash-zk-demo.lastrun.txt
 
-# 3. Week 1 viewing-key selective disclosure & 512-byte encrypted memo demo
+# 3. Viewing-key selective disclosure & live Zcash Testnet memo decryption demo
 pnpm demo:zcash              # writes scripts/zcash-shielded-demo.lastrun.txt
 ```
 
-See [`docs/zecathon-entry.md`](docs/zecathon-entry.md) for the circuit spec, Monad root-anchor transaction (`0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f`, block `74058241`), and honest risks.
+See [`docs/zecathon-entry.md`](docs/zecathon-entry.md) for the circuit spec, Monad root-anchor transaction ([`0x91f64222...`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f), block `74058241`), live Zcash Testnet transaction ([`d2b389c8...`](https://fauzec.com/api/v1/status/testnet/01M5SKS8EGMJ3MK633ED1ZJ02P), block `4,540,356`), and honest risks.
 
 ## What this is
 

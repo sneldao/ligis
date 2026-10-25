@@ -56,7 +56,8 @@
     "clean": "pnpm -r run clean && rm -rf out cache broadcast",
     "prepare": "husky",
     "format:web": "prettier --write 'web/**/*.{ts,tsx,css}'",
-    "demo:monad-x402": "tsx scripts/monad-x402-demo.ts"
+    "demo:monad-x402": "tsx scripts/monad-x402-demo.ts",
+    "demo:airwallex": "tsx scripts/airwallex-procurement-demo.ts"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,yml,yaml,css}": "prettier --write"

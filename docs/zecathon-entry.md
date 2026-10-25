@@ -147,11 +147,36 @@ matters**, **(c) demoable in minutes.** This is all three:
   not a port
 - The demo is a 90-second payment flow: gate → proof → shielded transfer
 
-## Timing (no conflict)
+## Timing & Hackathon Eligibility (Option B Provenance)
 
-Zecathon: Oct 25 → ~Nov 24 (30 days). Midnight Buildathon Wave 3 starts Oct 27,
-but Latep owns Midnight and Ligis has no Midnight commitment, so Ligis is free
-to run this entry without conflict.
+- **Registration opens:** Sep 28, 2026
+- **Submissions open:** Sep 28, 2026
+- **Submissions due:** **Oct 28, 2026 · 23:59 UTC**
+- **Judging window:** Oct 29 – Nov 22, 2026
+- **Winners announced:** Nov 23, 2026
+
+### Built During the Build Window (Sep 28 – Oct 28, 2026)
+
+In accordance with Zecathon rules (_"All code written during the build window. Libraries are fine; existing products are not"_), our submission uses Ligis's existing multi-chain core and EVM registries strictly as upstream libraries/oracles, with **all Zcash-native and zero-knowledge presentation code authored from scratch during the hackathon**:
+
+1. **`packages/circuits-zcash/` (100% net-new):**
+   - Noir circuit (`circuit/src/main.nr`): payee-bound credential proof, depth-16 Poseidon Merkle membership, and single-use context nullifier.
+   - Proof pipeline: UltraHonk proving via Barretenberg (`bb`), committed verification key (`src/vk.ts`), and server-side verification (`src/verify.ts`).
+   - Root builder (`src/registry.ts`): Poseidon tree generation from credential events, EIP-191 subject-to-identity-commitment registrations, and manifest signing.
+   - On-chain anchor: steward-signed root manifest anchored on Monad Testnet at block `74058241` ([`0x91f64222...`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f)).
+2. **`packages/core/src/zcash.ts` (100% net-new):**
+   - ZIP-316 Bech32m and F4Jumble decoder for Unified Addresses (`utest1...`) and Unified Incoming Viewing Keys (`uivktest1...`).
+   - 512-byte `LIGIS:v1:` memo encoder/decoder for encrypted Zcash note memos.
+   - Zero-dependency HTTP/2 gRPC lightclient connecting to `https://testnet.zec.rocks:443` (`CompactTxStreamer`).
+   - In-band Orchard and Ironwood note trial decryption (`Pallas` point scalar multiplication + `BLAKE2b` KDF + `ChaCha20-Poly1305` AEAD).
+   - In-memory and KV nullifier replay store (`isSpent`, `markSpent`).
+3. **Web User Experience & Guided Demo (100% net-new):**
+   - Guided 4-step privacy tour (`web/app/zcash/page.tsx` + `web/components/ZcashDemo.tsx`).
+   - Gate API ZK proof evaluation (`web/lib/zk-verifier.ts`, `POST /api/gate` with `zkProof`, `GET /api/zk/root`).
+   - Zcash shielded address routing and asset denomination in `PaymentIntent`.
+4. **Live Zcash Testnet Proofs:**
+   - Real testnet shielded transaction broadcast carrying the 512-byte `LIGIS:v1:` attestation memo: [`d2b389c8fd108561f3cdc45cfcb373e7474dbb8804368fcd560135f9cb443f90`](https://fauzec.com/api/v1/status/testnet/01M5SKS8EGMJ3MK633ED1ZJ02P), confirmed at block height `4,540,356`.
+   - On-chain action nullifier: `0x6743c460f674cdb17cb8abd425fc9063b68dd75a709d8e3a8c46350980540a00`.
 
 ## Honest risks & operational trade-offs
 
@@ -184,9 +209,9 @@ to run this entry without conflict.
 - [x] Guided 4-step web demo (`/zcash`) + post-`GO` shielded ZEC release receipt (`pnpm demo:zcash-web`, `pnpm demo:zcash`)
 - [x] README: "how to run the gate" (`README.md` § Zecathon)
 - [x] Honest risks documented (latency, verifier availability, root freshness window, anonymity set, KV durability)
+- [x] Live Zcash testnet broadcast txid & confirmed on-chain note (`d2b389c8fd108561f3cdc45cfcb373e7474dbb8804368fcd560135f9cb443f90`, confirmed at block `4,540,356` on `testnet.zec.rocks:443`)
 - [ ] Demo video (2 min max)
-- [ ] Live `zcashd` / `zingo-cli` testnet broadcast txid (currently uses deterministic 512-byte `LIGIS:v1:` shielded note fixture)
-- [ ] Submit before Zecathon closes (~Nov 24)
+- [ ] Submit before Zecathon closes (Oct 28, 2026 · 23:59 UTC)
 
 ## Cross-references
 

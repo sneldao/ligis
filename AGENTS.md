@@ -942,3 +942,48 @@ LIGIS_WALLET_POLICY_FILE=./policy.json mm ligis assess --chain-id 10143 \
 
 `mm ligis pay` additionally needs `mm login` (MetaMask account auth) — not
 yet exercised end-to-end.
+
+### Airwallex procurement controller (`@ligis/procurement`)
+
+PO-justified payouts over the Airwallex transfers rail. Ligis's executor is the
+only thing holding Airwallex credentials — a STOP means the transfer API call
+is never made. Checks whether a payment is still justified by the ORIGINAL
+purchase order (supplier destination fingerprint, price tolerance, prior
+attempts, mandate), not just whether the agent has budget.
+
+```bash
+node --import tsx --test packages/procurement/test/*.test.ts   # tests
+pnpm --filter @ligis/procurement build                          # build
+pnpm demo:airwallex                                             # fixture demo
+# live sandbox: put AWX_CLIENT_ID + AWX_API_KEY (+ optional AWX_BENEFICIARY_ID)
+# in .env.d/airwallex.env (see .env.d/airwallex.env.example)
+```
+
+Key invariants (asserted by the demo; exit non-zero on violation):
+
+- STOP/REVIEW ⇒ zero new transfers; the rail is never touched.
+- Never two PAID attempts for one invoice.
+- Timeouts → attempt UNKNOWN, no auto-retry; reconcile by `request_id` first.
+- Retries of a failed transfer use a NEW `request_id` and set `replaces`.
+- Approvals bind exactly (orderId + invoiceRef + amount + fingerprint), single-use.
+- Changed payout destination = hard STOP, never approvable. The check covers
+  the request's fingerprint/beneficiary_id AND the live rail record —
+  `getBeneficiaryFingerprint(id)` re-reads the beneficiary's bank_details;
+  drift or lookup failure fails closed (STOP), never approvable.
+- Ambiguous create errors → UNKNOWN (timeouts, 429, 5xx, network); only a
+  definite 4xx rejection (400/401/403/404/422) marks the attempt CANCELLED as
+  "rejected by rail: <code>". UNKNOWN never auto-retries.
+
+Airwallex gotchas (confirmed against https://www.airwallex.com/docs):
+
+- `transfers/create` requires `reason`, `reference`, `request_id`,
+  `transfer_currency`; `transfer_amount` is a STRING; `beneficiary_id` is a
+  top-level field; `transfer_method` LOCAL|SWIFT. No `payment_currency`.
+- `GET /transfers?request_id=` is a supported server-side filter — reconcile
+  ambiguous creates with it instead of listing everything.
+- Failed transfers end `CANCELLED` (never `FAILED`) with
+  `failure_type`/`failure_reason`.
+- Sandbox simulation: `POST /api/v1/simulation/transfers/{id}/transition` body
+  `{ next_status: SENT|PAID|FAILED|..., failure_type? }`.
+- Auth: `POST /authentication/login` with `x-client-id`/`x-api-key` headers,
+  no body → 30-min bearer. Rate limit 10 req/s per endpoint.
