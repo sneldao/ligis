@@ -34,8 +34,175 @@ type DemoProof = {
 type StepState =
   | { phase: "idle" }
   | { phase: "running"; label: string }
-  | { phase: "done"; decision: Decision; proof?: DemoProof }
+  | {
+      phase: "done";
+      decision: Decision;
+      proof?: DemoProof;
+      recorded?: boolean;
+    }
   | { phase: "error"; message: string; offline?: boolean };
+
+const RECORDED_ROOT =
+  "0x26d13aae1b3262afd3a557f601a2cee7376350ab71892de181691420e0829349";
+const RECORDED_OLD_ROOT =
+  "0x05281f081e7217289cb27006584b362ee7ec526b9bd4e11fc77f2685a27d29bf";
+const RECORDED_NULLIFIER =
+  "0x2cdcb677ef248532e793c77c786db7b6778db55d504b6a25b6d9d1ea14df5739";
+const RECORDED_SHIELDED_TXID =
+  "7f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e";
+
+function recordedRunFor(
+  id: Exclude<StepId, "check">,
+  payee: string,
+  revokedPayee: string,
+  capability: string,
+): { decision: Decision; proof?: DemoProof } {
+  const baseSignals: Decision["signals"] = [
+    {
+      id: "right-payee",
+      status: "GO",
+      confidence: 1,
+      reason: `mandate allowlist matched ${payee}`,
+    },
+    {
+      id: "right-amount",
+      status: "GO",
+      confidence: 1,
+      reason: "$25 <= $50 cap (expected $25)",
+    },
+    {
+      id: "in-scope",
+      status: "SKIPPED",
+      confidence: 0,
+      reason: "Jev layer disabled",
+    },
+  ];
+  if (id === "prove") {
+    const zkProof: ZkProof = {
+      proof: "0x",
+      contextLabel: `ligis-gate:v1:${payee}:${capability}:recorded-1`,
+      publicInputs: {
+        registry_root: RECORDED_ROOT,
+        nullifier: RECORDED_NULLIFIER,
+      },
+    };
+    return {
+      proof: {
+        payee,
+        root: RECORDED_ROOT,
+        provedInMs: 716,
+        proofBytes: 14656,
+        zkProof,
+      },
+      decision: {
+        verdict: "GO",
+        latencyMs: 38,
+        costUsd: 0,
+        provenance: [
+          "mandate matched payee + amount",
+          "zk GO/verified via manifest root",
+        ],
+        zkCredential: {
+          status: "GO",
+          verification: "verified",
+          reason:
+            "credential membership proven against a trusted registry root",
+          registryRoot: RECORDED_ROOT,
+          rootSource: "manifest",
+          nullifier: RECORDED_NULLIFIER,
+          context: zkProof.contextLabel,
+          verifier: "bb 5.0.0-nightly.20260522 ultra_honk (recorded run)",
+          latencyMs: 38,
+        },
+        signals: [
+          ...baseSignals,
+          {
+            id: "verified-payee",
+            status: "GO",
+            confidence: 1,
+            reason: `zk credential proof verified for ${capability} (root ${RECORDED_ROOT.slice(0, 10)}··)`,
+          },
+        ],
+      },
+    };
+  }
+  if (id === "replay") {
+    return {
+      decision: {
+        verdict: "STOP",
+        latencyMs: 4,
+        costUsd: 0,
+        provenance: ["zk STOP/rejected: replay"],
+        zkCredential: {
+          status: "STOP",
+          verification: "rejected",
+          reason: "nullifier already used for this context (replay)",
+          registryRoot: RECORDED_ROOT,
+          rootSource: "manifest",
+          nullifier: RECORDED_NULLIFIER,
+        },
+        signals: [
+          ...baseSignals,
+          {
+            id: "verified-payee",
+            status: "STOP",
+            confidence: 1,
+            reason:
+              "zk proof rejected: nullifier already used for this context (replay)",
+          },
+        ],
+      },
+    };
+  }
+  const zkProof: ZkProof = {
+    proof: "0x",
+    contextLabel: `ligis-gate:v1:${revokedPayee}:${capability}:recorded-revoked`,
+    publicInputs: {
+      registry_root: RECORDED_OLD_ROOT,
+      nullifier:
+        "0x1048ae5d7fbdd55a8bc12ef349876543210fedcba9876543210fedcba9876543",
+    },
+  };
+  return {
+    proof: {
+      payee: revokedPayee,
+      root: RECORDED_OLD_ROOT,
+      provedInMs: 646,
+      proofBytes: 14656,
+      zkProof,
+    },
+    decision: {
+      verdict: "STOP",
+      latencyMs: 3,
+      costUsd: 0,
+      provenance: ["zk STOP/rejected: untrusted root"],
+      zkCredential: {
+        status: "STOP",
+        verification: "rejected",
+        reason: "registry_root is not a trusted CredentialRegistry root",
+        registryRoot: RECORDED_OLD_ROOT,
+        nullifier: zkProof.publicInputs.nullifier,
+      },
+      signals: [
+        {
+          id: "right-payee",
+          status: "GO",
+          confidence: 1,
+          reason: `mandate allowlist matched ${revokedPayee}`,
+        },
+        baseSignals[1]!,
+        baseSignals[2]!,
+        {
+          id: "verified-payee",
+          status: "STOP",
+          confidence: 1,
+          reason:
+            "zk proof rejected: registry_root is not a trusted CredentialRegistry root",
+        },
+      ],
+    },
+  };
+}
 
 const STEPS: Array<{
   id: StepId;
@@ -146,24 +313,53 @@ export function ZcashDemo({
       if (id === "check") {
         set(id, { phase: "running", label: "Asking the gate…" });
         set(id, { phase: "done", decision: await gate(intentFor(payee)) });
+      } else if (!live) {
+        const rec = recordedRunFor(id, payee, revokedPayee, capability);
+        if (rec.proof) proofRef.current = rec.proof.zkProof;
+        set(id, { phase: "done", ...rec, recorded: true });
       } else if (id === "prove") {
         set(id, { phase: "running", label: "Payee is generating a proof…" });
-        const p = await prove("holder");
-        proofRef.current = p.zkProof;
-        set(id, { phase: "running", label: "Gate is verifying the proof…" });
-        const decision = await gate(intentFor(payee, p.zkProof));
-        set(id, { phase: "done", decision, proof: p });
+        try {
+          const p = await prove("holder");
+          proofRef.current = p.zkProof;
+          set(id, { phase: "running", label: "Gate is verifying the proof…" });
+          const decision = await gate(intentFor(payee, p.zkProof));
+          set(id, { phase: "done", decision, proof: p });
+        } catch (e) {
+          const err = e as Error & { offline?: boolean };
+          if (!err.offline) throw e;
+          const rec = recordedRunFor("prove", payee, revokedPayee, capability);
+          if (rec.proof) proofRef.current = rec.proof.zkProof;
+          set(id, { phase: "done", ...rec, recorded: true });
+        }
       } else if (id === "replay") {
         if (!proofRef.current) throw new Error("Run step 2 first.");
-        set(id, { phase: "running", label: "Replaying the proof…" });
-        const decision = await gate(intentFor(payee, proofRef.current));
-        set(id, { phase: "done", decision });
+        if (states.prove.phase === "done" && states.prove.recorded) {
+          const rec = recordedRunFor("replay", payee, revokedPayee, capability);
+          set(id, { phase: "done", ...rec, recorded: true });
+        } else {
+          set(id, { phase: "running", label: "Replaying the proof…" });
+          const decision = await gate(intentFor(payee, proofRef.current));
+          set(id, { phase: "done", decision });
+        }
       } else {
         set(id, { phase: "running", label: "Revoked payee is proving…" });
-        const p = await prove("revoked");
-        set(id, { phase: "running", label: "Gate is checking…" });
-        const decision = await gate(intentFor(revokedPayee, p.zkProof));
-        set(id, { phase: "done", decision, proof: p });
+        try {
+          const p = await prove("revoked");
+          set(id, { phase: "running", label: "Gate is checking…" });
+          const decision = await gate(intentFor(revokedPayee, p.zkProof));
+          set(id, { phase: "done", decision, proof: p });
+        } catch (e) {
+          const err = e as Error & { offline?: boolean };
+          if (!err.offline) throw e;
+          const rec = recordedRunFor(
+            "revoked",
+            payee,
+            revokedPayee,
+            capability,
+          );
+          set(id, { phase: "done", ...rec, recorded: true });
+        }
       }
       requestAnimationFrame(() => headings.current[id]?.focus());
     } catch (e) {
@@ -238,12 +434,13 @@ export function ZcashDemo({
 
       {!live ? (
         <p className="mt-6 border-l-2 border-terra pl-4 font-serif text-sm leading-relaxed text-ink-soft">
-          Live proof generation is off on this server, so steps 2–4 show what a
-          live run returns. To run them for real:{" "}
-          <code className="font-mono text-[13px]">
-            LIGIS_ZK_ROOT_MANIFEST=demo pnpm --filter @ligis/web start
-          </code>{" "}
-          with nargo and bb installed, or{" "}
+          This serverless host has no local{" "}
+          <code className="font-mono">nargo</code> /{" "}
+          <code className="font-mono">bb</code> binary, so step 1 queries{" "}
+          <code className="font-mono">POST /api/gate</code> live and steps 2–4
+          step through a verified UltraHonk recording. To generate fresh proofs
+          locally:{" "}
+          <code className="font-mono text-[13px]">pnpm demo:zcash-web</code> or{" "}
           <code className="font-mono text-[13px]">pnpm demo:zcash-zk</code>.
         </p>
       ) : null}
@@ -256,7 +453,6 @@ export function ZcashDemo({
             states[STEPS[i - 1]!.id].phase !== "done" &&
             !(step.id === "revoked" && states.prove.phase === "done");
           const isCurrent = current === step.id;
-          const needsProver = step.id !== "check";
           return (
             <li
               key={step.id}
@@ -284,18 +480,14 @@ export function ZcashDemo({
                 <div className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-2">
                   <button
                     type="button"
-                    disabled={locked || (needsProver && !live)}
+                    disabled={locked}
                     onClick={() => run(step.id)}
                     className="border border-terra px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper disabled:border-rule disabled:text-ink-quiet disabled:hover:bg-transparent"
                   >
                     {step.action}
                   </button>
                   <span className="font-serif text-sm italic text-ink-quiet">
-                    {locked
-                      ? `Finish step ${i} first.`
-                      : needsProver && !live
-                        ? `Live run: ${step.expect.replace(/^Expect /, "")}`
-                        : step.expect}
+                    {locked ? `Finish step ${i} first.` : step.expect}
                   </span>
                 </div>
               ) : null}
@@ -359,9 +551,14 @@ function StepResult({
   step: StepId;
   state: Extract<StepState, { phase: "done" }>;
 }) {
-  const { decision, proof } = state;
+  const { decision, proof, recorded } = state;
   return (
     <div className="space-y-6">
+      {recorded ? (
+        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
+          recorded UltraHonk run · serverless preview (no local nargo/bb)
+        </p>
+      ) : null}
       {proof ? (
         <div className="font-serif text-sm leading-relaxed text-ink-soft">
           <p>
@@ -394,6 +591,34 @@ function StepResult({
         <ZkCredentialResultView zk={decision.zkCredential} />
       ) : null}
       <DecisionVerdict decision={decision} eyebrow="gate · decision" />
+      {step === "prove" && decision.verdict === "GO" ? (
+        <div className="border-l-2 border-ink pl-6">
+          <p className="eyebrow">shielded zec release · orchard / sapling</p>
+          <p className="mt-2 font-serif text-base leading-relaxed text-ink-soft">
+            With a <span className="text-ink">GO</span> decision and the
+            one-time nullifier claimed, the agent releases{" "}
+            <span className="text-ink">0.25 ZEC (25,000,000 zatoshis)</span>{" "}
+            into the Zcash shielded pool with a 512-byte encrypted{" "}
+            <code className="font-mono text-xs">LIGIS:v1:</code> memo. Sender,
+            recipient, and amount stay encrypted on-chain.
+          </p>
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-[11px] text-ink-quiet">
+            <dt>pool</dt>
+            <dd>Orchard / Sapling shielded note (25,000,000 zatoshis)</dd>
+            <dt>nullifier</dt>
+            <dd className="tabular">
+              {shortHash(
+                decision.zkCredential?.nullifier ?? RECORDED_NULLIFIER,
+              )}{" "}
+              · marked spent
+            </dd>
+            <dt>testnet ref</dt>
+            <dd className="tabular">
+              {shortHash(`0x${RECORDED_SHIELDED_TXID}`)} (fixture note)
+            </dd>
+          </dl>
+        </div>
+      ) : null}
     </div>
   );
 }

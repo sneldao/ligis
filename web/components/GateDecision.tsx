@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { DecisionVerdict } from "@/components/DecisionVerdict";
 import { SignalStack } from "@/components/SignalStack";
+import { Term } from "@/components/Term";
 import { decisionToTrustSignals } from "@/lib/decision-receipt";
 import type { Decision, PaymentAmount } from "@/lib/decide";
 import {
@@ -211,9 +212,10 @@ export function GateDecision({
             <DecisionVerdict decision={result} />
             {jevOff ? (
               <p className="mt-3 pl-6 font-serif text-sm italic leading-relaxed text-ink-quiet">
-                Intent wasn&rsquo;t judged on this server (the Jev layer is
-                off), so this GO covers the credential and contracted terms, not
-                scope or prompt injection.
+                Intent wasn&rsquo;t judged on this server (the{" "}
+                <Term term="jev">Jev intent reader</Term> is off), so this GO
+                covers the credential and contracted terms, not scope or prompt
+                injection.
               </p>
             ) : null}
           </>

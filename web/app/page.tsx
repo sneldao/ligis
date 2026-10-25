@@ -68,9 +68,9 @@ export default async function HomePage({
           }),
         }}
       />
-      <HeroStage />
-      <main className="mx-auto max-w-5xl px-5 pt-16 pb-12 sm:px-8 sm:pt-24 sm:pb-20">
-        <div>
+      <main>
+        <HeroStage />
+        <div className="mx-auto max-w-5xl px-5 pt-16 pb-12 sm:px-8 sm:pt-24 sm:pb-20">
           <header className="flex items-baseline justify-between text-xs">
             <p className="eyebrow">Try it on a live registry</p>
             <ChainBadge
@@ -124,26 +124,30 @@ export default async function HomePage({
             />
           </div>
         </div>
-      </main>
 
-      <section className="mx-auto max-w-5xl px-5 pt-4 pb-16 sm:px-8 sm:pt-8 sm:pb-28">
-        <div className="mb-16 sm:mb-20">
-          <Rule />
-          <div className="mt-8 grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-[minmax(0,16rem)_1fr]">
-            <p className="eyebrow">Ship it</p>
-            <div>
-              <p className="font-serif text-base leading-relaxed text-ink-soft sm:text-lg">
-                Gate your endpoint — the same read, one line into the payment
-                path. Any client, any agent framework. The verdict header (
-                <code className="font-mono text-ink">X-Ligis-Gate-Verdict</code>
-                ) carries the GO/STOP answer before the body parses.
-              </p>
-              <pre
-                tabIndex={0}
-                aria-label="Code sample"
-                className="mt-5 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink"
-              >
-                {`curl -X POST https://ligis.vercel.app/api/gate \\
+        <section
+          aria-label="Developer integration"
+          className="mx-auto max-w-5xl px-5 pt-4 pb-16 sm:px-8 sm:pt-8 sm:pb-20"
+        >
+          <div className="mb-16 sm:mb-20">
+            <Rule />
+            <div className="mt-8 grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-[minmax(0,16rem)_1fr]">
+              <p className="eyebrow">Ship it</p>
+              <div>
+                <p className="font-serif text-base leading-relaxed text-ink-soft sm:text-lg">
+                  Gate your endpoint — the same read, one line into the payment
+                  path. Any client, any agent framework. The verdict header (
+                  <code className="font-mono text-ink">
+                    X-Ligis-Gate-Verdict
+                  </code>
+                  ) carries the GO/STOP answer before the body parses.
+                </p>
+                <pre
+                  tabIndex={0}
+                  aria-label="Code sample"
+                  className="mt-5 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink"
+                >
+                  {`curl -X POST https://ligis.vercel.app/api/gate \\
   -H 'content-type: application/json' \\
   -d '{
     "payee":      "0xabc…",
@@ -152,81 +156,82 @@ export default async function HomePage({
     "capability": "data.premium"
   }'
 # → { "verdict": "GO", "signals": [...], "latencyMs": 720, ... }`}
-              </pre>
-              <p className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em]">
-                <Link
-                  href="/embed"
-                  className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-                >
-                  embed the badge →
-                </Link>
-                <Link
-                  href={`/vouch?chain=${chain.id}`}
-                  className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-                >
-                  verify a payee →
-                </Link>
-              </p>
-              <p className="mt-3 max-w-prose font-serif text-xs italic leading-relaxed text-ink-quiet">
-                Privacy: the gate logs only an aggregate counter of which
-                branches ran and which CTAs were clicked. No payee, amount, IP,
-                or user agent is recorded.
-              </p>
+                </pre>
+                <p className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em]">
+                  <Link
+                    href="/embed"
+                    className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+                  >
+                    embed the badge →
+                  </Link>
+                  <Link
+                    href={`/vouch?chain=${chain.id}`}
+                    className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+                  >
+                    verify a payee →
+                  </Link>
+                </p>
+                <p className="mt-3 max-w-prose font-serif text-xs italic leading-relaxed text-ink-quiet">
+                  Privacy: the gate logs only an aggregate counter of which
+                  branches ran and which CTAs were clicked. No payee, amount,
+                  IP, or user agent is recorded.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <FieldInvite chainId={chain.id} />
+          <FieldInvite chainId={chain.id} />
 
-        <nav
-          aria-label="Proofs and integrations"
-          className="mt-16 flex flex-wrap items-baseline gap-x-7 gap-y-3 border-t border-rule pt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet sm:mt-20"
+          <nav
+            aria-label="Proofs and integrations"
+            className="mt-16 flex flex-wrap items-baseline gap-x-7 gap-y-3 border-t border-rule pt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-quiet sm:mt-20"
+          >
+            <span>Proofs &amp; integrations</span>
+            <Link
+              href="/proofs"
+              className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+            >
+              Proofs
+            </Link>
+            <Link
+              href="/passkey"
+              className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+            >
+              Passkey
+            </Link>
+            <Link
+              href={`/vouch?chain=${chain.id}`}
+              className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+            >
+              Verify a payee
+            </Link>
+            <Link
+              href={`/croo?chain=${chain.id}`}
+              className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+            >
+              CROO
+            </Link>
+            <Link
+              href={`/embed?chain=${chain.id}`}
+              className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
+            >
+              Embed
+            </Link>
+          </nav>
+        </section>
+      </main>
+
+      <footer className="mx-auto flex max-w-5xl flex-col gap-3 border-t border-rule px-5 pt-4 pb-16 text-xs text-ink-quiet sm:flex-row sm:items-baseline sm:justify-between sm:px-8 sm:pb-28">
+        <Link
+          href="/styleguide"
+          className="font-mono text-[11px] uppercase tracking-[0.14em] underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
         >
-          <span>Proofs &amp; integrations</span>
-          <Link
-            href="/proofs"
-            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-          >
-            Proofs
-          </Link>
-          <Link
-            href="/passkey"
-            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-          >
-            Passkey
-          </Link>
-          <Link
-            href={`/vouch?chain=${chain.id}`}
-            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-          >
-            Verify a payee
-          </Link>
-          <Link
-            href={`/croo?chain=${chain.id}`}
-            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-          >
-            CROO
-          </Link>
-          <Link
-            href={`/embed?chain=${chain.id}`}
-            className="text-ink underline decoration-rule decoration-1 underline-offset-4 hover:decoration-terra"
-          >
-            Embed
-          </Link>
-        </nav>
-
-        <footer className="mt-10 flex flex-col gap-3 border-t border-rule pt-4 text-xs text-ink-quiet sm:flex-row sm:items-baseline sm:justify-between">
-          <Link
-            href="/styleguide"
-            className="font-mono text-[11px] uppercase tracking-[0.14em] underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-          >
-            Design
-          </Link>
-          <span className="font-mono tabular">
-            chain {chain.chainId ?? chain.chainName}
-          </span>
-        </footer>
-      </section>
+          Design
+        </Link>
+        <span className="font-mono tabular">
+          chain {chain.chainId ?? chain.chainName}
+        </span>
+      </footer>
     </>
   );
 }

@@ -1,11 +1,11 @@
 # Ligis × Zcash Shielded Gate — Demo Last Run
-timestamp: 2026-10-25T01:29:52.343Z
+timestamp: 2026-10-25T04:06:03.342Z
 track: Shielded Payments ($15,000) + Grand Prize ($20,000)
 network: zcash-testnet
 payee: utest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8qp9x2m
 capability: agent.commerce.escrow
 amount: 0.25 ZEC (~$10 USD)
-nullifier: 0x0502c43c92fea483eb51873c117193d9d495e5633e4f8af78a9c85e34f615a54
+nullifier: 0x112f1e21602ec6c11db209da3245e50b6ec4e541094ed96c82341fbb652e30f4
 txid: 9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e
 firstGateVerdict: GO
 replayGateVerdict: STOP

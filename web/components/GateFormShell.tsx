@@ -12,6 +12,7 @@ import {
 } from "react";
 import { ChainSwitchHint } from "@/components/ChainSwitchHint";
 import { SubjectSpecimen } from "@/components/SubjectSpecimen";
+import { Term } from "@/components/Term";
 import { counterAction } from "@/app/actions/counter";
 import { capabilities } from "@/lib/capabilities-client";
 import { chainById } from "@/lib/network";
@@ -49,7 +50,7 @@ export function GateFormShell({
   defaultPurpose?: string;
   defaultMandate?: { payees?: string; maxUsd?: string; expectedUsd?: string };
   sampleLinks: ReactNode;
-  capabilityOptions?: ReadonlyArray<{ id: string }>;
+  capabilityOptions?: ReadonlyArray<{ id: string; label?: string }>;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -185,6 +186,12 @@ export function GateFormShell({
 
   const busy = pending || reading;
   const opts = capabilityOptions ?? capabilities;
+  const labelById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of capabilities) m.set(c.id, c.label);
+    for (const c of opts) if (c.label) m.set(c.id, c.label);
+    return m;
+  }, [opts]);
   const ids = opts.map((c) => c.id);
   const optionIds =
     defaultCapability && !ids.includes(defaultCapability)
@@ -206,13 +213,16 @@ export function GateFormShell({
           {situationId ? (
             <input type="hidden" name="situation" value={situationId} />
           ) : null}
-          <label htmlFor="subject" className="block space-y-2">
-            <span className="eyebrow">subject · wallet</span>
+          <div className="block space-y-2">
+            <label htmlFor="subject" className="eyebrow block">
+              subject · wallet
+            </label>
             <span className="flex items-end gap-3">
               <SubjectSpecimen subject={subjectDraft} size="chip" />
               <input
                 id="subject"
                 name="subject"
+                title={subjectDraft}
                 value={subjectDraft}
                 onChange={(e) => setSubjectDraft(e.target.value)}
                 spellCheck={false}
@@ -222,9 +232,24 @@ export function GateFormShell({
                 className="block w-full min-w-0 border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
               />
             </span>
-          </label>
-          <label htmlFor="capability" className="block space-y-2">
-            <span className="eyebrow">permission</span>
+            {subjectDraft.trim().length > 42 ? (
+              <p
+                className="break-all font-mono text-[11px] leading-relaxed text-ink-quiet"
+                aria-label="Full subject address"
+              >
+                {subjectDraft.trim()}
+              </p>
+            ) : null}
+          </div>
+          <div className="block space-y-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <label htmlFor="capability" className="eyebrow">
+                permission
+              </label>
+              <span className="font-serif text-xs text-ink-quiet">
+                <Term term="permission">what&rsquo;s this?</Term>
+              </span>
+            </div>
             <span className="relative block">
               <select
                 id="capability"
@@ -234,11 +259,14 @@ export function GateFormShell({
                 disabled={busy}
                 className="block w-full appearance-none border-0 border-b border-rule bg-transparent pb-2 pr-6 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra disabled:opacity-60"
               >
-                {optionIds.map((id) => (
-                  <option key={id} value={id}>
-                    {id}
-                  </option>
-                ))}
+                {optionIds.map((id) => {
+                  const lbl = labelById.get(id);
+                  return (
+                    <option key={id} value={id}>
+                      {lbl ? `${id} — ${lbl}` : id}
+                    </option>
+                  );
+                })}
               </select>
               <svg
                 width="9"
@@ -254,7 +282,7 @@ export function GateFormShell({
                 <path d="M1.5 3 L4.5 6 L7.5 3" />
               </svg>
             </span>
-          </label>
+          </div>
           <button
             type="submit"
             disabled={busy}
@@ -303,7 +331,9 @@ export function GateFormShell({
                 />
               </label>
               <div className="sm:col-span-3">
-                <p className="eyebrow">contracted terms · optional</p>
+                <p className="eyebrow">
+                  <Term term="mandate">contracted terms</Term> · optional
+                </p>
                 <div className="mt-3 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-3">
                   <label htmlFor="mandatePayees" className="block space-y-2">
                     <span className="font-mono text-[11px] text-ink-quiet">

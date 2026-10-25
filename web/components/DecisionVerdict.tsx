@@ -1,4 +1,5 @@
 import { VerdictMark } from "@/components/VerdictMark";
+import { Term } from "@/components/Term";
 import {
   SIGNAL_COPY,
   STATUS_COPY,
@@ -78,7 +79,11 @@ export function DecisionVerdict({
               <p
                 className={`font-mono text-xs uppercase tracking-[0.14em] ${st}`}
               >
-                {s.status}
+                {s.status === "SKIPPED" ? (
+                  <Term term="skipped">SKIPPED</Term>
+                ) : (
+                  s.status
+                )}
                 <span className="sr-only"> — {STATUS_COPY[s.status]}</span>
               </p>
             </li>

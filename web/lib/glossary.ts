@@ -16,6 +16,11 @@ export const GLOSSARY = {
     "UNKNOWN means a required check couldn't answer (for example the verifier isn't available). It is never approval: the agent must not pay.",
   permission:
     "The kind of job the payee must be credentialed for, such as agent.commerce.escrow.",
+  mandate:
+    "The operator's spending rules for this job: which payees are allowed, the maximum budget, and the expected price.",
+  jev: "Jev is the gate's fast intent reader (TypeSafe System One): it checks whether the payment's purpose, amount, and payee match the task and flags prompt injection.",
+  skipped:
+    "SKIPPED means a check didn't apply to this run (for example, no allowed-payee list was set). It never counts as a failure unless every required check was skipped.",
 } as const;
 
 export type GlossaryKey = keyof typeof GLOSSARY;

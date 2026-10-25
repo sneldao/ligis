@@ -114,6 +114,7 @@ export function VerifyDemo({
             <input
               id="subject"
               name="subject"
+              title={subjectDraft}
               value={subjectDraft}
               onChange={(e) => setSubjectDraft(e.target.value)}
               spellCheck={false}
@@ -121,6 +122,11 @@ export function VerifyDemo({
               autoCapitalize="off"
               className="block w-full border-0 border-b border-rule bg-transparent pb-2 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-terra"
             />
+            {subjectDraft.trim().length > 42 ? (
+              <span className="block break-all font-mono text-[11px] leading-relaxed text-ink-quiet">
+                {subjectDraft.trim()}
+              </span>
+            ) : null}
           </label>
           <label htmlFor="capability" className="block space-y-2">
             <span className="eyebrow">capability</span>
