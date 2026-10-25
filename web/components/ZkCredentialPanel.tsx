@@ -32,7 +32,12 @@ export function ZkCredentialResultView({ zk }: { zk: ZkCredentialResult }) {
       </p>
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-[11px] text-ink-quiet">
         <dt>root</dt>
-        <dd className="break-all">{short(zk.registryRoot)}</dd>
+        <dd className="break-all">
+          {short(zk.registryRoot)}
+          {zk.rootSource
+            ? ` (${zk.rootSource === "manifest" ? "published manifest" : "pinned"})`
+            : ""}
+        </dd>
         <dt>nullifier</dt>
         <dd className="break-all">{short(zk.nullifier)}</dd>
         {zk.verifier ? (

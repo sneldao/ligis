@@ -1,5 +1,5 @@
 /**
- * ZK credential presentation for the gate (Zecathon Week 2).
+ * ZK credential presentation for the gate (Zecathon Weeks 2–3).
  *
  * A payee may attach a proof from `@ligis/circuits-zcash`: "I hold an
  * unexpired credential for capability X in the registry tree with root R;
@@ -9,8 +9,13 @@
  * This module is the gate-side policy, pure and dependency-injected (the
  * `bb` verifier and the nullifier store are wired in `zk-verifier.ts`):
  *
- *   1. trusted root   — `registry_root` must be in LIGIS_ZK_TRUSTED_ROOTS
+ *   1. trusted root   — `registry_root` must be pinned in LIGIS_ZK_TRUSTED_ROOTS
+ *                       or be the root of the published manifest
+ *                       (LIGIS_ZK_ROOT_MANIFEST, rebuilt from CredentialRegistry
+ *                       events; UNKNOWN if older than LIGIS_ZK_ROOT_MAX_AGE_S)
  *   2. capability     — `capability_hash` must equal the gate's capability
+ *   2b. payee         — `payee_hash` (committed in the credential leaf) must
+ *                       equal keccak(intent.payee): no cross-payee replay
  *   3. context        — `contextLabel` (ligis-gate:v1:<payee>:<cap>:<nonce>)
  *                       must name this payee + capability and hash to `context`
  *   4. freshness      — `current_time` within LIGIS_ZK_MAX_PROOF_AGE_S of now
@@ -25,6 +30,7 @@ import {
   PUBLIC_INPUT_ORDER,
   capabilityField,
   contextField,
+  payeeField,
   fieldHex,
   parseField,
   parseGateContextLabel,
@@ -45,6 +51,8 @@ export type ZkCredentialResult = {
   verification: "verified" | "rejected" | "unverified";
   reason: string;
   registryRoot?: string;
+  /** Where the trusted root came from. */
+  rootSource?: "pinned" | "manifest";
   nullifier?: string;
   context?: string;
   currentTime?: string;
@@ -82,6 +90,10 @@ export type ZkDeps = {
   nullifiers: NullifierStore;
   /** Trusted registry roots. `undefined`/empty → every proof is UNKNOWN. */
   trustedRoots?: bigint[];
+  /** Published root manifest (already integrity-checked), or why it isn't usable. */
+  rootManifest?: PublishedRoot | { error: string };
+  /** Max age of the manifest's `asOf` (seconds). Default 86400. */
+  maxRootAgeS?: number;
   /** Unix ms. */
   now?: () => number;
   /** Max age of `current_time` (seconds). Default 600. */
@@ -91,6 +103,9 @@ export type ZkDeps = {
 const MAX_PROOF_BYTES = 64 * 1024;
 const FUTURE_SKEW_S = 60;
 export const DEFAULT_MAX_PROOF_AGE_S = 600;
+export const DEFAULT_MAX_ROOT_AGE_S = 86_400;
+
+export type PublishedRoot = { root: bigint; asOf: number; leafCount: number };
 
 /** Parse the optional `zkProof` request field. Returns an error string. */
 export function parseZkProof(raw: unknown): ZkProofInput | string {
@@ -146,7 +161,10 @@ export async function evaluateZkCredential(
   deps: ZkDeps | undefined,
 ): Promise<ZkCredentialResult> {
   const pub = zk.publicInputs;
-  const base = {
+  const base: Pick<
+    ZkCredentialResult,
+    "registryRoot" | "context" | "currentTime" | "rootSource"
+  > & { nullifier: string } = {
     registryRoot: fieldHex(pub.registry_root),
     nullifier: fieldHex(pub.nullifier),
     context: zk.contextLabel,
@@ -169,15 +187,32 @@ export async function evaluateZkCredential(
     }) as const;
 
   if (!deps) return unknown("zk verifier not configured on this gate");
-  const roots = deps.trustedRoots ?? [];
-  if (roots.length === 0) {
+  const nowS = Math.floor((deps.now ?? Date.now)() / 1000);
+  const pinned = deps.trustedRoots ?? [];
+  const m = deps.rootManifest;
+  const published = m && !("error" in m) ? m : undefined;
+  if (pinned.length === 0 && !published) {
     return unknown(
-      "no trusted registry roots configured (LIGIS_ZK_TRUSTED_ROOTS)",
+      m && "error" in m
+        ? `published root manifest unusable: ${m.error}`
+        : "no trusted registry roots configured (LIGIS_ZK_TRUSTED_ROOTS / LIGIS_ZK_ROOT_MANIFEST)",
     );
   }
-  if (!roots.includes(pub.registry_root)) {
+  let rootSource: "pinned" | "manifest";
+  if (pinned.includes(pub.registry_root)) {
+    rootSource = "pinned";
+  } else if (published && published.root === pub.registry_root) {
+    const maxRootAge = deps.maxRootAgeS ?? DEFAULT_MAX_ROOT_AGE_S;
+    if (nowS - published.asOf > maxRootAge) {
+      return unknown(
+        `published registry root is stale (asOf ${published.asOf}, > ${maxRootAge}s old); revocations may be missing`,
+      );
+    }
+    rootSource = "manifest";
+  } else {
     return stop("registry_root is not a trusted CredentialRegistry root");
   }
+  base.rootSource = rootSource;
   if (!intent.capability) {
     return unknown("no capability on the intent to bind the proof to");
   }
@@ -187,6 +222,9 @@ export async function evaluateZkCredential(
       `proof is for a different capability than ${intent.capability}`,
     );
   }
+  if (pub.payee_hash !== payeeField(intent.payee)) {
+    return stop("proof credential is bound to a different payee");
+  }
   const label = parseGateContextLabel(zk.contextLabel)!;
   if (
     label.payee !== intent.payee.trim().toLowerCase() ||
@@ -195,7 +233,6 @@ export async function evaluateZkCredential(
   ) {
     return stop("proof context is not bound to this payee and capability");
   }
-  const nowS = Math.floor((deps.now ?? Date.now)() / 1000);
   const maxAge = deps.maxProofAgeS ?? DEFAULT_MAX_PROOF_AGE_S;
   const t = Number(pub.current_time);
   if (t > nowS + FUTURE_SKEW_S)

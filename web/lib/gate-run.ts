@@ -58,7 +58,7 @@ export async function runGateDecision(
       evaluateIntent: opts?.evaluateIntent,
       readPayeeEvidence: opts?.readPayeeEvidence ?? readPayeeEvidence,
       operatorPolicy: opts?.operatorPolicy,
-      zk: intent.zkProof ? (opts?.zk ?? zkDepsFromEnv(env)) : undefined,
+      zk: intent.zkProof ? (opts?.zk ?? (await zkDepsFromEnv(env))) : undefined,
     });
     // No route supplies this opt-in. Recording failure cannot alter a decision.
     if (opts?.recorder?.authenticatedOptIn) {

@@ -17,6 +17,7 @@ import {
   type NullifierStore,
   type ZkDeps,
 } from "./zk-credential";
+import { loadRootManifest, maxRootAgeFromEnv } from "./zk-root";
 
 class UpstashNullifierStore implements NullifierStore {
   constructor(
@@ -80,9 +81,12 @@ export function nullifierStoreFromEnv(env: NodeJS.ProcessEnv): NullifierStore {
   return memoryStore;
 }
 
-export function zkDepsFromEnv(env: NodeJS.ProcessEnv): ZkDeps {
+export async function zkDepsFromEnv(env: NodeJS.ProcessEnv): Promise<ZkDeps> {
   const age = Number(env.LIGIS_ZK_MAX_PROOF_AGE_S);
+  const loaded = await loadRootManifest(env);
   return {
+    rootManifest: loaded && ("error" in loaded ? loaded : loaded.published),
+    maxRootAgeS: maxRootAgeFromEnv(env),
     verify: (proof, pub) => verifyMembershipProof(proof, pub, { env }),
     nullifiers: nullifierStoreFromEnv(env),
     trustedRoots: trustedRootsFromEnv(env),

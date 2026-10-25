@@ -1,10 +1,19 @@
 /**
- * Gate ZK credential proofs (Zecathon Week 2): real UltraHonk fixture from
+ * Gate ZK credential proofs (Zecathon Weeks 2–3): real UltraHonk fixture from
  * packages/circuits-zcash, verified with `bb` when present, plus stubbed
  * verifiers so every policy branch runs without the toolchain.
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import {
+  contextField,
+  fieldHex,
+  gateContextLabel,
+  payeeField,
+} from "@ligis/circuits-zcash/fields";
+import { DEMO_OTHER_PAYEE, demoRegistry } from "@ligis/circuits-zcash/demo";
 import { describe, it } from "node:test";
 import {
   resolveBb,
@@ -15,6 +24,7 @@ import { decide, type DecideDeps, type PaymentIntent } from "@/lib/decide";
 import { bodyToIntent, fromBadRequest } from "@/lib/gate-intent";
 import { runGateDecision } from "@/lib/gate-run";
 import { zecAmount } from "@/lib/payment-asset";
+import { loadRootManifest, zkRootInfo } from "@/lib/zk-root";
 import {
   MemoryNullifierStore,
   parseZkProof,
@@ -211,7 +221,7 @@ describe("gate zk credential proofs", () => {
       { ...intent, payee: other, mandate: { payees: [other], maxUsd: 50 } },
       deps(zk()),
     );
-    assert.match(wrongPayee.zkCredential!.reason, /not bound to this payee/);
+    assert.match(wrongPayee.zkCredential!.reason, /different payee/);
     const wrongCap = await decide(
       { ...intent, capability: "kyc.basic" },
       deps(zk()),
@@ -245,6 +255,169 @@ describe("gate zk credential proofs", () => {
     assert.equal(d.zkCredential?.status, "GO");
     assert.equal(vp(d).status, "STOP");
     assert.equal(d.verdict, "STOP");
+  });
+});
+
+describe("Week 3: payee binding", () => {
+  it("relabelled context alone can't redirect a proof: payee_hash still names the original payee", async () => {
+    const label = gateContextLabel(
+      DEMO_OTHER_PAYEE,
+      "agent.commerce.escrow",
+      "demo-1",
+    );
+    const relabelled: ZkProofInput = {
+      ...fixture,
+      contextLabel: label,
+      publicInputs: { ...fixture.publicInputs, context: contextField(label) },
+    };
+    const d = await decide(
+      {
+        ...intent,
+        payee: DEMO_OTHER_PAYEE,
+        mandate: { payees: [DEMO_OTHER_PAYEE], maxUsd: 50 },
+        zkProof: relabelled,
+      },
+      deps(zk()),
+    );
+    assert.equal(d.zkCredential?.status, "STOP");
+    assert.match(d.zkCredential!.reason, /different payee/);
+  });
+
+  it(
+    "rewriting payee_hash + context to another payee → bb rejects → STOP",
+    { skip: noBb },
+    async () => {
+      const label = gateContextLabel(
+        DEMO_OTHER_PAYEE,
+        "agent.commerce.escrow",
+        "demo-1",
+      );
+      const forged: ZkProofInput = {
+        ...fixture,
+        contextLabel: label,
+        publicInputs: {
+          ...fixture.publicInputs,
+          payee_hash: payeeField(DEMO_OTHER_PAYEE),
+          context: contextField(label),
+        },
+      };
+      const d = await decide(
+        {
+          ...intent,
+          payee: DEMO_OTHER_PAYEE,
+          mandate: { payees: [DEMO_OTHER_PAYEE], maxUsd: 50 },
+          zkProof: forged,
+        },
+        deps(zk({ verify: (p, pub) => verifyMembershipProof(p, pub) })),
+      );
+      assert.equal(d.zkCredential?.status, "STOP");
+      assert.match(d.zkCredential!.reason, /failed verification/);
+      assert.equal(d.verdict, "STOP");
+    },
+  );
+});
+
+describe("Week 3: published registry root manifest", () => {
+  const ASOF = Number(fixture.publicInputs.current_time);
+  const manifestPromise = demoRegistry(ASOF).then((r) => r.manifest);
+  const published = async () => {
+    const m = await manifestPromise;
+    return { root: BigInt(m.root), asOf: m.asOf, leafCount: m.leafCount };
+  };
+
+  it("demo manifest root is the fixture's proven root", async () => {
+    assert.equal((await manifestPromise).root, fieldHex(ROOT));
+  });
+
+  it("manifest root alone (no pinned roots) is trusted → GO, rootSource=manifest", async () => {
+    const d = await decide(
+      intent,
+      deps(zk({ trustedRoots: [], rootManifest: await published() })),
+    );
+    assert.equal(d.zkCredential?.status, "GO", d.zkCredential?.reason ?? "");
+    assert.equal(d.zkCredential?.rootSource, "manifest");
+    assert.equal(d.verdict, "GO");
+  });
+
+  it("stale manifest → UNKNOWN (revocations may be missing), nullifier not burned", async () => {
+    const store = new MemoryNullifierStore();
+    const d = await decide(
+      intent,
+      deps(
+        zk({
+          trustedRoots: [],
+          nullifiers: store,
+          rootManifest: await published(),
+          maxRootAgeS: 1,
+        }),
+      ),
+    );
+    assert.equal(d.zkCredential?.status, "UNKNOWN");
+    assert.match(d.zkCredential!.reason, /stale/);
+    assert.equal(d.verdict, "UNKNOWN");
+    assert.equal(
+      (await decide(intent, deps(zk({ nullifiers: store })))).zkCredential
+        ?.status,
+      "GO",
+    );
+  });
+
+  it("pinned root bypasses manifest staleness; unusable manifest → UNKNOWN", async () => {
+    const pinned = await decide(
+      intent,
+      deps(zk({ rootManifest: await published(), maxRootAgeS: 1 })),
+    );
+    assert.equal(pinned.zkCredential?.rootSource, "pinned");
+    assert.equal(pinned.zkCredential?.status, "GO");
+    const broken = await decide(
+      intent,
+      deps(zk({ trustedRoots: [], rootManifest: { error: "nope" } })),
+    );
+    assert.equal(broken.zkCredential?.status, "UNKNOWN");
+    assert.match(broken.zkCredential!.reason, /manifest unusable: nope/);
+  });
+
+  it("loadRootManifest re-derives the root; tampered file is rejected; /api/zk/root body", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ligis-root-"));
+    const good = path.join(dir, "good.json");
+    const bad = path.join(dir, "bad.json");
+    const m = await manifestPromise;
+    writeFileSync(good, JSON.stringify(m));
+    writeFileSync(bad, JSON.stringify({ ...m, leaves: m.leaves.slice(1) }));
+    const ok = await loadRootManifest({
+      NODE_ENV: "test",
+      LIGIS_ZK_ROOT_MANIFEST: good,
+    });
+    assert.ok(ok && !("error" in ok));
+    assert.equal(ok.published.root, ROOT);
+    const tampered = await loadRootManifest({
+      NODE_ENV: "test",
+      LIGIS_ZK_ROOT_MANIFEST: bad,
+    });
+    assert.ok(tampered && "error" in tampered);
+    assert.equal(await loadRootManifest({ NODE_ENV: "test" }), undefined);
+
+    const info = await zkRootInfo(
+      {
+        NODE_ENV: "test",
+        LIGIS_ZK_ROOT_MANIFEST: good,
+        LIGIS_ZK_TRUSTED_ROOTS: "0x01",
+      },
+      (ASOF + 10) * 1000,
+    );
+    assert.deepEqual(info.pinnedRoots, [fieldHex(1n)]);
+    assert.equal(info.manifest?.status, "fresh");
+    assert.ok(
+      info.manifest &&
+        "root" in info.manifest &&
+        info.manifest.root === fieldHex(ROOT),
+    );
+    assert.equal(info.publicInputs[1], "payee_hash");
+    const stale = await zkRootInfo(
+      { NODE_ENV: "test", LIGIS_ZK_ROOT_MANIFEST: good },
+      (ASOF + 90_000) * 1000,
+    );
+    assert.equal(stale.manifest?.status, "stale");
   });
 });
 
