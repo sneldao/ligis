@@ -179,8 +179,28 @@ export default async function OperatorPage({
             ← Home
           </Link>
         </header>
-        <p className="mt-20 font-serif text-xl text-revoke">
-          Unauthorized — pass ?token= to access.
+        <h1 className="mt-20 display text-3xl text-ink">Operator console</h1>
+        <p className="mt-4 font-serif text-lg text-revoke" role="alert">
+          You need an operator token to see this page.
+        </p>
+        <p className="mt-2 font-serif text-base text-ink-soft">
+          Open it as{" "}
+          <code className="font-mono text-sm">/operator?token=…</code> with the
+          token from your deployment settings. Looking for the product?{" "}
+          <Link
+            href="/gate"
+            className="text-ink underline decoration-terra decoration-1 underline-offset-4"
+          >
+            Gate a payment
+          </Link>{" "}
+          or try the{" "}
+          <Link
+            href="/zcash"
+            className="text-ink underline decoration-terra decoration-1 underline-offset-4"
+          >
+            guided Zcash demo
+          </Link>
+          .
         </p>
       </main>
     );

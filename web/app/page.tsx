@@ -138,7 +138,11 @@ export default async function HomePage({
                 <code className="font-mono text-ink">X-Ligis-Gate-Verdict</code>
                 ) carries the GO/STOP answer before the body parses.
               </p>
-              <pre className="mt-5 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink">
+              <pre
+                tabIndex={0}
+                aria-label="Code sample"
+                className="mt-5 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[11px] leading-relaxed tabular text-ink"
+              >
                 {`curl -X POST https://ligis.vercel.app/api/gate \\
   -H 'content-type: application/json' \\
   -d '{

@@ -147,6 +147,7 @@ export function SituationCast({
             >
               <button
                 type="button"
+                id={`moment-${s.id}-trigger`}
                 aria-expanded={open}
                 aria-controls={`moment-${s.id}`}
                 onClick={() => select(s)}
@@ -188,6 +189,7 @@ export function SituationCast({
               <div
                 id={`moment-${s.id}`}
                 role="region"
+                aria-labelledby={`moment-${s.id}-trigger`}
                 className="moment-panel"
                 data-open={open ? "true" : "false"}
               >

@@ -286,7 +286,11 @@ export default async function VerifyPage({
                   Anyone who opens this URL re-runs the same decision.
                 </p>
                 <div className="mt-5 flex flex-wrap items-baseline gap-4">
-                  <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+                  <code
+                    tabIndex={0}
+                    aria-label="Share URL"
+                    className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink"
+                  >
                     {decisionShareUrl}
                   </code>
                   <CopyButton
@@ -335,7 +339,11 @@ export default async function VerifyPage({
               account. No Ligis server.
             </p>
             <div className="mt-5 flex flex-wrap items-baseline gap-4">
-              <code className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+              <code
+                tabIndex={0}
+                aria-label="Share URL"
+                className="block min-w-0 flex-1 basis-72 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink"
+              >
                 {`${SITE_URL}/gate?${gateParams(scoped ? chain : null, subjectForVerdict, capForVerdict, situation?.id)}`}
               </code>
               <CopyButton
@@ -530,7 +538,11 @@ export default async function VerifyPage({
           <code className="font-mono">/gate</code> verb aliases{" "}
           <code className="font-mono">/verify</code> &mdash; use either.
         </p>
-        <pre className="mt-4 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink">
+        <pre
+          tabIndex={0}
+          aria-label="Example request"
+          className="mt-4 overflow-x-auto bg-paper-deep px-5 py-4 font-mono text-[12px] leading-relaxed tabular text-ink"
+        >
           {scoped
             ? `GET /gate?chain=${chain.id}&subject=${casper ? "account-hash-..." : "0x..."}&capability=${capForVerdict ?? "kyc.basic"}`
             : `GET /gate?subject=0x...&capability=${capForVerdict ?? "kyc.basic"}`}

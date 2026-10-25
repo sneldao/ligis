@@ -618,13 +618,10 @@ summary:focus-visible {
     animation-delay: 260ms;
   }
 
-  @supports (animation-timeline: view()) {
-    .page-enter .route-shell > :nth-child(n + 4) {
-      animation: page-rise linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 40%;
-    }
-  }
+  /* No scroll-driven (animation-timeline: view()) reveal here: it left
+     content near the bottom of the viewport partially transparent at rest
+     (axe measured 1.0–4.4:1 contrast on verdict text), and content on short
+     pages could never reach full opacity. One time-based cascade only. */
 
   .page-enter h1.display {
     animation: ink-rise 950ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms both;
