@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { explainDecision, explainZk, shortHash } from "@/lib/decision-copy";
+import {
+  compactAddresses,
+  explainDecision,
+  explainZk,
+  shortHash,
+} from "@/lib/decision-copy";
 import type { Signal, ZkCredentialResult } from "@/lib/decide";
 
 const sig = (id: Signal["id"], status: Signal["status"]): Signal =>
@@ -77,5 +82,18 @@ describe("plain-language decision copy", () => {
   it("shortHash uses the ·· mid-glyph", () => {
     assert.equal(shortHash("0x" + "a".repeat(64)), "0xaaaaaa··aaaaaa");
     assert.equal(shortHash(undefined), "—");
+  });
+
+  it("compactAddresses shortens shielded and EVM addresses in reasons", () => {
+    const z = "utest1" + "jh85uls2r66r05ps5aww5c23qhh4yzj5".repeat(2);
+    assert.equal(
+      compactAddresses(`payee ${z} is on mandate allowlist`),
+      `payee ${z.slice(0, 12)}··${z.slice(-6)} is on mandate allowlist`,
+    );
+    assert.match(
+      compactAddresses("issuer 0x" + "ab".repeat(20)),
+      /0xababababab··/,
+    );
+    assert.equal(compactAddresses("amount $25 is fine"), "amount $25 is fine");
   });
 });

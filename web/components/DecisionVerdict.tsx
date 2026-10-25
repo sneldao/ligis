@@ -1,5 +1,10 @@
 import { VerdictMark } from "@/components/VerdictMark";
-import { SIGNAL_COPY, STATUS_COPY, explainDecision } from "@/lib/decision-copy";
+import {
+  SIGNAL_COPY,
+  STATUS_COPY,
+  compactAddresses,
+  explainDecision,
+} from "@/lib/decision-copy";
 import type { Decision } from "@/lib/decide";
 
 /**
@@ -66,7 +71,7 @@ export function DecisionVerdict({
                 </p>
                 {s.reason ? (
                   <p className="mt-1 break-words font-serif text-sm text-ink-soft [overflow-wrap:anywhere]">
-                    {s.reason}
+                    {compactAddresses(s.reason)}
                   </p>
                 ) : null}
               </div>

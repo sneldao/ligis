@@ -185,3 +185,11 @@ export function shortHash(h: string | undefined, head = 8, tail = 6): string {
     ? h
     : `${h.slice(0, head)}··${h.slice(-tail)}`;
 }
+
+/** Shorten long addresses inside free-text reasons (shielded ones are 70+ chars). */
+export function compactAddresses(text: string): string {
+  return text.replace(
+    /\b(?:utest1|u1|zs1|ztestsapling1)[0-9a-z]{30,}\b|\b0x[0-9a-fA-F]{40,}\b/g,
+    (m) => shortHash(m, 12, 6),
+  );
+}
