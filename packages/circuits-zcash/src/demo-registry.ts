@@ -18,12 +18,18 @@ import {
 export const DEMO_CAPABILITY = "agent.commerce.escrow";
 /** Demo issuer (Monad PasskeyIssuer address; used only as a field here). */
 export const DEMO_ISSUER: Hex = "0x6C500B3968C54789b518D01066Aed2990d44c068";
-/** `ZCASH_DEMO_VERIFIED_SUBJECT` from @ligis/core — the demo payee. */
+/**
+ * The demo payee: a shielded address with NO public credential on any
+ * registry (unlike the `ZCASH_DEMO_*` fixtures in @ligis/core), so only a
+ * zk proof can answer verified-payee for it.
+ */
 export const DEMO_PAYEE =
-  "utest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8qp9x2m";
-/** `ZCASH_DEMO_REPLAYED_SUBJECT` — holds a credential that gets revoked. */
+  "utest1jh85uls2r66r05ps5aww5c23qhh4yzj5jh85uls2r66r05ps5aww5c23qhh4yzj5jh85uls";
+/** Holds a credential that the issuer revokes at block 110. */
 export const DEMO_REVOKED_PAYEE =
-  "utest1s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw08wk3r5n";
+  "utest1saldmx77ufmf405vgeund7zexpyf4ru0saldmx77ufmf405vgeund7zexpyf4ru0saldmx7";
+export const DEMO_REVOKED_SECRET = 0x2002n;
+export const DEMO_REVOKED_AT_BLOCK = 110;
 export const DEMO_OTHER_PAYEE =
   "utest17l6muaech5kn4j3s0wdvt2fg8x9yrzpq7l6muaech5kn4j3s0wdvt2fg8x9yrzpqq4x0m2";
 export const DEMO_EXPIRES = 1_924_992_000n; // 2031-01-01T00:00:00Z
@@ -91,13 +97,13 @@ export async function demoRegistryInput() {
       capabilityHash: cap,
       nonce: "0",
       revokedAt: "1761100000",
-      blockNumber: "110",
+      blockNumber: String(DEMO_REVOKED_AT_BLOCK),
       logIndex: log++,
     },
   ];
   const registrations = [
     await register("holder", DEMO_PAYEE, DEMO_HOLDER_SECRET),
-    await register("revoked", DEMO_REVOKED_PAYEE, 0x2002n),
+    await register("revoked", DEMO_REVOKED_PAYEE, DEMO_REVOKED_SECRET),
     await register("expired", DEMO_OTHER_PAYEE, 0x3003n),
     await register("other", DEMO_OTHER_PAYEE, 0x4004n),
     // Signed by the wrong key: must be rejected by the builder.

@@ -638,7 +638,11 @@ export async function decide(
   const zkCredential = await zkPromise;
   if (zkCredential) {
     const i = signals.findIndex((sig) => sig.id === "verified-payee");
-    signals[i] = applyZkCredential(signals[i]!, zkCredential);
+    signals[i] = applyZkCredential(
+      signals[i]!,
+      zkCredential,
+      publicCredentialAbsent(credentialResult),
+    );
   }
 
   const verdict = composeVerdict(signals, evidenceEnabled);
@@ -677,7 +681,11 @@ export async function decide(
  * unverifiable proof never upgrades anything and, unless the public
  * credential already answered GO, leaves the signal UNKNOWN (not a pass).
  */
-function applyZkCredential(signal: Signal, zk: ZkCredentialResult): Signal {
+function applyZkCredential(
+  signal: Signal,
+  zk: ZkCredentialResult,
+  publicAbsent = false,
+): Signal {
   if (signal.id !== "verified-payee") return signal;
   if (zk.status === "STOP") {
     return {
@@ -687,13 +695,20 @@ function applyZkCredential(signal: Signal, zk: ZkCredentialResult): Signal {
       reason: `zk credential proof rejected: ${zk.reason}`,
     };
   }
-  if (signal.status === "STOP") return signal;
+  // A public STOP that only means "no public record" is exactly the case a
+  // private presentation exists for (shielded holders have none). Revoked,
+  // self-issued, or otherwise negative public reads still win.
+  if (signal.status === "STOP" && !(publicAbsent && zk.status === "GO")) {
+    return signal;
+  }
   if (zk.status === "GO") {
     return {
       ...signal,
       status: "GO",
       confidence: 1,
-      reason: `zk credential proof verified: ${zk.reason}`,
+      reason: publicAbsent
+        ? `no public credential for this address, but a zk credential proof verified: ${zk.reason}`
+        : `zk credential proof verified: ${zk.reason}`,
     };
   }
   if (signal.status === "GO") return signal;
@@ -703,6 +718,24 @@ function applyZkCredential(signal: Signal, zk: ZkCredentialResult): Signal {
     confidence: 0,
     reason: `zk proof supplied but unverified: ${zk.reason}`,
   };
+}
+
+/**
+ * True when the public read answered and found no credential at all: not
+ * revoked on any registry, not self-issued, nothing held.
+ */
+function publicCredentialAbsent(
+  result: PromiseSettledResult<SubjectResolution>,
+): boolean {
+  if (result.status !== "fulfilled") return false;
+  const r = result.value;
+  if (!r.ok || r.capable || r.selfIssued) return false;
+  return (
+    r.verdicts.length > 0 &&
+    r.verdicts.every(
+      (v) => v.outcome.ok && !v.outcome.capable && !v.outcome.revoked,
+    )
+  );
 }
 
 // ─── signal builders ────────────────────────────────────────────────────

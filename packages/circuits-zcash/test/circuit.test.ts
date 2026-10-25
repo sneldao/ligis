@@ -15,7 +15,11 @@ import {
   resolveToolchain,
   toProverToml,
 } from "../src/index.js";
-import { SAMPLE_CAPABILITY, sampleRegistry } from "../src/sample.js";
+import {
+  SAMPLE_CAPABILITY,
+  SAMPLE_NOW,
+  sampleRegistry,
+} from "../src/sample.js";
 import { MEMBERSHIP_VK_BASE64 } from "../src/vk.js";
 
 describe("credential tree (TS mirror of main.nr)", () => {
@@ -156,3 +160,35 @@ describe("gate verifier (committed vk + bb)", () => {
     },
   );
 });
+
+describe(
+  "demo proofs for the guided web flow",
+  { skip: typeof tc === "string" ? tc : false },
+  () => {
+    it("holder proves against the current root; revoked holder only against the pre-revocation root", async () => {
+      const { demoProof } = await import("../src/demo-proof.js");
+      const { demoRegistry } = await import("../src/demo-registry.js");
+      const now = Number(SAMPLE_NOW);
+      const current = (await demoRegistry(now)).manifest.root;
+      const holder = await demoProof({ scenario: "holder", now });
+      const revoked = await demoProof({ scenario: "revoked", now });
+      assert.ok(typeof holder !== "string", String(holder));
+      assert.ok(typeof revoked !== "string", String(revoked));
+      assert.equal(holder.root, current);
+      assert.notEqual(revoked.root, current);
+      for (const p of [holder, revoked]) {
+        const pub = Object.fromEntries(
+          Object.entries(p.zkProof.publicInputs).map(([k, v]) => [
+            k,
+            BigInt(v),
+          ]),
+        ) as never;
+        const out = await verifyMembershipProof(
+          Buffer.from(p.zkProof.proof.slice(2), "hex"),
+          pub,
+        );
+        assert.equal(out.status, "verified", JSON.stringify(out));
+      }
+    });
+  },
+);

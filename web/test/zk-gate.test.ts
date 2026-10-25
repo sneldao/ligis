@@ -256,6 +256,68 @@ describe("gate zk credential proofs", () => {
     assert.equal(vp(d).status, "STOP");
     assert.equal(d.verdict, "STOP");
   });
+
+  const publicRead = (outcome: object, extra: object = {}) =>
+    (async () =>
+      ({
+        ok: true as const,
+        subject: PAYEE,
+        capable: false,
+        ...extra,
+        primary: {
+          chain: { id: "zcash-testnet", name: "Zcash Testnet" },
+          outcome,
+        },
+        verdicts: [
+          { chain: { id: "zcash-testnet", name: "Zcash Testnet" }, outcome },
+        ],
+      }) as never) as DecideDeps["resolveSubject"];
+
+  it("shielded payee with NO public credential: a verified proof answers GO (private presentation)", async () => {
+    const absent = { ok: true, capable: false, revoked: false };
+    const without = await decide(
+      { ...intent, zkProof: undefined },
+      { ...deps(zk()), resolveSubject: publicRead(absent) },
+    );
+    assert.equal(vp(without).status, "STOP");
+    const d = await decide(intent, {
+      ...deps(zk()),
+      resolveSubject: publicRead(absent),
+    });
+    assert.equal(vp(d).status, "GO");
+    assert.match(vp(d).reason ?? "", /no public credential/);
+    assert.equal(d.verdict, "GO");
+  });
+
+  it("public revoked or self-issued still wins over a verified proof", async () => {
+    for (const [outcome, extra] of [
+      [{ ok: true, capable: false, revoked: true }, {}],
+      [{ ok: true, capable: false, revoked: false }, { selfIssued: true }],
+    ] as const) {
+      const d = await decide(intent, {
+        ...deps(zk()),
+        resolveSubject: publicRead(outcome, extra),
+      });
+      assert.equal(d.zkCredential?.status, "GO");
+      assert.equal(d.verdict, "STOP");
+    }
+  });
+
+  it("an unverified proof never rescues public absence", async () => {
+    const d = await decide(intent, {
+      ...deps(
+        zk({
+          verify: stubVerify({
+            status: "unavailable",
+            detail: "bb missing",
+          } as VerifyOutcome),
+        }),
+      ),
+      resolveSubject: publicRead({ ok: true, capable: false, revoked: false }),
+    });
+    assert.equal(d.zkCredential?.status, "UNKNOWN");
+    assert.equal(d.verdict, "STOP");
+  });
 });
 
 describe("Week 3: payee binding", () => {

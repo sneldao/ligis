@@ -29,6 +29,10 @@
     "./sample": {
       "import": "./dist/sample.js",
       "types": "./dist/sample.d.ts"
+    },
+    "./demo-proof": {
+      "import": "./dist/demo-proof.js",
+      "types": "./dist/demo-proof.d.ts"
     }
   },
   "scripts": {
