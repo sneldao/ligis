@@ -11,7 +11,7 @@
  * pins it to SAMPLE_NOW so tests are deterministic.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import {
@@ -93,7 +93,7 @@ const out = values.fixture
       "fixtures",
       "membership-proof.json",
     )
-  : values.json;
+  : values.json && resolve(process.env.INIT_CWD ?? process.cwd(), values.json);
 if (out) {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, `${JSON.stringify(zkProof, null, 2)}\n`);

@@ -14,6 +14,7 @@
  * Point the gate at the output with LIGIS_ZK_ROOT_MANIFEST.
  */
 import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { createPublicClient, http, type Hex } from "viem";
 import { demoRegistry } from "../src/demo-registry.js";
@@ -39,8 +40,13 @@ const { values } = parseArgs({
   },
 });
 
+// `pnpm --filter … build-root` runs in the package dir; resolve user paths
+// against where the command was typed.
+const userPath = (p: string) =>
+  resolve(process.env.INIT_CWD ?? process.cwd(), p);
 const asOf = Number(values["as-of"] ?? Math.floor(Date.now() / 1000));
-const readJson = <T>(p: string): T => JSON.parse(readFileSync(p, "utf8")) as T;
+const readJson = <T>(p: string): T =>
+  JSON.parse(readFileSync(userPath(p), "utf8")) as T;
 
 let result;
 if (values.demo) {
@@ -85,7 +91,7 @@ if (values.demo) {
 }
 
 const json = `${JSON.stringify(result.manifest, null, 2)}\n`;
-if (values.out) writeFileSync(values.out, json);
+if (values.out) writeFileSync(userPath(values.out), json);
 else process.stdout.write(json);
 const m = result.manifest;
 console.error(
