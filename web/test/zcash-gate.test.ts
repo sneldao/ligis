@@ -6,6 +6,7 @@ import {
   ZCASH_DEMO_VERIFIED_SUBJECT,
 } from "@ligis/core";
 import { runGateDecision } from "../lib/gate-run.js";
+import { zecAmount } from "../lib/payment-asset.js";
 import { MONAD_TESTNET, ZCASH_TESTNET, chainById } from "../lib/network.js";
 import { candidateChains, resolveSubject } from "../lib/resolve.js";
 import {
@@ -89,6 +90,7 @@ describe("Zcash shielded gate integration (Week 1)", () => {
       {
         payee: ZCASH_DEMO_VERIFIED_SUBJECT,
         amountUsd: 25,
+        ...zecAmount("0.25"),
         purpose: "Release 0.25 shielded ZEC for escrow settlement",
         capability: "agent.commerce.escrow",
         mandate: baseMandate,
@@ -111,6 +113,7 @@ describe("Zcash shielded gate integration (Week 1)", () => {
       {
         payee: ZCASH_DEMO_REPLAYED_SUBJECT,
         amountUsd: 25,
+        ...zecAmount("0.25"),
         purpose: "Replay shielded ZEC payment with spent nullifier",
         capability: "agent.commerce.escrow",
         mandate: baseMandate,

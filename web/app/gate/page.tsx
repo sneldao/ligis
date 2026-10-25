@@ -26,6 +26,7 @@ import { SITE_URL } from "@/lib/site";
 import { getSituation, SITUATIONS } from "@/lib/situations";
 import { chainSwitchHref } from "@/lib/subject-format";
 
+import { parsePaymentAmount } from "@/lib/payment-asset";
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{
@@ -38,6 +39,9 @@ type SearchParams = Promise<{
   mandatePayees?: string;
   mandateMaxUsd?: string;
   mandateExpectedUsd?: string;
+  tokenSymbol?: string;
+  chainId?: string;
+  amountBaseUnits?: string;
 }>;
 
 export const metadata = {
@@ -125,6 +129,19 @@ export default async function VerifyPage({
     ? parseFloat(params.amountUsd)
     : undefined;
   const decisionPurpose = params.purpose ?? undefined;
+  // Optional explicit token leg (e.g. tokenSymbol=ZEC&amountBaseUnits=25000000).
+  // Only forwarded when it parses; the API re-validates either way.
+  const decisionPayment =
+    params.tokenSymbol && decisionAmountUsd !== undefined
+      ? parsePaymentAmount(
+          {
+            tokenSymbol: params.tokenSymbol,
+            chainId: params.chainId,
+            amountBaseUnits: params.amountBaseUnits,
+          },
+          decisionAmountUsd,
+        )
+      : undefined;
   const mandatePayeesRaw = params.mandatePayees?.trim() || undefined;
   const decisionMandate = {
     payees: mandatePayeesRaw
@@ -206,6 +223,11 @@ export default async function VerifyPage({
             <GateDecision
               payee={subjectForVerdict}
               amountUsd={decisionAmountUsd!}
+              payment={
+                decisionPayment && typeof decisionPayment !== "string"
+                  ? decisionPayment
+                  : undefined
+              }
               purpose={decisionPurpose!}
               capability={capForVerdict}
               situation={situation?.id}

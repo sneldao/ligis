@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Rule } from "@/components/Rule";
 import { SignalStack } from "@/components/SignalStack";
 import { decisionToTrustSignals } from "@/lib/decision-receipt";
-import type { Decision } from "@/lib/decide";
+import type { Decision, PaymentAmount } from "@/lib/decide";
 
 /**
  * GateDecision — client-side decision runner.
@@ -35,9 +35,13 @@ export function GateDecision({
   capability,
   situation,
   mandate,
+  payment,
 }: {
   payee: string;
   amountUsd: number;
+  /** Explicit token leg (ZEC zatoshis / USDC micro-units). When absent the
+   *  API treats the intent as USDC derived from `amountUsd`. */
+  payment?: PaymentAmount;
   purpose: string;
   capability: string;
   situation?: string;
@@ -70,6 +74,7 @@ export function GateDecision({
             purpose,
             capability,
             mandate,
+            ...(payment ?? {}),
           }),
           signal: controller.signal,
         });
@@ -108,6 +113,9 @@ export function GateDecision({
     mandate?.payees?.join(","),
     mandate?.maxUsd,
     mandate?.expectedUsd,
+    payment?.tokenSymbol,
+    payment?.chainId,
+    payment?.amountBaseUnits,
   ]);
 
   if (loading) {
@@ -269,7 +277,7 @@ export function GateDecision({
           <p>Open this URL to re-run the same decision:</p>
           <code className="mt-2 block break-all rounded bg-paper-deep px-4 py-3 text-[11px] text-ink">
             {typeof window !== "undefined"
-              ? `${window.location.origin}/gate?subject=${encodeURIComponent(payee)}&amountUsd=${amountUsd}&purpose=${encodeURIComponent(purpose)}&capability=${encodeURIComponent(capability)}${mandate?.payees?.length ? `&mandatePayees=${encodeURIComponent(mandate.payees.join(","))}` : ""}${mandate?.maxUsd !== undefined ? `&mandateMaxUsd=${mandate.maxUsd}` : ""}${mandate?.expectedUsd !== undefined ? `&mandateExpectedUsd=${mandate.expectedUsd}` : ""}`
+              ? `${window.location.origin}/gate?subject=${encodeURIComponent(payee)}&amountUsd=${amountUsd}&purpose=${encodeURIComponent(purpose)}&capability=${encodeURIComponent(capability)}${mandate?.payees?.length ? `&mandatePayees=${encodeURIComponent(mandate.payees.join(","))}` : ""}${mandate?.maxUsd !== undefined ? `&mandateMaxUsd=${mandate.maxUsd}` : ""}${mandate?.expectedUsd !== undefined ? `&mandateExpectedUsd=${mandate.expectedUsd}` : ""}${payment ? `&tokenSymbol=${payment.tokenSymbol}&chainId=${encodeURIComponent(payment.chainId)}&amountBaseUnits=${payment.amountBaseUnits}` : ""}`
               : "Loading…"}
           </code>
         </div>

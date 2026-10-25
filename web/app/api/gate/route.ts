@@ -80,6 +80,11 @@ export async function GET(req: NextRequest) {
       mandateMaxUsd: q.get("mandateMaxUsd"),
       mandateExpectedUsd: q.get("mandateExpectedUsd"),
     },
+    {
+      tokenSymbol: q.get("tokenSymbol"),
+      chainId: q.get("chainId"),
+      amountBaseUnits: q.get("amountBaseUnits"),
+    },
   );
   if (isBadRequest(intentOrError)) {
     return bad(fromBadRequest(intentOrError));

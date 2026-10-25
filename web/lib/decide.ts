@@ -34,6 +34,25 @@ import {
   type PayeeEvidenceReader,
   type EvidenceOptions,
 } from "./payee-evidence/types";
+import {
+  formatBaseUnits,
+  railFor,
+  scaleBaseUnitsByUsd,
+  tokenDecimals,
+  type PaymentAmount,
+} from "./payment-asset";
+
+export type {
+  BaseUnits,
+  EvmChainId,
+  PaymentAmount,
+  PaymentChainId,
+  PaymentRail,
+  TokenSymbol,
+  UsdcPaymentAmount,
+  ZcashChainId,
+  ZecPaymentAmount,
+} from "./payment-asset";
 
 // ─── public types (mirror docs/decide-api.md) ──────────────────────────
 
@@ -77,10 +96,25 @@ export type Signal =
       latencyMs?: number;
     };
 
-export type PaymentIntent = {
+/**
+ * A pre-payment intent. The token leg is explicit and discriminated on
+ * `tokenSymbol` (see `./payment-asset`):
+ *
+ *   - `{ tokenSymbol: "ZEC",  chainId: "zcash:testnet", amountBaseUnits }`
+ *     → zatoshis (8 decimals), `zcash-shielded` rail
+ *   - `{ tokenSymbol: "USDC", chainId: "eip155:<n>",    amountBaseUnits }`
+ *     → micro-USDC (6 decimals), `evm-erc20` rail
+ *
+ * `amountBaseUnits` is what actually moves on-chain and is what Jev sees.
+ * `amountUsd` is the operator-facing valuation that mandate caps
+ * (`maxUsd` / `expectedUsd`) are enforced against.
+ */
+export type PaymentIntent = PaymentIntentBase & PaymentAmount;
+
+export type PaymentIntentBase = {
   /** Payee address or stable known-vendor id. The credential subject. */
   payee: string;
-  /** Amount in USD; Jev reads it as human-readable. */
+  /** USD valuation of the payment. Mandate caps are enforced against it. */
   amountUsd: number;
   /** What the agent was hired to do. Forwarded to Jev + the operator UI. */
   purpose: string;
@@ -186,11 +220,6 @@ const INJECTION_TRIGGERS: ReadonlyArray<RegExp> = [
   /send (everything|all|the whole balance) to/i,
   /(urgent|immediate) (transfer|wire|payment) to/i,
 ];
-
-// Phase 3a assumption: amountUsd is USD with 6 decimals (USDC). Phase 3b
-// should extend PaymentIntent with `tokenSymbol`/`tokenDecimals` so the gate
-// can serve CSPR (9 decimals), ETH (18), etc. without re-deriving here.
-const ASSUMED_USDC_DECIMALS = 6;
 
 /** Tolerance above expectedUsd before the amount check stops the payment.
  * 10 % — allows minor rounding / exchange-rate drift while catching
@@ -387,9 +416,9 @@ export async function decide(
     Number(env.LIGIS_PAYEE_EVIDENCE_TIMEOUT_MS),
   );
 
-  const smallestUnit = BigInt(
-    Math.max(0, Math.round(intent.amountUsd * 10 ** ASSUMED_USDC_DECIMALS)),
-  ).toString();
+  // The token leg is explicit on the intent: Jev sees the exact base units
+  // that will move, in the token's own decimals (zatoshis / micro-USDC).
+  const smallestUnit = intent.amountBaseUnits;
 
   // Run mandate checks first — they're deterministic and cheap.
   const callerMandate = checkMandate(intent);
@@ -432,17 +461,21 @@ export async function decide(
     deps.operatorPolicy?.mandate?.expectedUsd ??
     intent.mandate?.expectedUsd ??
     intent.amountUsd;
-  const contractPriceSmallestUnit = BigInt(
-    Math.round(referencePriceUsd * 10 ** ASSUMED_USDC_DECIMALS),
-  ).toString();
+  // Express the USD reference price in the payment token's base units,
+  // using the intent's own USD quote as the implied rate (exact for USDC).
+  const contractPriceSmallestUnit = scaleBaseUnitsByUsd(
+    intent.amountBaseUnits,
+    referencePriceUsd,
+    intent.amountUsd,
+  );
 
   const jevInput: JevIntentInput = {
     subject: intent.payee,
     capability: capability ?? "payment",
     capabilityDescription: intent.purpose,
     gatePriceSmallestUnit: contractPriceSmallestUnit,
-    tokenSymbol: "USDC",
-    tokenDecimals: String(ASSUMED_USDC_DECIMALS),
+    tokenSymbol: intent.tokenSymbol,
+    tokenDecimals: String(tokenDecimals(intent.tokenSymbol)),
     advertisedPayTo,
     payment: {
       amountSmallestUnit: smallestUnit,
@@ -575,6 +608,10 @@ export async function decide(
       );
     }
   }
+
+  provenance.push(
+    `payment ${formatBaseUnits(intent.tokenSymbol, intent.amountBaseUnits)} (${intent.amountBaseUnits} base units) on ${intent.chainId} via ${railFor(intent)}`,
+  );
 
   return {
     verdict,

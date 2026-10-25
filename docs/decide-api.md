@@ -11,9 +11,22 @@ not GO.** Read `verdict` or `X-Ligis-Gate-Verdict`; STOP and UNKNOWN must not
 authorize payment. The endpoint does not settle a payment.
 
 ```ts
-type PaymentIntent = {
+// web/lib/payment-asset.ts — discriminated on tokenSymbol.
+type PaymentAmount =
+  | {
+      tokenSymbol: "ZEC";
+      chainId: "zcash:testnet" | "zcash:mainnet";
+      amountBaseUnits: `${bigint}`;
+    } // zatoshis, 8 dp, rail zcash-shielded
+  | {
+      tokenSymbol: "USDC";
+      chainId: `eip155:${number}`;
+      amountBaseUnits: `${bigint}`;
+    }; // micro-USDC, 6 dp, rail evm-erc20
+
+type PaymentIntent = PaymentAmount & {
   payee: string;
-  amountUsd: number;
+  amountUsd: number; // USD valuation; mandate caps are enforced against it
   purpose: string;
   capability?: string;
   mandate?: {
@@ -27,6 +40,13 @@ type PaymentIntent = {
 ```
 
 The parser requires a nonempty payee/purpose and finite positive amount.
+`tokenSymbol`, `chainId`, and `amountBaseUnits` (JSON or query) are optional
+for back-compat: when `tokenSymbol` is omitted the intent is USDC on
+`eip155:10143` with base units derived from `amountUsd`. Explicit USDC base
+units must equal the 6-decimal encoding of `amountUsd`; ZEC requires explicit
+zatoshis. ZEC cannot target an EVM/Casper payee and explicit USDC cannot
+target a Zcash shielded payee. Jev receives the exact base units, the token's
+decimals, and a contract price scaled by the intent's implied USD rate.
 `capability` is not inferred from purpose. GET mandate fields are
 `mandatePayees` (comma-separated), `mandateMaxUsd`, `mandateExpectedUsd`.
 

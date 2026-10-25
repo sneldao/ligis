@@ -13,6 +13,8 @@
  */
 import type { PaymentIntent } from "./decide";
 import { parseMandate } from "./mandate";
+import { parsePaymentAmount, type PaymentAmount } from "./payment-asset";
+import { detectSubjectKind } from "./subject-format";
 
 const HEX = /^0x[0-9a-fA-F]{40}$/;
 const CASPER_ACCT = /^account-hash-[0-9a-f]{64}$/;
@@ -96,6 +98,13 @@ export function bodyToIntent(
   if (typeof mandateOrError === "string") return bad400(mandateOrError);
   const mandate: PaymentIntent["mandate"] = mandateOrError;
 
+  const amountOrError = parseIntentAmount(payee, amountUsd, {
+    tokenSymbol: body.tokenSymbol,
+    chainId: body.chainId,
+    amountBaseUnits: body.amountBaseUnits,
+  });
+  if (typeof amountOrError === "string") return bad400(amountOrError);
+
   return {
     payee,
     amountUsd,
@@ -103,7 +112,36 @@ export function bodyToIntent(
     mandate,
     capability,
     pageText: pageText ?? undefined,
+    ...amountOrError,
   };
+}
+
+/**
+ * Parse the token leg and check it against the payee format: a ZEC payment
+ * must not target an EVM/Casper address, and USDC must not target a Zcash
+ * shielded address. Vendor ids (unknown format) are accepted on either rail.
+ */
+function parseIntentAmount(
+  payee: string,
+  amountUsd: number,
+  raw: { tokenSymbol?: unknown; chainId?: unknown; amountBaseUnits?: unknown },
+): PaymentAmount | string {
+  const amount = parsePaymentAmount(raw, amountUsd);
+  if (typeof amount === "string") return amount;
+  const kind = detectSubjectKind(payee);
+  if (amount.tokenSymbol === "ZEC" && (kind === "evm" || kind === "casper")) {
+    return `ZEC payments need a Zcash shielded payee, got a ${kind} address`;
+  }
+  // Only an explicit USDC claim is rejected for a shielded payee; legacy
+  // amountUsd-only requests keep their pre-typing behaviour.
+  if (
+    amount.tokenSymbol === "USDC" &&
+    kind === "zcash" &&
+    raw.tokenSymbol !== undefined
+  ) {
+    return "USDC payments cannot target a Zcash shielded address";
+  }
+  return amount;
 }
 
 export function queryToIntent(
@@ -115,6 +153,11 @@ export function queryToIntent(
     mandatePayees?: string | null;
     mandateMaxUsd?: string | null;
     mandateExpectedUsd?: string | null;
+  },
+  amountRaw?: {
+    tokenSymbol?: string | null;
+    chainId?: string | null;
+    amountBaseUnits?: string | null;
   },
 ): PaymentIntent | string {
   const p = asPayee(payee);
@@ -164,7 +207,20 @@ export function queryToIntent(
     if (typeof parsed === "string") return bad400(parsed);
     mandate = parsed;
   }
-  return { payee: p, amountUsd: n, purpose: pur, capability: cap, mandate };
+  const amountOrError = parseIntentAmount(p, n, {
+    tokenSymbol: amountRaw?.tokenSymbol ?? undefined,
+    chainId: amountRaw?.chainId ?? undefined,
+    amountBaseUnits: amountRaw?.amountBaseUnits ?? undefined,
+  });
+  if (typeof amountOrError === "string") return bad400(amountOrError);
+  return {
+    payee: p,
+    amountUsd: n,
+    purpose: pur,
+    capability: cap,
+    mandate,
+    ...amountOrError,
+  };
 }
 
 export function bad400(message: string): string {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { decide, type DecideDeps, type PaymentIntent } from "@/lib/decide";
 import { runGateDecision } from "@/lib/gate-run";
+import { usdcAmount } from "@/lib/payment-asset";
 import { decisionToTrustSignals } from "@/lib/decision-receipt";
 import { MONAD_TESTNET, PHAROS_ATLANTIC } from "@/lib/network";
 import type { SubjectResolution } from "@/lib/resolve";
@@ -12,6 +13,7 @@ const ISSUER = "0x2222222222222222222222222222222222222222";
 const intent: PaymentIntent = {
   payee: PAYEE,
   amountUsd: 10,
+  ...usdcAmount(10),
   purpose: "data delivery",
   capability: "data.premium",
   mandate: { payees: [PAYEE], maxUsd: 20, expectedUsd: 10 },
@@ -240,7 +242,7 @@ test("credential outage is unavailable, not successful absence, and blocks alter
 
 test("mandate violations always STOP despite positive evidence", async () => {
   for (const input of [
-    { ...intent, amountUsd: 900 },
+    { ...intent, amountUsd: 900, ...usdcAmount(900) },
     { ...intent, mandate: { ...intent.mandate, payees: [ISSUER] } },
   ]) {
     assert.equal(

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { parseMandate } from "@/lib/mandate";
 import { bodyToIntent, queryToIntent } from "@/lib/gate-intent";
 import { runGateDecision } from "@/lib/gate-run";
+import { usdcAmount } from "@/lib/payment-asset";
 import type { SubjectResolution } from "@/lib/resolve";
 
 // NOTE: bodyToIntent / queryToIntent / runGateDecision live in lib/gate-intent
@@ -163,6 +164,7 @@ test("runGateDecision returns GO over stubbed resolveSubject", async () => {
     {
       payee: PAYEE,
       amountUsd: 100,
+      ...usdcAmount(100),
       purpose: "Q4 renewal",
       capability: "agent.commerce.escrow",
       mandate: { payees: [PAYEE], maxUsd: 10000, expectedUsd: 100 },
@@ -183,6 +185,7 @@ test("runGateDecision with cap-only mandate keeps right-payee SKIPPED", async ()
     {
       payee: PAYEE,
       amountUsd: 100,
+      ...usdcAmount(100),
       purpose: "Q4 renewal",
       capability: "agent.commerce.escrow",
       mandate: { maxUsd: 10000 },

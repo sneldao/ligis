@@ -13,6 +13,7 @@ import { describe, it } from "node:test";
 import type { Hex } from "viem";
 import type { JevIntentResult } from "@ligis/core";
 import { decide, type PaymentIntent } from "@/lib/decide";
+import { usdcAmount, zecAmount } from "@/lib/payment-asset";
 import { PHAROS_ATLANTIC } from "@/lib/network";
 import type { VerificationOutcome } from "@/lib/verify";
 
@@ -23,6 +24,7 @@ const PAYEE: Hex = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec";
 const baseIntent: PaymentIntent = {
   payee: PAYEE,
   amountUsd: 1200,
+  ...usdcAmount(1200),
   purpose: "Q4 renewal, per signed contract",
   capability: "agent.commerce.escrow",
 };
@@ -374,6 +376,7 @@ describe("decide()", () => {
       {
         ...baseIntent,
         amountUsd: 5000,
+        ...usdcAmount(5000),
         mandate: {
           payees: [PAYEE],
           maxUsd: 1000,
@@ -465,6 +468,7 @@ describe("decide()", () => {
       {
         ...baseIntent,
         amountUsd: 50,
+        ...usdcAmount(50),
         mandate: { payees: [PAYEE], maxUsd: 10000 },
       },
       {
@@ -484,6 +488,7 @@ describe("decide()", () => {
       {
         ...baseIntent,
         amountUsd: 9000,
+        ...usdcAmount(9000),
         mandate: {
           payees: [PAYEE],
           maxUsd: 10000,
@@ -548,6 +553,7 @@ describe("decide()", () => {
       {
         ...baseIntent,
         amountUsd: 50,
+        ...usdcAmount(50),
         mandate: { payees: [PAYEE], maxUsd: 5000 },
       },
       {
