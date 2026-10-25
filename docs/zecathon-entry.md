@@ -135,7 +135,7 @@ to run this entry without conflict.
 - [x] `ZcashChainAdapter` in `@ligis/core` behind `ChainAdapter` boundary (`packages/core/src/zcash.ts`)
 - [x] Shielded ZEC payment readable via viewing key / light client (`z_listreceivedbyaddress` 512-byte memo codec + nullifier replay store)
 - [x] Gate returns `GO` / `STOP` / `UNKNOWN` for shielded ZEC intents (`web/lib/chain-zcash.ts`, `web/lib/resolve.ts`, `/gate` presets)
-- [ ] ZK circuit compiling (or Week 1 fallback active by Day 14)
+- [x] ZK circuit compiling — `packages/circuits-zcash` (Noir + UltraHonk; Poseidon Merkle membership + nullifier; sample proof verifies locally). Not yet wired into `/api/gate`; registry root is computed off-chain, anchoring is open
 - [ ] End-to-end demo: gate → proof → shielded ZEC on Zcash testnet
 - [ ] Demo video (2 min max)
 - [ ] Zcash testnet tx hash showing shielded transfer after Ligis `GO`

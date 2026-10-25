@@ -1,0 +1,40 @@
+{
+  "name": "@ligis/circuits-zcash",
+  "version": "0.1.0",
+  "description": "Zecathon Week 2: Noir circuit proving Ligis credential membership (Poseidon Merkle tree + nullifier) against the CredentialRegistry root without revealing identity",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:circuit": "cd circuit && nargo compile",
+    "test": "pnpm run test:circuit && node --import tsx --test test/*.test.ts",
+    "test:circuit": "cd circuit && nargo test",
+    "prove:sample": "tsx scripts/prove-sample.ts",
+    "clean": "rm -rf dist circuit/target"
+  },
+  "toolchain": {
+    "nargo": "1.0.0-beta.22",
+    "bb": "5.0.0-nightly.20260522",
+    "provingSystem": "UltraHonk (barretenberg)"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.7.0",
+    "circomlibjs": "^0.1.7"
+  },
+  "devDependencies": {
+    "@types/circomlibjs": "^0.1.6",
+    "@types/node": "^26.4.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

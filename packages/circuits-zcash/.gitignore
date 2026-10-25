@@ -1,0 +1,5 @@
+dist/
+circuit/target/
+circuit/TestProver.toml
+circuit/TestTampered.toml
+circuit/Tampered.toml
