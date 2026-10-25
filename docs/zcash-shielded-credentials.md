@@ -244,6 +244,14 @@ is touched. The Zcash layer is a new `ChainAdapter` + proving circuit behind
 - Replay attempt with the same nullifier → `STOP`
 - Record a 90-second demo video
 
+**Shipped (Week 3, ZK side):** the circuit now binds the payee (`payee_hash`
+in the leaf and public inputs), the registry root is published from
+`CredentialIssued`/`CredentialRevoked` events + signed subject →
+identity-commitment registrations (`build-root`, served at
+`GET /api/zk/root`, trusted via `LIGIS_ZK_ROOT_MANIFEST`), and
+`pnpm demo:zcash-zk` runs root → proof → GO → replay STOP end to end. The
+testnet shielded transfer and the video are still open.
+
 ### Week 4 — Submission packet
 
 - README with "how to run the gate"

@@ -13,3 +13,4 @@ next-env.d.ts
 .commandcode/
 .junie/
 .agents/
+.zk-root.json

@@ -180,6 +180,7 @@ type ZkProofInput = {
   contextLabel: string; // ligis-gate:v1:<payee lowercased>:<capability>:<nonce>
   publicInputs: {
     registry_root: string; // 0x field
+    payee_hash: string; // keccak256(lowercase trimmed Zcash address) mod p — committed in the leaf
     capability_hash: string; // keccak256(capability) mod p
     context: string; // keccak256(contextLabel) mod p
     current_time: string; // unix seconds the proof was made for
@@ -188,34 +189,108 @@ type ZkProofInput = {
 };
 ```
 
-Generate one with
-`pnpm --filter @ligis/circuits-zcash prove:sample -- --payee <addr> --nonce <n> --json out.json`
+Generate one (demo holder) with
+`pnpm --filter @ligis/circuits-zcash prove:sample -- --nonce <n> --json out.json`
 and send it as `zkProof` (too large for a GET query string). Checks, in order:
 
-| Check         | Fails as                                                                              |
-| ------------- | ------------------------------------------------------------------------------------- |
-| trusted roots | none configured → `UNKNOWN`; root not listed → `STOP`                                 |
-| capability    | no capability on the intent → `UNKNOWN`; `capability_hash` ≠ gate capability → `STOP` |
-| context       | label not naming this payee + capability, or not hashing to `context` → `STOP`        |
-| freshness     | `current_time` > now+60s or older than `LIGIS_ZK_MAX_PROOF_AGE_S` (600) → `STOP`      |
-| replay        | (context, nullifier) already recorded → `STOP`                                        |
-| proof         | `bb verify` rejects → `STOP`; `bb` missing/incompatible/timeout → `UNKNOWN`           |
-| record        | nullifier store unavailable → `UNKNOWN`                                               |
+| Check         | Fails as                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| trusted roots | none configured → `UNKNOWN`; root not pinned/published → `STOP`; manifest stale → `UNKNOWN` |
+| capability    | no capability on the intent → `UNKNOWN`; `capability_hash` ≠ gate capability → `STOP`       |
+| payee         | `payee_hash` ≠ keccak(intent `payee`) → `STOP` (credential issued to another address)       |
+| context       | label not naming this payee + capability, or not hashing to `context` → `STOP`              |
+| freshness     | `current_time` > now+60s or older than `LIGIS_ZK_MAX_PROOF_AGE_S` (600) → `STOP`            |
+| replay        | (context, nullifier) already recorded → `STOP`                                              |
+| proof         | `bb verify` rejects → `STOP`; `bb` missing/incompatible/timeout → `UNKNOWN`                 |
+| record        | nullifier store unavailable → `UNKNOWN`                                                     |
 
 The result is returned as `Decision.zkCredential`
-(`{ status, verification: "verified" | "rejected" | "unverified", reason, registryRoot, nullifier, context, currentTime, verifier?, latencyMs? }`),
+(`{ status, verification: "verified" | "rejected" | "unverified", reason, registryRoot, rootSource?, nullifier, context, currentTime, verifier?, latencyMs? }`),
 as a `zk-credential …` provenance line, and folded into `verified-payee`:
 a rejected proof forces `STOP`; a verified proof answers `GO` unless the
 public read already said `STOP`; an **unverified proof never counts** — it
 leaves `verified-payee` `UNKNOWN` (so the verdict is `UNKNOWN`) unless the
 public credential already answered `GO`. There is no silent pass.
 
-**Trusted root.** The EVM `CredentialRegistry` has no on-chain Merkle root.
-The gate trusts exactly the roots in `LIGIS_ZK_TRUSTED_ROOTS`
-(comma-separated 0x hex), which the operator sets to the root built off-chain
-from registry events with `CredentialTree` (`prove:sample` prints the sample
-root). Rotating the tree = adding the new root and later removing the old one.
-An on-chain root anchor is future work.
+**Trusted root.** The EVM `CredentialRegistry` has no on-chain Merkle root,
+so the root is **published** off-chain and the gate trusts either:
+
+- a root **pinned** in `LIGIS_ZK_TRUSTED_ROOTS` (comma-separated 0x hex;
+  no staleness limit — the operator's explicit choice), or
+- the root of the **published manifest** at `LIGIS_ZK_ROOT_MANIFEST` (a JSON
+  file path). The gate re-derives the root from the manifest's leaves on load
+  (a tampered file is ignored with `published root manifest unusable: …` →
+  `UNKNOWN` if nothing else is trusted), and a manifest whose `asOf` is older
+  than `LIGIS_ZK_ROOT_MAX_AGE_S` (default 86400) is `UNKNOWN` — revocations
+  may be missing, so it never answers `GO`.
+
+`Decision.zkCredential.rootSource` is `"pinned"` or `"manifest"`. Build the
+manifest with `pnpm --filter @ligis/circuits-zcash build-root` from
+`CredentialIssued` / `CredentialRevoked` events (`--rpc <url> --registry 0x…
+--from-block N`, read-only `eth_getLogs`; or `--events file`; or `--demo`) plus
+subject registrations (`--registrations file`). A credential becomes a leaf
+only if it is unrevoked (a revoke counts only from the same issuer), unexpired
+at `--as-of`, and its EVM subject has registered an identity commitment:
+
+```text
+ligis-zk-commitment:v1
+subject:<evm address, lowercase>
+zcash:<zcash address, lowercase>
+commitment:<0x identity_commitment = Poseidon(identity_secret)>
+```
+
+signed by the subject (EIP-191 `personal_sign`). Registrations with a bad
+signature are dropped (`skipped.badRegistration`). Rebuild + republish on
+every issue/revoke; rotating = publishing a new manifest (pinned roots stay
+until removed).
+
+### `GET /api/zk/root`
+
+Public, cacheable 60 s. Returns what the gate trusts and the manifest a
+holder needs to compute its Merkle path (`witnessFromManifest` in
+`@ligis/circuits-zcash/registry`):
+
+```json
+{
+  "circuit": "ligis_credential_membership",
+  "publicInputs": [
+    "registry_root",
+    "payee_hash",
+    "capability_hash",
+    "context",
+    "current_time",
+    "nullifier"
+  ],
+  "pinnedRoots": ["0x…"],
+  "maxRootAgeS": 86400,
+  "manifest": {
+    "status": "fresh",
+    "version": 1,
+    "depth": 16,
+    "root": "0x…",
+    "asOf": 1761350400,
+    "leafCount": 3,
+    "leaves": ["0x…"],
+    "source": {
+      "kind": "chain",
+      "chainId": 1,
+      "registry": "0x…",
+      "fromBlock": "0",
+      "toBlock": "…"
+    },
+    "skipped": {
+      "revoked": 1,
+      "expired": 1,
+      "unregistered": 2,
+      "badRegistration": 1
+    }
+  }
+}
+```
+
+`manifest` is `null` when none is configured, `{ "status": "invalid", "error" }`
+when it fails the root check, and `status: "stale"` past `maxRootAgeS`.
+Leaves are Poseidon hashes: they reveal neither subject, payee, nor secret.
 
 **Replay.** A verified proof's (context, nullifier) is recorded atomically;
 reuse in that context is `STOP`. The store is Upstash/Vercel-KV
@@ -229,10 +304,13 @@ gate uses `LIGIS_ZK_BB_BIN` when set (only that path), else
 `~/.bb-versions/<pinned>/bb`, else `bb` on PATH. Vercel has no `bb`, so
 proofs there report `unverified`. ~20–60 ms per verify locally.
 
-**Binding limit.** The circuit does not commit to the payee's address; the
-payee binding is the context label inside the nullifier. A holder of any
-valid credential could present for another payee's label. Binding the
-Zcash address commitment into the leaf is the Week 3 fix.
+**Payee binding.** The credential leaf commits to `payee_hash` (the Zcash
+address the credential was registered for) and the circuit exposes it as a
+public input, so a proof minted for one payee cannot be presented for
+another: re-labelling the context is caught by the `payee_hash` check, and
+rewriting `payee_hash` too makes `bb verify` fail. Run `pnpm demo:zcash-zk`
+for the whole flow (publish root → prove → `GO` → replay `STOP` → redirect
+`STOP` → verifier missing `UNKNOWN` → revoke `STOP`).
 
 ## Budgets, receipts, and privacy
 

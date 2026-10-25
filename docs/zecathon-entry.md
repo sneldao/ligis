@@ -58,7 +58,7 @@ rewritten.
    decision returns the same canonical stack (`right-payee`, `right-amount`,
    `in-scope`, `verified-payee`). Zcash plugs into `verified-payee` via
    viewing-key selective disclosure (Week 1) or a nullifier-bound ZK proof
-   against the public `CredentialRegistry` root (Week 2).
+   against the published `CredentialRegistry` root, bound to the payee's Zcash address (Weeks 2–3).
 3. **Public issuance, private presentation:** Issuers remain publicly
    accountable on EVM/Casper registries; spend and presentation on Zcash stay
    shielded so neither the buyer, the payee, nor the payment graph leaks.
@@ -105,10 +105,17 @@ rewritten.
 ### Gate wiring (shipped)
 
 `POST /api/gate` accepts `zkProof` (`{ proof, contextLabel, publicInputs }`).
-Demo: set `LIGIS_ZK_TRUSTED_ROOTS` to the root printed by
-`pnpm --filter @ligis/circuits-zcash prove:sample`, generate a fresh proof
-with `-- --payee <utest1…> --nonce <n> --json out.json`, paste it into
-`/gate` → "Attach zk credential proof". First submit: `verified · GO`; the
+One-command demo (offline, keyless): `pnpm demo:zcash-zk` — publishes a
+registry root manifest, proves twice, and drives the real `/api/gate` wiring
+through GO → replay STOP → redirect-to-other-payee STOP → verifier-missing
+UNKNOWN → revoke + republish STOP (`scripts/zcash-zk-demo.lastrun.txt`).
+
+UI demo: `pnpm --filter @ligis/circuits-zcash build-root -- --demo --out web/.zk-root.json`,
+run the web app with `LIGIS_ZK_ROOT_MANIFEST=.zk-root.json` (check
+`GET /api/zk/root`), generate a fresh proof with
+`pnpm --filter @ligis/circuits-zcash prove:sample -- --nonce <n> --json out.json`,
+open `/gate` for the demo payee (`utest1qpzry9x8gf2…8qp9x2m`, printed in the
+proof's `contextLabel`) and paste it into "Attach zk credential proof". First submit: `verified · GO`; the
 same proof again: `rejected · STOP` (replay). Where `bb` is not installed
 (e.g. Vercel) the panel reads `unverified · UNKNOWN` and the proof does not
 count. Proving system shipped: Noir + UltraHonk (not Groth16/Halo2).
@@ -148,6 +155,10 @@ to run this entry without conflict.
 - [x] Gate returns `GO` / `STOP` / `UNKNOWN` for shielded ZEC intents (`web/lib/chain-zcash.ts`, `web/lib/resolve.ts`, `/gate` presets)
 - [x] ZK circuit compiling — `packages/circuits-zcash` (Noir + UltraHonk; Poseidon Merkle membership + nullifier; sample proof verifies locally). registry root is computed off-chain, anchoring is open
 - [x] ZK proof verified in `/api/gate` — optional `zkProof` on `POST`, `bb verify` against the committed vk, trusted roots from `LIGIS_ZK_TRUSTED_ROOTS`, (context, nullifier) replay → `STOP`, missing toolchain → explicit `unverified`/`UNKNOWN`; result shown as `Decision.zkCredential` and on `/gate` ("Attach zk credential proof"). See `docs/decide-api.md` § ZK credential proofs
+- [x] Payee bound into the circuit — leaf = `H(identity_commitment, payee_hash, capability_hash, issuer, expires_at, nonce)`, `payee_hash` public; gate `STOP`s a proof for another payee (`bb` rejects a rewritten `payee_hash`)
+- [x] Published registry root the gate can trust — `build-root` (CredentialRegistry events via read-only `eth_getLogs`, or fixture) → manifest; gate trusts `LIGIS_ZK_ROOT_MANIFEST` (root re-derived, staleness → `UNKNOWN`) or pinned roots; `GET /api/zk/root`; subject → identity-commitment mapping by EIP-191-signed registration
+- [x] Offline end-to-end ZK gate demo — `pnpm demo:zcash-zk`
+- [ ] On-chain root anchor (root registry contract or issuer-signed root) — today the operator publishes the manifest
 - [ ] End-to-end demo: gate → proof → shielded ZEC on Zcash testnet
 - [ ] Demo video (2 min max)
 - [ ] Zcash testnet tx hash showing shielded transfer after Ligis `GO`
