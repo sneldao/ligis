@@ -1,7 +1,7 @@
 {
   "name": "@ligis/circuits-zcash",
   "version": "0.1.0",
-  "description": "Zecathon Week 2: Noir circuit proving Ligis credential membership (Poseidon Merkle tree + nullifier) against the CredentialRegistry root without revealing identity",
+  "description": "Zecathon: Noir circuit proving a payee-bound Ligis credential (Poseidon Merkle membership + nullifier) against a published CredentialRegistry root without revealing the holder",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,6 +17,10 @@
     "./verify": {
       "import": "./dist/verify.js",
       "types": "./dist/verify.d.ts"
+    },
+    "./registry": {
+      "import": "./dist/registry.js",
+      "types": "./dist/registry.d.ts"
     }
   },
   "scripts": {
@@ -26,7 +30,9 @@
     "test:circuit": "cd circuit && nargo test",
     "prove:sample": "tsx scripts/prove-sample.ts",
     "clean": "rm -rf dist circuit/target",
-    "write:vk": "tsx scripts/write-vk.ts"
+    "write:vk": "tsx scripts/write-vk.ts",
+    "build-root": "tsx scripts/build-root.ts",
+    "fetch-crs": "bash scripts/fetch-crs.sh"
   },
   "toolchain": {
     "nargo": "1.0.0-beta.22",
@@ -35,7 +41,8 @@
   },
   "dependencies": {
     "@noble/hashes": "^1.7.0",
-    "circomlibjs": "^0.1.7"
+    "circomlibjs": "^0.1.7",
+    "viem": "^2.55.10"
   },
   "devDependencies": {
     "@types/circomlibjs": "^0.1.6",

@@ -167,6 +167,9 @@ importers:
       circomlibjs:
         specifier: ^0.1.7
         version: 0.1.7(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      viem:
+        specifier: ^2.55.10
+        version: 2.56.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.4.3)
     devDependencies:
       "@types/circomlibjs":
         specifier: ^0.1.6
@@ -17374,7 +17377,7 @@ snapshots:
     dependencies:
       eslint-plugin-import: 2.32.0(eslint@9.39.5(jiti@2.7.0))
       typescript-parsec: 0.3.4
-      viem: 2.55.10(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.4.3)
+      viem: 2.56.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.4.3)
     transitivePeerDependencies:
       - "@typescript-eslint/parser"
       - bufferutil
