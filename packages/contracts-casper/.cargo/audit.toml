@@ -1,0 +1,8 @@
+[advisories]
+ignore = [
+    # crypto-bigint 0.5.5 timing variability in constant-time operations:
+    # pulled in transitively by k256 0.13 / odra 2.8.1 (no 0.5.x patch;
+    # >=0.7.6 is a breaking semver jump). On-chain Casper WASM contracts only
+    # verify public ECDSA signatures and never hold secret keys.
+    "RUSTSEC-2026-0387",
+]

@@ -6,8 +6,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "codegen": "envio codegen",
-    "test": "node --import tsx --test test/*.test.ts",
+    "codegen": "NODE_ENV=development envio codegen",
+    "test": "NODE_ENV=test node --import tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck envio-env.d.ts src/*.ts",
     "dev": "envio dev",
     "start": "envio start",
