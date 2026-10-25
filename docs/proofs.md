@@ -15,7 +15,7 @@
 | **Metropolis (Monad) 2026**        | Trust, Identity & AI Infrastructure | Live gate (GO / revoked STOP / none), Envio full history, `pnpm demo:monad` on testnet _(browser writes pending)_                                                        | [`docs/metropolis-hackathon.md`](metropolis-hackathon.md) |
 | **Monid "We Kill" Hackathon 2026** | Agent-native SaaS replacement       | _(in progress)_                                                                                                                                                          | [`docs/monid-hackathon.md`](monid-hackathon.md)           |
 | **OKX.AI Genesis Hackathon 2026**  | General ASP — Trust & Verification  | _(in progress)_                                                                                                                                                          | [`docs/okx-ai.md`](okx-ai.md)                             |
-| **Zecathon 2026**                  | Shielded Payments (+ Grand Prize)   | _(in progress — shielded ZEC payment gate + private credential presentation)_                                                                                            | [`docs/zecathon-entry.md`](zecathon-entry.md)             |
+| **Zecathon 2026**                  | Shielded Payments (+ Grand Prize)   | `pnpm demo:zcash` on testnet (disclosure → GO → nullifier replay STOP; `.lastrun.txt`)                                                                                   | [`docs/zecathon-entry.md`](zecathon-entry.md)             |
 
 **Completed (submitted, not winning):** Casper Agentic Buildathon 2026 — final
 round, see [`docs/archive/casper-final-round.md`](archive/casper-final-round.md);
