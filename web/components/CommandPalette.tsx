@@ -37,6 +37,12 @@ const STATIC: Command[] = [
     href: "/arena",
   },
   {
+    id: "zcash",
+    label: "Zcash",
+    hint: "shielded payment + private credential proof, guided",
+    href: "/zcash",
+  },
+  {
     id: "genlayer",
     label: "Escrow",
     hint: "GenLayer JobEscrow · Agent Tank",

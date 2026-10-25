@@ -163,28 +163,57 @@ export default async function VerifyPage({
     subjectForVerdict && capForVerdict && decisionAmountUsd && decisionPurpose,
   );
 
+  // Group samples by registry so the list scans (it was one run-on line).
+  const sampleGroups = demoSubjects.reduce<
+    Array<{ tag: string; items: typeof demoSubjects }>
+  >((acc, s) => {
+    const g = acc.find((x) => x.tag === s.tag);
+    if (g) g.items.push(s);
+    else acc.push({ tag: s.tag, items: [s] });
+    return acc;
+  }, []);
   const sampleLinks =
     demoSubjects.length > 0 ? (
-      <p className="mt-4 font-mono text-xs text-ink-quiet">
-        or try:{" "}
-        {demoSubjects.map((s, i) => (
-          <span key={`${s.label}-${s.capability}`}>
-            {i > 0 ? " · " : ""}
-            <a
-              className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
-              href={verifyHref(
-                scoped ? chain : null,
-                s.subject,
-                s.capability,
-                situation?.id,
-              )}
+      <div className="mt-4 font-mono text-xs text-ink-quiet">
+        <p>Try a sample payee:</p>
+        <ul className="mt-2 space-y-1">
+          {sampleGroups.map((g) => (
+            <li
+              key={g.tag || "scoped"}
+              className="flex flex-wrap gap-x-3 gap-y-1"
             >
-              {s.label}
-              {s.tag}
-            </a>
-          </span>
-        ))}
-      </p>
+              {g.tag ? (
+                <span className="w-16 shrink-0 uppercase tracking-[0.12em]">
+                  {g.tag.replace(/^ · /, "")}
+                </span>
+              ) : null}
+              {g.items.map((s) => (
+                <a
+                  key={`${s.label}-${s.capability}`}
+                  className="text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+                  href={verifyHref(
+                    scoped ? chain : null,
+                    s.subject,
+                    s.capability,
+                    situation?.id,
+                  )}
+                >
+                  {s.label}
+                </a>
+              ))}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 font-serif text-sm not-italic text-ink-soft">
+          Paying a shielded Zcash address?{" "}
+          <Link
+            href="/zcash"
+            className="text-ink underline decoration-terra decoration-1 underline-offset-4"
+          >
+            Walk through the private-credential demo →
+          </Link>
+        </p>
+      </div>
     ) : null;
 
   // Decision-mode share link (includes amount + purpose for full decide())
@@ -322,7 +351,9 @@ export default async function VerifyPage({
       <section className="mt-16">
         <h2 className="eyebrow">Verdict</h2>
         <p className="mt-4 font-serif text-base italic text-ink-quiet">
-          Run the gate above — or pick a situation below — to see the decision.
+          Enter a payee above and press Gate, or pick a moment below. The answer
+          is GO (safe to pay), STOP (don&rsquo;t pay), or UNKNOWN (not enough to
+          say yes, so don&rsquo;t pay either).
         </p>
       </section>
     );

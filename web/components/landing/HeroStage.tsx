@@ -51,6 +51,13 @@ export function HeroStage() {
             >
               Watch an attack stopped
             </HeroCtaCounter>
+            <HeroCtaCounter
+              bucket="hero:zcash"
+              href="/zcash"
+              className="font-mono text-xs uppercase tracking-[0.14em] text-fog-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-fog hover:decoration-terra"
+            >
+              Pay a shielded Zcash payee privately
+            </HeroCtaCounter>
           </div>
           <p
             className="pt-4 font-mono text-[11px] leading-relaxed text-fog-quiet"

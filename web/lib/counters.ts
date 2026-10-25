@@ -48,6 +48,7 @@ export type CounterCategory =
 export type CounterBucket =
   | "hero:gate"
   | "hero:arena"
+  | "hero:zcash"
   | "hero:proofs"
   | "share:gate"
   | "share:arena"
@@ -63,6 +64,7 @@ export type CounterBucket =
 const ALLOWED_BUCKETS: ReadonlySet<CounterBucket> = new Set<CounterBucket>([
   "hero:gate",
   "hero:arena",
+  "hero:zcash",
   "hero:proofs",
   "share:gate",
   "share:arena",
