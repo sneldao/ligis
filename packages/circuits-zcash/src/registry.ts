@@ -21,6 +21,7 @@ import {
   type Hex,
   type PublicClient,
 } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import {
   TREE_DEPTH,
   capabilityField,
@@ -70,6 +71,19 @@ export type SubjectRegistration = {
   signature: Hex;
 };
 
+export type RootAttestation = {
+  /** EIP-191 signer address (steward / operator). */
+  signer: Hex;
+  /** EIP-191 signature over `rootAttestationMessage(manifest)`. */
+  signature: Hex;
+  /** Optional on-chain transaction hash anchoring `root`. */
+  anchorTxHash?: Hex;
+  /** Optional EVM chain ID where `anchorTxHash` was broadcast. */
+  anchorChainId?: number;
+  /** Optional block number of the anchor transaction. */
+  anchorBlockNumber?: string;
+};
+
 export type RootManifest = {
   version: 1;
   circuit: "ligis_credential_membership";
@@ -94,7 +108,50 @@ export type RootManifest = {
     unregistered: number;
     badRegistration: number;
   };
+  /** Optional steward signature and on-chain anchor reference. */
+  attestation?: RootAttestation;
 };
+
+/** Canonical message a steward signs to attest to a published registry root. */
+export function rootAttestationMessage(
+  m: Pick<RootManifest, "root" | "asOf" | "leafCount" | "depth">,
+): string {
+  return [
+    "ligis-zk-root:v1",
+    `root:${m.root.toLowerCase()}`,
+    `asOf:${m.asOf}`,
+    `leafCount:${m.leafCount}`,
+    `depth:${m.depth}`,
+  ].join("\n");
+}
+
+/** Sign a `RootManifest` with a steward/operator private key and optional on-chain anchor metadata. */
+export async function signRootManifest(
+  manifest: RootManifest,
+  privateKey: Hex,
+  anchor?: { txHash: Hex; chainId: number; blockNumber?: string },
+): Promise<RootManifest> {
+  const acc = privateKeyToAccount(privateKey);
+  const signature = await acc.signMessage({
+    message: rootAttestationMessage(manifest),
+  });
+  return {
+    ...manifest,
+    attestation: {
+      signer: acc.address,
+      signature,
+      ...(anchor
+        ? {
+            anchorTxHash: anchor.txHash,
+            anchorChainId: anchor.chainId,
+            ...(anchor.blockNumber
+              ? { anchorBlockNumber: anchor.blockNumber }
+              : {}),
+          }
+        : {}),
+    },
+  };
+}
 
 /** Canonical message a subject signs to register a commitment. */
 export function registrationMessage(
@@ -219,9 +276,10 @@ export async function buildRegistryRoot(args: {
   };
 }
 
-/** Validate an untrusted manifest and recompute its root from its leaves. */
+/** Validate an untrusted manifest, recompute its root from its leaves, and verify any steward attestation. */
 export async function checkManifest(
   raw: unknown,
+  opts?: { expectedSigner?: string },
 ): Promise<RootManifest | string> {
   const m = raw as Partial<RootManifest> | null;
   if (!m || m.version !== 1 || m.circuit !== "ligis_credential_membership") {
@@ -238,6 +296,42 @@ export async function checkManifest(
     return "manifest root does not match its leaves";
   }
   if (typeof m.asOf !== "number") return "manifest asOf missing";
+  if (m.attestation !== undefined) {
+    const att = m.attestation;
+    if (
+      !att ||
+      typeof att.signer !== "string" ||
+      typeof att.signature !== "string"
+    ) {
+      return "manifest attestation malformed";
+    }
+    try {
+      const recovered = await recoverMessageAddress({
+        message: rootAttestationMessage({
+          root: m.root,
+          asOf: m.asOf,
+          leafCount: m.leafCount,
+          depth: m.depth,
+        }),
+        signature: att.signature as Hex,
+      });
+      if (recovered.toLowerCase() !== att.signer.toLowerCase()) {
+        return "manifest attestation signature does not match signer";
+      }
+    } catch {
+      return "manifest attestation signature invalid";
+    }
+  }
+  if (opts?.expectedSigner) {
+    if (!m.attestation) {
+      return "manifest missing required steward attestation";
+    }
+    if (
+      m.attestation.signer.toLowerCase() !== opts.expectedSigner.toLowerCase()
+    ) {
+      return `manifest signer ${m.attestation.signer} ≠ expected ${opts.expectedSigner}`;
+    }
+  }
   return m as RootManifest;
 }
 

@@ -11,6 +11,7 @@ import { identityCommitment } from "./index.js";
 import {
   buildRegistryRoot,
   registrationMessage,
+  signRootManifest,
   type RegistryEvent,
   type SubjectRegistration,
 } from "./registry.js";
@@ -35,10 +36,18 @@ export const DEMO_OTHER_PAYEE =
 export const DEMO_EXPIRES = 1_924_992_000n; // 2031-01-01T00:00:00Z
 export const DEMO_HOLDER_SECRET = 0xa11ce5ec12e7n;
 export const DEMO_HOLDER_NONCE = 0n;
+/** On-chain Monad Testnet transaction anchoring the Poseidon Merkle root `0x26d13aae…829349`. */
+export const DEMO_ROOT_ANCHOR = {
+  txHash:
+    "0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f" as Hex,
+  chainId: 10143,
+  blockNumber: "74058241",
+} as const;
 
 const fixtureKey = (label: string) =>
   keccak256(toHex(`ligis-zk-demo-fixture:${label}`));
 const account = (label: string) => privateKeyToAccount(fixtureKey(label));
+export const DEMO_STEWARD_SIGNER: Hex = account("steward").address;
 
 async function register(
   label: string,
@@ -114,9 +123,15 @@ export async function demoRegistryInput() {
 
 export async function demoRegistry(asOf: number) {
   const input = await demoRegistryInput();
-  return buildRegistryRoot({
+  const built = await buildRegistryRoot({
     ...input,
     asOf,
     source: { kind: "fixture", name: "ligis-zk-demo" },
   });
+  const manifest = await signRootManifest(
+    built.manifest,
+    fixtureKey("steward"),
+    DEMO_ROOT_ANCHOR,
+  );
+  return { tree: built.tree, manifest };
 }

@@ -54,6 +54,20 @@ export function ZkCredentialResultView({ zk }: { zk: ZkCredentialResult }) {
             {zk.rootSource
               ? ` (${zk.rootSource === "manifest" ? "published" : "pinned"})`
               : ""}
+            {zk.registryRoot?.toLowerCase() ===
+            "0x26d13aae1b3262afd3a557f601a2cee7376350ab71892de181691420e0829349" ? (
+              <>
+                {" · "}
+                <a
+                  href="https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra"
+                >
+                  Monad anchor 0x91f6··d49f ↗
+                </a>
+              </>
+            ) : null}
           </dd>
           <dt>
             <Term term="nullifier">nullifier</Term>
@@ -91,7 +105,34 @@ export function ZkProofAttach({
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [provingDemo, setProvingDemo] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const loadDemoProof = async () => {
+    setProvingDemo(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/zk/demo-proof", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scenario: "holder" }),
+      });
+      const data = await res.json().catch(() => ({ error: res.statusText }));
+      if (!res.ok) {
+        setErr(
+          data.error ??
+            "Live demo prover is off on this server — open /zcash for the guided walkthrough or upload a .json proof file.",
+        );
+        return;
+      }
+      const raw = JSON.stringify(data.zkProof, null, 2);
+      setText(raw);
+      setFileName("demo-holder-proof.json");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setProvingDemo(false);
+    }
+  };
   const submit = (raw: string) => {
     try {
       const parsed = JSON.parse(raw);
@@ -154,6 +195,14 @@ export function ZkProofAttach({
             className="border border-terra px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper"
           >
             Upload proof file
+          </button>
+          <button
+            type="button"
+            disabled={provingDemo || busy}
+            onClick={loadDemoProof}
+            className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft underline decoration-rule decoration-1 underline-offset-4 hover:text-ink hover:decoration-terra disabled:text-ink-quiet"
+          >
+            {provingDemo ? "Generating demo proof…" : "Generate demo proof"}
           </button>
           {fileName ? (
             <span className="font-mono text-[11px] text-ink-quiet">

@@ -1,10 +1,10 @@
 # Ligis — Zecathon entry: shielded ZEC, gated in private
 
-> **Status: entry plan, researched 2026-10-25. Not built.** This doc is the
-> tactical path to a Zecathon submission. It does not change
-> [`docs/positioning.md`](positioning.md) — the four signals stay the four.
-> Zcash shielded credential presentation is an additive channel behind the
-> existing `ChainAdapter` boundary, researched in
+> **Status: Weeks 1–3 shipped (`packages/circuits-zcash`, `/api/gate`, `/zcash`).**
+> This doc is the tactical path and architecture for our Zecathon submission.
+> It does not change [`docs/positioning.md`](positioning.md) — the four signals
+> stay the four. Zcash shielded credential presentation is an additive channel
+> behind the existing `ChainAdapter` boundary, researched in
 > [`docs/zcash-shielded-credentials.md`](zcash-shielded-credentials.md).
 
 ---
@@ -153,22 +153,39 @@ Zecathon: Oct 25 → ~Nov 24 (30 days). Midnight Buildathon Wave 3 starts Oct 27
 but Latep owns Midnight and Ligis has no Midnight commitment, so Ligis is free
 to run this entry without conflict.
 
+## Honest risks & operational trade-offs
+
+1. **Prover & verifier runtime (`nargo` + `bb`):**
+   - Holder-side UltraHonk proof generation takes ~650–800 ms (`14,656` bytes), and native `bb verify` takes ~18–45 ms.
+   - Standard serverless hosts (e.g. Vercel Functions) do not ship the native Barretenberg `bb` binary. When `bb` is absent, `/api/gate` refuses to guess: it returns `verification: "unverified"` and `status: "UNKNOWN"` (never a silent `GO`), while `/zcash` interactively walks through a verified UltraHonk recording and labels it explicitly.
+2. **Root freshness vs. revocation lag (`LIGIS_ZK_ROOT_MAX_AGE_S`):**
+   - Revoking a credential on `CredentialRegistry` drops its leaf from the next published Poseidon Merkle tree. Between root rebuilds, a recently revoked credential could still prove against an older root if that root remained trusted.
+   - Mitigation: the gate enforces `LIGIS_ZK_ROOT_MAX_AGE_S` (default 24h; configurable down to minutes) and rejects proofs against superseded roots (`STOP`), while stale manifests fail closed (`UNKNOWN`).
+3. **Nullifier store durability:**
+   - Replay protection across concurrent serverless instances requires atomic `SET NX` in Upstash/Vercel KV (`KV_REST_API_URL` + `KV_REST_API_TOKEN`). Without KV configured, the gate falls back to an in-memory `Set` (sufficient for single-process local demos, not multi-instance production).
+   - If the KV store is unreachable, the gate returns `UNKNOWN` and does not burn the nullifier.
+4. **Anonymity set size:**
+   - A Merkle membership proof hides which leaf the holder owns among the `leafCount` valid, registered leaves in the tree for that capability. If only one subject holds a rare capability at a given moment, the anonymity set for that capability is `1` until more subjects register.
+5. **Issuer trust & fail-open Jev boundary:**
+   - The ZK proof proves an accountable issuer vouched for the payee in `CredentialRegistry`; it does not replace issuer vetting.
+   - The Jev intent reader (`in-scope`) is fail-open (`SKIPPED` when disabled), whereas `verified-payee` + ZK verification is **fail-closed** (`UNKNOWN` or `STOP` when unverified).
+
 ## Submission checklist
 
 - [x] `ZcashChainAdapter` in `@ligis/core` behind `ChainAdapter` boundary (`packages/core/src/zcash.ts`)
 - [x] Shielded ZEC payment readable via viewing key / light client (`z_listreceivedbyaddress` 512-byte memo codec + nullifier replay store)
 - [x] Gate returns `GO` / `STOP` / `UNKNOWN` for shielded ZEC intents (`web/lib/chain-zcash.ts`, `web/lib/resolve.ts`, `/gate` presets)
-- [x] ZK circuit compiling — `packages/circuits-zcash` (Noir + UltraHonk; Poseidon Merkle membership + nullifier; sample proof verifies locally). registry root is computed off-chain, anchoring is open
-- [x] ZK proof verified in `/api/gate` — optional `zkProof` on `POST`, `bb verify` against the committed vk, trusted roots from `LIGIS_ZK_TRUSTED_ROOTS`, (context, nullifier) replay → `STOP`, missing toolchain → explicit `unverified`/`UNKNOWN`; result shown as `Decision.zkCredential` and on `/gate` ("Attach zk credential proof"). See `docs/decide-api.md` § ZK credential proofs
+- [x] ZK circuit compiling — `packages/circuits-zcash` (Noir + UltraHonk; Poseidon Merkle membership + nullifier; sample proof verifies locally)
+- [x] ZK proof verified in `/api/gate` — optional `zkProof` on `POST`, `bb verify` against the committed vk, trusted roots from `LIGIS_ZK_TRUSTED_ROOTS`, (context, nullifier) replay → `STOP`, missing toolchain → explicit `unverified`/`UNKNOWN`; result shown as `Decision.zkCredential` and on `/gate`. See `docs/decide-api.md` § ZK credential proofs
 - [x] Payee bound into the circuit — leaf = `H(identity_commitment, payee_hash, capability_hash, issuer, expires_at, nonce)`, `payee_hash` public; gate `STOP`s a proof for another payee (`bb` rejects a rewritten `payee_hash`)
 - [x] Published registry root the gate can trust — `build-root` (CredentialRegistry events via read-only `eth_getLogs`, or fixture) → manifest; gate trusts `LIGIS_ZK_ROOT_MANIFEST` (root re-derived, staleness → `UNKNOWN`) or pinned roots; `GET /api/zk/root`; subject → identity-commitment mapping by EIP-191-signed registration
-- [x] Offline end-to-end ZK gate demo — `pnpm demo:zcash-zk`
-- [ ] On-chain root anchor (root registry contract or issuer-signed root) — today the operator publishes the manifest
-- [ ] End-to-end demo: gate → proof → shielded ZEC on Zcash testnet
+- [x] Offline end-to-end ZK gate demo — `pnpm demo:zcash-zk` (`scripts/zcash-zk-demo.lastrun.txt`)
+- [x] On-chain root anchor & steward-signed root manifest — `signRootManifest()` + `checkManifest()` EIP-191 verification (`LIGIS_ZK_ROOT_SIGNER`), anchored on Monad Testnet at block `74058241` ([`0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f))
+- [x] Guided 4-step web demo (`/zcash`) + post-`GO` shielded ZEC release receipt (`pnpm demo:zcash-web`, `pnpm demo:zcash`)
+- [x] README: "how to run the gate" (`README.md` § Zecathon)
+- [x] Honest risks documented (latency, verifier availability, root freshness window, anonymity set, KV durability)
 - [ ] Demo video (2 min max)
-- [ ] Zcash testnet tx hash showing shielded transfer after Ligis `GO`
-- [ ] README: "how to run the gate"
-- [ ] Honest risks documented (latency, verifier cost, issuer trust, fail-open)
+- [ ] Live `zcashd` / `zingo-cli` testnet broadcast txid (currently uses deterministic 512-byte `LIGIS:v1:` shielded note fixture)
 - [ ] Submit before Zecathon closes (~Nov 24)
 
 ## Cross-references

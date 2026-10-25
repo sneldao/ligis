@@ -21,6 +21,7 @@ import { demoRegistry } from "../src/demo-registry.js";
 import {
   buildRegistryRoot,
   fetchRegistryEvents,
+  signRootManifest,
   type RegistryEvent,
   type SubjectRegistration,
 } from "../src/registry.js";
@@ -36,6 +37,7 @@ const { values } = parseArgs({
     "to-block": { type: "string" },
     registrations: { type: "string" },
     "as-of": { type: "string" },
+    "sign-key": { type: "string" },
     out: { type: "string" },
   },
 });
@@ -88,6 +90,16 @@ if (values.demo) {
     console.error("need --demo, --events, or --rpc + --registry");
     process.exit(1);
   }
+}
+
+const signKey = (values["sign-key"] ?? process.env.LIGIS_ZK_ROOT_SIGNER_KEY) as
+  | Hex
+  | undefined;
+if (signKey && !values.demo) {
+  result = {
+    ...result,
+    manifest: await signRootManifest(result.manifest, signKey),
+  };
 }
 
 const json = `${JSON.stringify(result.manifest, null, 2)}\n`;

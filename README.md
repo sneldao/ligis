@@ -39,6 +39,23 @@ PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
 **Try the live gate:** <https://ligis.vercel.app/gate> — the same
 decision service, exposed as a UI with measured verdict headers.
 
+### Zecathon — Shielded Zcash Gate & Zero-Knowledge Credentials
+
+Before an agent releases shielded ZEC to a `utest1…` / `u1…` address, the payee proves in zero knowledge (Noir + Barretenberg UltraHonk, depth-16 Poseidon Merkle tree) that it holds an unexpired, unrevoked Ligis credential bound to its own Zcash address inside a steward-signed, on-chain-anchored `CredentialRegistry` root — without revealing its EVM/Casper wallet, which issuer vouched for it, or which leaf it owns.
+
+```bash
+# 1. Guided 4-step web demo (/zcash): no proof STOP → UltraHonk proof GO → replay STOP → revoked STOP
+pnpm demo:zcash-web          # open http://localhost:3000/zcash (or visit https://ligis.vercel.app/zcash)
+
+# 2. One-command CLI ZK gate demo (publish root → prove → GO → replay/redirect/revoke STOP)
+pnpm demo:zcash-zk           # writes scripts/zcash-zk-demo.lastrun.txt
+
+# 3. Week 1 viewing-key selective disclosure & 512-byte encrypted memo demo
+pnpm demo:zcash              # writes scripts/zcash-shielded-demo.lastrun.txt
+```
+
+See [`docs/zecathon-entry.md`](docs/zecathon-entry.md) for the circuit spec, Monad root-anchor transaction (`0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f`, block `74058241`), and honest risks.
+
 ## What this is
 
 Ligis is a pre-payment decision service for AI agents. The wedge is the
@@ -126,12 +143,12 @@ Ligis is **chain-agnostic by design.** Every chain implements the same
 `ChainAdapter` interface from `@ligis/core`; the Trust Steward, CLI, and
 MCP server consume the interface, not the implementation.
 
-| Chain                     | Adapter                             | Contracts                                           | Status                                                                                              |
-| ------------------------- | ----------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                 | Live — deployed, tested, steward running                                                            |
-| **Casper Testnet**        | `@ligis/adapter-casper`             | `packages/contracts-casper` (Odra)                  | **Live** — contracts deployed, smoke test passing, web UI live                                      |
-| **Monad Testnet**         | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                 | Live — passkey issuer demo, GateStates walk                                                         |
-| **Zcash Testnet**         | `@ligis/core` (`ZcashChainAdapter`) | Viewing-key selective disclosure + nullifier replay | **Live** — shielded ZEC gate, viewing-key memo codec, nullifier replay protection (Zecathon Week 1) |
+| Chain                     | Adapter                             | Contracts                                                | Status                                                                                                              |
+| ------------------------- | ----------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                      | Live — deployed, tested, steward running                                                                            |
+| **Casper Testnet**        | `@ligis/adapter-casper`             | `packages/contracts-casper` (Odra)                       | **Live** — contracts deployed, smoke test passing, web UI live                                                      |
+| **Monad Testnet**         | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                      | Live — passkey issuer demo, GateStates walk                                                                         |
+| **Zcash Testnet**         | `@ligis/core` (`ZcashChainAdapter`) | `packages/circuits-zcash` (Noir + UltraHonk) + 512B memo | **Live** — `/zcash` guided demo, payee-bound ZK membership + nullifier, viewing-key disclosure (Zecathon Weeks 1–3) |
 
 **Why this works across chains:**
 

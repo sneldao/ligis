@@ -11,6 +11,8 @@ import {
   DEMO_OTHER_PAYEE,
   DEMO_PAYEE,
   DEMO_REVOKED_PAYEE,
+  DEMO_ROOT_ANCHOR,
+  DEMO_STEWARD_SIGNER,
   demoRegistry,
   demoRegistryInput,
 } from "../src/demo-registry.js";
@@ -131,6 +133,33 @@ describe("registry root builder", () => {
     assert.match(
       String(await checkManifest({ ...manifest, depth: 4 })),
       /depth/,
+    );
+  });
+
+  it("verifies steward root attestation and rejects tampered signatures or wrong signers", async () => {
+    const { manifest } = await demoRegistry(AS_OF);
+    assert.equal(manifest.attestation?.signer, DEMO_STEWARD_SIGNER);
+    assert.equal(manifest.attestation?.anchorTxHash, DEMO_ROOT_ANCHOR.txHash);
+    const verified = await checkManifest(manifest, {
+      expectedSigner: DEMO_STEWARD_SIGNER,
+    });
+    assert.equal(typeof verified, "object");
+    assert.match(
+      String(
+        await checkManifest({
+          ...manifest,
+          asOf: AS_OF + 1,
+        }),
+      ),
+      /signature does not match signer/,
+    );
+    assert.match(
+      String(
+        await checkManifest(manifest, {
+          expectedSigner: "0x000000000000000000000000000000000000dead",
+        }),
+      ),
+      /manifest signer/,
     );
   });
 

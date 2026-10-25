@@ -63,6 +63,7 @@ export async function loadRootManifest(
 ): Promise<LoadedManifest | undefined> {
   const p = env.LIGIS_ZK_ROOT_MANIFEST?.trim();
   if (!p) return undefined;
+  const expectedSigner = env.LIGIS_ZK_ROOT_SIGNER?.trim();
   if (p === DEMO_MANIFEST) return demoManifest(Math.floor(Date.now() / 1000));
   const file = path.resolve(process.cwd(), p);
   let mtimeMs: number;
@@ -78,6 +79,7 @@ export async function loadRootManifest(
   try {
     const checked = await checkManifest(
       JSON.parse(await readFile(file, "utf8")),
+      expectedSigner ? { expectedSigner } : undefined,
     );
     value =
       typeof checked === "string"
