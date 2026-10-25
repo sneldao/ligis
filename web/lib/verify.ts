@@ -8,6 +8,7 @@ import {
   readCredential,
   isValidAddress,
   isCasperChain,
+  isZcashChain,
 } from "./chain-router";
 import {
   subjectChainMismatch,
@@ -46,9 +47,13 @@ export function resolveCapability(ref: string) {
 }
 
 export function subjectFormatError(chain: ChainNetwork): string {
-  return isCasperChain(chain)
-    ? "Invalid subject. Expected account-hash-... format for Casper."
-    : "Invalid subject address. Expected 0x... format.";
+  if (isCasperChain(chain)) {
+    return "Invalid subject. Expected account-hash-... format for Casper.";
+  }
+  if (isZcashChain(chain)) {
+    return "Invalid subject. Expected a Zcash shielded address (u1…, utest1…, zs1…, or ztestsapling1…).";
+  }
+  return "Invalid subject address. Expected 0x... format.";
 }
 
 /**
@@ -74,7 +79,8 @@ export async function verifySubject(
       mismatch: mismatch ?? undefined,
     };
   }
-  const subject = isCasperChain(chain) ? trimmed : getAddress(trimmed);
+  const subject =
+    isCasperChain(chain) || isZcashChain(chain) ? trimmed : getAddress(trimmed);
 
   const cap = resolveCapability(capabilityRef.trim());
   if (!cap) {

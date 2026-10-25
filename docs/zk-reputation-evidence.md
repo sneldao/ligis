@@ -176,6 +176,27 @@ Why the primitive belongs here rather than there:
 - [ ] The positioning change made in `docs/positioning.md` **first**, with the
       claims-and-sources discipline that doc requires.
 
+## Potential substrates
+
+The private reputation signal needs a chain where a subject can prove
+credential possession without revealing their address. Two substrates are
+researched as **alternatives, not a sequence**:
+
+- **Zcash shielded pools** (Sapling/Orchard) — the most direct substrate for
+  private presentation. A subject can prove credential possession through a ZK
+  proof without revealing their address, issuer, or which credential. Zcash
+  also has built-in viewing keys (selective disclosure) and nullifiers (replay
+  protection), which the EVM registries do not. See
+  [`docs/zcash-shielded-credentials.md`](zcash-shielded-credentials.md) for the
+  additive Ligis primitive.
+- **Stellar / Soroban** — Latep's chain, where the same private-reputation
+  primitive (pattern 3) is spec'd but unbuilt. Latep owns that substrate; Ligis
+  does not pursue it.
+
+Zcash is the better fit for Ligis's Zecathon entry because the gate logic lives
+off-chain and Zcash's shielding is native, not a third-party pool. Both docs
+are researched, not built; nothing here depends on either.
+
 ## What we are not doing
 
 - Not claiming this is built. It is not, and `docs/positioning.md` is

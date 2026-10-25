@@ -170,6 +170,12 @@ together in `SERVICE_PRICE_USD` (`packages/croo-adapter/src/services.ts`),
 - **Private / ZK-proven counterparty history** → `docs/zk-reputation-evidence.md`
   (researched 2026-10-21; not built, not in the four signals, and this doc is
   unchanged until it ships and is measured).
+- **Zcash shielded credential presentation** →
+  `docs/zcash-shielded-credentials.md` (researched 2026-10-25; not built, not
+  in the four signals, positioning unchanged). This is a Zecathon entry path:
+  an additive shielded presentation channel behind the existing `ChainAdapter`
+  boundary. It does not change what Ligis says today, and it does not add a
+  fifth signal.
 - **Competitive landscape** → `docs/strategy.md` (kept; not a positioning
   doc concern).
 - **Roadmap and program status** → `docs/strategy.md` (kept; not a

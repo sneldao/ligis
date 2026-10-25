@@ -126,11 +126,12 @@ Ligis is **chain-agnostic by design.** Every chain implements the same
 `ChainAdapter` interface from `@ligis/core`; the Trust Steward, CLI, and
 MCP server consume the interface, not the implementation.
 
-| Chain                     | Adapter                 | Contracts                           | Status                                                         |
-| ------------------------- | ----------------------- | ----------------------------------- | -------------------------------------------------------------- |
-| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`    | `packages/contracts-evm` (Solidity) | Live — deployed, tested, steward running                       |
-| **Casper Testnet**        | `@ligis/adapter-casper` | `packages/contracts-casper` (Odra)  | **Live** — contracts deployed, smoke test passing, web UI live |
-| **Monad Testnet**         | `@ligis/adapter-evm`    | `packages/contracts-evm` (Solidity) | Live — passkey issuer demo, GateStates walk                    |
+| Chain                     | Adapter                             | Contracts                                           | Status                                                                                              |
+| ------------------------- | ----------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                 | Live — deployed, tested, steward running                                                            |
+| **Casper Testnet**        | `@ligis/adapter-casper`             | `packages/contracts-casper` (Odra)                  | **Live** — contracts deployed, smoke test passing, web UI live                                      |
+| **Monad Testnet**         | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                 | Live — passkey issuer demo, GateStates walk                                                         |
+| **Zcash Testnet**         | `@ligis/core` (`ZcashChainAdapter`) | Viewing-key selective disclosure + nullifier replay | **Live** — shielded ZEC gate, viewing-key memo codec, nullifier replay protection (Zecathon Week 1) |
 
 **Why this works across chains:**
 
@@ -206,25 +207,27 @@ outcome trail that backs every measured claim in
 
 ## Documentation
 
-| Doc                                                          | What's in it                                                                                                  |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| [Positioning](docs/positioning.md)                           | Source of truth: pitch, signals, glossary, claims, privacy, pricing                                           |
-| [Strategy](docs/strategy.md)                                 | Product strategy, competitive landscape, differentiation, roadmap, business model                             |
-| [Architecture](docs/architecture.md)                         | Contract design, module structure, repository layout                                                          |
-| [Agent Arena](docs/agent-arena.md)                           | Vultr Agent Arena submission: `/arena` demo, judges, env vars, checklist                                      |
-| [CROO Integration](docs/croo-integration.md)                 | CAP adapter, Agent Store listing, provider/requester usage                                                    |
-| [OKX.AI Integration](docs/okx-ai.md)                         | ASP strategy, services, demo plan, and submission checklist                                                   |
-| [Proofs](docs/proofs.md)                                     | Hackathon submissions, demo videos, on-chain deployment evidence                                              |
-| [Attestation integrations](docs/attestation-integrations.md) | Self Protocol and EAS provenance, privacy boundaries, and rollout                                             |
-| [ZK reputation evidence](docs/zk-reputation-evidence.md)     | Research note: private, ZK-proven counterparty history as a second evidence mode — **not built, not claimed** |
-| [Monorepo structure](MONOREPO_STRUCTURE.md)                  | Package layout, dependency graph, ChainAdapter interface, adding a new chain                                  |
-| [API Reference](docs/api.md)                                 | Service schemas, input/output examples, capability names, chains                                              |
-| [Archive](docs/archive/)                                     | Completed hackathon submissions + unpublished drafts                                                          |
-| [Trust Steward Agent](docs/trust-steward-agent.md)           | The autonomous loop, 0G integration, build phases                                                             |
-| [Security](docs/security.md)                                 | Non-custodial design, EIP-712 replay protection                                                               |
-| [Setup](docs/setup.md)                                       | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify                         |
-| [SKILL.md](SKILL.md)                                         | Director entry point for AI agents                                                                            |
-| [References](references/)                                    | Per-skill command specs (issue, verify, revoke, rotate, hash, sign, composability)                            |
+| Doc                                                              | What's in it                                                                                                  |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [Positioning](docs/positioning.md)                               | Source of truth: pitch, signals, glossary, claims, privacy, pricing                                           |
+| [Strategy](docs/strategy.md)                                     | Product strategy, competitive landscape, differentiation, roadmap, business model                             |
+| [Architecture](docs/architecture.md)                             | Contract design, module structure, repository layout                                                          |
+| [Agent Arena](docs/agent-arena.md)                               | Vultr Agent Arena submission: `/arena` demo, judges, env vars, checklist                                      |
+| [CROO Integration](docs/croo-integration.md)                     | CAP adapter, Agent Store listing, provider/requester usage                                                    |
+| [OKX.AI Integration](docs/okx-ai.md)                             | ASP strategy, services, demo plan, and submission checklist                                                   |
+| [Proofs](docs/proofs.md)                                         | Hackathon submissions, demo videos, on-chain deployment evidence                                              |
+| [Attestation integrations](docs/attestation-integrations.md)     | Self Protocol and EAS provenance, privacy boundaries, and rollout                                             |
+| [Zecathon entry](docs/zecathon-entry.md)                         | Zecathon submission: Shielded Payments track, viewing-key selective disclosure, ZK presentation, demo spec    |
+| [Zcash shielded credentials](docs/zcash-shielded-credentials.md) | Additive primitive: shielded credential presentation, costs, risks, and architecture                          |
+| [ZK reputation evidence](docs/zk-reputation-evidence.md)         | Research note: private, ZK-proven counterparty history as a second evidence mode — **not built, not claimed** |
+| [Monorepo structure](MONOREPO_STRUCTURE.md)                      | Package layout, dependency graph, ChainAdapter interface, adding a new chain                                  |
+| [API Reference](docs/api.md)                                     | Service schemas, input/output examples, capability names, chains                                              |
+| [Archive](docs/archive/)                                         | Completed hackathon submissions + unpublished drafts                                                          |
+| [Trust Steward Agent](docs/trust-steward-agent.md)               | The autonomous loop, 0G integration, build phases                                                             |
+| [Security](docs/security.md)                                     | Non-custodial design, EIP-712 replay protection                                                               |
+| [Setup](docs/setup.md)                                           | From-scratch install, env vars, 0G wallet, Casper wallet, x402 server, deploy, verify                         |
+| [SKILL.md](SKILL.md)                                             | Director entry point for AI agents                                                                            |
+| [References](references/)                                        | Per-skill command specs (issue, verify, revoke, rotate, hash, sign, composability)                            |
 
 ## License
 

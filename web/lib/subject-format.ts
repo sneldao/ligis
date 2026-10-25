@@ -2,9 +2,17 @@
  * Detect pasted subject formats that belong on another chain kind.
  * Client-safe — used by /gate, VerifyDemo, and verifySubject.
  */
-import { CASPER_TESTNET, PHAROS_ATLANTIC, type ChainNetwork } from "./network";
+import {
+  CASPER_TESTNET,
+  PHAROS_ATLANTIC,
+  ZCASH_TESTNET,
+  type ChainNetwork,
+} from "./network";
 
-export type SubjectKind = "evm" | "casper" | "unknown";
+export type SubjectKind = "evm" | "casper" | "zcash" | "unknown";
+
+const ZCASH_SHIELDED_RE =
+  /^(?:u1|utest1|zs1|ztestsapling1)[ac-hj-np-z02-9]{38,220}$/;
 
 export function detectSubjectKind(raw: string): SubjectKind {
   const t = raw.trim();
@@ -13,6 +21,7 @@ export function detectSubjectKind(raw: string): SubjectKind {
   if (/^0[12][a-fA-F0-9]{64}$/i.test(t) || /^0x0[12][a-fA-F0-9]{64}$/i.test(t))
     return "casper";
   if (/^0x[a-fA-F0-9]{40}$/.test(t)) return "evm";
+  if (ZCASH_SHIELDED_RE.test(t)) return "zcash";
   return "unknown";
 }
 
@@ -37,7 +46,15 @@ export function subjectChainMismatch(
   const kind = detectSubjectKind(subjectRaw);
   if (kind === "unknown") return null;
 
-  if (kind === "casper" && current.kind === "evm") {
+  if (kind === "zcash" && current.kind !== "zcash") {
+    return {
+      message: `That looks like a Zcash shielded address, not a ${current.shortName} address.`,
+      suggestedChainId: ZCASH_TESTNET.id,
+      suggestedChainName: ZCASH_TESTNET.name,
+    };
+  }
+
+  if (kind === "casper" && current.kind !== "casper") {
     return {
       message: `That looks like a Casper account hash, not an ${current.shortName} address.`,
       suggestedChainId: CASPER_TESTNET.id,
@@ -45,10 +62,9 @@ export function subjectChainMismatch(
     };
   }
 
-  if (kind === "evm" && current.kind === "casper") {
+  if (kind === "evm" && current.kind !== "evm") {
     return {
-      message:
-        "That looks like an EVM address (0x…), not a Casper account-hash.",
+      message: `That looks like an EVM address (0x…), not a ${current.shortName} address.`,
       suggestedChainId: PHAROS_ATLANTIC.id,
       suggestedChainName: PHAROS_ATLANTIC.name,
     };

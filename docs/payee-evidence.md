@@ -25,6 +25,15 @@ A private, ZK-proven reputation source is researched in
 [`docs/zk-reputation-evidence.md`](zk-reputation-evidence.md). **It is not
 built, and nothing in this doc depends on it.**
 
+A complementary additive path is Zcash shielded credential presentation —
+proving possession of a valid Ligis credential without revealing the subject's
+address — researched in
+[`docs/zcash-shielded-credentials.md`](zcash-shielded-credentials.md). **It is
+not built, and nothing in this doc depends on it.** The two are alternative
+substrates for the same private-presentation gap, not a sequence. Zcash is the
+substrate with native shielded pools and viewing keys; Stellar (Latep's chain)
+is the other researched alternative and is not pursued by Ligis.
+
 ## Official sources checked on 2026-10-13
 
 - Draft ERC-8004 specification:

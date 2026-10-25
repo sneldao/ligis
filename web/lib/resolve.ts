@@ -1,6 +1,11 @@
 import "server-only";
 
-import { CHAINS, MONAD_TESTNET, type ChainNetwork } from "./network";
+import {
+  CHAINS,
+  MONAD_TESTNET,
+  ZCASH_TESTNET,
+  type ChainNetwork,
+} from "./network";
 import { detectSubjectKind } from "./subject-format";
 import { readCredential } from "./chain-router";
 import { boundedRead, evidenceTimeout } from "./payee-evidence/types";
@@ -47,6 +52,9 @@ export function candidateChains(subjectRaw: string): ChainNetwork[] {
   if (kind === "casper") {
     return CHAINS.filter((c) => c.kind === "casper" && c.live);
   }
+  if (kind === "zcash") {
+    return ZCASH_TESTNET.live ? [ZCASH_TESTNET] : [];
+  }
   return [];
 }
 
@@ -75,7 +83,7 @@ export async function resolveSubject(
     return {
       ok: false,
       error:
-        "Unrecognised subject. Expected an EVM address (0x…) or a Casper account-hash-….",
+        "Unrecognised subject. Expected an EVM address (0x…), a Casper account-hash-…, or a Zcash shielded address (u1…/utest1…/zs1…).",
     };
   }
 

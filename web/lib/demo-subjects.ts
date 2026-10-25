@@ -68,4 +68,27 @@ export const DEMO_GATE_SAMPLES: Record<string, DemoGateSample[]> = {
       expect: "none",
     },
   ],
+  "zcash-testnet": [
+    {
+      label: "shielded payee",
+      subject:
+        "utest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8qp9x2m",
+      capability: "agent.commerce.escrow",
+      expect: "go",
+    },
+    {
+      label: "replayed nullifier",
+      subject:
+        "utest1s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw08wk3r5n",
+      capability: "agent.commerce.escrow",
+      expect: "revoked",
+    },
+    {
+      label: "unverified shielded",
+      subject:
+        "utest1ce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54kh9ac4v2x",
+      capability: "kyc.basic",
+      expect: "none",
+    },
+  ],
 };

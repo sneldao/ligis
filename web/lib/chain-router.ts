@@ -2,6 +2,7 @@ import "server-only";
 import { evmNetworkKey, type ChainNetwork } from "./network";
 import * as evm from "./chain";
 import * as casper from "./chain-casper";
+import * as zcash from "./chain-zcash";
 
 export type {
   CapabilityRef,
@@ -19,12 +20,19 @@ export function isCasperChain(chain: ChainNetwork): boolean {
   return chain.kind === "casper";
 }
 
+export function isZcashChain(chain: ChainNetwork): boolean {
+  return chain.kind === "zcash";
+}
+
 export async function readAgentId(
   chain: ChainNetwork,
   address: string,
 ): Promise<bigint> {
   if (isCasperChain(chain)) {
     return casper.readAgentId(address);
+  }
+  if (isZcashChain(chain)) {
+    return zcash.readAgentId();
   }
   return evm.readAgentId(address as `0x${string}`, evmNetworkKey(chain));
 }
@@ -33,12 +41,18 @@ export async function readBlockNumber(chain: ChainNetwork): Promise<bigint> {
   if (isCasperChain(chain)) {
     return casper.readBlockNumber();
   }
+  if (isZcashChain(chain)) {
+    return zcash.readBlockNumber();
+  }
   return evm.readBlockNumber(evmNetworkKey(chain));
 }
 
 export async function readTotalSupply(chain: ChainNetwork): Promise<bigint> {
   if (isCasperChain(chain)) {
     return casper.readTotalSupply();
+  }
+  if (isZcashChain(chain)) {
+    return zcash.readTotalSupply();
   }
   return evm.readTotalSupply(evmNetworkKey(chain));
 }
@@ -58,6 +72,9 @@ export async function isCapable(
   if (isCasperChain(chain)) {
     return casper.isCapable(subject, capabilityHash);
   }
+  if (isZcashChain(chain)) {
+    return zcash.isCapable(subject, capabilityHash);
+  }
   return evm.isCapable(
     subject as `0x${string}`,
     capabilityHash,
@@ -72,6 +89,9 @@ export async function isCapableMulti(
 ): Promise<boolean[]> {
   if (isCasperChain(chain)) {
     return casper.isCapableMulti(subject, capabilityHashes);
+  }
+  if (isZcashChain(chain)) {
+    return zcash.isCapableMulti(subject, capabilityHashes);
   }
   return evm.isCapableMulti(
     subject as `0x${string}`,
@@ -88,6 +108,9 @@ export async function readCredential(
   if (isCasperChain(chain)) {
     return casper.readCredential(subject, capabilityHash);
   }
+  if (isZcashChain(chain)) {
+    return zcash.readCredential(subject, capabilityHash);
+  }
   return evm.readCredential(
     subject as `0x${string}`,
     capabilityHash,
@@ -99,12 +122,18 @@ export async function readAgentSnapshot(chain: ChainNetwork, address: string) {
   if (isCasperChain(chain)) {
     return casper.readAgentSnapshot(address);
   }
+  if (isZcashChain(chain)) {
+    return zcash.readAgentSnapshot(address);
+  }
   return evm.readAgentSnapshot(address as `0x${string}`, evmNetworkKey(chain));
 }
 
 export async function readIssuerActivity(chain: ChainNetwork) {
   if (isCasperChain(chain)) {
     return casper.readIssuerActivity();
+  }
+  if (isZcashChain(chain)) {
+    return zcash.readIssuerActivity();
   }
   return evm.readIssuerActivity(evmNetworkKey(chain));
 }
@@ -116,6 +145,9 @@ export async function readCapabilityHistory(
 ) {
   if (isCasperChain(chain)) {
     return casper.readCapabilityHistory(subject, opts);
+  }
+  if (isZcashChain(chain)) {
+    return zcash.readCapabilityHistory();
   }
   return evm.readCapabilityHistory(subject as `0x${string}`, {
     ...opts,
@@ -138,6 +170,12 @@ export function readDeployment(chain: ChainNetwork): {
         process.env.LIGIS_CASPER_CREDENTIAL_REGISTRY ?? "not configured",
     };
   }
+  if (isZcashChain(chain)) {
+    return {
+      agentIdContract: "shielded-viewing-key",
+      credentialRegistry: "shielded-nullifier-set",
+    };
+  }
   const ctx = evm.getEvmReadContext(evmNetworkKey(chain));
   return {
     agentIdContract: ctx.addresses.pharosAgentId,
@@ -148,6 +186,9 @@ export function readDeployment(chain: ChainNetwork): {
 export function isValidAddress(chain: ChainNetwork, value: string): boolean {
   if (isCasperChain(chain)) {
     return casper.isCasperAddress(value);
+  }
+  if (isZcashChain(chain)) {
+    return zcash.isZcashAddress(value);
   }
   // EVM address check
   return /^0x[0-9a-fA-F]{40}$/.test(value);

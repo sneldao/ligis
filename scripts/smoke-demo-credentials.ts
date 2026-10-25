@@ -14,6 +14,7 @@
  * Public RPCs from assets/networks.json — no deployer keys required.
  */
 import { readFileSync, existsSync } from "node:fs";
+import { ZcashChainAdapter } from "@ligis/core";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
 
@@ -108,6 +109,29 @@ const SAMPLES: Record<
       expect: "none",
     },
   ],
+  "zcash-testnet": [
+    {
+      label: "shielded payee",
+      subject:
+        "utest1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7l8qp9x2m",
+      capability: "agent.commerce.escrow",
+      expect: "go",
+    },
+    {
+      label: "replayed nullifier",
+      subject:
+        "utest1s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw08wk3r5n",
+      capability: "agent.commerce.escrow",
+      expect: "revoked",
+    },
+    {
+      label: "unverified shielded",
+      subject:
+        "utest1ce6mua7lqpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54kh9ac4v2x",
+      capability: "kyc.basic",
+      expect: "none",
+    },
+  ],
 };
 
 const NETWORK_ENV: Record<string, string> = {
@@ -165,8 +189,23 @@ async function checkSample(
   if (chainLabel === "casper-testnet") {
     return checkCasper(chainLabel, sample);
   }
+  if (chainLabel === "zcash-testnet") {
+    return checkZcash(chainLabel, sample);
+  }
   if (!networkId) return `no network mapping for ${chainLabel}`;
   return checkEvm(chainLabel, networkId, sample);
+}
+
+async function checkZcash(
+  chainLabel: string,
+  sample: (typeof SAMPLES)[string][number],
+): Promise<string | null> {
+  const adapter = new ZcashChainAdapter({ network: "zcash-testnet" });
+  const result = await adapter.verifyCapability({
+    subject: sample.subject,
+    capability: sample.capability,
+  });
+  return evaluateResult(chainLabel, sample, result);
 }
 
 async function checkCasper(

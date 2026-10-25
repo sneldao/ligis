@@ -4,6 +4,7 @@ import { ShareLinkCounter } from "@/components/ShareLinkCounter";
 import { GateDecision } from "@/components/GateDecision";
 import {
   CHAINS,
+  ZCASH_TESTNET,
   getChain,
   isPasskeyIssuer,
   type ChainNetwork,
@@ -93,7 +94,7 @@ export default async function VerifyPage({
   const demoSubjects = scoped
     ? (DEMO_GATE_SAMPLES[chain.id] ?? []).map((s) => ({ ...s, tag: "" }))
     : // Monad first — richest provenance; matches candidate order in resolve.
-      [...CHAINS]
+      [...CHAINS, ZCASH_TESTNET]
         .sort((a) => (a.id === "monad-testnet" ? -1 : 0))
         .flatMap((c) =>
           (DEMO_GATE_SAMPLES[c.id] ?? []).map((s) => ({

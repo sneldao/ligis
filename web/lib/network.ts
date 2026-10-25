@@ -8,7 +8,7 @@
 
 export interface ChainNetwork {
   id: string;
-  kind: "evm" | "casper";
+  kind: "evm" | "casper" | "zcash";
   name: string;
   chainId?: number;
   chainName?: string;
@@ -73,6 +73,25 @@ export const MONAD_TESTNET: ChainNetwork = {
 };
 
 /**
+ * Zcash Testnet (Shielded).
+ *
+ * Additive shielded presentation channel (`ZcashChainAdapter`). Not added to
+ * `CHAINS` because `/field` and `/issuers` enumerate public registries, whereas
+ * Zcash subjects are shielded and verified via viewing-key selective disclosure
+ * or nullifier-bound ZK proofs on `/gate` and `POST /api/gate`.
+ */
+export const ZCASH_TESTNET: ChainNetwork = {
+  id: "zcash-testnet",
+  kind: "zcash",
+  name: "Zcash Testnet",
+  chainName: "zcash-testnet",
+  explorerUrl: "https://testnet.zcashexplorer.app",
+  live: true,
+  shortName: "zcash",
+  writeReady: false,
+};
+
+/**
  * PasskeyIssuer on Monad testnet — the ERC-1271 issuer whose credentials are
  * authorized by WebAuthn/P256 assertions verified by the 0x0100 precompile.
  * Client-safe: used to label passkey-authorized provenance on /gate and
@@ -112,6 +131,7 @@ export function isWriteReadyChain(chain: ChainNetwork): boolean {
 /** Look up a chain by its network slug. */
 export function chainById(id: string | undefined): ChainNetwork | undefined {
   if (!id) return undefined;
+  if (id === ZCASH_TESTNET.id) return ZCASH_TESTNET;
   return CHAINS.find((c) => c.id === id);
 }
 
@@ -138,16 +158,18 @@ export function getChain(
   const raw = searchParams?.chain;
   const id = Array.isArray(raw) ? raw[0] : raw;
   if (!id) return DEFAULT_CHAIN;
+  if (id === ZCASH_TESTNET.id) return ZCASH_TESTNET;
   return CHAINS.find((c) => c.id === id) ?? DEFAULT_CHAIN;
 }
 
 /**
  * Accent color classes for a chain — shared by ChainBadge and ChainSelector
  * so the active-chain color is consistent everywhere (terra for EVM/Pharos,
- * sky for Casper).
+ * sky for Casper, sage for Zcash shielded).
  */
 export function chainAccent(chain: ChainNetwork): { bg: string; text: string } {
   if (chain.kind === "casper") return { bg: "bg-sky", text: "text-paper" };
+  if (chain.kind === "zcash") return { bg: "bg-ink", text: "text-paper" };
   if (chain.id === "monad-testnet") return { bg: "bg-ink", text: "text-paper" };
   return { bg: "bg-terra", text: "text-paper" };
 }

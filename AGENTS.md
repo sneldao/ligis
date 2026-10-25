@@ -412,6 +412,23 @@ For the Casper self-issued check (`web/lib/verify.ts`) also set
   stay in sync (no cross-import — server-only modules can't be imported
   by root scripts).
 
+### Zcash Shielded Presentation Channel (Zecathon 2026)
+
+`ZcashChainAdapter` in `@ligis/core` (`packages/core/src/zcash.ts`) implements
+`ChainAdapter` for Zcash shielded addresses (`u1…`, `utest1…`, `zs1…`,
+`ztestsapling1…`). It bridges the public capability credential model to
+private shielded spend:
+
+- **Viewing-Key Selective Disclosure (Week 1):** Verified off-chain via
+  registered disclosures or Zebra/zcashd `z_listreceivedbyaddress` memo
+  inspection (`encodeZcashMemoAttestation` / `parseZcashMemoAttestation`).
+- **Nullifier Replay Protection:** Replaying an already-spent nullifier
+  reports `revoked: true, capable: false` so replay attempts trigger a hard
+  `STOP`.
+- **Smoke test:** `npx tsx scripts/smoke-demo-credentials.ts zcash-testnet`
+  (checks verified shielded payee → `go`, replayed nullifier → `revoked`,
+  and unverified shielded address → `none`).
+
 ### Monad Testnet Demos
 
 Four live scripts against Monad testnet (chainId 10143). Each writes a
