@@ -14,6 +14,7 @@ export const TREE_DEPTH = 16;
 /** Public inputs in circuit declaration order (bb's `public_inputs`). */
 export const PUBLIC_INPUT_ORDER = [
   "registry_root",
+  "payee_hash",
   "capability_hash",
   "context",
   "current_time",
@@ -57,6 +58,23 @@ export function capabilityField(capability: string): bigint {
   if (/^0x[0-9a-fA-F]{64}$/.test(capability))
     return toField(BigInt(capability));
   return keccakField(new TextEncoder().encode(capability));
+}
+
+/**
+ * Payee binding: `keccak256(utf8(trim(lowercase(address)))) mod p`. Public
+ * input of the circuit and part of every leaf, so a credential issued for one
+ * Zcash payee address cannot be presented for another.
+ */
+export function payeeField(address: string): bigint {
+  return keccakField(new TextEncoder().encode(address.trim().toLowerCase()));
+}
+
+/** Raw keccak256(name) as 0x bytes32 (the EVM CredentialRegistry key). */
+export function capabilityHashHex(name: string): `0x${string}` {
+  let hex = "";
+  for (const b of keccak_256(new TextEncoder().encode(name)))
+    hex += b.toString(16).padStart(2, "0");
+  return `0x${hex}`;
 }
 
 /** Issuer EVM address as a field element. */

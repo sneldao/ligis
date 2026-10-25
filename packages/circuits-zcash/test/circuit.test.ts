@@ -71,13 +71,16 @@ describe(
       const res = proveAndVerify(tc, inputs, "TestProver");
       assert.equal(res.verified, true);
       assert.deepEqual(
-        res.publicInputs.slice(0, 3).concat(res.publicInputs[4]!),
-        [
-          inputs.registry_root,
-          inputs.capability_hash,
-          inputs.context,
-          inputs.nullifier,
-        ].map(fieldHex),
+        res.publicInputs,
+        PUBLIC_INPUT_ORDER.map((k) => fieldHex(inputs[k])),
+      );
+      // Week 3 payee binding: same holder, other payee → no witness.
+      assert.throws(() =>
+        proveAndVerify(
+          tc,
+          { ...inputs, payee_hash: inputs.payee_hash + 1n },
+          "TestTampered",
+        ),
       );
       assert.throws(() =>
         proveAndVerify(

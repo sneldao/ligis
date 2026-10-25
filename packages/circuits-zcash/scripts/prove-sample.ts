@@ -4,8 +4,7 @@
  * verifier (committed vk), and optionally emit the `/api/gate` `zkProof` JSON.
  *
  *   pnpm --filter @ligis/circuits-zcash prove:sample
- *   pnpm --filter @ligis/circuits-zcash prove:sample -- --payee <addr> \
- *     --capability agent.commerce.escrow --nonce pay-42 --json /tmp/zk.json
+ *   pnpm --filter @ligis/circuits-zcash prove:sample -- --nonce pay-42 --json /tmp/zk.json
  *   pnpm --filter @ligis/circuits-zcash prove:sample -- --fixture   # test fixture
  *
  * `current_time` defaults to now (the gate rejects stale proofs); --fixture
@@ -27,8 +26,6 @@ const { values } = parseArgs({
   // pnpm forwards the `--` separator; drop it.
   args: process.argv.slice(2).filter((a) => a !== "--"),
   options: {
-    payee: { type: "string" },
-    capability: { type: "string" },
     nonce: { type: "string" },
     now: { type: "string" },
     json: { type: "string" },
@@ -48,8 +45,6 @@ const currentTime = values.fixture
   ? SAMPLE_NOW
   : BigInt(values.now ?? Math.floor(Date.now() / 1000));
 const { inputs, contextLabel } = await sampleRegistry({
-  payee: values.payee,
-  capability: values.capability,
   nonce: values.nonce ?? (values.fixture ? "fixture-1" : undefined),
   currentTime,
 });
@@ -68,6 +63,7 @@ log(
 const proof = readFileSync(join(res.outDir, "proof"));
 const pub = {
   registry_root: inputs.registry_root,
+  payee_hash: inputs.payee_hash,
   capability_hash: inputs.capability_hash,
   context: inputs.context,
   current_time: inputs.current_time,
@@ -82,6 +78,7 @@ const zkProof = {
   contextLabel,
   publicInputs: {
     registry_root: fieldHex(pub.registry_root),
+    payee_hash: fieldHex(pub.payee_hash),
     capability_hash: fieldHex(pub.capability_hash),
     context: fieldHex(pub.context),
     current_time: pub.current_time.toString(),

@@ -1,5 +1,5 @@
 /**
- * @ligis/circuits-zcash — off-chain half of the Week 2 credential circuit.
+ * @ligis/circuits-zcash — off-chain half of the credential circuit.
  *
  * Mirrors `circuit/src/main.nr` exactly: Poseidon (BN254, circomlib
  * parameters) for the identity commitment, credential leaf, nullifier, and
@@ -39,6 +39,8 @@ export function getPoseidon(): Promise<Poseidon> {
 export type CredentialLeafInput = {
   /** H(identity_secret). The tree stores this, never the subject address. */
   identityCommitment: bigint;
+  /** `payeeField(zcashAddress)` — the payee this credential was issued for. */
+  payeeHash: bigint;
   capabilityHash: bigint;
   issuer: bigint;
   /** Unix seconds; must be > the proof's `current_time`. */
@@ -56,6 +58,7 @@ export async function identityCommitment(
 export async function credentialLeaf(c: CredentialLeafInput): Promise<bigint> {
   return (await getPoseidon())([
     c.identityCommitment,
+    c.payeeHash,
     c.capabilityHash,
     c.issuer,
     c.expiresAt,
@@ -131,6 +134,7 @@ export class CredentialTree {
 export type CircuitInputs = {
   // public
   registry_root: bigint;
+  payee_hash: bigint;
   capability_hash: bigint;
   context: bigint;
   current_time: bigint;
@@ -157,6 +161,7 @@ export async function buildInputs(args: {
     args;
   return {
     registry_root: tree.root,
+    payee_hash: credential.payeeHash,
     capability_hash: credential.capabilityHash,
     context,
     current_time: currentTime,
