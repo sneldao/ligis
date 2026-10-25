@@ -3,3 +3,4 @@ circuit/target/
 circuit/TestProver.toml
 circuit/TestTampered.toml
 circuit/Tampered.toml
+circuit/Demo_*.toml
