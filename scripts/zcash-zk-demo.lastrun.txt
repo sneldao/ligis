@@ -1,13 +1,13 @@
 Ligis × Zcash — Week 3 ZK gate demo
-as of 2026-10-25T02:51:58.000Z
+as of 2026-10-25T03:30:09.000Z
 
 1. PUBLISH registry root
-  root 0x0a087fd31f14f1bd337b90beb3405cc63a690f669cf34414296ad1edd0134f41
+  root 0x26d13aae1b3262afd3a557f601a2cee7376350ab71892de181691420e0829349
   3 leaves; skipped {"revoked":1,"expired":1,"unregistered":2,"badRegistration":1}
 
 2. PROVE (holder, locally)
-  pay-001: 14656-byte UltraHonk proof in 681ms; nullifier 0x101fb94db2597506…
-  pay-002: 14656-byte UltraHonk proof in 747ms; nullifier 0x0b43085db3a53023…
+  pay-001: 14656-byte UltraHonk proof in 716ms; nullifier 0x22865a0a62844a84…
+  pay-002: 14656-byte UltraHonk proof in 646ms; nullifier 0x1048ae5d7fbdd55a…
 
 3. GATE
   ✔ verdict: GO — zk GO/verified via manifest root: credential membership proven against a trusted registry root
@@ -17,7 +17,7 @@ as of 2026-10-25T02:51:58.000Z
 
 5. REDIRECT proof to another payee
   ✔ relabel context only: STOP — proof credential is bound to a different payee
-  ✔ also rewrite payee_hash: STOP — proof failed verification (Proof verification failed (mem: 37.49 MiB))
+  ✔ also rewrite payee_hash: STOP — proof failed verification (Proof verification failed (mem: 34.53 MiB))
 
 6. VERIFIER UNAVAILABLE
   ✔ verdict: UNKNOWN — proof not verified: bb not runnable at /nonexistent/bb

@@ -208,7 +208,9 @@ The result is returned as `Decision.zkCredential`
 (`{ status, verification: "verified" | "rejected" | "unverified", reason, registryRoot, rootSource?, nullifier, context, currentTime, verifier?, latencyMs? }`),
 as a `zk-credential …` provenance line, and folded into `verified-payee`:
 a rejected proof forces `STOP`; a verified proof answers `GO` unless the
-public read already said `STOP`; an **unverified proof never counts** — it
+public read said `STOP` for a reason other than "no public credential"
+(revoked or self-issued still win; a shielded payee with nothing public is
+exactly what the proof is for); an **unverified proof never counts** — it
 leaves `verified-payee` `UNKNOWN` (so the verdict is `UNKNOWN`) unless the
 public credential already answered `GO`. There is no silent pass.
 
@@ -218,7 +220,8 @@ so the root is **published** off-chain and the gate trusts either:
 - a root **pinned** in `LIGIS_ZK_TRUSTED_ROOTS` (comma-separated 0x hex;
   no staleness limit — the operator's explicit choice), or
 - the root of the **published manifest** at `LIGIS_ZK_ROOT_MANIFEST` (a JSON
-  file path). The gate re-derives the root from the manifest's leaves on load
+  file path, or `demo` for the built-in public demo registry, which also
+  enables `POST /api/zk/demo-proof` `{ scenario: "holder" | "revoked" }`). The gate re-derives the root from the manifest's leaves on load
   (a tampered file is ignored with `published root manifest unusable: …` →
   `UNKNOWN` if nothing else is trusted), and a manifest whose `asOf` is older
   than `LIGIS_ZK_ROOT_MAX_AGE_S` (default 86400) is `UNKNOWN` — revocations

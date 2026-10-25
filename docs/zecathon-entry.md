@@ -110,15 +110,20 @@ registry root manifest, proves twice, and drives the real `/api/gate` wiring
 through GO → replay STOP → redirect-to-other-payee STOP → verifier-missing
 UNKNOWN → revoke + republish STOP (`scripts/zcash-zk-demo.lastrun.txt`).
 
-UI demo: `pnpm --filter @ligis/circuits-zcash build-root -- --demo --out web/.zk-root.json`,
-run the web app with `LIGIS_ZK_ROOT_MANIFEST=.zk-root.json` (check
-`GET /api/zk/root`), generate a fresh proof with
-`pnpm --filter @ligis/circuits-zcash prove:sample -- --nonce <n> --json out.json`,
-open `/gate` for the demo payee (`utest1qpzry9x8gf2…8qp9x2m`, printed in the
-proof's `contextLabel`) and paste it into "Attach zk credential proof". First submit: `verified · GO`; the
-same proof again: `rejected · STOP` (replay). Where `bb` is not installed
-(e.g. Vercel) the panel reads `unverified · UNKNOWN` and the proof does not
-count. Proving system shipped: Noir + UltraHonk (not Groth16/Halo2).
+**Guided UI demo (the judge path):** `pnpm demo:zcash-web`, then open
+`/zcash` (also linked from the landing hero, `/gate`, and ⌘K). Four one-click
+steps against the real API: no proof → `STOP` (a shielded payee has no public
+credential) → the payee generates a live UltraHonk proof
+(`POST /api/zk/demo-proof`) → `GO` → the same proof replayed → `STOP` → a
+revoked credential (valid proof against the pre-revocation root) → `STOP`.
+Each result is explained in plain language with the hashes behind
+"Technical details". `LIGIS_ZK_ROOT_MANIFEST=demo` makes the gate trust the
+public demo registry and enables the demo prover; without it (e.g. Vercel,
+no `bb`), `/zcash` still runs step 1 and states what the live steps return.
+
+Manual path: `/gate` → "Payee has a private credential proof? Attach it" →
+upload the `.json` from `prove:sample -- --json out.json`.
+Proving system shipped: Noir + UltraHonk (not Groth16/Halo2).
 
 ## Fallback path (Day 14 checkpoint)
 

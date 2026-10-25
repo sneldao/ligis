@@ -33,6 +33,7 @@
     "demo:casper": "tsx scripts/casper-e2e-demo.ts",
     "demo:zcash": "tsx scripts/zcash-shielded-demo.ts",
     "demo:zcash-zk": "pnpm --filter @ligis/web run predev && pnpm --filter @ligis/web demo:zk",
+    "demo:zcash-web": "pnpm --filter @ligis/web build && cd web && LIGIS_ZK_ROOT_MANIFEST=demo LIGIS_JEV_ENABLED=${LIGIS_JEV_ENABLED:-0} pnpm start",
     "demo:genlayer": "tsx scripts/genlayer-agent-tank-demo.ts",
     "demo:genlayer-gate": "tsx scripts/genlayer-gate-demo.ts",
     "demo:jev": "tsx scripts/jev-stress-demo.ts",
