@@ -15,6 +15,7 @@ import "server-only";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fieldHex } from "@ligis/circuits-zcash/fields";
+import { demoRegistry } from "@ligis/circuits-zcash/demo";
 import {
   checkManifest,
   type RootManifest,
@@ -29,6 +30,31 @@ export type LoadedManifest =
   | { manifest: RootManifest; published: PublishedRoot }
   | { error: string };
 
+/** `LIGIS_ZK_ROOT_MANIFEST=demo`: the deterministic public demo registry. */
+export const DEMO_MANIFEST = "demo";
+
+let demoCache: { asOf: number; value: LoadedManifest } | undefined;
+async function demoManifest(nowS: number): Promise<LoadedManifest> {
+  // Rebuilt every 10 minutes so `asOf` stays fresh; the root only changes
+  // if a demo credential expires (2031).
+  const asOf = nowS - (nowS % 600);
+  if (demoCache?.asOf !== asOf) {
+    const { manifest } = await demoRegistry(asOf);
+    demoCache = {
+      asOf,
+      value: {
+        manifest,
+        published: {
+          root: BigInt(manifest.root),
+          asOf: manifest.asOf,
+          leafCount: manifest.leafCount,
+        },
+      },
+    };
+  }
+  return demoCache.value;
+}
+
 let cache: { file: string; mtimeMs: number; value: LoadedManifest } | undefined;
 
 /** `undefined` when no manifest is configured. Cached by file mtime. */
@@ -37,6 +63,7 @@ export async function loadRootManifest(
 ): Promise<LoadedManifest | undefined> {
   const p = env.LIGIS_ZK_ROOT_MANIFEST?.trim();
   if (!p) return undefined;
+  if (p === DEMO_MANIFEST) return demoManifest(Math.floor(Date.now() / 1000));
   const file = path.resolve(process.cwd(), p);
   let mtimeMs: number;
   try {

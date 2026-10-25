@@ -13,11 +13,10 @@ import { PINNED_BB } from "./verify.js";
 
 const CIRCUIT_NAME = "ligis_credential_membership";
 
-export const CIRCUIT_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "circuit",
-);
+/** `LIGIS_ZK_CIRCUIT_DIR` overrides (bundled servers, read-only installs). */
+export const CIRCUIT_DIR =
+  process.env.LIGIS_ZK_CIRCUIT_DIR ??
+  join(dirname(fileURLToPath(import.meta.url)), "..", "circuit");
 
 export type Toolchain = { nargo: string; bb: string; bbVersion: string };
 
