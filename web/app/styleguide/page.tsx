@@ -3,6 +3,9 @@ import type { Address } from "viem";
 import { AddressDisplay } from "@/components/AddressDisplay";
 import { CopyButton } from "@/components/CopyButton";
 import { GateVerdict } from "@/components/GateVerdict";
+import { DecisionVerdict } from "@/components/DecisionVerdict";
+import { ZkCredentialResultView } from "@/components/ZkCredential";
+import { Term } from "@/components/Term";
 import { ArenaVerdict } from "@/components/arena/ArenaVerdict";
 import { Rule } from "@/components/Rule";
 import { StyleguideInteractions } from "@/components/StyleguideInteractions";
@@ -325,6 +328,66 @@ export default async function StyleguidePage({
                 revoked: false,
               }}
               source="styleguide specimen"
+            />
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          <header className="flex items-baseline justify-between">
+            <p className="eyebrow">
+              07b · DecisionVerdict · ZkCredential · Term
+            </p>
+            <span className="font-mono text-xs text-ink-quiet">
+              answer · why · next
+            </span>
+          </header>
+          <Rule />
+          <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
+            The four-signal decision in plain language: verdict and headline,
+            then why, then what to do next; each check phrased as its question.
+            Zk results explain themselves before showing hashes. Jargon is a{" "}
+            <Term term="nullifier">Term</Term>: a disclosure, never a hover-only
+            tooltip.
+          </p>
+          <div className="space-y-10">
+            <DecisionVerdict
+              decision={{
+                verdict: "UNKNOWN",
+                signals: [
+                  {
+                    id: "right-payee",
+                    status: "GO",
+                    confidence: 1,
+                    reason: "payee is on mandate allowlist",
+                  },
+                  {
+                    id: "right-amount",
+                    status: "GO",
+                    confidence: 1,
+                    reason: "amount $25 is within mandate cap $50",
+                  },
+                  {
+                    id: "in-scope",
+                    status: "SKIPPED",
+                    confidence: 0,
+                    reason: "layer disabled",
+                  },
+                  {
+                    id: "verified-payee",
+                    status: "UNKNOWN",
+                    confidence: 0,
+                    reason: "zk proof supplied but unverified: bb not runnable",
+                  },
+                ],
+              }}
+              eyebrow="styleguide specimen"
+            />
+            <ZkCredentialResultView
+              zk={{
+                status: "STOP",
+                verification: "rejected",
+                reason: "nullifier already used for this context (replay)",
+              }}
             />
           </div>
         </section>

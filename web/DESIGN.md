@@ -181,6 +181,8 @@ Only these compose surfaces:
 | `AddressDisplay`                                                  | mono address, optional link to explorer, optional copy                                                                               |
 | `CopyButton`                                                      | quiet tracked-uppercase action, no border                                                                                            |
 | `GateVerdict`                                                     | the GO/STOP pre-payment decision — left rule in tone, display verdict, plain-language reason, provenance line                        |
+| `DecisionVerdict`                                                 | the four-signal decision in plain language — ✓/✗ verdict + headline, why, “Next ·” action, one ledger row per check as its question  |
+| `ZkCredential` / `Term`                                           | private-proof result explained before hashes; inline glossary disclosure (button + aria-expanded), never a hover-only tooltip        |
 | `SituationCast`                                                   | exclusive moment accordion — Blind↔Gated flip, keys 1–5; `link` or `sync` mode                                                       |
 | `LandingGate`                                                     | home product loop — moment picker syncs capability into `GateStates` + `VerifyDemo`                                                  |
 | `GateStates`                                                      | three-branch x402 toggle (401 / 402 / 200) with path line + status numeral                                                           |
