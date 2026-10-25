@@ -202,6 +202,7 @@ const VERDICT_COLOR_ALLOW_PATHS = [
 const VERDICT_COLOR_ALLOW_FILES = new Set([
   // Verdict primitives (paper mode)
   "components/GateVerdict.tsx",
+  "components/DecisionVerdict.tsx", // four-signal decision, human-readable
   "components/VerdictMark.tsx",
   "components/GateDecision.tsx", // decision runner — uses verdict colors for GO/STOP signals
   "components/SituationCast.tsx",

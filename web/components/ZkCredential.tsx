@@ -1,63 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Link from "next/link";
+import { Term } from "@/components/Term";
+import { explainZk, shortHash } from "@/lib/decision-copy";
 import type { ZkCredentialResult } from "@/lib/decide";
 
-const short = (h?: string) => (h ? `${h.slice(0, 10)}…${h.slice(-6)}` : "—");
-
-/** Renders `Decision.zkCredential`: verified / rejected / unverified. */
+/**
+ * Renders `Decision.zkCredential` in plain language first (what happened,
+ * what to do), with the cryptographic details disclosed on intent.
+ * Ink/terra tones only: the overall verdict owns sage/revoke.
+ */
 export function ZkCredentialResultView({ zk }: { zk: ZkCredentialResult }) {
+  const copy = explainZk(zk);
   const tone =
     zk.status === "GO"
       ? { border: "border-ink", text: "text-ink" }
       : zk.status === "STOP"
         ? { border: "border-terra", text: "text-terra" }
-        : { border: "border-rule", text: "text-ink-quiet" };
+        : { border: "border-rule", text: "text-ink-soft" };
   return (
     <div
       className={`border-l-2 pl-6 ${tone.border}`}
       data-testid="zk-credential"
     >
-      <p className="eyebrow">zk credential · private presentation</p>
-      <p
-        className={`mt-2 font-mono text-sm uppercase tracking-[0.14em] ${tone.text}`}
-      >
-        {zk.verification} · {zk.status}
+      <p className="eyebrow">private credential proof</p>
+      <p className={`mt-2 font-serif text-xl ${tone.text}`}>{copy.title}</p>
+      <p className="mt-2 font-serif text-base leading-relaxed text-ink-soft">
+        {copy.plain}
       </p>
-      <p className="mt-2 font-serif text-sm leading-relaxed text-ink-soft">
-        {zk.reason}
-        {zk.verification === "unverified"
-          ? " — this proof did not count toward the decision."
-          : null}
+      <p className="mt-2 font-serif text-base leading-relaxed text-ink">
+        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
+          Next ·{" "}
+        </span>
+        {copy.next}
       </p>
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-[11px] text-ink-quiet">
-        <dt>root</dt>
-        <dd className="break-all">
-          {short(zk.registryRoot)}
-          {zk.rootSource
-            ? ` (${zk.rootSource === "manifest" ? "published manifest" : "pinned"})`
-            : ""}
-        </dd>
-        <dt>nullifier</dt>
-        <dd className="break-all">{short(zk.nullifier)}</dd>
-        {zk.verifier ? (
-          <>
-            <dt>verifier</dt>
-            <dd>
-              {zk.verifier} · {zk.latencyMs}ms
-            </dd>
-          </>
-        ) : null}
-      </dl>
+      <details className="mt-3">
+        <summary className="cursor-pointer py-1 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft hover:text-ink">
+          Technical details
+        </summary>
+        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-[11px] text-ink-quiet">
+          <dt>result</dt>
+          <dd>
+            {zk.verification} · {zk.status}
+          </dd>
+          <dt>gate said</dt>
+          <dd className="break-words [overflow-wrap:anywhere]">{zk.reason}</dd>
+          <dt>
+            <Term term="registryRoot">registry root</Term>
+          </dt>
+          <dd className="tabular">
+            {shortHash(zk.registryRoot)}
+            {zk.rootSource
+              ? ` (${zk.rootSource === "manifest" ? "published" : "pinned"})`
+              : ""}
+          </dd>
+          <dt>
+            <Term term="nullifier">nullifier</Term>
+          </dt>
+          <dd className="tabular">{shortHash(zk.nullifier)}</dd>
+          {zk.verifier ? (
+            <>
+              <dt>verifier</dt>
+              <dd>
+                {zk.verifier} · {zk.latencyMs}ms
+              </dd>
+            </>
+          ) : null}
+        </dl>
+      </details>
     </div>
   );
 }
 
+const MAX_PROOF_FILE = 256 * 1024;
+
 /**
- * Paste the JSON emitted by
- * `pnpm --filter @ligis/circuits-zcash prove:sample -- --json out.json`
- * and submit it once. Explicit action (not an effect) because the gate burns
- * the nullifier on a verified proof — a re-render must not replay it.
+ * Attach a zk credential proof: upload the JSON file a prover wrote, or
+ * paste it. For a one-click proof, the guided demo at /zcash generates one.
+ * Submit is an explicit action (not an effect): a verified proof burns its
+ * nullifier, so a re-render must never replay it.
  */
 export function ZkProofAttach({
   onSubmit,
@@ -67,41 +89,108 @@ export function ZkProofAttach({
   busy: boolean;
 }) {
   const [text, setText] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const submit = (raw: string) => {
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || !("proof" in parsed)) {
+        setErr(
+          "That JSON isn't a proof: expected { proof, contextLabel, publicInputs }.",
+        );
+        return;
+      }
+      setErr(null);
+      onSubmit(parsed);
+    } catch {
+      setErr("That isn't valid JSON. Upload the .json file your prover wrote.");
+    }
+  };
   return (
     <details className="group border-t border-rule pt-4">
       <summary className="cursor-pointer list-none py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft marker:hidden hover:text-ink">
-        Attach zk credential proof →
+        Payee has a private credential proof? Attach it →
       </summary>
-      <div className="mt-3 space-y-3">
+      <div className="mt-3 space-y-4">
         <p className="font-serif text-sm leading-relaxed text-ink-soft">
-          The payee proves it holds a credential for this capability in a
-          trusted registry tree, without revealing which one. One use per
-          context: resubmitting the same proof is a replay and stops.
+          A shielded payee can prove it holds a valid credential without
+          revealing who it is (a{" "}
+          <Term term="zkProof">zero-knowledge proof</Term>). Each proof works
+          once per payment. No proof handy?{" "}
+          <Link
+            href="/zcash"
+            className="text-ink underline decoration-terra decoration-1 underline-offset-4"
+          >
+            Generate one in the guided Zcash demo
+          </Link>
+          .
         </p>
-        <textarea
-          aria-label="zk proof JSON"
-          className="h-28 w-full rounded bg-paper-deep p-3 font-mono text-[11px] text-ink"
-          placeholder='{"proof":"0x…","contextLabel":"ligis-gate:v1:…","publicInputs":{…}}'
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        {err ? <p className="font-mono text-[11px] text-terra">{err}</p> : null}
+        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            id="zk-proof-file"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              if (f.size > MAX_PROOF_FILE) {
+                setErr("That file is too large to be a proof (max 256 KB).");
+                return;
+              }
+              setFileName(f.name);
+              const t = await f.text();
+              setText(t);
+              setErr(null);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="border border-terra px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-terra hover:text-paper"
+          >
+            Upload proof file
+          </button>
+          {fileName ? (
+            <span className="font-mono text-[11px] text-ink-quiet">
+              {fileName} · {Math.round(text.length / 1024)} KB loaded
+            </span>
+          ) : null}
+        </div>
+        <details>
+          <summary className="cursor-pointer py-1 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet hover:text-ink">
+            or paste JSON
+          </summary>
+          <label htmlFor="zk-proof-json" className="sr-only">
+            Proof JSON
+          </label>
+          <textarea
+            id="zk-proof-json"
+            className="mt-2 h-28 w-full bg-paper-deep p-3 font-mono text-[11px] text-ink"
+            placeholder='{"proof":"0x…","contextLabel":"ligis-gate:v1:…","publicInputs":{…}}'
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setFileName(null);
+            }}
+          />
+        </details>
+        {err ? (
+          <p role="alert" className="font-serif text-sm text-terra">
+            {err}
+          </p>
+        ) : null}
         <button
           type="button"
           disabled={busy || !text.trim()}
-          className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline disabled:text-ink-quiet"
-          onClick={() => {
-            try {
-              const parsed = JSON.parse(text);
-              setErr(null);
-              onSubmit(parsed);
-            } catch {
-              setErr("not valid JSON");
-            }
-          }}
+          className="border border-ink px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:bg-ink hover:text-paper disabled:border-rule disabled:text-ink-quiet disabled:hover:bg-transparent"
+          onClick={() => submit(text)}
         >
-          {busy ? "verifying…" : "Run check with proof"}
+          {busy ? "Verifying proof…" : "Run the gate with this proof"}
         </button>
       </div>
     </details>

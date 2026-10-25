@@ -221,6 +221,7 @@ export default async function VerifyPage({
               configured. Credential read is one signal — not the whole answer.
             </p>
             <GateDecision
+              shareInline={false}
               payee={subjectForVerdict}
               amountUsd={decisionAmountUsd!}
               payment={
