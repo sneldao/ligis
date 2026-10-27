@@ -42,7 +42,7 @@
     "react-dom": "^19.0.0",
     "server-only": "0.0.1",
     "three": "^0.185.1",
-    "viem": "^2.55.10"
+    "viem": "^2.57.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
