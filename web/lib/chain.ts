@@ -135,6 +135,11 @@ export function getEvmReadContext(
     client: createPublicClient({
       chain,
       transport: http(rpcUrl, { retryCount: 3, timeout: 20_000 }),
+      // Batch concurrent contract reads into one JSON-RPC payload per tick.
+      // The gate fires isCapable + latestCredential together (and resolve()
+      // fans out across chains), so this halves request count on public RPCs
+      // that meter or rate-limit per request.
+      batch: { multicall: { wait: 16 } },
     }),
     addresses: {
       pharosAgentId: dep.pharosAgentId as Address,

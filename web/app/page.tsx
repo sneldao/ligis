@@ -19,10 +19,21 @@ async function liveStats(chain: ChainNetwork) {
   if (!chain.live) {
     return { ok: false as const, preview: true as const };
   }
+  // The page is force-dynamic and awaits this before first paint, so the
+  // reads get a tight budget: a slow public RPC degrades the stats line to
+  // "temporarily unreachable" instead of holding the hero for the viem
+  // transport's full 20s timeout.
+  const budget = <T,>(p: Promise<T>): Promise<T> =>
+    Promise.race([
+      p,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error("live stats timeout")), 3_500),
+      ),
+    ]);
   try {
     const [supply, block] = await Promise.all([
-      readTotalSupply(chain),
-      readBlockNumber(chain),
+      budget(readTotalSupply(chain)),
+      budget(readBlockNumber(chain)),
     ]);
     return {
       supply: Number(supply),

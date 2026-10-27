@@ -91,17 +91,16 @@ export async function verifySubject(
   }
 
   try {
-    const capable = await withTimeout(
-      isCapable(chain, subject, cap.hash),
-      timeoutMs,
-    );
-    // Read the credential view in both branches: a false verdict may still
-    // mean a credential exists — revoked or expired — and the STOP reason
-    // depends on which it is.
-    const view = await withTimeout(
-      readCredential(chain, subject, cap.hash),
-      timeoutMs,
-    ).catch(() => null);
+    // Both reads are independent — run them concurrently so a gate verdict
+    // costs one RPC round trip, not two. A false isCapable may still mean a
+    // credential exists (revoked or expired), so the view read is needed in
+    // every branch to name the STOP reason.
+    const [capable, view] = await Promise.all([
+      withTimeout(isCapable(chain, subject, cap.hash), timeoutMs),
+      withTimeout(readCredential(chain, subject, cap.hash), timeoutMs).catch(
+        () => null,
+      ),
+    ]);
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     const hasCredential =
       view != null &&
