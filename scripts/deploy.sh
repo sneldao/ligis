@@ -41,6 +41,12 @@ case "$NETWORK" in
     EXPLORER="http://localhost"
     NETWORK_KEY="local-anvil"
     ;;
+  0g|0g-newton-testnet)
+    RPC="${LIGIS_RPC_URL:-https://evmrpc-testnet.0g.ai}"
+    CHAIN_ID=16602
+    EXPLORER="https://chainscan-newton.0g.ai"
+    NETWORK_KEY="0g-newton-testnet"
+    ;;
   *)
     echo "Unknown network: $NETWORK (use 'atlantic', 'mainnet', or 'local')" >&2
     exit 1
@@ -101,6 +107,9 @@ if [[ "$BALANCE_WEI" == "0" ]]; then
   if [[ "$NETWORK_KEY" == "monad-testnet" ]]; then
     echo "Monad testnet faucet: https://faucet.monad.xyz" >&2
   fi
+  if [[ "$NETWORK_KEY" == "0g-newton-testnet" ]]; then
+    echo "0G testnet faucet: https://faucet.0g.ai" >&2
+  fi
   exit 1
 fi
 
@@ -123,7 +132,7 @@ if [[ -n "${PHAROS_GAS_PRICE:-}" ]]; then
   GAS_PRICE_FLAG=(--gas-price "$PHAROS_GAS_PRICE")
   echo "Using custom gas price: $PHAROS_GAS_PRICE"
 fi
-DEPLOYMENT_OUT="$ROOT_DIR/.deployment-latest.json" \
+DEPLOYMENT_OUT="${DEPLOYMENT_OUT:-$ROOT_DIR/.deployment-latest.json}" \
   "$FORGE" script script/Deploy.s.sol:DeployIdentitySkill \
   --rpc-url "$RPC" \
   --private-key "$PRIVATE_KEY" \

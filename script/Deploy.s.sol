@@ -50,6 +50,13 @@ contract DeployIdentitySkill is Script {
             networkKey = "monad-testnet";
         } else if (block.chainid == 31_337) {
             networkKey = "local-anvil";
+        } else if (block.chainid == 16_602) {
+            // 0G Newton testnet (chainId verified live via cast, 2026-10-27;
+            // assets/networks.json previously said 16600). Adapter pins
+            // "0g-newton-testnet".
+            networkKey = "0g-newton-testnet";
+        } else if (block.chainid == 16_601) {
+            networkKey = "0g-mainnet";
         } else {
             revert("Unsupported deployment chain");
         }

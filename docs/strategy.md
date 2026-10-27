@@ -13,7 +13,7 @@
 > status, roadmap, and competitive landscape — not what we say on the
 > landing.
 
-## Status (2026-10-14)
+## Status (2026-10-27)
 
 - **Live:** 5 paid services on the CROO Agent Store (`ligis.risk` $0.50,
   `ligis.verify` $0.25, `ligis.issue` $2.00, `ligis.gate` $0.25,
@@ -52,14 +52,18 @@
   capability from payment alone — external evidence that passes policy, or an
   explicit `LIGIS_SELF_ISSUABLE_CAPABILITIES` allowlist (empty by default).
 - **Intent layer:** Jev is on the **direct** route
-  (`LIGIS_JEV_TRANSPORT=direct`, `api.typesafe.ai`, model `jev-1.13.0`). The AI
+  (`LIGIS_JEV_TRANSPORT=direct`, `api.typesafe.ai`, model `jev-1.13.0`;
+  prod reported `jev-1.14.0` on 2026-10-27 — the served version is logged by
+  `pnpm watchdog:jev` now). The AI
   Gateway promo ended 2026-09-25; the last `pnpm smoke:jev` (2026-09-26)
   recorded two correct probes at ~$0.0001. The layer fails open, so a dead
   route is invisible without a check — that check exists: `pnpm watchdog:jev`
   (`scripts/jev-prod-watchdog.mjs`) asks production's own `/api/gate` whether its
   provenance carries a `jev` line that actually answered, and
   `.github/workflows/jev-watchdog.yml` runs it daily at 06:30 UTC. Live since
-  2026-10-18 on the Vercel deployment.
+  2026-10-18 on the Vercel deployment. Failures can additionally post to a
+  Slack/Discord webhook via `LIGIS_WATCHDOG_WEBHOOK_URL` (repo variable), and
+  the served model version is surfaced in the watchdog output.
 - **Tests:** 65 Foundry + 22 Odra + 297 TypeScript. Root `pnpm run test:ts`
   covers every package suite plus the web suite.
 - **Next:** Phase 3 (OKX.AI ASP) is still the open one. The 0G Bridge by AKINDO
@@ -67,7 +71,11 @@
   0G Chain stays a future option via `@ligis/adapter-0g`, not a
   deadline-driven milestone. Replacement 0G channel identified: **0G Apollo
   Accelerator Cohort 2** (applications opening soon, program Nov–Feb) —
-  see "0G: Apollo Cohort 2" for the deploy-prep checklist.
+  see "0G: Apollo Cohort 2" for the deploy-prep checklist. **Update
+  2026-10-27:** the 0G Chain deploy is done — contracts live on Newton
+  testnet, first credentials issued, three-chain portability verified
+  (`docs/0g-chain-deploy.md`). The critical path is now the fork test suite,
+  the web chain selector, and the application itself.
 
 ## The problem
 
@@ -458,6 +466,8 @@ Direct-API wallet plans ($29 / $99 / $499 per month, see
 - [ ] (Deferred, no deadline) Deploy `CredentialRegistry` and `AgentId` to
       0G Chain via `@ligis/adapter-0g` — now re-anchored as the Apollo
       Cohort 2 application prep, see "0G: Apollo Cohort 2" below
+      (**done 2026-10-27** for the contracts + first credentials; remaining:
+      fork test suite, web chain selector, application)
 
 ### Phase 4: Adjudication compose (GenLayer Agent Tank → ongoing)
 
@@ -555,14 +565,18 @@ Secondary 0G channels, same research:
 Compute + Storage today; here is the 0G Chain deploy proving the third
 pillar." That makes the adapter-0g checkpoint the critical path:
 
-- [ ] Point `@ligis/adapter-0g` at the 0G Chain testnet RPC + chain config
-- [ ] Deploy `PharosAgentID` + `CredentialRegistry` to 0G Chain testnet
-      (standard EIP-712 / ERC-721 — verify no opcode/gas-metering surprises)
+- [x] Point `@ligis/adapter-0g` at the 0G Chain testnet RPC + chain config
+      (chainId corrected to the live 16602; see `docs/0g-chain-deploy.md`)
+- [x] Deploy `PharosAgentID` + `CredentialRegistry` to 0G Chain testnet
+      (standard EIP-712 / ERC-721 — no opcode/gas-metering surprises; both
+      contracts verified by live reads, 2026-10-27)
 - [ ] Run the full Foundry suite against a 0G testnet fork
-- [ ] Confirm viem reads/writes/event logs work against 0G Chain RPC
+- [x] Confirm viem reads/writes/event logs work against 0G Chain RPC
+      (deploys + two credential submissions via `ZeroGAdapter`, receipts status 1)
 - [ ] Wire 0G Chain into the web chain selector as a read target
-- [ ] One credential issued on 0G Chain verified from Casper (the portability
-      demo, now with a third chain)
+- [x] One credential issued on 0G Chain verified from Casper (the portability
+      demo, now with a third chain — capability hash identical on both,
+      `isCapable` → true both directions, 2026-10-27)
 - [ ] Submit Apollo Cohort 2 application when it opens + prepare a
       TOKEN2049 Week presence decision
 

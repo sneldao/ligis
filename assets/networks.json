@@ -51,7 +51,7 @@
     },
     "0g-newton-testnet": {
       "name": "0G Newton Testnet",
-      "chainId": 16600,
+      "chainId": 16602,
       "rpcUrl": "https://evmrpc-testnet.0g.ai",
       "explorerUrl": "https://chainscan-newton.0g.ai",
       "explorerApiUrl": "",
@@ -123,6 +123,14 @@
         "asset": "0x16f6bD0c285a630fe72275909c0f5815d276E2f4",
         "assetNote": "Ligis test USDC (EIP-3009), demo-only. Canonical Monad testnet USDC: 0x534b2f3A21130d7a60830c2Df862319e593943A3"
       }
+    },
+    "0g-newton-testnet": {
+      "network": "0g-newton-testnet",
+      "pharosAgentId": "0x6D083998990AaE75c28f40B2E790cdead010f8cb",
+      "credentialRegistry": "0x37d74b9B586FcD8Ce507Fa690143bAf72E42245A",
+      "chainId": 16602,
+      "deployer": "0xa234d5ba3864acD254467193272e15941102A8fa",
+      "deployedAt": "1793133821"
     }
   }
 }

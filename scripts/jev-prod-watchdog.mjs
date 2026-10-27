@@ -38,7 +38,11 @@ export function parseJevProvenance(provenance) {
   const skippedReason = parts.slice(2).join(", ");
 
   const abnormal = verdict !== "go" && verdict !== "stop" && verdict !== "unknown";
-  return { ok: !abnormal && verdict !== "skipped" && !skippedReason, line, verdict, transport, latency, skippedReason, abnormal };
+  // The model id is the token right after the verdict when present ("jev-1.13.0").
+  const model =
+    line.slice("jev ".length).trim().split(/\s+/)[1]?.match(/^jev-[\w.\-]+$/)?.[0] ??
+    undefined;
+  return { ok: !abnormal && verdict !== "skipped" && !skippedReason, line, verdict, model, transport, latency, skippedReason, abnormal };
 }
 
 async function probe() {
@@ -85,15 +89,42 @@ async function probe() {
 
   console.log(
     `ok  gate ${decision.verdict} · ${parsed.line} · ` +
+      `model ${parsed.model ?? "unversioned"} · ` +
       `cost $${Number(decision.costUsd ?? 0).toFixed(8)} · decision ${decision.latencyMs}ms`,
   );
+}
+
+/**
+ * Optional failure alert. When LIGIS_WATCHDOG_WEBHOOK_URL is set (Slack/Discord
+ * style webhook), a failing run posts there as well as exiting non-zero — a
+ * scheduled workflow nobody watches is just a log line. Set
+ * LIGIS_WATCHDOG_WEBHOOK_TEXT=1 for webhooks that want { text } instead of
+ * { content }.
+ */
+async function alert(message, fix) {
+  const url = process.env.LIGIS_WATCHDOG_WEBHOOK_URL;
+  if (!url) return;
+  const text = `JEV WATCHDOG: ${message}\nurl ${GATE_URL}${fix ? `\ncheck ${fix}` : ""}`;
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(
+        process.env.LIGIS_WATCHDOG_WEBHOOK_TEXT === "1" ? { text } : { content: text },
+      ),
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch (err) {
+    console.error(`watchdog alert delivery failed (${err?.name}: ${err?.message})`);
+  }
 }
 
 function die(message, fix) {
   console.error(`\nJEV WATCHDOG: ${message}`);
   console.error(`  url    ${GATE_URL}`);
   if (fix) console.error(`  check  ${fix}`);
-  process.exit(1);
+  // Fire-and-forget: exit must not depend on the alert path being reachable.
+  alert(message, fix).finally(() => process.exit(1));
 }
 
 async function selfTest() {
@@ -114,7 +145,7 @@ async function selfTest() {
     const detail =
       parsed.reason === "missing"
         ? "no jev line"
-        : `verdict=${parsed.verdict} transport=${parsed.transport} latency=${parsed.latency} reason=${parsed.skippedReason || "-"}`;
+        : `verdict=${parsed.verdict} model=${parsed.model ?? "-"} transport=${parsed.transport} latency=${parsed.latency} reason=${parsed.skippedReason || "-"}`;
     console.log(`${pass ? "ok  " : "FAIL"} expected=${expected} got=${parsed.ok} [${detail}] ${line ?? "(absent)"}`);
   }
   if (failed) {

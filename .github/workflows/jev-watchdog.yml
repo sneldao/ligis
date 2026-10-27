@@ -9,6 +9,13 @@ on:
     - cron: "30 6 * * *" # daily 06:30 UTC
   workflow_dispatch:
 
+# Optional: set LIGIS_WATCHDOG_WEBHOOK_URL (repo variable or secret) to also post
+# failures to a Slack/Discord webhook; without it a failing run is only visible
+# in the Actions tab. LIGIS_WATCHDOG_WEBHOOK_TEXT=1 if the webhook wants { text }.
+env:
+  LIGIS_WATCHDOG_WEBHOOK_URL: ${{ vars.LIGIS_WATCHDOG_WEBHOOK_URL || '' }}
+  LIGIS_WATCHDOG_WEBHOOK_TEXT: ${{ vars.LIGIS_WATCHDOG_WEBHOOK_TEXT || '' }}
+
 jobs:
   watchdog:
     runs-on: ubuntu-latest
