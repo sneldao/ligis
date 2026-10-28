@@ -13,6 +13,8 @@ export const dynamic = "force-dynamic";
 export default function PasskeyPage() {
   return (
     <main className="route-shell max-w-5xl">
+      <div className="field-texture" aria-hidden />
+      <div className="field-fog" aria-hidden />
       <header className="route-header text-xs">
         <p className="eyebrow">Ligis · Passkey</p>
         <div className="flex items-baseline gap-6">

@@ -43,6 +43,8 @@ export default async function CrooPage({
 
   return (
     <main className="route-shell max-w-3xl">
+      <div className="field-texture" aria-hidden />
+      <div className="field-fog" aria-hidden />
       <header className="route-header text-xs text-ink-quiet">
         <p className="eyebrow">Ligis · CROO Agent Store</p>
         <Link

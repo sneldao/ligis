@@ -124,6 +124,8 @@ function criticalityFor(id: string): string {
 export default function CapabilitiesPage() {
   return (
     <main className="route-shell max-w-5xl">
+      <div className="field-texture" aria-hidden />
+      <div className="field-fog" aria-hidden />
       <header className="route-header text-xs">
         <p className="eyebrow">Ligis · Capabilities</p>
         <div className="flex items-baseline gap-6">

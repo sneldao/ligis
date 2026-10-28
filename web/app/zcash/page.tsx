@@ -21,6 +21,8 @@ export default function ZcashPage() {
   const live = zkDemoEnabled(process.env);
   return (
     <main className="route-shell max-w-3xl">
+      <div className="field-texture" aria-hidden />
+      <div className="field-fog" aria-hidden />
       <header className="route-header text-xs">
         <p className="eyebrow">Ligis · Zcash</p>
         <Link

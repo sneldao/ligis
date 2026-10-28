@@ -170,6 +170,8 @@ export default async function OperatorPage({
   if (!authCheck.ok) {
     return (
       <main className="route-shell max-w-3xl">
+        <div className="field-texture" aria-hidden />
+        <div className="field-fog" aria-hidden />
         <header className="route-header text-xs">
           <p className="eyebrow">Ligis · Operator</p>
           <Link

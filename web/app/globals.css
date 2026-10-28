@@ -140,6 +140,111 @@ summary:focus-visible {
   padding-top: 1.25rem;
 }
 
+/* ---- Field language -----------------------------------------------------
+   /field is the aesthetic north star: warm paper, fog, the quiet specimen
+   texture, serif-first editorial type, sage/terra verdicts that settle like
+   events. These classes bring that DNA to every route so the whole app
+   reads as one place. Additive to route-shell; reduced-motion safe. */
+
+/* The quiet specimen field as a page backdrop. Fixed, behind content,
+   barely-there: the same deterministic mark layout as QuietField.tsx. */
+.field-texture {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(
+      circle at 4% 6%,
+      rgba(28, 27, 26, 0.14) 0 1.6px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 41% 29%,
+      rgba(28, 27, 26, 0.17) 0 3px,
+      transparent 3.4px
+    ),
+    radial-gradient(
+      circle at 78% 52%,
+      rgba(28, 27, 26, 0.12) 0 1.6px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 15% 71%,
+      rgba(28, 27, 26, 0.22) 0 3px,
+      transparent 3.4px
+    ),
+    radial-gradient(
+      circle at 52% 88%,
+      rgba(28, 27, 26, 0.12) 0 1.6px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 89% 15%,
+      rgba(28, 27, 26, 0.17) 0 1.6px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 66% 6%,
+      rgba(28, 27, 26, 0.12) 0 1.6px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 28% 44%,
+      rgba(28, 27, 26, 0.12) 0 1.6px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 95% 78%,
+      rgba(28, 27, 26, 0.17) 0 3px,
+      transparent 3.4px
+    ),
+    radial-gradient(
+      circle at 8% 40%,
+      rgba(28, 27, 26, 0.12) 0 1.6px,
+      transparent 2px
+    );
+  background-size: 100vw 100vh;
+}
+
+/* The fog: /field's depth cue, laid over the texture so content sits in
+   air rather than on a surface. */
+.field-fog::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 30%,
+    transparent 40%,
+    color-mix(in srgb, var(--color-paper-deep) 55%, transparent) 100%
+  );
+}
+
+/* Verdicts settle like events: the video's Go./Stop. language, in the
+   app's canonical sage/revoke. One breath on arrival, then still. */
+@keyframes verdict-settle {
+  from {
+    opacity: 0;
+    letter-spacing: 0.18em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.01em;
+  }
+}
+
+.verdict-settle {
+  animation: verdict-settle 0.9s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verdict-settle {
+    animation: none;
+  }
+}
+
 @media (min-width: 640px) {
   .route-shell {
     padding: 5rem 2rem 8rem;

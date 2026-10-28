@@ -66,7 +66,7 @@ export function GateVerdict({
 
   return (
     <div
-      className={`flex flex-col-reverse gap-8 border-l-2 pl-6 sm:flex-row sm:items-start sm:justify-between ${tone}`}
+      className={`verdict-settle flex flex-col-reverse gap-8 border-l-2 pl-6 sm:flex-row sm:items-start sm:justify-between ${tone}`}
     >
       <div className="min-w-0 flex-1">
         <p className="eyebrow">gate · pre-payment check</p>

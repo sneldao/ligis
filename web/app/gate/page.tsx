@@ -368,6 +368,8 @@ export default async function VerifyPage({
 
   return (
     <main className="route-shell max-w-3xl">
+      <div className="field-texture" aria-hidden />
+      <div className="field-fog" aria-hidden />
       <Suspense>
         <ShareLinkCounter bucket="share:gate" />
       </Suspense>

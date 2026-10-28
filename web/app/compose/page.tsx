@@ -33,6 +33,8 @@ export default async function ComposePage({
 
   return (
     <main className="route-shell max-w-3xl">
+      <div className="field-texture" aria-hidden />
+      <div className="field-fog" aria-hidden />
       <header className="route-header text-xs text-ink-quiet">
         <p className="eyebrow">Ligis · Build the check in</p>
         <Link

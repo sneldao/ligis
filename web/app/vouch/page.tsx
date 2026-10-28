@@ -28,6 +28,8 @@ export default async function VouchPage({
 
   return (
     <main className="route-shell max-w-3xl">
+      <div className="field-texture" aria-hidden />
+      <div className="field-fog" aria-hidden />
       <header className="route-header text-xs">
         <p className="eyebrow">Ligis · Verify a payee</p>
         <div className="flex items-baseline gap-6">
