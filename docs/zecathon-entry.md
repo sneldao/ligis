@@ -149,6 +149,18 @@ matters**, **(c) demoable in minutes.** This is all three:
   not a port
 - The demo is a 90-second payment flow: gate → proof → shielded transfer
 
+**And it wins the differentiation argument, not just the demo.** The 2026
+agent-trust field is saturated — but entirely on the _payer_ side: Visa TAP,
+Mastercard Agent Pay, Trulioo/Worldpay KYA passports, ERC-8004 identity
+registries, x402 and AP2 rails. All of it answers "who is this agent?" None
+of it answers "should this payment go through?" — and not one player touches
+shielded transactions, because their models are surveillance-shaped by
+design. Ligis's ZK proof-of-credential is the only trust primitive in the
+field that works _inside_ the privacy pool: the payee proves it holds a
+valid credential without revealing its address, its issuer, or which
+credential. Privacy payments get adopted when they stop requiring a leap of
+faith — that is the adoption thesis, and it is Zecathon's thesis too.
+
 ## Timing & Hackathon Eligibility (Option B Provenance)
 
 - **Registration opens:** Sep 28, 2026
