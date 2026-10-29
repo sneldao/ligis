@@ -30,7 +30,10 @@ export function DecisionVerdict({
   const rule = go ? "border-sage" : stop ? "border-revoke" : "border-ink-quiet";
   const tone = go ? "text-sage" : stop ? "text-revoke" : "text-ink-soft";
   return (
-    <div className={`border-l-2 pl-6 ${rule}`} data-testid="decision-verdict">
+    <div
+      className={`verdict-settle border-l-2 pl-6 ${rule}`}
+      data-testid="decision-verdict"
+    >
       <p className="eyebrow">{eyebrow}</p>
       <p className="mt-3 display text-3xl sm:text-4xl">
         <span className={tone}>
