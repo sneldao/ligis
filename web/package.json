@@ -28,7 +28,7 @@
     "@noble/curves": "^1.6.0",
     "@noble/hashes": "^1.5.0",
     "@privy-io/node": "0.35.0",
-    "@privy-io/react-auth": "3.48.1",
+    "@privy-io/react-auth": "3.51.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@use-gesture/react": "^10.3.1",
