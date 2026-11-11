@@ -154,3 +154,6 @@ __pycache__/
 # Canonical receipts — scripts/*.lastrun.txt — stay committable as evidence.
 /scripts/*-laun.txt
 
+
+# Perch agent workspace (local tool config)
+.perch/
