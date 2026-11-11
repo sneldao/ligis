@@ -1,0 +1,66 @@
+name: ligis
+version: 0.1.0
+manifest_version: 2
+api_version: 1
+description: >-
+  Verify that a payee holds a live, third-party-issued, revocable on-chain
+  capability credential before your agent pays them. Hermes agents pay other
+  agents, and the destination address comes from the HTTP answer asking for
+  the money — nothing in the x402 flow ties that address to anything the
+  payee has proven about itself. ligis reads the credential registry
+  directly over read-only JSON-RPC and answers the question the payment
+  flow leaves open: is this counterparty entitled to this? Four tools
+  (ligis_check_capability, ligis_capability_hash, ligis_verify_payee,
+  ligis_chains) plus a pre_tool_call gate that intercepts payment-shaped
+  tool calls and escalates to Hermes's approval prompt when the payee
+  cannot be credentialed. A capability is indexed by the keccak-256 hash of
+  its name, so the same capability resolves to the same bytes on every
+  chain and a credential minted on one chain is found on another.
+  Disclosure — makes read-only HTTPS JSON-RPC eth_call requests to the
+  configured RPC endpoint (default https://testnet-rpc.monad.xyz for
+  monad-testnet and https://atlantic.dplabs-internal.com for
+  pharos-atlantic); the RPC operator sees the caller's IP and the queried
+  registry and subject addresses; it holds no keys, signs nothing, sends no
+  transactions, reads no files outside its own plugin data directory, runs
+  no background processes, and has no telemetry. The pre_tool_call hook
+  escalates to Hermes's approval prompt, which unattended surfaces (cron,
+  --yolo, approvals off) refuse rather than auto-approve.
+author: snel
+license: MIT
+homepage: https://github.com/sneldao/ligis
+tags: [security, payments, x402, credentials, guardrails, verification]
+provides_tools:
+  - ligis_check_capability
+  - ligis_capability_hash
+  - ligis_verify_payee
+  - ligis_chains
+provides_hooks:
+  - pre_tool_call
+config_schema:
+  mode:
+    type: str
+    default: escalate
+    description: >-
+      What to do when a payment-shaped tool call names a payee that does
+      not hold the required credential: escalate (ask through Hermes's own
+      approval prompt — the default), enforce (block the call outright),
+      or off (never gate).
+  capability:
+    type: str
+    default: ""
+    description: >-
+      The capability a payee must hold, e.g. agent.commerce.escrow. Empty
+      means the gate uses the capability named in the tool call's own
+      arguments, and stays silent when there is none.
+  chain:
+    type: str
+    default: monad-testnet
+    description: >-
+      Which chain's credential registry to read: monad-testnet or
+      pharos-atlantic. The capability hash is identical on both.
+  amount_tolerance_pct:
+    type: float
+    default: 10.0
+    description: >-
+      Percentage drift allowed between the amount asked for and the
+      expected amount in the right-amount signal.
