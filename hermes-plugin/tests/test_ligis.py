@@ -205,12 +205,14 @@ def test_verdict_rules() -> None:
     # All four signals can pass.
     signals, data = _signal_map(
         tools.ligis_verify_payee(
-            payee="0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
-            amount_usd=100.0,
-            purpose="renew licence",
-            expected_payees=["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
-            expected_usd=100.0,
-            capability="agent.commerce.escrow",
+            {
+                "payee": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                "amount_usd": 100.0,
+                "purpose": "renew licence",
+                "expected_payees": ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
+                "expected_usd": 100.0,
+                "capability": "agent.commerce.escrow",
+            }
         )
     )
     check(
@@ -242,12 +244,14 @@ def test_verdict_rules() -> None:
     # A payee that is not contracted must STOP.
     signals, data = _signal_map(
         tools.ligis_verify_payee(
-            payee="0x" + "99" * 20,
-            amount_usd=100.0,
-            purpose="renew licence",
-            expected_payees=["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
-            expected_usd=100.0,
-            capability="agent.commerce.escrow",
+            {
+                "payee": "0x" + "99" * 20,
+                "amount_usd": 100.0,
+                "purpose": "renew licence",
+                "expected_payees": ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
+                "expected_usd": 100.0,
+                "capability": "agent.commerce.escrow",
+            }
         )
     )
     check(
@@ -259,12 +263,14 @@ def test_verdict_rules() -> None:
     # An amount far from the agreed figure must STOP.
     signals, data = _signal_map(
         tools.ligis_verify_payee(
-            payee="0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
-            amount_usd=5000.0,
-            purpose="renew licence",
-            expected_payees=["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
-            expected_usd=100.0,
-            capability="agent.commerce.escrow",
+            {
+                "payee": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                "amount_usd": 5000.0,
+                "purpose": "renew licence",
+                "expected_payees": ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
+                "expected_usd": 100.0,
+                "capability": "agent.commerce.escrow",
+            }
         )
     )
     check(
@@ -275,11 +281,13 @@ def test_verdict_rules() -> None:
     # A missing expected amount must SKIP, never pass.
     signals, _ = _signal_map(
         tools.ligis_verify_payee(
-            payee="0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
-            amount_usd=100.0,
-            purpose="renew licence",
-            expected_payees=["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
-            capability="agent.commerce.escrow",
+            {
+                "payee": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                "amount_usd": 100.0,
+                "purpose": "renew licence",
+                "expected_payees": ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
+                "capability": "agent.commerce.escrow",
+            }
         )
     )
     check(
@@ -290,11 +298,13 @@ def test_verdict_rules() -> None:
     # A missing capability must SKIP the credential check, not pass it.
     signals, _ = _signal_map(
         tools.ligis_verify_payee(
-            payee="0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
-            amount_usd=100.0,
-            purpose="renew licence",
-            expected_payees=["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
-            expected_usd=100.0,
+            {
+                "payee": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                "amount_usd": 100.0,
+                "purpose": "renew licence",
+                "expected_payees": ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
+                "expected_usd": 100.0,
+            }
         )
     )
     check(
@@ -302,12 +312,69 @@ def test_verdict_rules() -> None:
         signals["verified-payee"]["status"] == "SKIPPED",
     )
 
+    # A comma-separated expected_payees string is accepted.
+    signals, _ = _signal_map(
+        tools.ligis_verify_payee(
+            {
+                "payee": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                "amount_usd": 100.0,
+                "purpose": "renew licence",
+                "expected_payees": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                "expected_usd": 100.0,
+            }
+        )
+    )
+    check(
+        "a comma-separated payee list is parsed",
+        signals["right-payee"]["status"] == "GO",
+    )
+
+
+def test_tool_argument_handling() -> None:
+    """The handler signature must match Hermes's contract: (args, **kwargs)."""
+    import inspect
+    import json
+
+    for name in (
+        "ligis_check_capability",
+        "ligis_capability_hash",
+        "ligis_verify_payee",
+        "ligis_chains",
+    ):
+        params = list(inspect.signature(getattr(tools, name)).parameters.values())
+        check(
+            f"{name} takes a single args dict",
+            params[0].name == "args",
+            f"got {params[0].name}",
+        )
+        check(
+            f"{name} accepts **kwargs",
+            any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params),
+        )
+
+    # Missing required arguments return an error JSON, never raise.
+    result = json.loads(tools.ligis_check_capability({}))
+    check(
+        "check_capability errors cleanly with no args",
+        "error" in result,
+    )
+    result = json.loads(tools.ligis_capability_hash({}))
+    check(
+        "capability_hash errors cleanly with no args",
+        "error" in result,
+    )
+    result = json.loads(tools.ligis_verify_payee({"payee": "0x1"}))
+    check(
+        "verify_payee errors cleanly with no amount",
+        "error" in result,
+    )
+
 
 def test_tool_output_shapes() -> None:
     import json
 
     payload = json.loads(
-        tools.ligis_capability_hash("agent.commerce.escrow")
+        tools.ligis_capability_hash({"capability": "agent.commerce.escrow"})
     )
     check(
         "capability_hash tool returns the registry hash",
@@ -315,7 +382,7 @@ def test_tool_output_shapes() -> None:
         == "0x17775e488d090dd8527e0139b3472d4d03c3372525b10a7c1449f04027a3ebf8",
     )
 
-    chains_payload = json.loads(tools.ligis_chains())
+    chains_payload = json.loads(tools.ligis_chains({}))
     check(
         "chains tool lists both chains",
         len(chains_payload["chains"]) == 2,
@@ -433,6 +500,7 @@ def main() -> int:
     test_payment_detection()
     test_payee_extraction()
     test_verdict_rules()
+    test_tool_argument_handling()
     test_tool_output_shapes()
     test_hook()
 

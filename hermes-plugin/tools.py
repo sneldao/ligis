@@ -187,13 +187,26 @@ def _payload(data: dict) -> str:
     return json.dumps(data, default=str)
 
 
-def ligis_check_capability(
-    subject: str,
-    capability: str,
-    chain: str = DEFAULT_CHAIN,
-    ctx=None,
-) -> str:
-    """Check one subject's credential for one capability on one chain."""
+def ligis_check_capability(args: dict, **kwargs) -> str:
+    """Check one subject's credential for one capability on one chain.
+
+    Hermes calls a tool handler with a single ``args`` dict and injects
+    context keywords, so the signature is ``(args, **kwargs)``.
+    """
+    args = args or {}
+    subject = str(args.get("subject") or "").strip()
+    capability = str(args.get("capability") or "").strip()
+    chain = str(args.get("chain") or DEFAULT_CHAIN).strip() or DEFAULT_CHAIN
+
+    if not subject or not capability:
+        return _payload(
+            {
+                "error": "both 'subject' and 'capability' are required",
+                "subject": subject,
+                "capability": capability,
+            }
+        )
+
     try:
         status = read_capability(subject, capability, chain)
     except ValueError as exc:
@@ -221,11 +234,12 @@ def ligis_check_capability(
     return _payload(data)
 
 
-def ligis_capability_hash(capability: str, ctx=None) -> str:
+def ligis_capability_hash(args: dict, **kwargs) -> str:
     """Compute the chain-agnostic keccak-256 hash of a capability name."""
-    name = str(capability or "").strip()
+    args = args or {}
+    name = str(args.get("capability") or "").strip()
     if not name:
-        return _payload({"error": "capability must be a non-empty string"})
+        return _payload({"error": "'capability' is required"})
     digest = chains.capability_hash(name)
     return _payload(
         {
@@ -239,7 +253,7 @@ def ligis_capability_hash(capability: str, ctx=None) -> str:
     )
 
 
-def ligis_chains(ctx=None) -> str:
+def ligis_chains(args: dict, **kwargs) -> str:
     """List the chains this plugin can read."""
     return _payload(
         {
@@ -260,17 +274,36 @@ def _signal(signal_id: str, status: str, confidence: float, reason: str, **extra
     return out
 
 
-def ligis_verify_payee(
-    payee: str,
-    amount_usd: float,
-    purpose: str,
-    capability: str = "",
-    expected_payees: list | None = None,
-    expected_usd: float | None = None,
-    chain: str = DEFAULT_CHAIN,
-    ctx=None,
-) -> str:
+def ligis_verify_payee(args: dict, **kwargs) -> str:
     """Evaluate the four payment signals and return a verdict + stack."""
+    args = args or {}
+    payee = str(args.get("payee") or "").strip()
+    purpose = str(args.get("purpose") or "").strip()
+    capability = str(args.get("capability") or "").strip()
+    chain = str(args.get("chain") or DEFAULT_CHAIN).strip() or DEFAULT_CHAIN
+
+    try:
+        amount_usd = float(args.get("amount_usd"))
+    except (TypeError, ValueError):
+        return _payload({"error": "'amount_usd' must be a number"})
+
+    if not payee or not purpose:
+        return _payload(
+            {"error": "both 'payee' and 'purpose' are required"}
+        )
+
+    raw_payees = args.get("expected_payees") or []
+    if isinstance(raw_payees, str):
+        raw_payees = [p.strip() for p in raw_payees.split(",") if p.strip()]
+    expected_payees = [str(a) for a in raw_payees]
+
+    expected_usd = args.get("expected_usd")
+    if expected_usd is not None:
+        try:
+            expected_usd = float(expected_usd)
+        except (TypeError, ValueError):
+            expected_usd = None
+
     tolerance = config.get_float("amount_tolerance_pct", 10.0)
 
     signals: list[dict] = []
