@@ -9,27 +9,51 @@
 ## 1. The video
 
 **File:** `~/Downloads/ligis-hermes-demo.mp4`
-**Length:** 46.0 s (limit is 90 s) · 4.2 MB · 1080×1920 vertical · 30 fps
+**Length:** 46.0 s (limit is 90 s) · 1080×1920 vertical · 30 fps
 
-Source film: `/tmp/ligis_film/` (HyperFrames 0.9.30, `index.html` + assets).
+**Branding:** the film uses the **Ligis** design system — the
+tokens and faces are copied from `web/app/globals.css` and
+`web/app/fonts`:
+
+|            |                                                                                                 |
+| ---------- | ----------------------------------------------------------------------------------------------- |
+| Paper      | `#f4f1ec` / `#ece7df`                                                                           |
+| Ink        | `#1c1b1a` (mono: `#241f1a`)                                                                     |
+| Terracotta | `#9f4c2f` — the accent, used only for ceremony (CTA, the `i`, the STOP)                         |
+| Sage       | `#5a6d53` — good                                                                                |
+| Revoke     | `#a13a2a` — loss                                                                                |
+| Sky        | `#356584` — in progress                                                                         |
+| Faces      | Fraunces (display) · Hanken Grotesk (UI) · JetBrains Mono (addresses, hashes, capability names) |
+
+Containment is by **hairline and whitespace**, never a box — matching the
+product's own rule that a verdict is a 2px left rule in tone, not a card.
+The terminal is a printed specimen sheet, not a dark IDE panel.
+
+Source film: `/tmp/ligis_film/` (HyperFrames 0.9.30, `index.html` +
+assets, with the fonts copied into `assets/fonts/`).
 The terminal pane carries **real captured bytes** — a real 402 from the
 Ligis x402 server and the real `[LIGIS]` annotation the plugin appended.
 Nothing in the film is mocked.
 
 ### Beat sheet (in case you want to re-cut)
 
-| Time | What is on screen |
-|---|---|
-| 0.0–7.6 | "Your agent pays strangers for you" — the two columns: what the agent knows (`payTo`, a URL, a price it was told) vs what it should know (a capability, issued by a third party, revocable, readable from the chain) |
-| 7.6–13.6 | The real 402: `HTTP/1.1 402 Payment Required`, the `accepts[]` body, `"payTo": "0x0000…dEaD"` |
-| 10.1–13.6 | **The payload:** the `[LIGIS] VERIFIED-PAYEE` note — *does NOT hold a live 'agent.commerce.escrow' credential*, the registry address, `no key · no hosted service`, and a red **STOP** chip |
-| 15.4–22.2 | Revocation: `demo.metropolis.revocation → revoked` *(still present in the registry)* |
-| 24.6–30.6 | Portability: `keccak256("agent.commerce.escrow") = 0x17775e48…a3ebf8` — same bytes, every chain; Monad ✓ · Pharos ✓ · same issuer |
-| 33.4–40.4 | **The climax:** `[LIGIS] Blocked terminal:` … `BLOCKED` — *no transaction was ever signed* |
-| 41.0–46.0 | Endcard: `ligis` — *Is this payee entitled to be paid? Read the credential registry. No key, no hosted service.* + `hermes plugins install ligis` |
+| Time      | What is on screen                                                                                                                                                                                                    |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.0–7.6   | "Your agent pays strangers for you" — the two columns: what the agent knows (`payTo`, a URL, a price it was told) vs what it should know (a capability, issued by a third party, revocable, readable from the chain) |
+| 7.6–13.6  | The real 402: `HTTP/1.1 402 Payment Required`, the `accepts[]` body, `"payTo": "0x0000…dEaD"`                                                                                                                        |
+| 13.6–21.9 | **The payload:** the `[LIGIS] VERIFIED-PAYEE` note — _does NOT hold a live 'agent.commerce.escrow' credential_, the registry address, `no key · no hosted service`, and a **STOP** in Fraunces terracotta            |
+| 21.9–30.3 | Revocation: `demo.metropolis.revocation → revoked` _(still present in the registry)_ — _a spend cap cannot see this. neither can a URL reputation list._                                                             |
+| 30.3–38.1 | Portability: `keccak256("agent.commerce.escrow") = 0x17775e48…a3ebf8` — same bytes, every chain; Monad ✓ · Pharos ✓ · same issuer                                                                                    |
+| 38.1–41.2 | **The climax:** `[LIGIS] Blocked terminal:` … **BLOCKED** — _no transaction was ever signed_                                                                                                                         |
+| 41.2–46.0 | Endcard: `ligis` — _Is this payee entitled to be paid? Read the credential registry. No key, no hosted service._ + `hermes plugins install ligis`                                                                    |
 
-**Audio:** music bed (looped + faded) plus a xylophone motif on the intro
-and impact hits on the three reveals.
+**Audio:** print-room foley, no music — quiet room tone throughout, a
+typewriter tick as each terminal line lands, a paper slide between beats,
+and a rubber stamp on STOP, BLOCKED, and the endcard logo (the film's
+document is also its soundtrack).
+
+**Checks:** `hyperframes check` — 0 errors in every category (lint, runtime,
+layout, motion, contrast, audio).
 
 ---
 
@@ -65,12 +89,12 @@ Post the video with the caption below. Tag **@NousResearch**.
 
 Fill in:
 
-| Field | Value |
-|---|---|
-| **Plugin name** | `ligis` |
+| Field                    | Value                                                      |
+| ------------------------ | ---------------------------------------------------------- |
+| **Plugin name**          | `ligis`                                                    |
 | **Repository / PR link** | `https://github.com/NousResearch/hermes-agent/pull/153409` |
-| **Demo video link** | *(the URL of your X post — paste it after posting)* |
-| **Description** | see below |
+| **Demo video link**      | _(the URL of your X post — paste it after posting)_        |
+| **Description**          | see below                                                  |
 
 **Description (paste-ready):**
 
@@ -86,15 +110,15 @@ Fill in:
 
 ## 4. Where everything lives
 
-| Thing | Where |
-|---|---|
-| Plugin source | `sneldao/ligis` → `hermes-plugin/` |
-| Pinned commit | `695335709f9930aa008cc7e7f1747752ec261e73` |
-| Catalog PR | https://github.com/NousResearch/hermes-agent/pull/153409 |
-| Catalog entry file | `plugin-catalog/ligis.yaml` in the PR |
-| Demo video | `~/Downloads/ligis-hermes-demo.mp4` |
-| Film source | `/tmp/ligis_film/` (not committed — the mp4 is the receipt) |
-| Build plan | `docs/hermes-plugin-plan.md` in `sneldao/ligis` |
+| Thing              | Where                                                       |
+| ------------------ | ----------------------------------------------------------- |
+| Plugin source      | `sneldao/ligis` → `hermes-plugin/`                          |
+| Pinned commit      | `695335709f9930aa008cc7e7f1747752ec261e73`                  |
+| Catalog PR         | https://github.com/NousResearch/hermes-agent/pull/153409    |
+| Catalog entry file | `plugin-catalog/ligis.yaml` in the PR                       |
+| Demo video         | `~/Downloads/ligis-hermes-demo.mp4`                         |
+| Film source        | `/tmp/ligis_film/` (not committed — the mp4 is the receipt) |
+| Build plan         | `docs/hermes-plugin-plan.md` in `sneldao/ligis`             |
 
 **To rebuild the video:** `cd /tmp/ligis_film && npx --yes hyperframes@0.9.30 render --output ligis-demo.mp4`
 
@@ -102,35 +126,35 @@ Fill in:
 
 ## 5. Verification state (all green as of 08:35 EST)
 
-| Check | Result |
-|---|---|
-| `hermes plugins validate --install-deps hermes-plugin` | **passed**, no warnings, "security scan — safe", no Python dependencies |
-| `hermes plugins doctor hermes-plugin --ci` | **passed** — 5 tools, 2 hooks |
-| `tests/test_ligis.py` | **89/89** pass, offline |
-| `fixtures/selftest.py` | **4/4** fixtures reproduce live from raw JSON-RPC |
-| Catalog CI simulation on a clean clone at the pinned sha | **all four gates pass** (validate, payload scan, self-updater grep, confinement) |
-| `validate_plugin_catalog.py` on the entry file | **valid** |
-| **Live Hermes session** | 402 challenge annotated with the payee's verdict (both directions); payment to an uncredentialed payee **blocked**; payment to a credentialed payee **allowed through** |
+| Check                                                    | Result                                                                                                                                                                  |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hermes plugins validate --install-deps hermes-plugin`   | **passed**, no warnings, "security scan — safe", no Python dependencies                                                                                                 |
+| `hermes plugins doctor hermes-plugin --ci`               | **passed** — 5 tools, 2 hooks                                                                                                                                           |
+| `tests/test_ligis.py`                                    | **89/89** pass, offline                                                                                                                                                 |
+| `fixtures/selftest.py`                                   | **4/4** fixtures reproduce live from raw JSON-RPC                                                                                                                       |
+| Catalog CI simulation on a clean clone at the pinned sha | **all four gates pass** (validate, payload scan, self-updater grep, confinement)                                                                                        |
+| `validate_plugin_catalog.py` on the entry file           | **valid**                                                                                                                                                               |
+| **Live Hermes session**                                  | 402 challenge annotated with the payee's verdict (both directions); payment to an uncredentialed payee **blocked**; payment to a credentialed payee **allowed through** |
 
 ---
 
 ## 6. If a reviewer asks
 
-**"Why is this not just a spend cap?"** — A spend cap asks *is this within
-the operator's budget*. It says nothing about the counterparty. Ligis asks
-*is this counterparty entitled to this*, from a credential the operator did
+**"Why is this not just a spend cap?"** — A spend cap asks _is this within
+the operator's budget_. It says nothing about the counterparty. Ligis asks
+_is this counterparty entitled to this_, from a credential the operator did
 not issue and cannot forge.
 
 **"Why is this not like `vet402` or `toll`?"** — `vet402` looks up whether
 anyone has bought a URL before (endpoint reputation). `toll` checks whether
-a *coin* is safe, on one chain, through a hosted server. Neither asks
+a _coin_ is safe, on one chain, through a hosted server. Neither asks
 whether the counterparty holds a credential, and neither can see a
 revocation.
 
 **"Isn't this just ERC-8478?"** — ERC-8478 (opened 2026-10-30, PR #2132,
-still a draft) defines the *payee binding* — that `payTo` is the agent's
+still a draft) defines the _payee binding_ — that `payTo` is the agent's
 registered wallet or a delegated one. That is the seller's side. ligis
-answers a different and complementary question: *entitlement* — does this
+answers a different and complementary question: _entitlement_ — does this
 counterparty hold a third-party-issued, revocable permission for this
 capability. The README says so explicitly rather than overclaiming.
 
@@ -146,17 +170,14 @@ stronger than pretending.
 
 **"Which chains?"** — EVM only in this release: Monad Testnet and Pharos
 Atlantic. The capability hash is chain-agnostic by construction (it is the
-keccak-256 of the capability's *name*), so the same capability resolves on
+keccak-256 of the capability's _name_), so the same capability resolves on
 any EVM registry — but the issuer issues per chain, and the README states
 that distinction rather than claiming portable credentials.
 
 ---
 
-## 7. Remaining checklist for you
+## 7. Checklist
 
-- [ ] Post `~/Downloads/ligis-hermes-demo.mp4` to X with the caption in §2, tagging @NousResearch
-- [ ] Copy the post URL
-- [ ] Submit the Typeform (§3) with the PR link and the post URL
-- [ ] **Elcaro:** confirm the ≤90 s video is actually posted (the 88 s montage exists locally; your visible posts look like announcements)
-- [ ] **Elcaro:** the re-review nudge is posted on #149503
-- [ ] **Lemma:** merged ✓ — nothing to do
+- [x] Post `~/Downloads/ligis-hermes-demo.mp4` to X with the caption in §2, tagging @NousResearch — https://x.com/papajimjams/status/2120539259660595389
+- [x] Copy the post URL
+- [x] Submit the Typeform (§3) with the PR link and the post URL — submitted, confirmation "Submission Received" (receipt: `~/Downloads/ligis-typeform-receipt.png`)
