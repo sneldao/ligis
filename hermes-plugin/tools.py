@@ -834,4 +834,42 @@ def transform_tool_result(
             "capability. You are about to pay an uncredentialed counterparty."
         )
 
-    return f"{result}\n\n{summary}"
+    return _append_note(result, summary)
+
+
+def _append_note(result: str, note: str) -> str:
+    """Append a note to a tool result without corrupting its shape.
+
+    Some tools return a JSON envelope whose fields are themselves JSON
+    strings — the terminal tool returns
+    ``{"output": "<the command's stdout>", "exit_code": 0}``. Appending to
+    the envelope's text would produce a string that is no longer valid
+    JSON, so the note goes inside the ``output`` field instead: the agent
+    reads the same envelope, with the verdict appended to the text it was
+    going to read anyway.
+    """
+    try:
+        parsed = json.loads(result)
+    except (ValueError, TypeError):
+        return f"{result}\n\n{note}"
+
+    if not isinstance(parsed, dict):
+        return f"{result}\n\n{note}"
+
+    for key in ("output", "text", "content", "result", "body", "data"):
+        value = parsed.get(key)
+        if isinstance(value, str) and value.strip():
+            parsed[key] = f"{value}\n\n{note}"
+            try:
+                return json.dumps(parsed, ensure_ascii=False)
+            except (TypeError, ValueError):
+                break
+            break
+
+    # No text field to append to: keep the envelope valid and put the note
+    # in a field of its own.
+    parsed["ligis_note"] = note
+    try:
+        return json.dumps(parsed, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return f"{result}\n\n{note}"

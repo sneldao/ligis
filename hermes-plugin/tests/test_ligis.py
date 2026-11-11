@@ -524,6 +524,92 @@ def test_402_annotation() -> None:
     )
 
 
+def test_terminal_envelope_shape() -> None:
+    """The terminal tool returns a JSON envelope; the note must go inside it.
+
+    The terminal tool's result is
+    ``{"output": "<stdout>", "exit_code": 0}`` — a JSON string whose
+    ``output`` field is itself the command's text. Two things follow, and
+    both were bugs: the 402 body is nested inside that string (so the
+    parser has to look through it), and the note has to go inside the
+    envelope rather than after it (or the envelope stops being valid JSON).
+    """
+    import json as _json
+
+    tools.config.bind(
+        _FakeCtx(
+            {
+                "mode": "escalate",
+                "capability": "agent.commerce.escrow",
+                "chain": "monad-testnet",
+            }
+        )
+    )
+
+    body = {
+        "x402Version": 2,
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": "eip155:10143",
+                "amount": "1000000",
+                "payTo": "0x000000000000000000000000000000000000dEaD",
+            }
+        ],
+    }
+    envelope = _json.dumps(
+        {"output": _json.dumps(body), "exit_code": 0, "status": "success"}
+    )
+
+    result = tools.transform_tool_result(
+        "terminal", envelope, {"command": "curl ..."}, "task-1", session_id="s1"
+    )
+    check(
+        "a 402 inside the terminal envelope is found",
+        result is not None and "[LIGIS]" in result,
+        f"got {result!r}",
+    )
+    check(
+        "the envelope stays valid JSON",
+        result is not None and isinstance(_json.loads(result), dict),
+    )
+    check(
+        "the note lands inside the output field",
+        result is not None
+        and "[LIGIS]" in _json.loads(result).get("output", ""),
+    )
+    check(
+        "the original output text is preserved",
+        result is not None and "x402Version" in _json.loads(result).get("output", ""),
+    )
+    check(
+        "the envelope's other fields are untouched",
+        result is not None and _json.loads(result).get("exit_code") == 0,
+    )
+
+
+def test_append_note_shapes() -> None:
+    """_append_note keeps every result shape valid."""
+    import json as _json
+
+    check(
+        "plain text gets the note appended",
+        tools._append_note("hello", "NOTE") == "hello\n\nNOTE",
+    )
+    check(
+        "a JSON envelope keeps its shape",
+        isinstance(_json.loads(tools._append_note('{"output": "x"}', "NOTE")), dict),
+    )
+    check(
+        "an envelope without a text field gets a note field",
+        "ligis_note" in _json.loads(tools._append_note('{"a": 1}', "NOTE")),
+    )
+    check(
+        "a JSON array result is left readable",
+        "NOTE" in tools._append_note("[1, 2]", "NOTE"),
+    )
+
+
 def test_verify_payment_tool() -> None:
     """ligis_verify_payment — the path for wallet flows no hook can see."""
     import json as _json
@@ -757,6 +843,8 @@ def main() -> int:
     test_x402_parsing()
     test_x402_payee_reaches_the_gate()
     test_402_annotation()
+    test_terminal_envelope_shape()
+    test_append_note_shapes()
     test_verify_payment_tool()
     test_tool_argument_handling()
     test_tool_output_shapes()

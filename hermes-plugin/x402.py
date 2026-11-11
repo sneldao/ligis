@@ -52,6 +52,10 @@ _ADDRESS = re.compile(r"0x[a-fA-F0-9]{40}")
 # A base64 blob big enough to be a signed payment payload.
 _BASE64_BLOB = re.compile(r"[A-Za-z0-9+/]{40,}={0,2}")
 
+# How deep to follow JSON strings nested inside JSON strings. The terminal
+# tool nests twice (result -> output -> body); three is plenty.
+_MAX_NESTING = 4
+
 
 class PaymentRequirement:
     """One ``accepts[]`` entry from an x402 payment requirement."""
@@ -126,18 +130,31 @@ def _requirements_from_json(obj: Any, source: str) -> list[PaymentRequirement]:
     return found
 
 
-def _json_candidates(text: str):
-    """Yield decoded JSON values from a text blob, outermost first."""
+def _json_candidates(text: str, depth: int = 0):
+    """Yield decoded JSON values from a text blob, outermost first.
+
+    A tool result is often a JSON *string* whose fields are themselves JSON
+    strings: the terminal tool returns
+    ``{"output": "{\\"x402Version\\": 2, \\"accepts\\": [...]}"}``. So a
+    decoded value is re-scanned for nested JSON strings, up to a small
+    depth, or the 402 body inside the terminal output is never seen.
+    """
     stripped = text.strip()
     if not stripped:
         return
     try:
-        yield json.loads(stripped)
-        return
+        decoded = json.loads(stripped)
     except (ValueError, TypeError):
-        pass
-    # A tool result is often an error message with the JSON body appended.
-    # Scan for balanced objects rather than guessing where the body starts.
+        decoded = None
+    else:
+        yield decoded
+        if depth < _MAX_NESTING:
+            for nested in _nested_json_strings(decoded):
+                yield from _json_candidates(nested, depth + 1)
+        return
+
+    # Not a JSON document. Scan for balanced objects rather than guessing
+    # where the body starts.
     for index, char in enumerate(stripped):
         if char not in "{[":
             continue
@@ -146,9 +163,40 @@ def _json_candidates(text: str):
         if end == -1:
             continue
         try:
-            yield json.loads(stripped[index:end + 1])
+            found = json.loads(stripped[index:end + 1])
         except (ValueError, TypeError):
             continue
+        yield found
+        if depth < _MAX_NESTING:
+            for nested in _nested_json_strings(found):
+                yield from _json_candidates(nested, depth + 1)
+
+
+def _nested_json_strings(value: Any) -> list[str]:
+    """Every string inside ``value`` that itself parses as JSON."""
+    found: list[str] = []
+
+    def walk(node: Any, depth: int) -> None:
+        if depth > _MAX_NESTING:
+            return
+        if isinstance(node, str):
+            candidate = node.strip()
+            if candidate[:1] in "{[" and len(candidate) > 8:
+                try:
+                    json.loads(candidate)
+                except (ValueError, TypeError):
+                    return
+                found.append(candidate)
+            return
+        if isinstance(node, dict):
+            for item in node.values():
+                walk(item, depth + 1)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, depth + 1)
+
+    walk(value, 0)
+    return found
 
 
 def find_requirements(text: str) -> list[PaymentRequirement]:
