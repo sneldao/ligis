@@ -19,7 +19,7 @@ from pathlib import Path
 PLUGIN_DIR = Path(__file__).resolve().parent
 ALIAS = "ligis_plugin"
 
-_MODULES = ("caphash", "chains", "schemas", "tools")
+_MODULES = ("caphash", "chains", "x402", "schemas", "tools")
 
 
 def load() -> types.ModuleType:
@@ -50,5 +50,6 @@ load()
 # Convenience re-exports for the test scripts.
 caphash = sys.modules[f"{ALIAS}.caphash"]
 chains = sys.modules[f"{ALIAS}.chains"]
+x402 = sys.modules[f"{ALIAS}.x402"]
 schemas = sys.modules[f"{ALIAS}.schemas"]
 tools = sys.modules[f"{ALIAS}.tools"]

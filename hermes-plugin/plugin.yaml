@@ -9,13 +9,15 @@ description: >-
   the money — nothing in the x402 flow ties that address to anything the
   payee has proven about itself. ligis reads the credential registry
   directly over read-only JSON-RPC and answers the question the payment
-  flow leaves open: is this counterparty entitled to this? Four tools
+  flow leaves open: is this counterparty entitled to this? Five tools
   (ligis_check_capability, ligis_capability_hash, ligis_verify_payee,
-  ligis_chains) plus a pre_tool_call gate that intercepts payment-shaped
-  tool calls and escalates to Hermes's approval prompt when the payee
-  cannot be credentialed. A capability is indexed by the keccak-256 hash of
-  its name, so the same capability resolves to the same bytes on every
-  chain and a credential minted on one chain is found on another.
+  ligis_verify_payment, ligis_chains) plus two surfaces: a pre_tool_call
+  gate that intercepts payment-shaped tool calls and escalates to
+  Hermes's approval prompt when the payee cannot be credentialed, and a
+  transform_tool_result hook that annotates an x402 402 challenge with the
+  payee's credential verdict before the agent signs anything. A capability
+  is indexed by the keccak-256 hash of its name, so the same capability
+  resolves to the same bytes on every chain.
   Disclosure — makes read-only HTTPS JSON-RPC eth_call requests to the
   configured RPC endpoint (default https://testnet-rpc.monad.xyz for
   monad-testnet and https://atlantic.dplabs-internal.com for
@@ -24,7 +26,10 @@ description: >-
   transactions, reads no files outside its own plugin data directory, runs
   no background processes, and has no telemetry. The pre_tool_call hook
   escalates to Hermes's approval prompt, which unattended surfaces (cron,
-  --yolo, approvals off) refuse rather than auto-approve.
+  --yolo, approvals off) refuse rather than auto-approve. The
+  transform_tool_result hook only appends a note to a result that already
+  contains an x402 payment challenge; it never blocks and never rewrites
+  the result's content.
 author: snel
 license: MIT
 homepage: https://github.com/sneldao/ligis
@@ -33,9 +38,11 @@ provides_tools:
   - ligis_check_capability
   - ligis_capability_hash
   - ligis_verify_payee
+  - ligis_verify_payment
   - ligis_chains
 provides_hooks:
   - pre_tool_call
+  - transform_tool_result
 config_schema:
   mode:
     type: str

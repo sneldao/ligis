@@ -159,6 +159,58 @@ LIGIS_VERIFY_PAYEE = {
 }
 
 
+LIGIS_VERIFY_PAYMENT = {
+    "name": "ligis_verify_payment",
+    "description": (
+        "Check whether the payee named by an x402 payment requirement or a "
+        "signed payment header holds a live capability credential. Use this "
+        "when the plugin cannot see the payment itself: an agent paying "
+        "through a wallet server hands the 402 challenge to the wallet, and "
+        "neither the tool arguments nor the tool result carry the payee. "
+        "Pass the challenge body (JSON with accepts[] and payTo) as "
+        "'requirement', or the signed X-PAYMENT / PAYMENT-SIGNATURE header "
+        "as 'payment_header'. Returns GO, STOP or UNKNOWN over every payee "
+        "named, with the issuer, chain and credential hash."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "requirement": {
+                "type": "string",
+                "description": (
+                    "The x402 payment requirement as JSON — the body of the "
+                    "402 response, which carries accepts[].payTo."
+                ),
+            },
+            "payment_header": {
+                "type": "string",
+                "description": (
+                    "The signed payment header, base64-encoded (the "
+                    "X-PAYMENT or PAYMENT-SIGNATURE value) or raw JSON."
+                ),
+            },
+            "capability": {
+                "type": "string",
+                "description": (
+                    "The capability the payee must hold, e.g. "
+                    "'agent.commerce.escrow'. Required unless the plugin is "
+                    "configured with a default capability."
+                ),
+            },
+            "chain": {
+                "type": "string",
+                "description": (
+                    "Which chain to read for the credential check. "
+                    "'monad-testnet' (default) or 'pharos-atlantic'."
+                ),
+                "default": "monad-testnet",
+            },
+        },
+        "required": [],
+    },
+}
+
+
 LIGIS_CHAINS = {
     "name": "ligis_chains",
     "description": (

@@ -32,6 +32,7 @@ import re
 from typing import Any
 
 from . import chains
+from . import x402
 from .chains import CHAINS, DEFAULT_CHAIN, read_capability
 
 logger = logging.getLogger(__name__)
@@ -129,7 +130,14 @@ def _looks_like_payment(tool_name: str, args: dict) -> bool:
             if isinstance(value, str):
                 command += " " + value
         if command.strip():
-            return any(p.search(command) for p in _PAYMENT_TERMINAL_PATTERNS)
+            if any(p.search(command) for p in _PAYMENT_TERMINAL_PATTERNS):
+                return True
+            # A signed x402 retry: the payee is base64-encoded in the
+            # header, so the command carries no plain address — but it
+            # does carry the payment blob.
+            for blob in x402.find_payment_headers(command):
+                if x402.extract_payee_from_payment_header(blob):
+                    return True
         return False
 
     # An MCP or native tool whose *name* reads as money movement. Tools
@@ -144,7 +152,7 @@ def _looks_like_payment(tool_name: str, args: dict) -> bool:
             return True
 
     # A tool that explicitly carries an x402 payment payload.
-    for key in ("payment", "payment_requirement", "requirement"):
+    for key in ("payment", "payment_requirement", "requirement", "payment_header"):
         if args.get(key):
             return True
 
@@ -152,7 +160,13 @@ def _looks_like_payment(tool_name: str, args: dict) -> bool:
 
 
 def _extract_payee(args: dict) -> str:
-    """Pull a destination address out of a tool call's arguments."""
+    """Pull a destination address out of a tool call's arguments.
+
+    Looks, in order, at the payee-shaped argument names, at an x402
+    payment header (base64 or raw JSON — where the payee is *not* a plain
+    hex address in the command string), and finally at any
+    address-shaped value in the arguments.
+    """
     for key in _PAYEE_ARG_NAMES:
         value = args.get(key)
         if isinstance(value, str):
@@ -161,6 +175,26 @@ def _extract_payee(args: dict) -> str:
                 return match.group(0)
             if value.startswith("0x") and len(value) == 42:
                 return value
+
+    # An x402 signed payment carries the payee base64-encoded, so no plain
+    # hex address appears in the command — decode the header instead.
+    for value in args.values():
+        if not isinstance(value, str):
+            continue
+        payees = x402.extract_payee_from_payment_header(value)
+        if payees:
+            return payees[0]
+
+    # The header may be embedded in a larger string (a shell command with
+    # -H 'X-PAYMENT: <base64>'), so scan for payment blobs in it.
+    for value in args.values():
+        if not isinstance(value, str):
+            continue
+        for blob in x402.find_payment_headers(value):
+            payees = x402.extract_payee_from_payment_header(blob)
+            if payees:
+                return payees[0]
+
     # Fall back to any address-shaped value in the arguments.
     for value in args.values():
         if isinstance(value, str):
@@ -259,6 +293,138 @@ def ligis_chains(args: dict, **kwargs) -> str:
         {
             "chains": [chain.to_dict() for chain in CHAINS.values()],
             "default_chain": DEFAULT_CHAIN,
+        }
+    )
+
+
+def ligis_verify_payment(args: dict, **kwargs) -> str:
+    """Check the payee named by an x402 payment requirement or header.
+
+    Use this when the plugin cannot see the payment itself — an agent
+    paying through a wallet MCP server (``mpp_fetch``, ``pay``,
+    ``switch402``) hands the 402 to the wallet, and neither the tool
+    arguments nor the tool result carry the payee. In that case read the
+    payment requirement out of the challenge and ask here.
+    """
+    args = args or {}
+    requirement = args.get("requirement") or args.get("payment_requirement")
+    header = args.get("payment_header") or args.get("header")
+    capability = str(args.get("capability") or "").strip()
+    chain = str(args.get("chain") or DEFAULT_CHAIN).strip() or DEFAULT_CHAIN
+
+    if not capability:
+        capability = config.get_str("capability", "")
+    if not capability:
+        return _payload(
+            {
+                "error": (
+                    "a 'capability' is required (name the capability the "
+                    "payee must hold, e.g. 'agent.commerce.escrow')"
+                ),
+            }
+        )
+
+    payees: list[str] = []
+    requirements: list[dict] = []
+
+    if isinstance(requirement, str) and requirement.strip():
+        for req in x402.find_requirements(requirement):
+            payees.append(req.pay_to)
+            requirements.append(req.to_dict())
+    elif isinstance(requirement, dict):
+        for req in x402.find_requirements(json.dumps(requirement)):
+            payees.append(req.pay_to)
+            requirements.append(req.to_dict())
+
+    if isinstance(header, str) and header.strip():
+        payees.extend(x402.extract_payee_from_payment_header(header))
+
+    # Deduplicate, preserving order.
+    seen: set[str] = set()
+    unique: list[str] = []
+    for payee in payees:
+        lowered = payee.lower()
+        if lowered and lowered not in seen:
+            seen.add(lowered)
+            unique.append(payee)
+
+    if not unique:
+        return _payload(
+            {
+                "error": (
+                    "no payee could be read from the payment requirement or "
+                    "header"
+                ),
+                "hint": (
+                    "pass the x402 challenge body (with accepts[].payTo) as "
+                    "'requirement', or the signed X-PAYMENT / "
+                    "PAYMENT-SIGNATURE header as 'payment_header'"
+                ),
+            }
+        )
+
+    signals: list[dict] = []
+    for payee in unique:
+        status = read_capability(payee, capability, chain)
+        if status.status == "capable":
+            signals.append(
+                _signal(
+                    "verified-payee",
+                    "GO",
+                    1.0,
+                    f"the payee holds a live '{capability}' credential issued "
+                    f"by {status.issuer} on {status.chain}",
+                    issuer=status.issuer,
+                    chain=status.chain,
+                    capability_hash=status.capability_hash,
+                    expires_at=status.expires_at,
+                )
+            )
+        elif status.status == "unknown":
+            signals.append(
+                _signal(
+                    "verified-payee",
+                    "SKIPPED",
+                    0.0,
+                    f"the credential registry on {status.chain} could not be "
+                    "read, so entitlement is unknown — this is not a pass",
+                    error=status.error,
+                )
+            )
+        else:
+            signals.append(
+                _signal(
+                    "verified-payee",
+                    "STOP",
+                    1.0,
+                    status.describe(),
+                    issuer=status.issuer,
+                    chain=status.chain,
+                    capability_hash=status.capability_hash,
+                    revoked=status.revoked,
+                )
+            )
+
+    if any(s["status"] == "STOP" for s in signals):
+        verdict = "STOP"
+    elif any(s["status"] == "GO" for s in signals):
+        verdict = "GO"
+    else:
+        verdict = "UNKNOWN"
+
+    return _payload(
+        {
+            "verdict": verdict,
+            "payees": unique,
+            "signals": signals,
+            "capability": capability,
+            "chain": chain,
+            "requirements": requirements or None,
+            "note": (
+                "STOP means at least one payee named by this payment cannot "
+                "be credentialed. UNKNOWN means the registry could not be "
+                "read — which is not a pass."
+            ),
         }
     )
 
@@ -563,3 +729,109 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str, **kwargs) -> dict | 
             f"({status.credential_registry})."
         ),
     }
+
+
+# --------------------------------------------------------------------------
+# transform_tool_result hook — the x402 402 challenge
+# --------------------------------------------------------------------------
+
+_NOTE_PREFIX = "[LIGIS]"
+
+
+def transform_tool_result(
+    tool_name: str, result: str, args: dict, task_id: str, **kwargs
+) -> str | None:
+    """Annotate an x402 402 challenge with the payee's credential verdict.
+
+    In an x402 payment the agent learns the payee from the **402 response**,
+    not from its own request: the challenge carries ``accepts[].payTo`` in
+    plaintext and arrives as a tool result. That is the window in which the
+    agent decides whether to sign — the same window ERC-8478 describes when
+    it says the HTTP answer is the only source of ``payTo``.
+
+    So the useful thing is not to block (the agent has not paid anything
+    yet) but to put the verdict in front of it, naming the payee, the
+    capability and the registry the answer came from. An agent that sees
+    "this payee holds no live credential" before it signs can decide; an
+    agent that does not see it cannot.
+
+    Returns the rewritten result, or ``None`` to leave it unchanged.
+    """
+    mode = config.get_str("mode", "escalate").strip().lower()
+    if mode == "off":
+        return None
+
+    if not isinstance(result, str) or not result.strip():
+        return None
+
+    requirements = x402.find_requirements(result)
+    if not requirements:
+        return None
+
+    capability = config.get_str("capability", "")
+    chain = config.get_str("chain", DEFAULT_CHAIN) or DEFAULT_CHAIN
+
+    lines: list[str] = []
+    checked = 0
+    capable = 0
+    unknown = 0
+
+    for req in requirements:
+        if not capability:
+            lines.append(
+                f"{_NOTE_PREFIX} this payment would send {req.amount} "
+                f"{req.asset or ''} to {req.pay_to} on {req.network}. "
+                "No capability is configured for this plugin, so the payee's "
+                "entitlement was not checked."
+            )
+            continue
+
+        try:
+            status = read_capability(req.pay_to, capability, chain)
+        except Exception:  # noqa: BLE001 - a note must never break a result
+            logger.debug("ligis: 402 annotation read failed", exc_info=True)
+            continue
+
+        checked += 1
+        if status.status == "capable":
+            capable += 1
+            lines.append(
+                f"{_NOTE_PREFIX} the payee {req.pay_to} HOLDS a live "
+                f"'{capability}' credential, issued by {status.issuer} on "
+                f"{status.chain}. Verified by read-only eth_call against the "
+                f"credential registry ({status.credential_registry})."
+            )
+        elif status.status == "unknown":
+            unknown += 1
+            lines.append(
+                f"{_NOTE_PREFIX} the payee {req.pay_to} could not be checked "
+                f"— the credential registry on {status.chain} did not answer "
+                f"({status.error}). That is NOT evidence that the payee is "
+                "entitled; it is an unanswered question."
+            )
+        else:
+            lines.append(
+                f"{_NOTE_PREFIX} the payee {req.pay_to} does NOT hold a live "
+                f"'{capability}' credential — {status.describe()}. "
+                f"Verified by read-only eth_call against the credential "
+                f"registry on {status.chain} ({status.credential_registry}). "
+                "Check this before paying, unless you have an independent "
+                "reason to trust this payee."
+            )
+
+    if not lines:
+        return None
+
+    summary = "\n".join(lines)
+    if checked and capable == checked and not unknown:
+        summary += (
+            "\nEvery payee named in this payment challenge holds the "
+            "configured capability."
+        )
+    elif checked and capable == 0 and not unknown:
+        summary += (
+            "\nNo payee named in this payment challenge holds the configured "
+            "capability. You are about to pay an uncredentialed counterparty."
+        )
+
+    return f"{result}\n\n{summary}"

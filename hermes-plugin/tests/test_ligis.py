@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from _loader import chains, caphash, tools  # noqa: E402
+from _loader import chains, caphash, tools, x402  # noqa: E402
 
 FAILURES: list[str] = []
 PASSED = 0
@@ -330,6 +330,260 @@ def test_verdict_rules() -> None:
     )
 
 
+def test_x402_parsing() -> None:
+    """The x402 shapes the plugin must read: a 402 challenge and a signed header."""
+    import base64
+    import json as _json
+
+    body = {
+        "x402Version": 2,
+        "error": "PAYMENT-SIGNATURE header is required",
+        "resource": {"url": "https://x/premium", "mimeType": "application/json"},
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": "eip155:10143",
+                "asset": "0x16f6bD0c285a630fe72275909c0f5815d276E2f4",
+                "amount": "5000000",
+                "payTo": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                "maxTimeoutSeconds": 300,
+            }
+        ],
+        "extensions": {},
+    }
+    text = _json.dumps(body)
+
+    check(
+        "a 402 challenge names its payee",
+        x402.extract_payees_from_text(text)
+        == ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
+    )
+    check(
+        "a 402 challenge inside an error string still names its payee",
+        x402.extract_payees_from_text(f"Error: 402 Payment Required\n\n{text}")
+        == ["0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"],
+    )
+    check(
+        "a v1 requirements body names its payee",
+        x402.extract_payees_from_text(
+            _json.dumps(
+                {
+                    "x402Version": 1,
+                    "scheme": "exact",
+                    "network": "eip155:10143",
+                    "amount": "5000000",
+                    "payTo": "0x000000000000000000000000000000000000dEaD",
+                }
+            )
+        )
+        == ["0x000000000000000000000000000000000000dEaD"],
+    )
+    check(
+        "ordinary text names no payee",
+        x402.extract_payees_from_text("just some text") == [],
+    )
+
+    payload = {
+        "x402Version": 1,
+        "accepted": {
+            "scheme": "exact",
+            "network": "eip155:10143",
+            "amount": "5000000",
+            "payTo": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+        },
+        "payload": {
+            "authorization": {
+                "from": "0xabc",
+                "to": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                "value": "5000000",
+            }
+        },
+    }
+    b64 = base64.b64encode(_json.dumps(payload).encode()).decode()
+    check(
+        "a base64 payment header names its payee",
+        "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"
+        in x402.extract_payee_from_payment_header(b64),
+    )
+    check(
+        "a raw JSON payment header names its payee",
+        "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"
+        in x402.extract_payee_from_payment_header(_json.dumps(payload)),
+    )
+    check(
+        "a non-payment header names no payee",
+        x402.extract_payee_from_payment_header("hello world") == [],
+    )
+
+
+def test_x402_payee_reaches_the_gate() -> None:
+    """The defect the product work fixes: the payee is invisible in the args."""
+    import base64
+    import json as _json
+
+    payload = {
+        "x402Version": 1,
+        "accepted": {
+            "scheme": "exact",
+            "network": "eip155:10143",
+            "amount": "5000000",
+            "payTo": "0x000000000000000000000000000000000000dEaD",
+        },
+    }
+    b64 = base64.b64encode(_json.dumps(payload).encode()).decode()
+    command = f"curl -X GET https://api.example.com/data -H 'X-PAYMENT: {b64}'"
+
+    check(
+        "the x402 retry is payment-shaped",
+        tools._looks_like_payment("terminal", {"command": command}),
+    )
+    check(
+        "the payee is recovered from the base64 header",
+        tools._extract_payee({"command": command})
+        == "0x000000000000000000000000000000000000dEaD",
+    )
+
+
+def test_402_annotation() -> None:
+    """The 402 challenge hook annotates the result with the payee's verdict."""
+    import json as _json
+
+    tools.config.bind(
+        _FakeCtx(
+            {
+                "mode": "escalate",
+                "capability": "agent.commerce.escrow",
+                "chain": "monad-testnet",
+            }
+        )
+    )
+
+    body = {
+        "x402Version": 2,
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": "eip155:10143",
+                "amount": "5000000",
+                "payTo": "0x000000000000000000000000000000000000dEaD",
+            }
+        ],
+    }
+    result = tools.transform_tool_result(
+        "http_request", _json.dumps(body), {}, "task-1", session_id="s1"
+    )
+    check(
+        "a 402 challenge is annotated",
+        result is not None and "[LIGIS]" in result,
+        f"got {result!r}",
+    )
+    check(
+        "the annotation names the payee",
+        result is not None
+        and "0x000000000000000000000000000000000000dEaD" in result,
+    )
+    check(
+        "the annotation says the credential is missing",
+        result is not None and "does NOT hold" in result,
+    )
+    check(
+        "the annotation names the registry it read",
+        result is not None
+        and "0xf589013b0D41efBdb25b8BDF98c83d676B02aF5a" in result,
+    )
+    check(
+        "the original result is preserved",
+        result is not None and result.startswith("{"),
+    )
+
+    # A result with no payment challenge is left untouched.
+    check(
+        "a non-payment result is unchanged",
+        tools.transform_tool_result("read_file", "hello", {}, "task-2") is None,
+    )
+
+    # A credentialed payee is reported as such.
+    body_ok = {
+        "x402Version": 2,
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": "eip155:10143",
+                "amount": "5000000",
+                "payTo": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+            }
+        ],
+    }
+    result = tools.transform_tool_result(
+        "http_request", _json.dumps(body_ok), {}, "task-3", session_id="s1"
+    )
+    check(
+        "a credentialed payee is reported as holding the credential",
+        result is not None and "HOLDS a live" in result,
+        f"got {result!r}",
+    )
+
+
+def test_verify_payment_tool() -> None:
+    """ligis_verify_payment — the path for wallet flows no hook can see."""
+    import json as _json
+
+    tools.config.bind(
+        _FakeCtx({"mode": "escalate", "chain": "monad-testnet"})
+    )
+
+    body = {
+        "x402Version": 2,
+        "accepts": [
+            {
+                "scheme": "exact",
+                "network": "eip155:10143",
+                "amount": "5000000",
+                "payTo": "0x000000000000000000000000000000000000dEaD",
+            }
+        ],
+    }
+    payload = _json.loads(
+        tools.ligis_verify_payment(
+            {"requirement": _json.dumps(body), "capability": "agent.commerce.escrow"}
+        )
+    )
+    check("verify_payment names the payee", payload["payees"] == ["0x000000000000000000000000000000000000dEaD"])
+    check("verify_payment STOPS an uncredentialed payee", payload["verdict"] == "STOP")
+
+    payload_ok = _json.loads(
+        tools.ligis_verify_payment(
+            {
+                "requirement": _json.dumps(
+                    {
+                        "x402Version": 2,
+                        "accepts": [
+                            {
+                                "scheme": "exact",
+                                "network": "eip155:10143",
+                                "amount": "5000000",
+                                "payTo": "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec",
+                            }
+                        ],
+                    }
+                ),
+                "capability": "agent.commerce.escrow",
+            }
+        )
+    )
+    check("verify_payment GOES for a credentialed payee", payload_ok["verdict"] == "GO")
+
+    check(
+        "verify_payment errors cleanly with no payee",
+        "error"
+        in _json.loads(
+            tools.ligis_verify_payment(
+                {"requirement": "not a payment", "capability": "agent.commerce.escrow"}
+            )
+        ),
+    )
+
+
 def test_tool_argument_handling() -> None:
     """The handler signature must match Hermes's contract: (args, **kwargs)."""
     import inspect
@@ -500,6 +754,10 @@ def main() -> int:
     test_payment_detection()
     test_payee_extraction()
     test_verdict_rules()
+    test_x402_parsing()
+    test_x402_payee_reaches_the_gate()
+    test_402_annotation()
+    test_verify_payment_tool()
     test_tool_argument_handling()
     test_tool_output_shapes()
     test_hook()

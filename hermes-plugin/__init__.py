@@ -81,10 +81,21 @@ def register(ctx) -> None:
         schema=schemas.LIGIS_CHAINS,
         handler=tools.ligis_chains,
     )
+    ctx.register_tool(
+        name="ligis_verify_payment",
+        toolset="ligis",
+        schema=schemas.LIGIS_VERIFY_PAYMENT,
+        handler=tools.ligis_verify_payment,
+    )
 
     # The gate: intercept payment-shaped tool calls and check the payee's
     # credential before the money moves.
     ctx.register_hook("pre_tool_call", tools.pre_tool_call)
+
+    # The x402 402 challenge: the agent learns the payee from the response,
+    # not the request, so the verdict has to be put in front of it there —
+    # before it signs.
+    ctx.register_hook("transform_tool_result", tools.transform_tool_result)
 
     skill_md = Path(__file__).parent / "skill" / "SKILL.md"
     if skill_md.exists():
