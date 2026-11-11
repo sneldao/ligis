@@ -20,8 +20,10 @@ Four tools and one gate, all read-only:
 | `ligis_check_capability` | Is this address credentialed for this capability? Returns `capable` / `revoked` / `expired` / `none` / `unknown`, with the issuer, expiry and capability hash. |
 | `ligis_capability_hash` | The chain-agnostic keccak-256 hash of a capability name. |
 | `ligis_verify_payee` | The four-signal payment verdict: `right-payee`, `right-amount`, `in-scope`, `verified-payee` → `GO` / `STOP` / `UNKNOWN` with the full stack. |
+| `ligis_verify_payment` | The payee check for an x402 payment requirement or a signed payment header — for agents paying through a wallet server, where no hook can see the payee. |
 | `ligis_chains` | The chains this plugin can read, with registry addresses. |
 | `pre_tool_call` hook | Intercepts payment-shaped tool calls and escalates to Hermes's approval prompt when the payee cannot be credentialed. |
+| `transform_tool_result` hook | Annotates an x402 402 challenge with the payee's credential verdict, before the agent signs anything. |
 
 ## Why it needs no key
 
@@ -43,20 +45,38 @@ keccak256("agent.commerce.escrow")
   = 0x17775e488d090dd8527e0139b3472d4d03c3372525b10a7c1449f04027a3ebf8
 ```
 
-The same name therefore resolves to the same bytes on **every** chain, so a
-credential minted on one chain is referentially identical to the same
-credential on another. That is what makes a credential portable — and it is
-the property the demo shows.
+The same name therefore resolves to the same bytes on **every** chain, so the
+same capability is *addressable* everywhere — and an issuer's credential for
+it resolves identically on each chain it issued on.
+
+What this is **not**: it does not make a credential portable by itself. The
+issuer still issues per chain. Measured on the demo subject:
+
+| Capability | Monad Testnet | Pharos Atlantic |
+|---|---|---|
+| `agent.commerce.escrow` | issuer `0x0DBCF…`, valid | issuer `0x0DBCF…`, valid |
+| `kyc.basic` | issuer `0xd21a…`, **revoked** | issuer `0x0DBCF…`, valid |
+
+Same capability hash on both chains; the *issuance* differs. The hash makes
+the capability name portable, not the attestation.
+
+A second detail worth knowing: `isCapable()` falls back to the newest
+still-valid nonce, so revoking the newest credential does not clear the
+subject. "Revoked" and "never issued" are genuinely different reads, and
+the plugin reports them differently.
 
 ## Verified in a live Hermes session
 
 Not just in tests. Driven through a running Hermes agent, with the plugin
-installed from this repository at the pinned commit:
+installed from this repository at the pinned commit, against a live x402
+server:
 
 | What | Result |
 |---|---|
 | `ligis_capability_hash("agent.commerce.escrow")` | `0x17775e48…a3ebf8` — the registry's hash |
 | `ligis_check_capability(0xd21a…27Ec, agent.commerce.escrow)` | `capable`, issuer `0x0DBCF8D1…93aAf` |
+| a 402 challenge naming an **uncredentialed** payee | annotated: *"does NOT hold a live 'agent.commerce.escrow' credential … You are about to pay an uncredentialed counterparty."* |
+| a 402 challenge naming a **credentialed** payee | annotated: *"HOLDS a live 'agent.commerce.escrow' credential, issued by 0x0DBCF… on Monad Testnet."* |
 | Payment to `0x…dEaD` (no credential), `mode: enforce` | **blocked** by the gate, with the credential evidence |
 | Payment to `0xd21a…27Ec` (credentialed), `mode: enforce` | **allowed through** to the tool |
 
@@ -85,6 +105,23 @@ chain-agnostic credential identity in action.
 Row 3 is the one no spend-cap plugin can see: the credential *exists* in the
 registry, and it reads as present — but its issuer revoked it, so
 `isCapable` returns false. Row 4 is a subject that never held one.
+
+## Scope, stated plainly
+
+Where the payee is visible, the plugin gates it. Where it is not, it says so
+rather than pretending.
+
+| Payment shape | Covered how |
+|---|---|
+| `cast send <addr>`, `solana transfer`, `near call --deposit` | `pre_tool_call` gate — blocked or escalated |
+| `curl -H 'X-PAYMENT: <base64>'` | `pre_tool_call` gate — the payee is recovered from the decoded header |
+| A 402 challenge in any tool result | `transform_tool_result` — the verdict is annotated into the result before the agent signs |
+| An MCP tool with a payee-shaped argument | `pre_tool_call` gate |
+| A wallet server that takes the 402 and settles it itself (`mpp_fetch`, `pay`, `switch402`) | **not** gated by a hook — the payee never reaches the agent. Call `ligis_verify_payment` with the challenge instead. |
+
+That last row is the same gap ERC-8478 describes, seen from the payer's
+side: when the payment is settled inside a wallet, nobody outside the
+wallet can see who was paid before the money moves.
 
 ## The four signals
 
@@ -137,7 +174,6 @@ All optional; the defaults work out of the box.
 | `capability` | *(empty)* | The capability a payee must hold. Empty means the gate uses the capability named in the call's own arguments, and stays silent when there is none. |
 | `chain` | `monad-testnet` | `monad-testnet` · `pharos-atlantic` |
 | `amount_tolerance_pct` | `10.0` | Drift allowed between the amount asked for and the expected amount. |
-
 ## Disclosure
 
 - Makes **read-only HTTPS JSON-RPC `eth_call` requests** to the configured

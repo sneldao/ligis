@@ -35,6 +35,24 @@ Use `ligis_check_capability` before:
 Do **not** use it to check your own permissions — it reads other parties'
 credentials, not the caller's own mandate.
 
+## The x402 payment flow
+
+In an x402 payment the payee is **not** in the request. It arrives in the
+**402 response**, as `accepts[].payTo`, and the signed retry carries it
+base64-encoded in the `X-PAYMENT` header. So the plugin's
+`transform_tool_result` hook annotates a 402 challenge with the payee's
+verdict — you will see a `[LIGIS]` note appended to the tool result
+naming the payee, the capability, the chain and the registry.
+
+**Read that note before you sign.** It is the whole point: the challenge is
+where the payee becomes known, and that is the last moment before money
+moves.
+
+If you are paying through a wallet server (`mpp_fetch`, `pay`,
+`switch402`) the 402 never reaches you — the wallet takes it and settles
+internally. In that case read the challenge out of the response and call
+`ligis_verify_payment` with it.
+
 ## When to use `ligis_verify_payee`
 
 Use it when the payment has a *contract* behind it: an expected payee, an
@@ -70,12 +88,19 @@ Common names: `kyc.basic`, `agent.commerce.escrow`.
 
 ## The gate
 
-If the plugin is enabled, a `pre_tool_call` hook already checks payment-shaped
-calls for you — `cast send`, `solana transfer`, `curl` with an `X-PAYMENT`
-header, and MCP tools whose names read as money movement. On a payee that
-cannot be credentialed it raises Hermes's approval prompt (or blocks, in
-`enforce` mode). It never auto-approves, and it stays quiet when the registry
-is merely unreachable.
+If the plugin is enabled, two surfaces already work for you:
+
+- a `pre_tool_call` hook checks payment-shaped calls — `cast send`,
+  `solana transfer`, `curl` with an `X-PAYMENT` header, and MCP tools whose
+  names read as money movement — and raises Hermes's approval prompt (or
+  blocks, in `enforce` mode) when the payee cannot be credentialed;
+- a `transform_tool_result` hook annotates an x402 402 challenge with the
+  payee's verdict, so you see it before you sign.
+
+Neither ever auto-approves, and on unattended surfaces (cron, `--yolo`,
+approvals off) the escalation is refused rather than silently allowed. The
+gate also stays quiet when the registry is merely unreachable — an outage is
+not a finding.
 
 So in most sessions you do not need to call a tool before paying — the gate
 already asked. When it escalates, read the evidence in the message: it names
@@ -86,8 +111,10 @@ situations and deserve different responses.
 ## Chainless reading
 
 Ask `ligis_chains` which chains are available. The same capability resolves
-on each of them, so if a credential is missing on one chain it may still be
-present on another — but only if the *issuer* issued on both.
+on each of them — the hash is of the capability's *name*, not of a chain —
+so if a credential is missing on one chain it may still be present on
+another, provided the *issuer* issued on both. A hash that is the same
+everywhere does not mean the credential is.
 
 ## Scope
 
