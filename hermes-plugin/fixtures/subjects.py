@@ -11,6 +11,11 @@ Every row is a live fact about a public testnet, re-checked by
 # A subject that holds a live credential.
 VERIFIED_SUBJECT = "0xd21a4c7ab1a52a2Ab48A6f0271984d5c3D4027Ec"
 
+# The issuer that signed the demo credentials. A live credential only
+# reports "capable" when a trusted issuer signed it — the registry lets
+# anyone issue for any subject — so the matrix names its trusted issuer.
+TRUSTED_ISSUER = "0x0DBCF8D105A0a14BE81Ee733c303849474293aAf"
+
 # A subject that holds no credential for anything.
 UNVERIFIED_SUBJECT = "0x000000000000000000000000000000000000dEaD"
 
@@ -41,6 +46,7 @@ DEMO_MATRIX = (
         "subject": VERIFIED_SUBJECT,
         "capability": COMMERCE_ESCROW,
         "chain": CHAIN_MONAD,
+        "trusted_issuers": [TRUSTED_ISSUER],
         "expect": "capable",
     },
     {
@@ -48,7 +54,15 @@ DEMO_MATRIX = (
         "subject": VERIFIED_SUBJECT,
         "capability": KYC_BASIC,
         "chain": CHAIN_PHAROS,
+        "trusted_issuers": [TRUSTED_ISSUER],
         "expect": "capable",
+    },
+    {
+        "label": "verified agent, no trusted issuer named",
+        "subject": VERIFIED_SUBJECT,
+        "capability": COMMERCE_ESCROW,
+        "chain": CHAIN_MONAD,
+        "expect": "unverified_issuer",
     },
     {
         "label": "revoked credential",

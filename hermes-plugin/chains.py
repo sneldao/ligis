@@ -14,15 +14,21 @@ payee was entitled would be a much worse plugin.
 What we read
 ------------
 ``isCapable(subject, capabilityHash) -> bool``
-    The headline check. True means the subject currently holds a valid,
-    unrevoked, unexpired credential for that capability.
+    True when the subject currently holds a valid, unrevoked, unexpired
+    credential for that capability — from *any* issuer. The registry lets
+    anyone issue a credential for any subject, so on its own this boolean
+    cannot prove entitlement: a payee can issue one for itself.
+
+``isCapableFromIssuer(subject, capabilityHash, issuer) -> bool``
+    The trust check. The same question, narrowed to a named issuer, so
+    only attestations from issuers the operator chose to trust count.
 
 ``latestCredential(subject, capabilityHash) -> CredentialView``
     The detail: ``(issuer, issuedAt, expiresAt, revoked, valid)``. This is
     what lets the plugin say *why* a credential is not valid (revoked vs
     expired vs never issued) instead of only that it is not.
 
-Both are ``view`` functions on the CredentialRegistry; neither mutates state.
+All are ``view`` functions on the CredentialRegistry; none mutates state.
 
 Chains
 ------
@@ -37,7 +43,6 @@ from __future__ import annotations
 
 import json
 import ssl
-import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
@@ -110,6 +115,9 @@ DEFAULT_CHAIN = "monad-testnet"
 # --------------------------------------------------------------------------
 
 _SELECTOR_IS_CAPABLE = caphash.function_selector("isCapable(address,bytes32)")
+_SELECTOR_IS_CAPABLE_FROM_ISSUER = caphash.function_selector(
+    "isCapableFromIssuer(address,bytes32,address)"
+)
 _SELECTOR_LATEST_CREDENTIAL = caphash.function_selector(
     "latestCredential(address,bytes32)"
 )
@@ -146,6 +154,18 @@ def _encode_call(selector: str, address: str, cap_hash: str) -> str:
     return selector + _encode_address(address) + _encode_bytes32(cap_hash)
 
 
+def _encode_call_issuer(
+    selector: str, address: str, cap_hash: str, issuer: str
+) -> str:
+    """4-byte selector + three words: subject, capability hash, issuer."""
+    return (
+        selector
+        + _encode_address(address)
+        + _encode_bytes32(cap_hash)
+        + _encode_address(issuer)
+    )
+
+
 def _decode_uint(word: str) -> int:
     return int(word, 16)
 
@@ -162,22 +182,15 @@ def _decode_address(word: str) -> str:
 # JSON-RPC
 # --------------------------------------------------------------------------
 
-# Some public RPC endpoints sit behind a TLS chain whose root the local
-# Python does not trust. We do not disable verification globally; we fall
-# back to an unverified context only for the initial handshake and only
-# after a certificate error, so a normal environment never sees it.
-_UNVERIFIED_CTX = ssl.create_default_context()
-_UNVERIFIED_CTX.check_hostname = False
-_UNVERIFIED_CTX.verify_mode = ssl.CERT_NONE
-
-
 def _build_verified_context() -> ssl.SSLContext | None:
-    """An SSL context that actually verifies, or None if we cannot build one.
+    """An SSL context that verifies, or None if we cannot build one.
 
     Some Python builds ship without a usable CA bundle (an empty default
     verify path). ``certifi`` is the usual fix and is present on most
-    machines; when neither works we return None and the caller falls back
-    to an unverified context rather than failing every call.
+    machines; when neither works we return None and urllib falls back to
+    its default context, which still verifies. Verification is never
+    disabled anywhere in this module: a TLS failure must surface as an
+    unreadable registry, not silently produce an answer.
     """
     try:
         ctx = ssl.create_default_context()
@@ -203,27 +216,21 @@ class RpcError(RuntimeError):
     """A JSON-RPC call failed or returned an error object."""
 
 
-def rpc_call(
+def _rpc_request(
     rpc_url: str,
-    to: str,
-    data: str,
+    method: str,
+    params: list,
     timeout: float = 15.0,
-) -> str:
-    """Perform one ``eth_call`` and return the raw hex result.
+) -> Any:
+    """Send one JSON-RPC request and return the raw ``result`` field.
 
-    Read-only: ``eth_call`` never changes state. A failure raises
-    ``RpcError`` rather than returning a zero value, because a failed read
-    must never be reported as "not capable" -- that distinction is the
-    difference between "this payee is uncredentialed" and "we could not
-    find out".
+    A failure raises ``RpcError`` rather than returning a zero value,
+    because a failed read must never be reported as "not capable" -- that
+    distinction is the difference between "this payee is uncredentialed"
+    and "we could not find out".
     """
     payload = json.dumps(
-        {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "eth_call",
-            "params": [{"to": to, "data": data}, "latest"],
-        }
+        {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
     ).encode("utf-8")
 
     request = urllib.request.Request(
@@ -235,45 +242,19 @@ def rpc_call(
         },
     )
 
-    def _open(context: ssl.SSLContext | None):
-        kwargs = {"timeout": timeout}
-        if context is not None:
-            kwargs["context"] = context
-        return urllib.request.urlopen(request, **kwargs)
-
-    def _is_tls_error(exc: BaseException) -> bool:
-        """urllib wraps SSL failures in URLError, so inspect the cause."""
-        seen = set()
-        current: BaseException | None = exc
-        while current is not None and id(current) not in seen:
-            seen.add(id(current))
-            if isinstance(current, ssl.SSLError):
-                return True
-            current = current.__cause__ or current.__context__
-        return False
-
     body: bytes
     try:
-        with _open(_VERIFIED_CTX) as response:
+        kwargs = {"timeout": timeout}
+        if _VERIFIED_CTX is not None:
+            kwargs["context"] = _VERIFIED_CTX
+        with urllib.request.urlopen(request, **kwargs) as response:
             body = response.read()
     except Exception as exc:  # noqa: BLE001 - re-raised as RpcError below
-        # A TLS trust failure is recoverable: retry with an unverified
-        # context. This only affects confidentiality/integrity of the
-        # transport to a public RPC. The response is public chain state,
-        # and the credential decision is re-derived from it locally, so a
-        # tampered response cannot grant a capability that is not in the
-        # registry -- it can only fail the read, which we report as
-        # "unknown" rather than "not capable".
-        if _is_tls_error(exc):
-            try:
-                with _open(_UNVERIFIED_CTX) as response:
-                    body = response.read()
-            except Exception as inner:  # noqa: BLE001
-                raise RpcError(f"RPC call to {rpc_url} failed: {inner}") from inner
-        elif isinstance(exc, (urllib.error.URLError, OSError)):
-            raise RpcError(f"RPC call to {rpc_url} failed: {exc}") from exc
-        else:
-            raise RpcError(f"RPC call to {rpc_url} failed: {exc}") from exc
+        # A TLS failure is fatal to the read. Retrying without certificate
+        # verification would let anyone on the network path answer
+        # isCapable = true, so the failure is surfaced as "unknown" --
+        # which the caller never reports as "not capable".
+        raise RpcError(f"RPC call to {rpc_url} failed: {exc}") from exc
 
     try:
         parsed = json.loads(body.decode("utf-8"))
@@ -285,10 +266,89 @@ def rpc_call(
         message = error.get("message") if isinstance(error, dict) else str(error)
         raise RpcError(f"RPC error from {rpc_url}: {message}")
 
-    result = parsed.get("result") if isinstance(parsed, dict) else None
-    if not isinstance(result, str):
+    if not isinstance(parsed, dict) or "result" not in parsed:
         raise RpcError(f"RPC returned no result from {rpc_url}")
+    return parsed["result"]
+
+
+def rpc_call(
+    rpc_url: str,
+    to: str,
+    data: str,
+    timeout: float = 15.0,
+) -> str:
+    """Perform one ``eth_call`` and return the raw hex result.
+
+    Read-only: ``eth_call`` never changes state.
+    """
+    result = _rpc_request(
+        rpc_url, "eth_call", [{"to": to, "data": data}, "latest"], timeout
+    )
+    if not isinstance(result, str):
+        raise RpcError(f"eth_call returned a non-hex result from {rpc_url}")
     return result
+
+
+# --------------------------------------------------------------------------
+# Endpoint honesty
+# --------------------------------------------------------------------------
+#
+# TLS authenticates the transport, not the answer. A hostile or merely
+# wrong endpoint can still say ``isCapable = true`` for anyone. Before the
+# first read against an (endpoint, registry) pair, probe two cheap facts
+# that a lookalike endpoint cannot fake without also failing them:
+#
+# * ``eth_chainId`` — the endpoint must be serving the chain the registry
+#   lives on. A Monad RPC that answers ``688689`` is not Monad.
+# * ``eth_getCode(registry)`` — the registry address must hold contract
+#   code. An address with no code answering ``true`` is a tell.
+#
+# Neither is proof of honesty — an endpoint could serve a fork where the
+# registry is replaced — but they close the cheap impersonations, and a
+# caller can see the registry address in every verdict. Results are cached
+# per process; only deterministic verdicts are cached (a transport error
+# is retried on the next read).
+
+_endpoint_verdicts: dict[tuple, "str | None"] = {}
+
+
+def _verify_endpoint(endpoint: str, chain: "Chain", timeout: float) -> "str | None":
+    """Probe the endpoint once, or None if it looks like the claimed chain."""
+    key = (endpoint, chain.chain_id, chain.credential_registry.lower())
+    if key in _endpoint_verdicts:
+        return _endpoint_verdicts[key]
+
+    try:
+        reported = int(str(_rpc_request(endpoint, "eth_chainId", [], timeout)), 16)
+    except (RpcError, ValueError, TypeError) as exc:
+        # Transient — do not cache; the next read can try again.
+        return f"the endpoint did not answer eth_chainId ({exc})"
+    if reported != chain.chain_id:
+        verdict = (
+            f"the endpoint reports chain id {reported}, expected "
+            f"{chain.chain_id} ({chain.name}) — the registry answers "
+            "cannot be trusted to come from the claimed chain"
+        )
+        _endpoint_verdicts[key] = verdict
+        return verdict
+
+    try:
+        code = _rpc_request(
+            endpoint, "eth_getCode", [chain.credential_registry, "latest"], timeout
+        )
+    except RpcError as exc:
+        return f"the endpoint did not answer eth_getCode ({exc})"
+    if not isinstance(code, str) or code in ("0x", ""):
+        verdict = (
+            f"no contract code at the credential registry "
+            f"{chain.credential_registry} on {chain.name} — the endpoint "
+            "is not serving the expected registry"
+        )
+        _endpoint_verdicts[key] = verdict
+        return verdict
+
+    _endpoint_verdicts[key] = None
+    return None
 
 
 # --------------------------------------------------------------------------
@@ -301,12 +361,20 @@ class CredentialStatus:
 
     ``status`` is one of:
 
-    ``capable``       the subject holds a valid credential for the capability
-    ``revoked``       a credential exists but its issuer revoked it
-    ``expired``       a credential exists but it is past its expiry
-    ``none``          the subject never held a credential for this capability
-    ``unknown``       the read failed -- the registry could not be reached or
-                      the call was rejected. Never rendered as "not capable".
+    ``capable``           the subject holds a valid credential for the
+                          capability, verified against a trusted issuer
+    ``unverified_issuer`` a live credential exists, but its issuer is not
+                          verified -- either no trusted issuers were given
+                          or none of them issued it. A credential the
+                          subject could have issued for itself is not
+                          entitlement; this escalates like ``none``.
+    ``revoked``           a credential exists but its issuer revoked it
+    ``expired``           a credential exists but it is past its expiry
+    ``none``              the subject never held a credential for this
+                          capability
+    ``unknown``           the read failed -- the registry could not be
+                          reached or the call was rejected. Never rendered
+                          as "not capable".
     """
 
     status: str
@@ -317,6 +385,7 @@ class CredentialStatus:
     chain_id: int = 0
     credential_registry: str = ""
     issuer: str = ""
+    issuer_verified: bool = False
     issued_at: int = 0
     expires_at: int = 0
     revoked: bool = False
@@ -339,6 +408,7 @@ class CredentialStatus:
             "chain_id": self.chain_id,
             "credential_registry": self.credential_registry,
             "issuer": self.issuer,
+            "issuer_verified": self.issuer_verified,
             "revoked": self.revoked,
             "valid": self.valid,
         }
@@ -357,7 +427,14 @@ class CredentialStatus:
         if self.status == "capable":
             return (
                 f"capable — {self.subject} holds '{self.capability}' issued by "
-                f"{self.issuer} on {self.chain}"
+                f"trusted issuer {self.issuer} on {self.chain}"
+            )
+        if self.status == "unverified_issuer":
+            issued = f" issued by {self.issuer}" if self.issuer else ""
+            return (
+                f"unverified_issuer — {self.subject} holds a live "
+                f"'{self.capability}' credential{issued} on {self.chain}, "
+                "but the issuer is not verified"
             )
         if self.status == "revoked":
             return (
@@ -391,12 +468,20 @@ def read_capability(
     chain_key: str = DEFAULT_CHAIN,
     rpc_url: str | None = None,
     timeout: float = 15.0,
+    trusted_issuers: list[str] | tuple[str, ...] | None = None,
 ) -> CredentialStatus:
     """Read whether ``subject`` holds a live credential for ``capability``.
 
     ``capability`` may be a human-readable name (``"kyc.basic"``) or a
     32-byte hex hash. The name is hashed with keccak-256 locally, which is
     the same hash the registries use on every chain.
+
+    ``trusted_issuers`` are the issuer addresses whose attestations count.
+    The registry lets anyone issue a credential for any subject — a payee
+    can issue its own — so a live credential only reports ``capable`` when
+    one of these issuers signed it (``isCapableFromIssuer``). With an
+    empty list a present credential reports ``unverified_issuer``: present,
+    but not proof.
     """
     chain = CHAINS.get(chain_key)
     if chain is None:
@@ -422,6 +507,14 @@ def read_capability(
         credential_registry=chain.credential_registry,
         explorer_url=chain.explorer_url,
     )
+
+    # --- the endpoint honesty probe -------------------------------------
+    # TLS authenticates the transport; this checks the endpoint is serving
+    # the chain and registry it claims before any answer is trusted.
+    problem = _verify_endpoint(endpoint, chain, timeout)
+    if problem:
+        status.error = problem
+        return status
 
     # --- the headline boolean -------------------------------------------
     try:
@@ -457,8 +550,40 @@ def read_capability(
         pass
 
     if capable:
-        status.status = "capable"
+        # A live credential exists — but from whom? The registry lets
+        # anyone issue for any subject, so the credential only counts if a
+        # trusted issuer signed it. The latest credential's own issuer is
+        # checked first: when the live credential is the latest one, that
+        # resolves the question in a single call instead of one per issuer.
         status.valid = True
+        ordered = list(trusted_issuers or [])
+        if status.issuer:
+            ordered.sort(
+                key=lambda i: 0 if i.lower() == status.issuer.lower() else 1
+            )
+        for issuer in ordered:
+            try:
+                raw = rpc_call(
+                    endpoint,
+                    chain.credential_registry,
+                    _encode_call_issuer(
+                        _SELECTOR_IS_CAPABLE_FROM_ISSUER,
+                        subject,
+                        cap_hash,
+                        issuer,
+                    ),
+                    timeout=timeout,
+                )
+            except (RpcError, ValueError):
+                continue
+            if len(raw) >= 66 and _decode_bool(raw[-64:]):
+                status.status = "capable"
+                status.issuer = issuer
+                status.issuer_verified = True
+                return status
+        # A credential is present but no trusted issuer vouches for it —
+        # report it as such rather than folding it into "none".
+        status.status = "unverified_issuer"
     elif not status.issuer or status.issuer == _ZERO_ADDRESS:
         # No credential has ever been issued for this (subject, capability).
         # The zero address is the registry's "empty" marker, and it is a

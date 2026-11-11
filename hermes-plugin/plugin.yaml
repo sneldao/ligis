@@ -25,11 +25,29 @@ description: >-
   registry and subject addresses; it holds no keys, signs nothing, sends no
   transactions, reads no files outside its own plugin data directory, runs
   no background processes, and has no telemetry. The pre_tool_call hook
-  escalates to Hermes's approval prompt, which unattended surfaces (cron,
-  --yolo, approvals off) refuse rather than auto-approve. The
-  transform_tool_result hook only appends a note to a result that already
-  contains an x402 payment challenge; it never blocks and never rewrites
-  the result's content.
+  escalates to Hermes's approval prompt — what that prompt does is
+  Hermes's approvals policy, not the plugin's: --yolo and
+  approvals.mode: off auto-approve plugin escalations, and cron follows
+  approvals.cron_mode. Set mode: enforce to block the call outright
+  regardless of approvals configuration. If the credential registry
+  cannot be read, the hook does not gate — an unreachable registry is not
+  a finding. The registry lets anyone issue a credential for any subject,
+  so a live credential only counts when its issuer is in trusted_issuers —
+  the operator's setting is the only root of trust (tool arguments can
+  narrow it, never widen it). Before its first read against an endpoint the
+  plugin probes eth_chainId and eth_getCode on the registry address, so an
+  endpoint serving the wrong chain or a registry address with no contract
+  reads as unknown rather than an answer; reads are at the "latest" block,
+  not a finalized one. Registry reads reveal the queried subject addresses
+  to the RPC operator. The pre_tool_call gate checks every destination
+  address a call names — inside nested arguments and signed x402 payment
+  payloads — not just the first, and stops when its time budget
+  (hook_time_budget_seconds, default 10s) is spent: unchecked payees are
+  reported, never assumed. A verified credential means a trusted issuer
+  vouches for the payee's capability — it is not a guarantee of honesty or
+  of settlement. The transform_tool_result hook only appends a note to a
+  result that already contains an x402 payment challenge; it never blocks
+  and never rewrites the result's content.
 author: snel
 license: MIT
 homepage: https://github.com/sneldao/ligis
@@ -59,12 +77,31 @@ config_schema:
       The capability a payee must hold, e.g. agent.commerce.escrow. Empty
       means the gate uses the capability named in the tool call's own
       arguments, and stays silent when there is none.
+  trusted_issuers:
+    type: str
+    default: ""
+    description: >-
+      Comma-separated issuer addresses whose credentials count — the only
+      root of trust. The registry lets anyone issue a credential for any
+      subject — a payee can issue its own — so a live credential only
+      counts when one of these issuers signed it. Tool arguments can
+      narrow this set for a single call but cannot add to it. Empty means
+      no issuer is trusted: a present credential is reported as issuer
+      not verified and gated like a missing one.
   chain:
     type: str
     default: monad-testnet
     description: >-
       Which chain's credential registry to read: monad-testnet or
       pharos-atlantic. The capability hash is identical on both.
+  hook_time_budget_seconds:
+    type: float
+    default: 10.0
+    description: >-
+      Total wall-clock budget for the registry reads a single hook
+      invocation may spend, shared across every payee it checks. A slow
+      or stalling endpoint cannot stretch a hook past this; payees that
+      did not fit the budget are reported as unchecked.
   amount_tolerance_pct:
     type: float
     default: 10.0

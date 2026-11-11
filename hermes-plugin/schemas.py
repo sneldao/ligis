@@ -16,11 +16,13 @@ LIGIS_CHECK_CAPABILITY = {
         "credential (a third-party-issued, revocable permission) on a "
         "public chain. Reads the credential registry directly over "
         "read-only JSON-RPC — no key, no account, no hosted service. "
-        "Returns one of: 'capable' (holds a valid credential), 'revoked' "
-        "(the issuer revoked it), 'expired' (past its expiry), 'none' "
-        "(never issued), or 'unknown' (the registry could not be read). "
-        "Use this before paying, lending to, or granting access to an "
-        "address whose entitlement you need to establish."
+        "Returns one of: 'capable' (holds a valid credential issued by a "
+        "trusted issuer), 'unverified_issuer' (a live credential exists "
+        "but its issuer is not verified — anyone can issue for any "
+        "subject), 'revoked' (the issuer revoked it), 'expired' (past its "
+        "expiry), 'none' (never issued), or 'unknown' (the registry could "
+        "not be read). Use this before paying, lending to, or granting "
+        "access to an address whose entitlement you need to establish."
     ),
     "parameters": {
         "type": "object",
@@ -40,6 +42,21 @@ LIGIS_CHECK_CAPABILITY = {
                     "keccak256 hash. A name is hashed locally with "
                     "keccak-256, which is chain-agnostic — the same name "
                     "resolves to the same bytes on every chain."
+                ),
+            },
+            "issuer": {
+                "type": "string",
+                "description": (
+                    "The issuer whose attestation counts, e.g. "
+                    "0x0DBCF8D105A0a14BE81Ee733c303849474293aAf. The "
+                    "registry lets anyone issue a credential for any "
+                    "subject — a payee can issue its own — so a live "
+                    "credential only counts as 'capable' when a trusted "
+                    "issuer signed it. This argument can only select an "
+                    "issuer the operator's trusted_issuers setting already "
+                    "names — it narrows, it cannot widen the trust set. "
+                    "If no trusted issuers are configured, a present "
+                    "credential reports 'unverified_issuer'."
                 ),
             },
             "chain": {
@@ -92,7 +109,8 @@ LIGIS_VERIFY_PAYEE = {
         "right-payee (is this payee one you contracted with), right-amount "
         "(is the amount within tolerance), in-scope (does this purchase "
         "match what the agent was asked to buy), and verified-payee (does "
-        "the payee hold a live third-party-issued capability credential). "
+        "the payee hold a live capability credential issued by a trusted "
+        "issuer — a credential anyone can self-issue does not count). "
         "Returns GO, STOP or UNKNOWN with the full signal stack, where "
         "each signal is separately GO, STOP or SKIPPED — SKIPPED means "
         "that signal could not be evaluated and is never reported as a "
@@ -126,6 +144,17 @@ LIGIS_VERIFY_PAYEE = {
                     "The capability the payee must hold, e.g. "
                     "'agent.commerce.escrow'. Optional: without it the "
                     "verified-payee signal is SKIPPED rather than assumed."
+                ),
+            },
+            "issuer": {
+                "type": "string",
+                "description": (
+                    "The issuer whose attestation counts for the "
+                    "verified-payee signal. It can only pick among the "
+                    "operator's configured trusted_issuers — it narrows "
+                    "the trust set, it cannot add to it. With no trusted "
+                    "issuers configured, a present credential is "
+                    "'unverified_issuer' — STOP, not GO."
                 ),
             },
             "expected_payees": {
@@ -195,6 +224,16 @@ LIGIS_VERIFY_PAYMENT = {
                     "The capability the payee must hold, e.g. "
                     "'agent.commerce.escrow'. Required unless the plugin is "
                     "configured with a default capability."
+                ),
+            },
+            "issuer": {
+                "type": "string",
+                "description": (
+                    "The issuer whose attestation counts. It can only "
+                    "pick among the operator's configured trusted_issuers "
+                    "— it narrows the trust set, it cannot add to it. "
+                    "With no trusted issuers configured, a present "
+                    "credential is 'unverified_issuer' — STOP, not GO."
                 ),
             },
             "chain": {

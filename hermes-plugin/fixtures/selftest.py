@@ -33,7 +33,12 @@ def main() -> int:
     print("ligis live self-test — read-only eth_call against public testnets\n")
 
     for row in DEMO_MATRIX:
-        status = read_capability(row["subject"], row["capability"], row["chain"])
+        status = read_capability(
+            row["subject"],
+            row["capability"],
+            row["chain"],
+            trusted_issuers=row.get("trusted_issuers"),
+        )
         actual = status.status
         expected = row["expect"]
         ok = actual == expected

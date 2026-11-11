@@ -9,10 +9,21 @@ should actually work: "I checked the payee's credential and it is valid"
 and "I did not check" are different facts, and collapsing them is how agents
 end up paying strangers.
 
-**Fail closed on a failed read.** If the credential registry cannot be
-reached, the verified-payee signal is SKIPPED and the overall verdict is
-UNKNOWN — not GO. A registry outage must never read as a clean bill of
-health.
+**A failed read is never a pass.** In ``ligis_verify_payee`` an
+unreachable registry yields a SKIPPED signal and an UNKNOWN verdict — a
+registry outage must never read as a clean bill of health. The gate takes
+the same posture differently: an unreadable registry is not evidence of
+anything, so the hook stays quiet rather than escalating on every payment
+during an outage.
+
+**A credential is only as good as its issuer.** The registry lets anyone
+issue a credential for any subject — a payee can issue its own — so a
+live credential only counts when a trusted issuer signed it. The
+``trusted_issuers`` setting is the root of trust, chosen by the operator;
+tool arguments can narrow it for one call but never widen it, so a payee
+cannot steer the model into trusting an issuer of the payee's choosing.
+With no trusted issuer, a present credential is reported
+``unverified_issuer`` and gated like a missing one.
 
 **No secrets, no hosted service.** Every chain read is a read-only
 ``eth_call`` against a public JSON-RPC endpoint. The plugin holds no key,
@@ -20,8 +31,10 @@ signs nothing, and sends no transaction.
 
 **The hook escalates by default.** See ``config`` for the mode. In
 ``escalate`` mode an uncredentialed payee raises Hermes's own approval
-prompt; in ``enforce`` mode the call is blocked outright. Neither mode ever
-auto-approves.
+prompt — what that prompt does is Hermes's approvals policy (``--yolo``
+and ``approvals.mode: off`` auto-approve plugin escalations; cron follows
+``approvals.cron_mode``). In ``enforce`` mode the call is blocked
+outright, regardless of approvals configuration.
 """
 
 from __future__ import annotations
@@ -29,6 +42,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from typing import Any
 
 from . import chains
@@ -117,6 +131,66 @@ _PAYEE_ARG_NAMES = ("payee", "to", "recipient", "destination", "address", "targe
 
 _HEX_ADDRESS = re.compile(r"\b0x[a-fA-F0-9]{40}\b")
 
+# An EVM address matched in full — for validating values a 402 body
+# supplies, where a prefix match would accept trailing junk.
+_EVM_ADDRESS_FULL = re.compile(r"0x[a-fA-F0-9]{40}")
+
+# Untrusted text hygiene. A 402 challenge is adversary-controlled: fields
+# can carry newlines and control characters that would let the response
+# forge plugin-voiced lines in a [LIGIS] note.
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f-\x9f]+")
+_WS_RUN = re.compile(r"\s+")
+
+# Each distinct payee costs sequential RPC calls. A hostile 402 could name
+# hundreds, so the result hook checks at most this many per result.
+_MAX_PAYEES_PER_RESULT = 3
+
+# A tool call can name several destinations (from/to, a decoy before the
+# real payee). The gate checks at most this many per call.
+_MAX_GATE_PAYEES = 8
+
+
+class _Deadline:
+    """A shared time budget for one hook invocation's RPC work.
+
+    Count bounds how many reads run; this bounds how long they may take.
+    Each read gets ``min(remaining, cap)`` as its timeout, so a slow or
+    stalling endpoint cannot stretch a hook past its budget.
+    """
+
+    def __init__(self, seconds: float) -> None:
+        self._end = time.monotonic() + max(0.0, float(seconds))
+
+    @property
+    def expired(self) -> bool:
+        return time.monotonic() >= self._end
+
+    def remaining(self, cap: float = 15.0) -> float:
+        return max(0.05, min(cap, self._end - time.monotonic()))
+
+
+def _hook_budget() -> _Deadline:
+    return _Deadline(config.get_float("hook_time_budget_seconds", 10.0))
+
+
+def _clean_field(value: object, limit: int = 64) -> str:
+    """Make an untrusted field safe to interpolate into a [LIGIS] note.
+
+    Strips control characters (including newlines), collapses whitespace,
+    and caps the length. Anything the payment challenge supplied goes
+    through this before it can reach a note.
+    """
+    text = _CONTROL_CHARS.sub("", str(value or ""))
+    text = _WS_RUN.sub(" ", text).strip()
+    if len(text) > limit:
+        text = text[: limit - 1] + "…"
+    return text
+
+
+def _quote(value: object, limit: int = 64) -> str:
+    """Present an untrusted field as quoted data in a note."""
+    return f'"{_clean_field(value, limit)}"'
+
 
 def _looks_like_payment(tool_name: str, args: dict) -> bool:
     """Is this tool call plausibly moving money?"""
@@ -159,49 +233,81 @@ def _looks_like_payment(tool_name: str, args: dict) -> bool:
     return False
 
 
-def _extract_payee(args: dict) -> str:
-    """Pull a destination address out of a tool call's arguments.
+def _iter_strings(node: Any, depth: int = 0):
+    """Every string inside a tool-args value, bounded depth.
 
-    Looks, in order, at the payee-shaped argument names, at an x402
-    payment header (base64 or raw JSON — where the payee is *not* a plain
-    hex address in the command string), and finally at any
-    address-shaped value in the arguments.
+    Payees hide inside JSON-encoded argument strings and nested objects,
+    not just top-level string fields — and a payee buried in a blob pays
+    exactly like one in a named field.
     """
+    if depth > 4:
+        return
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for value in node.values():
+            yield from _iter_strings(value, depth + 1)
+    elif isinstance(node, (list, tuple)):
+        for item in node:
+            yield from _iter_strings(item, depth + 1)
+
+
+def _extract_payees(args: dict) -> list[str]:
+    """Every candidate destination address in a tool call's arguments.
+
+    Three sources, in order of confidence:
+
+    1. the payee-shaped argument names (``to``, ``payee``, …) — explicit;
+    2. signed payment payloads — a base64 ``X-PAYMENT`` blob or JSON with
+       ``accepted.payTo`` / ``payload.authorization.to`` / ``accepts[]``.
+       This is the address the money actually goes to, which is not
+       necessarily the address the challenge displayed;
+    3. any other address-shaped string anywhere in the arguments,
+       including nested values.
+
+    All distinct candidates are returned (case-insensitive dedupe, capped
+    at ``_MAX_GATE_PAYEES``) because checking only the first lets a crafted
+    call front-run a credentialed decoy before the real payee.
+    """
+    found: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: str) -> None:
+        key = value.lower()
+        if key and key not in seen:
+            seen.add(key)
+            found.append(value)
+
     for key in _PAYEE_ARG_NAMES:
-        value = args.get(key)
-        if isinstance(value, str):
-            match = _HEX_ADDRESS.search(value)
-            if match:
-                return match.group(0)
-            if value.startswith("0x") and len(value) == 42:
-                return value
+        for text in _iter_strings(args.get(key)):
+            for match in _HEX_ADDRESS.finditer(text):
+                add(match.group(0))
+            if text.startswith("0x") and len(text) == 42:
+                add(text)
 
     # An x402 signed payment carries the payee base64-encoded, so no plain
-    # hex address appears in the command — decode the header instead.
-    for value in args.values():
-        if not isinstance(value, str):
-            continue
-        payees = x402.extract_payee_from_payment_header(value)
-        if payees:
-            return payees[0]
+    # hex address appears in the command — decode the payload instead.
+    for text in _iter_strings(args):
+        for payee in x402.extract_payee_from_payment_header(text):
+            add(payee)
+        for blob in x402.find_payment_headers(text):
+            for payee in x402.extract_payee_from_payment_header(blob):
+                add(payee)
+        for req in x402.find_requirements(text):
+            add(req.pay_to)
 
-    # The header may be embedded in a larger string (a shell command with
-    # -H 'X-PAYMENT: <base64>'), so scan for payment blobs in it.
-    for value in args.values():
-        if not isinstance(value, str):
-            continue
-        for blob in x402.find_payment_headers(value):
-            payees = x402.extract_payee_from_payment_header(blob)
-            if payees:
-                return payees[0]
+    # Fall back to any address-shaped string anywhere in the arguments.
+    for text in _iter_strings(args):
+        for match in _HEX_ADDRESS.finditer(text):
+            add(match.group(0))
 
-    # Fall back to any address-shaped value in the arguments.
-    for value in args.values():
-        if isinstance(value, str):
-            match = _HEX_ADDRESS.search(value)
-            if match:
-                return match.group(0)
-    return ""
+    return found[:_MAX_GATE_PAYEES]
+
+
+def _extract_payee(args: dict) -> str:
+    """The first candidate destination, for payment-shape detection."""
+    payees = _extract_payees(args)
+    return payees[0] if payees else ""
 
 
 def _extract_capability(args: dict) -> str:
@@ -210,6 +316,70 @@ def _extract_capability(args: dict) -> str:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return ""
+
+
+def _parse_issuers(values: list[str]) -> list[str]:
+    """Validate and dedupe issuer addresses, preserving order."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in values:
+        item = str(item).strip()
+        if not item or item.lower() in seen:
+            continue
+        if _EVM_ADDRESS_FULL.fullmatch(item):
+            seen.add(item.lower())
+            out.append(item)
+        else:
+            logger.debug("ligis: dropping non-address trusted issuer %r", item)
+    return out
+
+
+def _trusted_issuers(args: dict | None = None) -> list[str]:
+    """Issuer addresses whose credentials count as verified.
+
+    The plugin's ``trusted_issuers`` setting is the root of trust — the
+    operator chose it. The ``issuer`` / ``trusted_issuers`` tool arguments
+    can only *narrow* that set for a single call: they may pick among
+    issuers the operator already trusts, never add a new one. If arguments
+    could widen the set, a payee (or text in a tool result steering the
+    model) could name an issuer of its own choosing — including itself —
+    and self-issued credentials would verify again.
+
+    An empty result means no issuer is trusted: a present credential
+    reports ``unverified_issuer``, not ``capable``.
+    """
+    configured = _parse_issuers(
+        config.get_str("trusted_issuers", "").split(",")
+    )
+    if not args:
+        return configured
+
+    raw: list[str] = []
+    single = args.get("issuer")
+    if isinstance(single, str) and single.strip():
+        raw.append(single.strip())
+    many = args.get("trusted_issuers")
+    if isinstance(many, str):
+        raw.extend(many.split(","))
+    elif isinstance(many, list):
+        raw.extend(str(p) for p in many)
+
+    requested = _parse_issuers(raw)
+    if not requested:
+        return configured
+
+    # Narrow, never widen: keep only requested issuers the operator's
+    # trusted_issuers setting already names — in the operator's spelling.
+    trusted = {a.lower(): a for a in configured}
+    narrowed = [trusted[a.lower()] for a in requested if a.lower() in trusted]
+    dropped = [a for a in requested if a.lower() not in trusted]
+    if dropped:
+        logger.debug(
+            "ligis: ignoring %d issuer argument(s) not in the configured "
+            "trusted_issuers",
+            len(dropped),
+        )
+    return narrowed
 
 
 # --------------------------------------------------------------------------
@@ -242,7 +412,9 @@ def ligis_check_capability(args: dict, **kwargs) -> str:
         )
 
     try:
-        status = read_capability(subject, capability, chain)
+        status = read_capability(
+            subject, capability, chain, trusted_issuers=_trusted_issuers(args)
+        )
     except ValueError as exc:
         return _payload({"error": str(exc), "known_chains": sorted(CHAINS)})
     except Exception as exc:  # noqa: BLE001 - never raise into the model
@@ -264,6 +436,14 @@ def ligis_check_capability(args: dict, **kwargs) -> str:
             "The credential registry could not be read, so entitlement is "
             "UNKNOWN. This is not the same as the payee being "
             "uncredentialed."
+        )
+    elif status.status == "unverified_issuer":
+        data["note"] = (
+            "A live credential exists, but its issuer is not verified — "
+            "anyone can issue a credential for any subject, including the "
+            "payee itself. The operator's trusted_issuers setting names "
+            "the issuers that count; the 'issuer' argument can only pick "
+            "among those."
         )
     return _payload(data)
 
@@ -363,9 +543,22 @@ def ligis_verify_payment(args: dict, **kwargs) -> str:
             }
         )
 
+    issuers = _trusted_issuers(args)
+
     signals: list[dict] = []
     for payee in unique:
-        status = read_capability(payee, capability, chain)
+        if not _EVM_ADDRESS_FULL.fullmatch(payee):
+            signals.append(
+                _signal(
+                    "verified-payee",
+                    "SKIPPED",
+                    0.0,
+                    f"the payee value {_quote(payee)} is not an EVM "
+                    "address, so it could not be checked",
+                )
+            )
+            continue
+        status = read_capability(payee, capability, chain, trusted_issuers=issuers)
         if status.status == "capable":
             signals.append(
                 _signal(
@@ -373,7 +566,7 @@ def ligis_verify_payment(args: dict, **kwargs) -> str:
                     "GO",
                     1.0,
                     f"the payee holds a live '{capability}' credential issued "
-                    f"by {status.issuer} on {status.chain}",
+                    f"by trusted issuer {status.issuer} on {status.chain}",
                     issuer=status.issuer,
                     chain=status.chain,
                     capability_hash=status.capability_hash,
@@ -422,8 +615,8 @@ def ligis_verify_payment(args: dict, **kwargs) -> str:
             "requirements": requirements or None,
             "note": (
                 "STOP means at least one payee named by this payment cannot "
-                "be credentialed. UNKNOWN means the registry could not be "
-                "read — which is not a pass."
+                "be credentialed by a trusted issuer. UNKNOWN means the "
+                "registry could not be read — which is not a pass."
             ),
         }
     )
@@ -577,8 +770,20 @@ def ligis_verify_payee(args: dict, **kwargs) -> str:
                 "no capability was named, so no credential could be checked",
             )
         )
+    elif not _EVM_ADDRESS_FULL.fullmatch(payee):
+        signals.append(
+            _signal(
+                "verified-payee",
+                "SKIPPED",
+                0.0,
+                f"the payee value {_quote(payee)} is not an EVM address, "
+                "so no credential could be checked",
+            )
+        )
     else:
-        status = read_capability(payee, capability, chain)
+        status = read_capability(
+            payee, capability, chain, trusted_issuers=_trusted_issuers(args)
+        )
         if status.status == "unknown":
             signals.append(
                 _signal(
@@ -587,7 +792,7 @@ def ligis_verify_payee(args: dict, **kwargs) -> str:
                     0.0,
                     f"the credential registry on {status.chain} could not be "
                     f"read, so entitlement is unknown — this is not a pass",
-                    error=status.error,
+                    error=_clean_field(status.error, 160),
                 )
             )
         elif status.status == "capable":
@@ -597,7 +802,7 @@ def ligis_verify_payee(args: dict, **kwargs) -> str:
                     "GO",
                     1.0,
                     f"the payee holds a live '{capability}' credential issued "
-                    f"by {status.issuer} on {status.chain}",
+                    f"by trusted issuer {status.issuer} on {status.chain}",
                     issuer=status.issuer,
                     chain=status.chain,
                     capability_hash=status.capability_hash,
@@ -676,8 +881,8 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str, **kwargs) -> dict | 
     try:
         if not _looks_like_payment(tool_name, args):
             return None
-        payee = _extract_payee(args)
-        if not payee:
+        payees = _extract_payees(args)
+        if not payees:
             return None
     except Exception:  # noqa: BLE001 - a gate must never wedge the agent
         logger.debug("ligis: payment detection failed", exc_info=True)
@@ -689,44 +894,88 @@ def pre_tool_call(tool_name: str, args: dict, task_id: str, **kwargs) -> dict | 
         return None
 
     chain = config.get_str("chain", DEFAULT_CHAIN) or DEFAULT_CHAIN
+    issuers = _trusted_issuers()
+    budget = _hook_budget()
 
-    try:
-        status = read_capability(payee, capability, chain)
-    except Exception:  # noqa: BLE001
-        logger.debug("ligis: credential read failed in hook", exc_info=True)
+    # Check every destination the call names, not just the first — a
+    # crafted call can put a credentialed decoy before the real payee. One
+    # failed payee is enough to gate; a read failure (``unknown``) is not
+    # evidence either way, so it neither gates nor stops the checks.
+    bad = None
+    checked = 0
+    for payee in payees:
+        if budget.expired:
+            break
+        try:
+            status = read_capability(
+                payee,
+                capability,
+                chain,
+                trusted_issuers=issuers,
+                timeout=budget.remaining(),
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("ligis: credential read failed in hook", exc_info=True)
+            continue
+        checked += 1
+        if status.status == "unknown":
+            # A registry outage is not evidence of anything. Do not
+            # escalate on it — that would train the user to click through.
+            continue
+        if status.status == "capable":
+            continue
+        bad = status
+        break
+    unchecked = len(payees) - checked
+
+    if bad is None:
+        if unchecked:
+            logger.debug(
+                "ligis: %d destination(s) unchecked (time budget); not gating",
+                unchecked,
+            )
         return None
 
-    if status.status == "capable":
-        return None
+    if bad.status == "unverified_issuer":
+        reason = (
+            f"holds a '{_clean_field(capability)}' credential, but its "
+            "issuer is not verified"
+        )
+    else:
+        reason = f"does not hold a live '{_clean_field(capability)}' credential"
 
-    if status.status == "unknown":
-        # A registry outage is not evidence of anything. Do not escalate on
-        # it — that would train the user to click through the gate.
-        logger.debug("ligis: credential read unknown; not gating")
-        return None
+    extra = ""
+    if len(payees) > 1:
+        extra = (
+            f" The call names {len(payees)} destination(s); this is the "
+            "first that failed the check"
+        )
+        if unchecked:
+            extra += f" ({unchecked} unchecked)"
+        extra += "."
 
-    detail = status.describe()
+    detail = _clean_field(bad.describe(), 240)
     if mode == "enforce":
         return {
             "action": "block",
             "message": (
-                f"[LIGIS] Blocked {tool_name}: the payee {payee} does not "
-                f"hold a live '{capability}' credential. {detail}. "
+                f"[LIGIS] Blocked {tool_name}: the payee {bad.subject} "
+                f"{reason}. {detail}.{extra} "
                 "Verification: read-only eth_call against the credential "
-                f"registry on {status.chain} "
-                f"({status.credential_registry})."
+                f"registry on {bad.chain} "
+                f"({bad.credential_registry})."
             ),
         }
 
     return {
         "action": "approve",
         "message": (
-            f"[LIGIS] {tool_name} is paying {payee}, which does not hold a "
-            f"live '{capability}' credential. {detail}. "
+            f"[LIGIS] {tool_name} is paying {bad.subject}, which {reason}. "
+            f"{detail}.{extra} "
             "Approve only if you have an independent reason to trust this "
             f"payee. Verification: read-only eth_call against the "
-            f"credential registry on {status.chain} "
-            f"({status.credential_registry})."
+            f"credential registry on {bad.chain} "
+            f"({bad.credential_registry})."
         ),
     }
 
@@ -764,30 +1013,70 @@ def transform_tool_result(
     if not isinstance(result, str) or not result.strip():
         return None
 
+    # Cheap bail before any parsing: a result that names no payee field
+    # cannot contain an x402 challenge, so most tool results return here
+    # without a JSON scan.
+    if "payTo" not in result and "pay_to" not in result:
+        return None
+
     requirements = x402.find_requirements(result)
     if not requirements:
         return None
 
     capability = config.get_str("capability", "")
     chain = config.get_str("chain", DEFAULT_CHAIN) or DEFAULT_CHAIN
+    issuers = _trusted_issuers()
+    budget = _hook_budget()
+
+    # The 402 body is untrusted: a payee that is not an EVM address cannot
+    # be checked, and each distinct payee costs two sequential RPC calls —
+    # so dedupe, validate, and bound how many are checked per result.
+    seen: set[str] = set()
+    payees: list[x402.PaymentRequirement] = []
+    invalid = 0
+    for req in requirements:
+        if not _EVM_ADDRESS_FULL.fullmatch(req.pay_to.strip()):
+            invalid += 1
+            continue
+        key = req.pay_to.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        payees.append(req)
+
+    skipped_payees = max(0, len(payees) - _MAX_PAYEES_PER_RESULT)
+    payees = payees[:_MAX_PAYEES_PER_RESULT]
 
     lines: list[str] = []
     checked = 0
     capable = 0
     unknown = 0
+    timed_out = 0
 
-    for req in requirements:
+    for index, req in enumerate(payees):
+        payee = _quote(req.pay_to)
         if not capability:
             lines.append(
-                f"{_NOTE_PREFIX} this payment would send {req.amount} "
-                f"{req.asset or ''} to {req.pay_to} on {req.network}. "
+                f"{_NOTE_PREFIX} this payment would send amount "
+                f"{_quote(req.amount, 32)} asset {_quote(req.asset, 48)} "
+                f"to payee {payee} on network {_quote(req.network, 48)}. "
                 "No capability is configured for this plugin, so the payee's "
                 "entitlement was not checked."
             )
             continue
 
+        if budget.expired:
+            timed_out = len(payees) - index
+            break
+
         try:
-            status = read_capability(req.pay_to, capability, chain)
+            status = read_capability(
+                req.pay_to,
+                capability,
+                chain,
+                trusted_issuers=issuers,
+                timeout=budget.remaining(),
+            )
         except Exception:  # noqa: BLE001 - a note must never break a result
             logger.debug("ligis: 402 annotation read failed", exc_info=True)
             continue
@@ -796,28 +1085,63 @@ def transform_tool_result(
         if status.status == "capable":
             capable += 1
             lines.append(
-                f"{_NOTE_PREFIX} the payee {req.pay_to} HOLDS a live "
-                f"'{capability}' credential, issued by {status.issuer} on "
-                f"{status.chain}. Verified by read-only eth_call against the "
+                f"{_NOTE_PREFIX} the payee {payee} HOLDS a live "
+                f"'{_clean_field(capability)}' credential, issued by "
+                f"trusted issuer {_quote(status.issuer)} on {status.chain}. "
+                f"Verified by read-only eth_call against the "
                 f"credential registry ({status.credential_registry})."
+            )
+        elif status.status == "unverified_issuer":
+            if issuers:
+                why = (
+                    f"its issuer {_quote(status.issuer)} is not in the "
+                    "trusted issuer list"
+                    if status.issuer
+                    else "no trusted issuer signed it"
+                )
+            else:
+                why = "no trusted issuers are configured, so it cannot be verified"
+            lines.append(
+                f"{_NOTE_PREFIX} the payee {payee} holds a live "
+                f"'{_clean_field(capability)}' credential, but {why} — a "
+                "credential a payee could have issued for itself is not "
+                "entitlement. Check this before paying."
             )
         elif status.status == "unknown":
             unknown += 1
             lines.append(
-                f"{_NOTE_PREFIX} the payee {req.pay_to} could not be checked "
+                f"{_NOTE_PREFIX} the payee {payee} could not be checked "
                 f"— the credential registry on {status.chain} did not answer "
-                f"({status.error}). That is NOT evidence that the payee is "
-                "entitled; it is an unanswered question."
+                f"({_clean_field(status.error, 160)}). That is NOT evidence "
+                "that the payee is entitled; it is an unanswered question."
             )
         else:
             lines.append(
-                f"{_NOTE_PREFIX} the payee {req.pay_to} does NOT hold a live "
-                f"'{capability}' credential — {status.describe()}. "
+                f"{_NOTE_PREFIX} the payee {payee} does NOT hold a live "
+                f"'{_clean_field(capability)}' credential — "
+                f"{_clean_field(status.describe(), 240)}. "
                 f"Verified by read-only eth_call against the credential "
                 f"registry on {status.chain} ({status.credential_registry}). "
                 "Check this before paying, unless you have an independent "
                 "reason to trust this payee."
             )
+
+    if invalid:
+        lines.append(
+            f"{_NOTE_PREFIX} {invalid} payTo value(s) in this challenge "
+            "were not EVM addresses and were not checked."
+        )
+    if skipped_payees:
+        lines.append(
+            f"{_NOTE_PREFIX} {skipped_payees} further payee(s) in this "
+            f"challenge were not checked (bounded at "
+            f"{_MAX_PAYEES_PER_RESULT} per result)."
+        )
+    if timed_out:
+        lines.append(
+            f"{_NOTE_PREFIX} {timed_out} payee(s) in this challenge were "
+            "not checked (the hook's time budget was reached)."
+        )
 
     if not lines:
         return None
@@ -825,13 +1149,14 @@ def transform_tool_result(
     summary = "\n".join(lines)
     if checked and capable == checked and not unknown:
         summary += (
-            "\nEvery payee named in this payment challenge holds the "
-            "configured capability."
+            "\nEvery payee named in this payment challenge holds a "
+            "verified credential for the configured capability."
         )
     elif checked and capable == 0 and not unknown:
         summary += (
-            "\nNo payee named in this payment challenge holds the configured "
-            "capability. You are about to pay an uncredentialed counterparty."
+            "\nNo payee named in this payment challenge holds a verified "
+            "credential for the configured capability. You are about to "
+            "pay an uncredentialed counterparty."
         )
 
     return _append_note(result, summary)

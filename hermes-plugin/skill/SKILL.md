@@ -68,7 +68,8 @@ and the reason to look before paying.
 
 | Status | Meaning | What to do |
 |---|---|---|
-| `capable` | Holds a valid, unrevoked, unexpired credential | Proceed, subject to the other signals. |
+| `capable` | Holds a valid, unrevoked, unexpired credential issued by a trusted issuer | Proceed, subject to the other signals. |
+| `unverified_issuer` | A live credential exists, but the issuer is not verified — a payee can issue its own | Treat like `none` unless you independently trust the issuer. |
 | `revoked` | The issuer revoked it | **Do not pay.** This is not a stale record — revocation is permanent. |
 | `expired` | Past its expiry | Do not pay on the expired credential; ask for a fresh one. |
 | `none` | Never held one | The counterparty has not proven entitlement. |
@@ -97,10 +98,20 @@ If the plugin is enabled, two surfaces already work for you:
 - a `transform_tool_result` hook annotates an x402 402 challenge with the
   payee's verdict, so you see it before you sign.
 
-Neither ever auto-approves, and on unattended surfaces (cron, `--yolo`,
-approvals off) the escalation is refused rather than silently allowed. The
-gate also stays quiet when the registry is merely unreachable — an outage is
-not a finding.
+What an escalation does is Hermes's approvals policy, not the plugin's:
+`--yolo` and `approvals.mode: off` auto-approve plugin escalations, and
+cron follows `approvals.cron_mode` — `mode: enforce` blocks the call
+outright regardless. The gate also stays quiet when the registry is
+merely unreachable — an outage is not a finding. And a credential only
+counts when a trusted issuer signed it: the registry lets anyone issue
+for any subject, so without `trusted_issuers` a present credential is
+reported `unverified_issuer`, not `capable`. `trusted_issuers` is the
+only root of trust — the `issuer` tool argument can narrow it for one
+call but never widen it, so naming an issuer yourself cannot rescue a
+credential the operator does not already trust. The gate checks every
+destination a call names, including inside nested arguments and signed
+payment payloads, not just the first — so a credentialed decoy before the
+real payee does not pass.
 
 So in most sessions you do not need to call a tool before paying — the gate
 already asked. When it escalates, read the evidence in the message: it names
