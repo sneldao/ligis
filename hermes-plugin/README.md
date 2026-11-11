@@ -48,6 +48,23 @@ credential minted on one chain is referentially identical to the same
 credential on another. That is what makes a credential portable — and it is
 the property the demo shows.
 
+## Verified in a live Hermes session
+
+Not just in tests. Driven through a running Hermes agent, with the plugin
+installed from this repository at the pinned commit:
+
+| What | Result |
+|---|---|
+| `ligis_capability_hash("agent.commerce.escrow")` | `0x17775e48…a3ebf8` — the registry's hash |
+| `ligis_check_capability(0xd21a…27Ec, agent.commerce.escrow)` | `capable`, issuer `0x0DBCF8D1…93aAf` |
+| Payment to `0x…dEaD` (no credential), `mode: enforce` | **blocked** by the gate, with the credential evidence |
+| Payment to `0xd21a…27Ec` (credentialed), `mode: enforce` | **allowed through** to the tool |
+
+The blocked case is the one that matters: the agent asked to send value to
+an address that cannot be credentialed, and the gate stopped it and said
+why — naming the payee, the capability, the chain, the registry address,
+and the fact that no credential exists.
+
 ## Live proof
 
 Every row below is re-read from the chain on demand, not a recorded
@@ -155,15 +172,17 @@ Then restart Hermes.
 ## Development
 
 ```
-python3 tests/test_ligis.py      # 48 offline unit tests, no network
+python3 tests/test_ligis.py      # 60 offline unit tests, no network
 python3 fixtures/selftest.py     # live chain reads against public testnets
 hermes plugins validate .        # the catalog CI gate
 hermes plugins doctor . --ci     # discovery, import and registration
 ```
 
 The offline tests cover the ABI encoding and decoding, the four-signal
-verdict rules, the payment-call detection and the hook. The live self-test
-re-reads every fixture row from the chain.
+verdict rules, the payment-call detection, the hook, and the handler
+signature Hermes dispatches to (`(args, **kwargs)`) — the last one because
+getting it wrong breaks every live call while the offline suite still
+passes.
 
 ## License
 

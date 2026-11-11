@@ -1,8 +1,51 @@
 # Hermes Plugin Hackathon — Third Entry Plan: `ligis`
 
-> **Status:** plan approved 2026-11-11, ~04:40 EST. Deadline 5:00 PM EST today.
+> **Status:** **built and verified live** 2026-11-11. Plan approved ~04:40 EST,
+> plugin working end-to-end in a running Hermes session by ~06:10 EST.
+> Deadline 5:00 PM EST today.
 > **Decision:** ship a third entry (`ligis`) *after* securing elcaro and lemma.
 > **Recommended posture:** escalation-by-default with opt-in enforce (see §7).
+
+---
+
+## Build outcome (what actually happened)
+
+| Gate | Result |
+|---|---|
+| `hermes plugins validate .` | **passed**, zero warnings, "security scan — safe", no python dependencies |
+| `hermes plugins doctor . --ci` | **passed** — 4 tools, 1 hook |
+| `tests/test_ligis.py` | **60/60 pass** (offline, no network) |
+| `fixtures/selftest.py` | **4/4 fixtures reproduce live** from raw JSON-RPC |
+| Catalog CI simulation on a clean clone | **all four gates pass** (validate, payload scan, self-updater grep, confinement) |
+| Catalog entry structural validation | **valid** (`validate_plugin_catalog.py`) |
+| **Live Hermes session** | tools return correct values; **the gate blocked an uncredentialed payment and allowed a credentialed one** |
+
+**Three real bugs found and fixed by testing rather than reading:**
+
+1. **Handler signature.** Hermes dispatches `handler(args: dict, **kwargs)` —
+   one arguments dict, not keyword arguments. The handlers had keyword
+   parameters, so every live call failed with `TypeError`. The offline suite
+   did not catch it because it called the handlers directly with keywords.
+   Fixed, and four tests now assert the signature so it cannot regress.
+2. **A tuple of patterns searched with `.search()`** — a single-pattern API.
+   The payment-tool-name match raised `AttributeError`.
+3. **A message-shaped tool (`send_message`) read as payment-shaped.**
+   Communication tools are now excluded explicitly.
+
+Plus two smaller fixes: `CredentialStatus` carried no registry address (so
+the gate's message could not name the registry it read), and the zero address
+is truthy — so "no credential" needed an explicit comparison.
+
+**One behaviour worth knowing:** in `escalate` mode the gate *does* fire on an
+uncredentialed payee, but a non-interactive surface (`hermes -z`) auto-approves
+the escalation, so the call proceeds. `enforce` mode produces an absolute
+block that no surface auto-approves. The demo uses `enforce` for the blocked
+case precisely because that is the shot that cannot be waved through.
+
+**One operational trap:** the gateway caches plugin code. A plugin update is
+not live until the gateway restarts, and a restart is refused while a turn is
+running (`hermes gateway restart --yes` interrupts). Two of the early
+"the hook does not fire" readings were this, not a code fault.
 
 ---
 
