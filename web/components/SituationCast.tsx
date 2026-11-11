@@ -246,7 +246,7 @@ function MomentBody({
           onClick={() => setLens("blind")}
           className={`py-1 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors ${
             !gated
-              ? "text-revoke underline decoration-revoke decoration-1 underline-offset-4"
+              ? "text-loss underline decoration-loss decoration-1 underline-offset-4"
               : "text-ink-quiet hover:text-ink"
           }`}
         >
@@ -259,7 +259,7 @@ function MomentBody({
           onClick={() => setLens("gated")}
           className={`py-1 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors ${
             gated
-              ? "text-sage underline decoration-sage decoration-1 underline-offset-4"
+              ? "text-good underline decoration-good decoration-1 underline-offset-4"
               : "text-ink-quiet hover:text-ink"
           }`}
         >
@@ -270,14 +270,14 @@ function MomentBody({
       <div
         key={lens}
         className={`animate-fade-in mt-4 border-l-2 pl-4 ${
-          gated ? "border-sage" : "border-revoke"
+          gated ? "border-good" : "border-loss"
         }`}
         role="tabpanel"
         aria-live="polite"
       >
         <p
           className={`display text-2xl sm:text-3xl ${
-            gated ? "text-sage" : "text-revoke"
+            gated ? "text-good" : "text-loss"
           }`}
         >
           <VerdictMark ok={gated} /> {gated ? "GO" : "STOP"}

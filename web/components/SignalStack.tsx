@@ -49,11 +49,11 @@ export function SignalStack({ signals }: { signals: TrustSignal[] }) {
               </div>
               <div className="space-y-1.5 text-right">
                 {signal.verdict === "go" ? (
-                  <span className="font-mono text-sm tabular text-sage">
+                  <span className="font-mono text-sm tabular text-good">
                     <VerdictMark ok /> GO
                   </span>
                 ) : signal.verdict === "stop" ? (
-                  <span className="font-mono text-sm tabular text-revoke">
+                  <span className="font-mono text-sm tabular text-loss">
                     <VerdictMark ok={false} /> STOP
                   </span>
                 ) : (

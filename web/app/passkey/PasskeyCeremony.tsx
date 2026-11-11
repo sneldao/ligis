@@ -187,13 +187,13 @@ export function PasskeyCeremony() {
         {message}
       </p>
       {supported === false && (
-        <p className="font-serif text-sm text-revoke">
+        <p className="font-serif text-sm text-loss">
           Unsupported browser or insecure context. HTTPS (or local
           secure-context testing) and a verifying authenticator are required.
         </p>
       )}
       {config && !originOk && (
-        <p className="font-serif text-sm text-revoke">
+        <p className="font-serif text-sm text-loss">
           Wrong serving origin. Expected {config.origin}. Live RP-ID rotation is
           not a testing workaround.
         </p>
@@ -362,7 +362,7 @@ export function PasskeyCeremony() {
         </>
       )}
       {gateError && (
-        <p role="status" className="font-serif text-sm text-revoke">
+        <p role="status" className="font-serif text-sm text-loss">
           {gateError}
         </p>
       )}

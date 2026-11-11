@@ -33,7 +33,7 @@ function JudgeRow({ name, outcome }: { name: string; outcome: JudgeOutcome }) {
       </div>
     );
   }
-  const tone = outcome.verdict === "STOP" ? "text-stop" : "text-go";
+  const tone = outcome.verdict === "STOP" ? "text-loss" : "text-good";
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 font-mono text-[11px]">
       <span className="text-fog-quiet">{name}</span>
@@ -100,9 +100,9 @@ export function ArenaVerdict({
       data-mode="incident"
       className={`relative flex flex-col gap-4 overflow-hidden border bg-night/70 p-4 sm:p-5 ${
         stop
-          ? "stop-flash border-stop/50"
+          ? "stop-flash border-loss/50"
           : final === "GO"
-            ? "border-go/40"
+            ? "border-good/40"
             : "border-night-rule"
       }`}
       aria-live="polite"
@@ -135,7 +135,7 @@ export function ArenaVerdict({
             initial={reduce ? false : { scale: 2.4, rotate: -22, opacity: 0 }}
             animate={{ scale: 1, rotate: -8, opacity: 1 }}
             transition={{ type: "spring", stiffness: 520, damping: 18 }}
-            className="shrink-0 border-2 border-stop px-2.5 py-0.5 font-mono text-sm font-bold tracking-[0.18em] text-stop"
+            className="shrink-0 border-2 border-loss px-2.5 py-0.5 font-mono text-sm font-bold tracking-[0.18em] text-loss"
           >
             STOPPED
           </motion.span>
@@ -143,7 +143,7 @@ export function ArenaVerdict({
           <span
             className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1 font-mono text-sm font-medium tracking-[0.12em] ${
               final === "GO"
-                ? "bg-go text-night"
+                ? "bg-good text-night"
                 : "border border-night-rule text-fog-quiet"
             }`}
           >
@@ -170,7 +170,7 @@ export function ArenaVerdict({
                   transition={{ delay: 0.25 + i * 0.08 }}
                   className="flex gap-2 text-sm leading-relaxed text-fog"
                 >
-                  <VerdictMark ok={false} className="mt-1 text-stop" />
+                  <VerdictMark ok={false} className="mt-1 text-loss" />
                   <span className="text-pretty first-letter:uppercase">
                     {reason}
                   </span>

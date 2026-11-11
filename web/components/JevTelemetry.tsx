@@ -39,16 +39,16 @@ const VERDICT_TONE: Record<
   VerdictRecord["verdict"],
   { text: string; border: string; bar: string }
 > = {
-  GO: { text: "text-sage", border: "border-sage", bar: "bg-sage/70" },
-  STOP: { text: "text-revoke", border: "border-revoke", bar: "bg-revoke/70" },
+  GO: { text: "text-good", border: "border-good", bar: "bg-good/70" },
+  STOP: { text: "text-loss", border: "border-loss", bar: "bg-loss/70" },
   SKIPPED: { text: "text-ink-quiet", border: "border-rule", bar: "bg-rule" },
 };
 
 const STATUS_TONE: Record<number, string> = {
-  200: "text-sage",
-  401: "text-revoke",
-  402: "text-sky",
-  403: "text-revoke",
+  200: "text-good",
+  401: "text-loss",
+  402: "text-progress",
+  403: "text-loss",
 };
 
 export function JevTelemetry() {
@@ -183,7 +183,7 @@ function SummaryStrip({
           </span>
           <span>
             flagged{" "}
-            <span className={stops > 0 ? "text-revoke" : "text-ink"}>
+            <span className={stops > 0 ? "text-loss" : "text-ink"}>
               {stops}
             </span>
           </span>
@@ -235,7 +235,7 @@ function VerdictRow({
           {record.capability}
         </span>
         {record.flags.length > 0 ? (
-          <span className="font-mono text-xs tabular text-revoke/80">
+          <span className="font-mono text-xs tabular text-loss/80">
             {record.flags.join(" · ")}
           </span>
         ) : null}

@@ -32,11 +32,11 @@ export function TrustReceipt({ receipt }: { receipt: TrustReceiptData }) {
   const { incumbent, provider, savingsPct } = receipt.cost;
 
   return (
-    <div className={`border-l-2 pl-6 ${go ? "border-sage" : "border-revoke"}`}>
+    <div className={`border-l-2 pl-6 ${go ? "border-good" : "border-loss"}`}>
       <p className="eyebrow">trust · pre-payment receipt</p>
 
       <p className="mt-3 display text-3xl sm:text-4xl">
-        <span className={go ? "text-sage" : "text-revoke"}>
+        <span className={go ? "text-good" : "text-loss"}>
           <VerdictMark ok={go} /> {go ? "GO" : "STOP"}
         </span>
       </p>

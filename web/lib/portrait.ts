@@ -8,12 +8,24 @@ export type PortraitParams = {
   deck: PortraitDeck;
   band: { y: number; h: number };
   primary: { cx: number; cy: number; r: number };
-  secondary: { cx: number; cy: number; r: number; shape: "circle" | "arc" };
+  secondary: {
+    cx: number;
+    cy: number;
+    r: number;
+    shape: "circle" | "arc" | "bar";
+  };
   ghost: { ox: number; oy: number };
   arcAngle: number;
   seed: number;
 };
 
+/*
+ * Six decks, drawn from the site's own palette — warm paper, terracotta,
+ * sage and ink. The risograph target means flat ink, no gradients, and at
+ * most three colours per plate. Six is enough variety that a wall of
+ * specimens does not read as the same object recoloured; the SHAPE axis
+ * (below) supplies the rest.
+ */
 const DECKS: PortraitDeck[] = [
   { paper: "#ECE7DF", primary: "#B85D3E", secondary: "#5A6D53" },
   { paper: "#F4F1EC", primary: "#1C1B1A", secondary: "#B85D3E" },
@@ -52,7 +64,11 @@ export function portraitParams(address: string): PortraitParams {
       cx: 0.15 + norm(6) * 0.7,
       cy: 0.55 + norm(7) * 0.3,
       r: 0.03 + norm(8) * 0.05,
-      shape: b[11]! % 2 === 0 ? "circle" : "arc",
+      // Three shapes, not two: a circle, a drawn arc, and a printed bar.
+      // The bar is the one that reads as ink-laid rather than drawn, and
+      // it keeps a wall of specimens from looking like the same mark
+      // recoloured.
+      shape: b[11]! % 3 === 0 ? "circle" : b[11]! % 3 === 1 ? "arc" : "bar",
     },
     ghost: {
       ox: (((b[9]! % 9) - 4) / 1000) * 6,
@@ -101,6 +117,16 @@ export function portraitSvgInner(
       ? `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${sr.toFixed(1)}" fill="${p.deck.secondary}" />`
       : "";
 
+  // A printed bar: a laid rectangle, slightly off-square, rotated by the
+  // same angle the arc would use. Reads as ink on paper, not as a shape.
+  const bar = (() => {
+    if (p.secondary.shape !== "bar") return "";
+    const bw = sr * 3.4;
+    const bh2 = sr * 0.9;
+    const rot = p.arcAngle * (180 / Math.PI);
+    return `<rect x="${(sx - bw / 2).toFixed(1)}" y="${(sy - bh2 / 2).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh2.toFixed(1)}" fill="${p.deck.secondary}" transform="rotate(${rot.toFixed(1)} ${sx.toFixed(1)} ${sy.toFixed(1)})" />`;
+  })();
+
   return `
     <rect width="${W}" height="${H}" fill="${p.deck.paper}" />
     <circle cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" r="${pr.toFixed(1)}" fill="${p.deck.secondary}" opacity="0.42" />
@@ -108,6 +134,7 @@ export function portraitSvgInner(
     <rect x="0" y="${by.toFixed(1)}" width="${W}" height="${bh.toFixed(1)}" fill="${p.deck.secondary}" opacity="0.86" />
     ${dot}
     ${arc}
+    ${bar}
   `.trim();
 }
 

@@ -18,19 +18,19 @@ export const metadata = {
 type SearchParams = Promise<{ job?: string }>;
 
 const STATUS_TONE: Record<string, string> = {
-  open: "text-sky",
-  delivered: "text-sky",
+  open: "text-progress",
+  delivered: "text-progress",
   disputed: "text-terra",
-  resolved_release: "text-sage",
-  resolved_refund: "text-revoke",
+  resolved_release: "text-good",
+  resolved_refund: "text-loss",
 };
 
 const STATUS_BORDER: Record<string, string> = {
-  open: "border-sky",
-  delivered: "border-sky",
+  open: "border-progress",
+  delivered: "border-progress",
   disputed: "border-terra",
-  resolved_release: "border-sage",
-  resolved_refund: "border-revoke",
+  resolved_release: "border-good",
+  resolved_refund: "border-loss",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -332,15 +332,15 @@ pnpm demo:genlayer --dry-run       # Ligis gate only`}
                 </summary>
                 <div className="mt-6">
                   <div
-                    className={`border-l-2 pl-6 ${result.gateReceipt.capable ? "border-sage" : "border-revoke"}`}
+                    className={`border-l-2 pl-6 ${result.gateReceipt.capable ? "border-good" : "border-loss"}`}
                   >
                     <p className="eyebrow">gate · pre-payment check</p>
                     <p className="mt-3 display text-3xl">
                       <span
                         className={
                           result.gateReceipt.capable
-                            ? "text-sage"
-                            : "text-revoke"
+                            ? "text-good"
+                            : "text-loss"
                         }
                       >
                         {result.gateReceipt.capable ? "✓ GO" : "✗ STOP"}

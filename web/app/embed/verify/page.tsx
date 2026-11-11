@@ -104,7 +104,7 @@ function Frame(props: {
     return (
       <a
         href={link}
-        className="block bg-paper px-5 py-4 text-xs font-mono text-revoke no-underline"
+        className="block bg-paper px-5 py-4 text-xs font-mono text-loss no-underline"
       >
         Ligis · {props.error}
       </a>
@@ -115,7 +115,7 @@ function Frame(props: {
     ? " Self-issued credential (issuer === subject). Not trustworthy."
     : "";
 
-  const dotClass = props.capable ? "bg-sage" : "bg-revoke";
+  const dotClass = props.capable ? "bg-good" : "bg-loss";
   const verdict = props.capable ? "GO" : "STOP";
   const ariaLabel = [
     `Ligis gate: ${truncateAddress(props.subject!, 6, 4)}, verdict ${verdict}, for ${props.capabilityId}`,
@@ -150,7 +150,7 @@ function Frame(props: {
         />
         <p className="font-serif text-base leading-snug text-ink">
           <span
-            className={`font-mono text-sm tabular ${props.capable ? "text-sage" : "text-revoke"}`}
+            className={`font-mono text-sm tabular ${props.capable ? "text-good" : "text-loss"}`}
           >
             {props.capable ? "✓ GO" : "✗ STOP"}
           </span>{" "}

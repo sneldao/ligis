@@ -264,7 +264,7 @@ export function VerifyDemo({
               </p>
               <p className="flex flex-wrap items-baseline gap-x-6 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em]">
                 <span>
-                  <span className="text-sage">
+                  <span className="text-good">
                     <VerdictMark ok /> GO
                   </span>
                   <span className="ml-2 text-ink-quiet">proceed</span>
@@ -273,7 +273,7 @@ export function VerifyDemo({
                   ·
                 </span>
                 <span>
-                  <span className="text-revoke">
+                  <span className="text-loss">
                     <VerdictMark ok={false} /> STOP
                   </span>
                   <span className="ml-2 text-ink-quiet">do not pay</span>
@@ -357,11 +357,11 @@ function SingleGate({
                 {p.unreachable ? (
                   <span className="text-ink-quiet">read unreachable</span>
                 ) : p.capable ? (
-                  <span className="text-sage">
+                  <span className="text-good">
                     vouched{p.passkey ? " · passkey" : ""}
                   </span>
                 ) : p.revoked ? (
-                  <span className="text-revoke">revoked</span>
+                  <span className="text-loss">revoked</span>
                 ) : (
                   <span className="text-ink-quiet">no credential</span>
                 )}
@@ -388,7 +388,7 @@ function BatchGate({
     <div className="space-y-6">
       <div className="flex items-baseline gap-3">
         <span
-          className={`inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full ${heldCount > 0 ? "bg-sage" : "bg-revoke"}`}
+          className={`inline-block h-1.5 w-1.5 translate-y-[-2px] rounded-full ${heldCount > 0 ? "bg-good" : "bg-loss"}`}
           aria-hidden
         />
         <p className="font-serif text-lg leading-snug text-ink">
@@ -414,7 +414,7 @@ function BatchGate({
             <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-8 py-3 text-sm">
               <span className="font-mono tabular text-ink">{r.id}</span>
               <span
-                className={`font-mono text-[11px] uppercase tracking-[0.16em] ${r.capable ? "text-sage" : "text-revoke"}`}
+                className={`font-mono text-[11px] uppercase tracking-[0.16em] ${r.capable ? "text-good" : "text-loss"}`}
               >
                 {r.capable ? "GO" : "STOP"}
               </span>
@@ -452,7 +452,7 @@ function ErrorRetry({
 
   return (
     <div className="space-y-3">
-      <p className="font-serif text-base text-revoke">{message}</p>
+      <p className="font-serif text-base text-loss">{message}</p>
       {mismatch && href ? (
         <ChainSwitchHint mismatch={mismatch} href={href} />
       ) : (

@@ -119,7 +119,7 @@ function PhasePill({
     status === "running"
       ? "bg-terra animate-pulse"
       : status === "done"
-        ? "bg-sage"
+        ? "bg-good"
         : "bg-rule";
   const labelColor = status === "idle" ? "text-ink-quiet" : "text-ink";
 

@@ -148,15 +148,15 @@ export function AttackLab() {
             </div>
           </fieldset>
 
-          <div className="flex flex-col gap-2 border border-dashed border-stop/60 bg-stop/10 p-3">
+          <div className="flex flex-col gap-2 border border-dashed border-loss/60 bg-loss/10 p-3">
             <div className="flex items-baseline justify-between gap-3">
-              <label htmlFor={textId} className={`${LABEL} text-stop`}>
+              <label htmlFor={textId} className={`${LABEL} text-loss`}>
                 Hidden text on northwind-data.co/invoices
               </label>
               <span
                 className={`tabular font-mono text-[11px] ${
                   attack.instruction.length > INSTRUCTION_LIMITS.max - 20
-                    ? "text-stop"
+                    ? "text-loss"
                     : "text-fog-quiet"
                 }`}
               >
@@ -297,9 +297,9 @@ export function AttackLab() {
                   <span
                     className={
                       a.result.final === "STOP"
-                        ? "text-stop"
+                        ? "text-loss"
                         : a.result.final === "GO"
-                          ? "text-go"
+                          ? "text-good"
                           : "text-fog-quiet"
                     }
                   >

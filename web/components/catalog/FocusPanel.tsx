@@ -111,12 +111,12 @@ export function FocusPanel() {
                 !knownLive
                   ? "bg-ink-quiet"
                   : error
-                    ? "bg-revoke"
+                    ? "bg-loss"
                     : loading
                       ? "bg-ink-quiet"
                       : isCapable
-                        ? "bg-sage"
-                        : "bg-revoke"
+                        ? "bg-good"
+                        : "bg-loss"
               }`}
               aria-hidden
             />
@@ -131,7 +131,7 @@ export function FocusPanel() {
                   </span>
                 </>
               ) : error ? (
-                <span className="text-revoke">{error}</span>
+                <span className="text-loss">{error}</span>
               ) : loading ? (
                 <span className="italic text-ink-soft">
                   Asking the registry…
@@ -139,7 +139,7 @@ export function FocusPanel() {
               ) : (
                 <>
                   <span
-                    className={`font-mono text-base tabular ${isCapable ? "text-sage" : "text-revoke"}`}
+                    className={`font-mono text-base tabular ${isCapable ? "text-good" : "text-loss"}`}
                   >
                     <VerdictMark ok={isCapable} /> {isCapable ? "GO" : "STOP"}
                   </span>{" "}
@@ -198,7 +198,7 @@ export function FocusPanel() {
                     key={h.id}
                     className="flex items-baseline gap-3 font-mono text-[12px] tabular text-ink"
                   >
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-sage" />
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-good" />
                     {h.id}
                   </li>
                 ))}

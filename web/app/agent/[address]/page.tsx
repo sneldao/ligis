@@ -254,7 +254,7 @@ export default async function AgentPage({
                           {capName}
                         </span>
                         <span
-                          className={`w-20 text-right font-mono text-[11px] uppercase tracking-[0.16em] sm:text-left ${h.capable ? "text-sage" : "text-revoke"}`}
+                          className={`w-20 text-right font-mono text-[11px] uppercase tracking-[0.16em] sm:text-left ${h.capable ? "text-good" : "text-loss"}`}
                         >
                           {h.capable ? "gained" : "lost"}
                         </span>
@@ -362,7 +362,7 @@ export default async function AgentPage({
                         {f.tag2 || f.tag1}
                       </span>
                       <span
-                        className={`w-20 text-right font-mono text-[11px] uppercase tracking-[0.16em] sm:text-left ${f.value > 0n ? "text-sage" : "text-revoke"}`}
+                        className={`w-20 text-right font-mono text-[11px] uppercase tracking-[0.16em] sm:text-left ${f.value > 0n ? "text-good" : "text-loss"}`}
                       >
                         {f.revoked ? "revoked" : f.value > 0n ? "go" : "stop"}
                       </span>

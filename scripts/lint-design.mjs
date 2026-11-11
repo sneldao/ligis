@@ -103,6 +103,22 @@ const BANNED = [
     msg: 'Verdict-color tokens (text-go/stop/sage/revoke) belong on verdict primitives (GateVerdict, ArenaVerdict, SituationCast, JevTelemetry, TrustReceipt, SignalStack, GateStates, FocusPanel, /arena) and status dots. Other UI uses text-ink / text-ink-soft / text-ink-quiet / text-terra / text-sky.',
     // Per-file and per-pattern exemptions, applied below.
   },
+  {
+    id: "tone-token-role",
+    // The tonal layer is the meaning layer: text-good means "valid, held,
+    // ready" and text-loss means "revoked, hard stop" — on the paper stage
+    // AND on the night stage, where they re-point. Naming a raw palette
+    // colour (text-sage) instead of a role (text-good) loses that: the
+    // colour stops carrying a fixed meaning and becomes decoration.
+    //
+    // So: outside verdict surfaces, a tone token is required for any
+    // verdict-meaning colour, and the raw palette names are banned there
+    // too. This is what makes the role binding structural rather than
+    // reviewable-by-eye.
+    re: /\b(?:text|bg|border|fill|stroke)-(?:good|loss|progress|ceremony|inactive)\b/,
+    msg: 'Tone tokens (text-good/loss/progress/ceremony/inactive) are for verdict and status surfaces. Elsewhere use text-ink / text-ink-soft / text-ink-quiet / text-terra.',
+    // Per-file and per-pattern exemptions, applied below.
+  },
 ];
 
 // Rules that should only trigger on UI surfaces (app/ + components/).
@@ -113,6 +129,7 @@ const UI_RULE_IDS = new Set([
   "isCapable-metadata",
   "rounded-full-cta",
   "verdict-color-tokens",
+  "tone-token-role",
 ]);
 
 // Files where `kyc.basic` may NOT appear. Capability ids belong in
@@ -263,6 +280,24 @@ for (const file of files) {
     }
     // Per-file exemptions for verdict-color-tokens.
     if (rule.id === "verdict-color-tokens") {
+      const fileAllowed =
+        VERDICT_COLOR_ALLOW_FILES.has(rel) ||
+        VERDICT_COLOR_ALLOW_PATHS.some((p) => p.test(rel));
+      if (!fileAllowed) {
+        lines.forEach((line, i) => {
+          if (rule.re.test(line)) {
+            console.error(`${rel}:${i + 1}: ${rule.msg}`);
+            console.error(`  ${line.trim()}`);
+            failures++;
+          }
+        });
+      }
+      continue;
+    }
+    // Per-file exemptions for tone-token-role: the same verdict surfaces are
+    // allowed to speak in tones; everywhere else a tone token is the wrong
+    // register (it would assert a verdict the surface does not make).
+    if (rule.id === "tone-token-role") {
       const fileAllowed =
         VERDICT_COLOR_ALLOW_FILES.has(rel) ||
         VERDICT_COLOR_ALLOW_PATHS.some((p) => p.test(rel));

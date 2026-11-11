@@ -27,8 +27,8 @@ export function DecisionVerdict({
   const copy = explainDecision(decision);
   const go = verdict === "GO";
   const stop = verdict === "STOP";
-  const rule = go ? "border-sage" : stop ? "border-revoke" : "border-ink-quiet";
-  const tone = go ? "text-sage" : stop ? "text-revoke" : "text-ink-soft";
+  const rule = go ? "border-good" : stop ? "border-loss" : "border-ink-quiet";
+  const tone = go ? "text-good" : stop ? "text-loss" : "text-ink-soft";
   return (
     <div
       className={`verdict-settle border-l-2 pl-6 ${rule}`}
@@ -59,9 +59,9 @@ export function DecisionVerdict({
           const c = SIGNAL_COPY[s.id];
           const st =
             s.status === "GO"
-              ? "text-sage"
+              ? "text-good"
               : s.status === "STOP"
-                ? "text-revoke"
+                ? "text-loss"
                 : "text-ink-quiet";
           return (
             <li

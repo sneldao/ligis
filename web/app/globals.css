@@ -6,6 +6,11 @@
   --color-ink: #1c1b1a;
   --color-ink-soft: #5c5852;
   --color-ink-quiet: #67625a;
+  /* Mono runs at small sizes against warm paper, where a neutral-cool ink
+     reads colder than the display face beside it. This is the same ink with
+     a touch more warmth, so hashes and addresses sit in the same register
+     as the serif that sets the page. */
+  --color-ink-mono: #241f1a;
   --color-rule: #d9d3cb;
   --color-rule-soft: #e7e2d9;
   --color-terra: #9f4c2f;
@@ -24,6 +29,35 @@
   --color-signal: #4d8dff;
   --color-go: #3ddc97;
   --color-stop: #ff5d4f;
+
+  /*
+   * Tonal tokens — the meaning layer.
+   *
+   * The palette above is a set of colours; these are the ROLES those
+   * colours play. A role is bound to its meaning in one place, so "good"
+   * cannot mean "green" by accident, and the night stage re-points a role
+   * without touching a call site.
+   *
+   *   --color-good       valid, held, funded, ready
+   *   --color-progress   connected but not yet ready, awaiting funding
+   *   --color-ceremony   the accent: CTAs, active nav, the one warm voice
+   *   --color-loss       revoked, errors, hard stops
+   *   --color-inactive   not held, expired, secondary metadata
+   *
+   * On the paper stage these resolve to the paper palette. Inside the
+   * night stage (.night-grid) good/loss re-point at the night-tuned go and
+   * stop tokens, because a sage green on near-black fails contrast and the
+   * stage has its own vocabulary.
+   *
+   * `text-good` / `text-loss` are the tone-facing utilities. The raw
+   * palette utilities (text-sage, text-revoke) stay available for the
+   * places that legitimately name a colour rather than a role.
+   */
+  --color-good: #5a6d53;
+  --color-progress: #356584;
+  --color-ceremony: #9f4c2f;
+  --color-loss: #a13a2a;
+  --color-inactive: #67625a;
 
   --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
@@ -87,6 +121,22 @@ summary:focus-visible {
 
 .font-mono {
   font-family: var(--font-mono);
+}
+
+/*
+ * Mono carries its own ink: hashes, addresses and capability names are
+ * read at small sizes on warm paper, where the neutral ink reads cold
+ * beside the display face.
+ *
+ * In the components layer, not unlayered: unlayered CSS outranks every
+ * Tailwind layer, so this would beat `text-ink` / `text-loss` and pin
+ * every mono run to one colour. In components, the tone utilities still
+ * win, and the mono ink applies where no colour was asked for.
+ */
+@layer components {
+  .font-mono {
+    color: var(--color-ink-mono);
+  }
 }
 
 .tabular {
@@ -543,6 +593,12 @@ summary:focus-visible {
 
 [data-mode="incident"].night-grid,
 [data-mode="incident"] .night-grid {
+  /* The night stage re-points the tonal roles at its own vocabulary: a sage
+     green on near-black fails contrast, and the stage has its own go/stop
+     tokens. Scoped exactly like the palette itself — a paper surface stays
+     paper, so this must not apply outside an incident root. */
+  --color-good: var(--color-go);
+  --color-loss: var(--color-stop);
   background-color: var(--color-night);
   background-image: radial-gradient(
     color-mix(in oklab, var(--color-fog) 14%, transparent) 1px,

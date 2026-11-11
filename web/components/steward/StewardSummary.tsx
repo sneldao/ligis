@@ -18,8 +18,8 @@ export function StewardSummary({
   if (!state.summary?.ok) return null;
 
   return (
-    <section className="space-y-5 border-l-2 border-sage pl-6">
-      <p className="eyebrow text-sage">what just happened</p>
+    <section className="space-y-5 border-l-2 border-good pl-6">
+      <p className="eyebrow text-good">what just happened</p>
       <dl className="grid grid-cols-[6.5rem_1fr] gap-x-6 border-t border-rule divide-y divide-rule">
         <dt className="pt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet">
           subject
@@ -118,7 +118,7 @@ export function StewardSummary({
       </div>
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-xs">
         <span
-          className={`font-mono tabular ${state.summary.live ? "text-sage" : "text-ink-quiet"}`}
+          className={`font-mono tabular ${state.summary.live ? "text-good" : "text-ink-quiet"}`}
         >
           {state.summary.live ? "● live on-chain" : "○ simulated"}
         </span>

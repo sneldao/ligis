@@ -50,7 +50,7 @@ export function VouchDesk({
           type="button"
           aria-pressed={intent === "revoke"}
           onClick={() => setIntent("revoke")}
-          className={`py-1.5 text-sm transition-colors ${intent === "revoke" ? "text-ink underline decoration-revoke decoration-1 underline-offset-4" : "text-ink-quiet hover:text-ink"}`}
+          className={`py-1.5 text-sm transition-colors ${intent === "revoke" ? "text-ink underline decoration-loss decoration-1 underline-offset-4" : "text-ink-quiet hover:text-ink"}`}
         >
           pull back
         </button>
@@ -157,13 +157,13 @@ export function VouchDesk({
         ) : state === null ? (
           <p className="font-serif text-sm italic text-ink-quiet">
             Vouch for a subject and the gate answers{" "}
-            <span className="text-sage not-italic">GO</span>. Pull it back and
+            <span className="text-good not-italic">GO</span>. Pull it back and
             the gate answers{" "}
-            <span className="text-revoke not-italic">STOP</span> — on the next
+            <span className="text-loss not-italic">STOP</span> — on the next
             read, not eventually.
           </p>
         ) : !state.ok ? (
-          <p role="alert" className="font-serif text-base text-revoke">
+          <p role="alert" className="font-serif text-base text-loss">
             {state.error}
           </p>
         ) : (
@@ -171,7 +171,7 @@ export function VouchDesk({
             <p className="font-serif text-lg leading-snug text-ink">
               {state.action === "issue" ? "Vouched." : "Pulled back."}{" "}
               <span
-                className={`font-mono text-sm tabular ${state.capable ? "text-sage" : "text-revoke"}`}
+                className={`font-mono text-sm tabular ${state.capable ? "text-good" : "text-loss"}`}
               >
                 <VerdictMark ok={state.capable} />{" "}
                 {state.capable ? "GO" : "STOP"}
