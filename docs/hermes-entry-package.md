@@ -4,7 +4,9 @@
 > and awaiting re-review after the security fixes.
 > **Deadline:** was 5:00 PM EST, Tue Nov 11 2026 — submission made before it.
 > **Catalog PR:** https://github.com/NousResearch/hermes-agent/pull/153409
-> **Sibling entry:** `elcaro` (#149503) — **merged** 2026-11-11 21:42 UTC.
+> **Sibling entries:** `elcaro` (#149503) — **merged** 2026-11-11 21:42 UTC,
+> live in the catalog. `lemma` (#149514) — **merged** 2026-11-10 09:45 UTC,
+> live in the catalog.
 
 ---
 
