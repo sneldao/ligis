@@ -1,8 +1,10 @@
 # ligis — Hermes entry package
 
-> **Status:** everything ready to post. Video rendered, PR open, form text drafted.
-> **Deadline:** 5:00 PM EST, Tue Nov 11 2026. (Now ~08:35 EST.)
+> **Status:** submitted. Demo posted to X, typeform received, catalog PR open
+> and awaiting re-review after the security fixes.
+> **Deadline:** was 5:00 PM EST, Tue Nov 11 2026 — submission made before it.
 > **Catalog PR:** https://github.com/NousResearch/hermes-agent/pull/153409
+> **Sibling entry:** `elcaro` (#149503) — **merged** 2026-11-11 21:42 UTC.
 
 ---
 
@@ -29,11 +31,17 @@ Containment is by **hairline and whitespace**, never a box — matching the
 product's own rule that a verdict is a 2px left rule in tone, not a card.
 The terminal is a printed specimen sheet, not a dark IDE panel.
 
-Source film: `/tmp/ligis_film/` (HyperFrames 0.9.30, `index.html` +
-assets, with the fonts copied into `assets/fonts/`).
-The terminal pane carries **real captured bytes** — a real 402 from the
-Ligis x402 server and the real `[LIGIS]` annotation the plugin appended.
-Nothing in the film is mocked.
+Source film: the HyperFrames 0.9.30 composition (`index.html` + assets,
+with the fonts copied from `web/app/fonts/`). The terminal pane carries
+**real captured bytes** — a real 402 from the Ligis x402 server and the
+real `[LIGIS]` annotation the plugin appended. Nothing in the film is mocked.
+
+The composition was built in `/tmp/ligis_film/`, which the machine has
+since reclaimed; the mp4 is the receipt. Rebuilding it means recreating the
+composition from this beat sheet — the tokens are `web/app/globals.css`
+verbatim, the faces are `web/app/fonts/`, and the captured bytes are in
+`/tmp/ligis_video/*.txt` (also ephemeral) or re-capturable with one
+`hermes --cli -z` call against a live x402 server.
 
 ### Beat sheet (in case you want to re-cut)
 
@@ -113,14 +121,16 @@ Fill in:
 | Thing              | Where                                                       |
 | ------------------ | ----------------------------------------------------------- |
 | Plugin source      | `sneldao/ligis` → `hermes-plugin/`                          |
-| Pinned commit      | `695335709f9930aa008cc7e7f1747752ec261e73`                  |
+| Pinned commit      | `b7f80a38fd20616650e6de8e6cbcab3f97a3de3a`                  |
 | Catalog PR         | https://github.com/NousResearch/hermes-agent/pull/153409    |
 | Catalog entry file | `plugin-catalog/ligis.yaml` in the PR                       |
 | Demo video         | `~/Downloads/ligis-hermes-demo.mp4`                         |
-| Film source        | `/tmp/ligis_film/` (not committed — the mp4 is the receipt) |
+| Film source        | ephemeral (`/tmp`) — the mp4 is the receipt; tokens/faces are `web/app/` |
 | Build plan         | `docs/hermes-plugin-plan.md` in `sneldao/ligis`             |
 
-**To rebuild the video:** `cd /tmp/ligis_film && npx --yes hyperframes@0.9.30 render --output ligis-demo.mp4`
+**To rebuild the video:** recreate the composition per the beat sheet above
+(tokens from `web/app/globals.css`, faces from `web/app/fonts/`), then
+`npx --yes hyperframes@0.9.30 render --output ligis-demo.mp4`.
 
 ---
 
@@ -130,8 +140,8 @@ Fill in:
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `hermes plugins validate --install-deps hermes-plugin`   | **passed**, no warnings, "security scan — safe", no Python dependencies                                                                                                 |
 | `hermes plugins doctor hermes-plugin --ci`               | **passed** — 5 tools, 2 hooks                                                                                                                                           |
-| `tests/test_ligis.py`                                    | **89/89** pass, offline                                                                                                                                                 |
-| `fixtures/selftest.py`                                   | **4/4** fixtures reproduce live from raw JSON-RPC                                                                                                                       |
+| `tests/test_ligis.py`                                    | **140/140** pass, offline (hermetic — a fixture registry answers the RPC, no network)                                                                                   |
+| `fixtures/selftest.py`                                   | **5/5** fixtures reproduce live from raw JSON-RPC, on Monad + Pharos                                                                                                   |
 | Catalog CI simulation on a clean clone at the pinned sha | **all four gates pass** (validate, payload scan, self-updater grep, confinement)                                                                                        |
 | `validate_plugin_catalog.py` on the entry file           | **valid**                                                                                                                                                               |
 | **Live Hermes session**                                  | 402 challenge annotated with the payee's verdict (both directions); payment to an uncredentialed payee **blocked**; payment to a credentialed payee **allowed through** |
@@ -181,3 +191,65 @@ that distinction rather than claiming portable credentials.
 - [x] Post `~/Downloads/ligis-hermes-demo.mp4` to X with the caption in §2, tagging @NousResearch — https://x.com/papajimjams/status/2120539259660595389
 - [x] Copy the post URL
 - [x] Submit the Typeform (§3) with the PR link and the post URL — submitted, confirmation "Submission Received" (receipt: `~/Downloads/ligis-typeform-receipt.png`)
+- [x] Open the catalog PR — #153409
+- [x] Address the maintainer's five security blockers and re-pin the sha — see §8
+- [ ] Maintainer re-review of the delta → merge → the marketplace listing
+- [x] Sibling entry `elcaro` (#149503) — **merged** 2026-11-11 21:42 UTC
+
+---
+
+## 8. The maintainer review, and what it changed
+
+`teknium1` reviewed the `hermes-plugin` subdir at `69533570` and returned
+**CHANGES_REQUESTED**. The review was right on every point, and the fix
+commit `b7f80a3` is now the pinned sha. What changed:
+
+**1. Self-issued credentials were possible — the important one.** `isCapable`
+accepts a credential from *any* issuer and the registry lets anyone issue
+for any subject, so a payee could self-issue for its own `payTo` and the
+gate would stay silent while the note claimed it held a live credential.
+Now `read_capability` takes `trusted_issuers` and confirms with the
+contract's `isCapableFromIssuer(subject, cap, issuer)`. With none
+configured or none matching, a present credential reports
+`unverified_issuer` — *present, but the issuer is not verified* — and
+escalates like an uncredentialed payee.
+
+**2. The unverified-TLS retry is gone.** The old code retried any TLS error
+with certificate checks off, so anyone on the network path could answer
+`isCapable = true`. The reviewer's correction: the bool is decoded
+straight from the response, so the old comment claiming a tampered response
+could not grant a capability was simply wrong. A TLS failure now raises
+`RpcError` → `unknown`.
+
+**3. The result hook is bounded.** It bails before parsing unless `payTo`
+appears in the result, dedupes, full-matches `0x[a-fA-F0-9]{40}`, checks
+at most 3 payees per result, and reports how many were skipped.
+
+**4. 402 fields are treated as untrusted data.** `pay_to`, `amount`,
+`asset`, `network` and RPC error text used to go into a `[LIGIS]` note
+unvalidated, so a hostile 402 body could forge plugin-voiced lines. Now
+control characters and newlines are stripped, whitespace collapsed, lengths
+capped, and values quoted as data.
+
+**5. The approval claim was wrong.** The docs said unattended runs refuse;
+in Hermes `--yolo` and `approvals.mode: off` *auto-approve* plugin
+escalations, and cron follows `approvals.cron_mode`. Corrected in the
+README, `plugin.yaml`, the skill and the docstring. It now also says that an
+unreadable registry does **not** gate.
+
+Going further, the fix commit also added the next layer of the same trust
+chain: the operator's `trusted_issuers` setting is the **sole** root of trust
+(tool arguments can narrow it, never widen it, so a payee — or text steering
+the model — cannot whitelist an issuer of its choosing); an endpoint probe
+checks `eth_chainId` and `eth_getCode` before the first read, so a
+wrong-chain endpoint or a codeless registry reads as `unknown`; the gate
+checks *every* destination a call names, not just the first; a
+`hook_time_budget_seconds` bounds total RPC wall-clock; and the unit suite
+is hermetic (140 offline tests, no network).
+
+**State at the pin `b7f80a3`:** `hermes plugins validate --install-deps`
+passes with no warnings (security scan: safe, no Python dependencies),
+`hermes plugins doctor --ci` passes (5 tools, 2 hooks), 140/140 offline
+tests pass, 5/5 live fixtures reproduce on Monad + Pharos, and the catalog
+CI simulation on a clean clone at that exact sha passes all four gates
+(validate, payload scan, self-updater grep, confinement).
