@@ -37,7 +37,7 @@
     "framer-motion": "^13.1.1",
     "genlayer-js": "^1.1.8",
     "maath": "^0.10.8",
-    "next": "^16.4.3",
+    "next": "^16.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "0.0.1",
