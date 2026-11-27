@@ -758,6 +758,11 @@ export async function revokeCredential(
       rpcUrl: ctx.config.network.rpcUrl,
     });
   } catch (sdkErr) {
+    if (process.env.LIGIS_CASPER_DEBUG) {
+      console.warn(
+        `[ligis-casper] SDK submission failed, trying CLI fallback: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}`,
+      );
+    }
     if (process.env.LIGIS_CASPER_KEY_PATH) {
       try {
         return await callStoredContractViaCli({
@@ -798,6 +803,11 @@ async function callRegistry(
       rpcUrl: ctx.config.network.rpcUrl,
     });
   } catch (sdkErr) {
+    if (process.env.LIGIS_CASPER_DEBUG) {
+      console.warn(
+        `[ligis-casper] SDK submission failed, trying CLI fallback: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}`,
+      );
+    }
     if (process.env.LIGIS_CASPER_KEY_PATH) {
       try {
         return await callStoredContractViaCli({
@@ -962,6 +972,11 @@ async function callContractByDeployment(
       rpcUrl: ctx.config.network.rpcUrl,
     });
   } catch (sdkErr) {
+    if (process.env.LIGIS_CASPER_DEBUG) {
+      console.warn(
+        `[ligis-casper] SDK submission failed, trying CLI fallback: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}`,
+      );
+    }
     if (process.env.LIGIS_CASPER_KEY_PATH) {
       try {
         return await callStoredContractViaCli({

@@ -347,9 +347,15 @@ function clValueToCasperClientArg(name: string, clValue: CLValueType): string {
     return `${name}:u8='${val}'`;
   }
 
-  // Bool
+  // Bool — SDK 5.x stores the bare boolean on `.bool` (there is no
+  // `.boolVal` and `.parsed` is undefined), so reach through the public
+  // accessor. The previous `.boolVal?.value ?? .parsed ?? false` chain
+  // silently serialized EVERY bool as false.
   if (typeName === "Bool") {
-    const val = v.boolVal?.value ?? v.parsed ?? false;
+    const val =
+      typeof v.getValueByType === "function"
+        ? v.getValueByType().getValue()
+        : v.bool === true;
     return `${name}:bool='${val}'`;
   }
 
@@ -425,18 +431,25 @@ async function pollTransactionWithCli(
       );
       const match = output.match(/"block_height":\s*(\d+)/);
       if (match) {
-        // Check for errors
+        // A reverted transaction is still included in a block — inclusion
+        // is not success. Fail loudly instead of reporting the block.
         const errMatch = output.match(/"error_message":\s*"([^"]+)"/);
         if (errMatch && errMatch[1] !== "null") {
-          console.error(`  Transaction execution error: ${errMatch[1]}`);
+          throw new Error(`transaction reverted on-chain: ${errMatch[1]}`);
         }
         return match[1];
       }
-    } catch {
-      // Transaction not found yet, keep polling
+    } catch (err) {
+      // Transaction not found yet, keep polling — unless it reverted.
+      if (
+        err instanceof Error &&
+        err.message.startsWith("transaction reverted")
+      ) {
+        throw err;
+      }
     }
   }
-  return "0";
+  throw new Error(`transaction ${txHash} not confirmed within ${timeoutMs}ms`);
 }
 
 function sleep(ms: number): Promise<void> {
