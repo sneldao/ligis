@@ -41,7 +41,7 @@ import {
   type CasperEip712Domain,
   type CredentialMessage,
 } from "./eip712";
-import { canonicalizeClaim, claimHash } from "@ligis/core";
+import { canonicalizeClaim, claimHash } from "@ligis/core/claim";
 
 const {
   Args,

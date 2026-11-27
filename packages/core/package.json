@@ -18,6 +18,10 @@
       "import": "./dist/hash.js",
       "types": "./dist/hash.d.ts"
     },
+    "./claim": {
+      "import": "./dist/claim.js",
+      "types": "./dist/claim.d.ts"
+    },
     "./trust": {
       "import": "./dist/trust.js",
       "types": "./dist/trust.d.ts"
