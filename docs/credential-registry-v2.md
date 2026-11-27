@@ -233,6 +233,8 @@ the issuer, not a frozen fact about the credential.
 
 Fresh package, no state carried over. V1 credentials on the old package
 remain readable; v2 becomes the address in `LIGIS_CASPER_CREDENTIAL_REGISTRY`.
+The read decoders accept both the v1 (70-byte) and v2 layouts, so the adapter
+keeps reading the v1 package until deployments switch over.
 Because hash space is shared, an agent's `kyc.basic` issued on v2 satisfies
 any consumer checking the same claim hash — including the unchanged EVM
 registries, which is the portability story continuing to hold.

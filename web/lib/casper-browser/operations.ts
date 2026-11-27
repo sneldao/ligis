@@ -397,6 +397,33 @@ function parseCredentialView(cl: unknown): VerifyResult["latest"] | null {
   // v2 layout (after a 4-byte u32 LE length prefix): issuer(20) ||
   // subject(32) || claim(u32 LE len ++ utf8) || issued_at(u64 LE) ||
   // expires_at(u64 LE) || revoked(bool) || valid(bool)
+  // v1 layout (no claim field): issuer(20) || subject(32) ||
+  // issued_at(u64 LE) || expires_at(u64 LE) || revoked(bool) || valid(bool)
+  // — exactly 74 bytes total; decoded with claim "".
+  const readU64 = (at: number) => {
+    const dv = new DataView(buf.buffer, buf.byteOffset + at, 8);
+    return (
+      BigInt(dv.getUint32(4, true) >>> 0) * 0x1_0000_0000n +
+      BigInt(dv.getUint32(0, true))
+    ).toString();
+  };
+  if (buf.length === 4 + 20 + 32 + 8 + 8 + 1 + 1) {
+    // v1
+    let o = 4;
+    const issuer =
+      "0x" +
+      Array.from(buf.slice(o, o + 20))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    o += 20 + 32; // subject (32 bytes) skipped
+    const issuedAt = readU64(o);
+    o += 8;
+    const expiresAt = readU64(o);
+    o += 8;
+    const revoked = buf[o] !== 0;
+    const valid = buf[o + 1] !== 0;
+    return { issuer, claim: "", issuedAt, expiresAt, revoked, valid };
+  }
   if (buf.length < 4 + 20 + 32 + 4 + 8 + 8 + 1 + 1) return null;
   let o = 4;
   const issuer =

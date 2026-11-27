@@ -560,14 +560,19 @@ export async function credentialStanding(
   }
 }
 
-/** Parse a CredentialView stored as List<U8> bytes (v2 layout).
+/** Parse a CredentialView stored as List<U8> bytes (v1 and v2 layouts).
  *
- * The bytes (after the 4-byte length prefix) are:
+ * v2 bytes (after the 4-byte length prefix):
  *   issuer: [u8; 20] | subject: [u8; 32] | claim: String (u32 LE len ++ utf8)
  *   | issued_at: u64 LE | expires_at: u64 LE | revoked: bool | valid: bool
- * (v1 stored no `claim` field — this decoder only matches v2 packages.)
+ *   — at least 74 bytes.
+ * v1 stores no `claim` field:
+ *   issuer: [u8; 20] | subject: [u8; 32] | issued_at: u64 LE
+ *   | expires_at: u64 LE | revoked: bool | valid: bool
+ *   — exactly 70 bytes, decoded with `claim: ""` so the adapter can keep
+ *   reading credentials issued by a v1 registry package.
  */
-function parseCredentialViewBytes(clValue: any): {
+export function parseCredentialViewBytes(clValue: any): {
   issuer: string;
   claim: string;
   issuedAt: string;
@@ -588,12 +593,23 @@ function parseCredentialViewBytes(clValue: any): {
     revoked: false,
     valid: false,
   };
-  if (data.length < 74) return empty;
   let offset = 0;
   const issuer = "0x" + data.subarray(offset, offset + 20).toString("hex");
   offset += 20;
   // subject (32 bytes) — skip, not needed for verification
   offset += 32;
+  if (data.length === 70) {
+    // v1 layout — no claim field
+    const issuedAt = data.readBigUInt64LE(offset).toString();
+    offset += 8;
+    const expiresAt = data.readBigUInt64LE(offset).toString();
+    offset += 8;
+    const revoked = data[offset] !== 0;
+    offset += 1;
+    const valid = data[offset] !== 0;
+    return { issuer, claim: "", issuedAt, expiresAt, revoked, valid };
+  }
+  if (data.length < 74) return empty;
   const claimLen = data.readUInt32LE(offset);
   offset += 4;
   if (offset + claimLen + 18 > data.length) return empty;
