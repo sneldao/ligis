@@ -21,7 +21,6 @@
  */
 import * as casperSdk from "casper-js-sdk";
 import { blake2b } from "@noble/hashes/blake2b";
-import { keccak_256 } from "@noble/hashes/sha3";
 import {
   getBalanceMotes,
   getLatestBlockInfo,
@@ -30,7 +29,11 @@ import {
   rpcCall,
   waitForDeploy,
 } from "./rpc";
-import { evmAddressFromSecpKey, generateKeyPair, type CasperKeyPair } from "./keypair";
+import {
+  evmAddressFromSecpKey,
+  generateKeyPair,
+  type CasperKeyPair,
+} from "./keypair";
 import {
   buildCredentialDomain,
   signCredentialMessage,
@@ -38,6 +41,7 @@ import {
   type CasperEip712Domain,
   type CredentialMessage,
 } from "./eip712";
+import { canonicalizeClaim, claimHash } from "@ligis/core";
 
 const {
   Args,
@@ -85,6 +89,7 @@ export interface VerifyResult {
   capabilityHash: `0x${string}`;
   latest: {
     issuer: string;
+    claim: string;
     issuedAt: string;
     expiresAt: string;
     revoked: boolean;
@@ -100,6 +105,8 @@ export interface SubmitCredentialResult {
 export interface SignedCredential {
   issuer: `0x${string}`;
   subject: string;
+  /** Canonical claim string (registry v2). */
+  claim: string;
   capabilityHash: `0x${string}`;
   issuedAt: string;
   expiresAt: string;
@@ -141,11 +148,20 @@ function stripAccountHashPrefix(hash: string): string {
 }
 
 function stripPackagePrefix(hash: string): string {
-  return hash.replace(/^contract-package-/, "").replace(/^hash-/, "").replace(/^0x/, "");
+  return hash
+    .replace(/^contract-package-/, "")
+    .replace(/^hash-/, "")
+    .replace(/^0x/, "");
 }
 
-function requirePackage(env: CasperOpEnv, which: "agentId" | "credentialRegistry"): string {
-  const v = which === "agentId" ? env.agentIdPackageHash : env.credentialRegistryPackageHash;
+function requirePackage(
+  env: CasperOpEnv,
+  which: "agentId" | "credentialRegistry",
+): string {
+  const v =
+    which === "agentId"
+      ? env.agentIdPackageHash
+      : env.credentialRegistryPackageHash;
   if (!v) {
     throw new Error(
       `Cas browser: ${which} contract not configured. Set NEXT_PUBLIC_LIGIS_CASPER_${which.toUpperCase() === "AGENTID" ? "AGENT_ID" : "CREDENTIAL_REGISTRY"}.`,
@@ -155,19 +171,25 @@ function requirePackage(env: CasperOpEnv, which: "agentId" | "credentialRegistry
 }
 
 function pkgBytes(pkgHash: string): Uint8Array {
-  return hexToBytes(pkgHash.replace(/^0x/, "").replace(/^contract-package-/, "").replace(/^hash-/, "").padEnd(64, "0").slice(-64));
+  return hexToBytes(
+    pkgHash
+      .replace(/^0x/, "")
+      .replace(/^contract-package-/, "")
+      .replace(/^hash-/, "")
+      .padEnd(64, "0")
+      .slice(-64),
+  );
 }
 
-// Vector matching `capabilityHash` in @ligis/core.
-function keccak256OfText(text: string): `0x${string}` {
-  const data = new TextEncoder().encode(text);
-  return bytesToHex(keccak_256(data));
-}
+// Capability/claim hashes come from @ligis/core (canonicalizeClaim + claimHash)
+// so the browser and Node adapters can never produce divergent encodings.
 
 // ---------- state queries (byte 1 of the read protocol) ----------
 
 interface GetDictionaryResp {
-  result?: { stored_value?: { CLValue?: { bytes?: string; parsed?: unknown } } };
+  result?: {
+    stored_value?: { CLValue?: { bytes?: string; parsed?: unknown } };
+  };
 }
 
 async function getDictionaryItem(
@@ -201,7 +223,14 @@ async function resolveState(
     { key: pkgAddr, path: [] },
   ])) as {
     result?: {
-      stored_value?: { ContractPackage?: { versions?: Array<{ contract_hash?: string; protocol_version?: string }> } };
+      stored_value?: {
+        ContractPackage?: {
+          versions?: Array<{
+            contract_hash?: string;
+            protocol_version?: string;
+          }>;
+        };
+      };
     };
   };
   const pkg = globalState?.result?.stored_value?.ContractPackage;
@@ -219,9 +248,14 @@ async function resolveState(
       path: [],
     },
   ])) as {
-    result?: { stored_value?: { Contract?: { named_keys?: Array<{ name: string; key: string }> } } };
+    result?: {
+      stored_value?: {
+        Contract?: { named_keys?: Array<{ name: string; key: string }> };
+      };
+    };
   };
-  const namedKeys = contractState?.result?.stored_value?.Contract?.named_keys ?? [];
+  const namedKeys =
+    contractState?.result?.stored_value?.Contract?.named_keys ?? [];
   const stateEntry = namedKeys.find((k) => k.name === "state");
   if (!stateEntry) return null;
   return { contractHashHex, stateUref: stateEntry.key };
@@ -252,7 +286,11 @@ export async function getAgentIdFromController(
   const acctHashBytes = pubKey.accountHash().toBytes();
   const dictItemKey = bytesToHex(blake2b(acctHashBytes, { dkLen: 32 }));
   const stateRoot = await getStateRootHash();
-  const cl = await getDictionaryItem(stateRoot, stripAccountHashPrefix(dictItemKey), stateUref);
+  const cl = await getDictionaryItem(
+    stateRoot,
+    stripAccountHashPrefix(dictItemKey),
+    stateUref,
+  );
   if (!cl) return "0";
   const parsed = (cl as { parsed?: unknown }).parsed;
   if (typeof parsed === "string" && parsed !== "0") return parsed;
@@ -283,12 +321,20 @@ function AccountHash_Bytes(accountHash: string): Uint8Array {
  */
 export async function verifyCapability(
   env: CasperOpEnv,
-  opts: { subject: string; capability: CapabilityRef | string; issuer?: string },
+  opts: {
+    subject: string;
+    capability: CapabilityRef | string;
+    issuer?: string;
+  },
 ): Promise<VerifyResult> {
-  const cap =
+  // v2: capability is a claim — canonicalize (param ordering, case)
+  // before hashing so callers can't produce divergent encodings.
+  const capName =
     typeof opts.capability === "string"
-      ? { name: opts.capability, hash: keccak256OfText(opts.capability) as `0x${string}` }
-      : opts.capability;
+      ? opts.capability
+      : opts.capability.name;
+  const canonical = canonicalizeClaim(capName);
+  const cap = { name: canonical, hash: claimHash(canonical) as `0x${string}` };
   if (!env.credentialRegistryPackageHash) {
     return emptyVerify(cap.hash);
   }
@@ -307,7 +353,11 @@ export async function verifyCapability(
   concat.set(capHashBytes, 36);
   const dictItemKey = bytesToHex(blake2b(concat, { dkLen: 32 })).slice(2);
   const stateRoot = await getStateRootHash();
-  const cl = await getDictionaryItem(stateRoot, dictItemKey, resolved.stateUref);
+  const cl = await getDictionaryItem(
+    stateRoot,
+    dictItemKey,
+    resolved.stateUref,
+  );
   if (!cl) return emptyVerify(cap.hash);
   const view = parseCredentialView(cl);
   if (!view) return emptyVerify(cap.hash);
@@ -328,6 +378,7 @@ function emptyVerify(hash: `0x${string}`): VerifyResult {
     capabilityHash: hash,
     latest: {
       issuer: "0x" + "00".repeat(20),
+      claim: "",
       issuedAt: "0",
       expiresAt: "0",
       revoked: false,
@@ -343,9 +394,10 @@ function parseCredentialView(cl: unknown): VerifyResult["latest"] | null {
   for (let i = 0; i < buf.length; i++) {
     buf[i] = parseInt(bytesHex.slice(i * 2, i * 2 + 2), 16);
   }
-  // Layout (after a 4-byte u32 LE length prefix): issuer(20) || subject(32) ||
-  // issued_at(u64 LE) || expires_at(u64 LE) || revoked(bool) || valid(bool)
-  if (buf.length < 4 + 20 + 32 + 8 + 8 + 1 + 1) return null;
+  // v2 layout (after a 4-byte u32 LE length prefix): issuer(20) ||
+  // subject(32) || claim(u32 LE len ++ utf8) || issued_at(u64 LE) ||
+  // expires_at(u64 LE) || revoked(bool) || valid(bool)
+  if (buf.length < 4 + 20 + 32 + 4 + 8 + 8 + 1 + 1) return null;
   let o = 4;
   const issuer =
     "0x" +
@@ -353,6 +405,14 @@ function parseCredentialView(cl: unknown): VerifyResult["latest"] | null {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
   o += 20 + 32; // subject (32 bytes) skipped
+  const claimLen = new DataView(buf.buffer, buf.byteOffset + o, 4).getUint32(
+    0,
+    true,
+  );
+  o += 4;
+  if (o + claimLen + 18 > buf.length) return null;
+  const claim = new TextDecoder().decode(buf.slice(o, o + claimLen));
+  o += claimLen;
   const dv = new DataView(buf.buffer, buf.byteOffset + o, 8);
   const issuedAtLo = BigInt(dv.getUint32(0, true));
   const issuedAtHi = BigInt(dv.getUint32(4, true) >>> 0);
@@ -365,7 +425,7 @@ function parseCredentialView(cl: unknown): VerifyResult["latest"] | null {
   o += 8;
   const revoked = buf[o] !== 0;
   const valid = buf[o + 1] !== 0;
-  return { issuer, issuedAt, expiresAt, revoked, valid };
+  return { issuer, claim, issuedAt, expiresAt, revoked, valid };
 }
 
 // ---------- nonce read ----------
@@ -387,7 +447,11 @@ async function readIssuerNonce(
   const dictItemKey = bytesToHex(blake2b(concat, { dkLen: 32 })).slice(2);
   const stateRoot = await getStateRootHash();
   try {
-    const cl = await getDictionaryItem(stateRoot, dictItemKey, resolved.stateUref);
+    const cl = await getDictionaryItem(
+      stateRoot,
+      dictItemKey,
+      resolved.stateUref,
+    );
     if (!cl) return 0n;
     const bytesHex = (cl as { bytes?: string }).bytes ?? "";
     if (!bytesHex) return 0n;
@@ -420,10 +484,12 @@ export async function buildCredentialMessage(
     expiresInSeconds?: number;
   },
 ): Promise<SignedCredential> {
-  const cap =
+  const capName =
     typeof opts.capability === "string"
-      ? { name: opts.capability, hash: keccak256OfText(opts.capability) as `0x${string}` }
-      : opts.capability;
+      ? opts.capability
+      : opts.capability.name;
+  const canonical = canonicalizeClaim(capName);
+  const cap = { name: canonical, hash: claimHash(canonical) as `0x${string}` };
   const issuer = evmAddressFromSecpKey(opts.issuerPrivateKeyHex);
   const issuedAt = BigInt(Math.floor(Date.now() / 1000));
   const expiresIn = BigInt(opts.expiresInSeconds ?? 30 * 24 * 60 * 60);
@@ -439,7 +505,7 @@ export async function buildCredentialMessage(
   const message: CredentialMessage = {
     issuer,
     subject: subjectBytes32,
-    capabilityHash: cap.hash,
+    claim: cap.name,
     issuedAt: issuedAt.toString(),
     expiresAt: expiresAt.toString(),
     nonce: nonce.toString(),
@@ -453,6 +519,7 @@ export async function buildCredentialMessage(
   return {
     issuer: issuer as `0x${string}`,
     subject: opts.subject,
+    claim: cap.name,
     capabilityHash: cap.hash,
     issuedAt: issuedAt.toString(),
     expiresAt: expiresAt.toString(),
@@ -471,8 +538,11 @@ export async function submitCredential(
   const pkgHash = requirePackage(env, "credentialRegistry");
   const args = new Map<string, ReturnType<typeof CLValue.newCLByteArray>>();
   args.set("issuer", CLValue.newCLByteArray(hexToBytes(signed.issuer)));
-  args.set("subject", CLValue.newCLByteArray(hexToBytes(stripAccountHashPrefix(signed.subject))));
-  args.set("capability_hash", CLValue.newCLByteArray(hexToBytes(signed.capabilityHash)));
+  args.set(
+    "subject",
+    CLValue.newCLByteArray(hexToBytes(stripAccountHashPrefix(signed.subject))),
+  );
+  args.set("claim", CLValue.newCLString(signed.claim));
   args.set("issued_at", CLValue.newCLUint64(BigInt(signed.issuedAt)));
   args.set("expires_at", CLValue.newCLUint64(BigInt(signed.expiresAt)));
   args.set("nonce", CLValue.newCLUint64(BigInt(signed.nonce)));
@@ -539,7 +609,10 @@ export async function anchorEvidence(
     signer,
     packageHashHex: pkgHash,
     entryPoint: "set_token_uri",
-    args: args as unknown as Map<string, ReturnType<typeof CLValue.newCLByteArray>>,
+    args: args as unknown as Map<
+      string,
+      ReturnType<typeof CLValue.newCLByteArray>
+    >,
     paymentAmount: 3_000_000_000,
   });
   const { blockHeight } = await waitForDeploy(txHash, { timeoutMs: 180_000 });
@@ -575,7 +648,10 @@ async function callStoredContract(opts: CallContractOpts): Promise<string> {
   type CLValueInstance = InstanceType<typeof CLValue>;
   const argsMap = opts.args as unknown as Map<string, CLValueInstance>;
 
-  const pk = PrivateKey.fromHex(opts.signer.privateKeyHex.replace(/^0x/, ""), KeyAlgorithm.SECP256K1);
+  const pk = PrivateKey.fromHex(
+    opts.signer.privateKeyHex.replace(/^0x/, ""),
+    KeyAlgorithm.SECP256K1,
+  );
   const publicKey = pk.publicKey;
   const initiatorAddr = new InitiatorAddr(publicKey);
 
@@ -611,13 +687,16 @@ async function callStoredContract(opts: CallContractOpts): Promise<string> {
   const pricingMode = new PricingMode();
   pricingMode.paymentLimited = new PaymentLimitedMode();
   pricingMode.paymentLimited.gasPriceTolerance = 1;
-  pricingMode.paymentLimited.paymentAmount = opts.paymentAmount ?? DEFAULT_PAYMENT_AMOUNT;
+  pricingMode.paymentLimited.paymentAmount =
+    opts.paymentAmount ?? DEFAULT_PAYMENT_AMOUNT;
   pricingMode.paymentLimited.standardPayment = false;
 
   const scheduling = new TransactionScheduling();
   scheduling.standard = {};
 
-  const argsInstance = new Args(argsMap as unknown as Map<string, CLValueInstance>);
+  const argsInstance = new Args(
+    argsMap as unknown as Map<string, CLValueInstance>,
+  );
   // Defense-in-depth: trip before signing if the SDK silently dropped
   // our entry-point name. Custom=tag 1; Call=tag 0. Anything else
   // means we shipped a broken payload.
@@ -655,9 +734,16 @@ function toJsonBytes(tx: unknown): unknown {
     return anyTx.toJSON();
   }
   if (typeof anyTx.toBytes === "function") {
-    return "0x" + Array.from(anyTx.toBytes()).map((b) => b.toString(16).padStart(2, "0")).join("");
+    return (
+      "0x" +
+      Array.from(anyTx.toBytes())
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+    );
   }
-  throw new Error("Browser: Transaction object exposes neither toJSON nor toBytes");
+  throw new Error(
+    "Browser: Transaction object exposes neither toJSON nor toBytes",
+  );
 }
 
 /**

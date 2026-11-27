@@ -67,6 +67,8 @@ export interface NetworksFile {
  */
 export interface CredentialView {
   issuer: string;
+  /** Canonical claim string (v2 registries store it; v1 leaves it empty). */
+  claim?: string;
   issuedAt: string;
   expiresAt: string;
   revoked: boolean;
@@ -81,6 +83,8 @@ export interface CredentialView {
 export interface SignedCredential {
   issuer: string;
   subject: string;
+  /** Canonical claim string — required by v2 registries, absent on v1. */
+  claim?: string;
   capabilityHash: CapabilityHash;
   issuedAt: string;
   expiresAt: string;

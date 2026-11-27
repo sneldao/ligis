@@ -47,6 +47,28 @@ RUSTFLAGS="-C target-feature=-bulk-memory,-bulk-memory-opt" \
     -- -C linker=/usr/local/bin/wasm-ld
 cp target/wasm32-unknown-unknown/release/ligis_contracts_casper_build_contract.wasm wasm/CredentialRegistry.wasm
 
+# OutcomeFeed (M2 reputation receipts):
+RUSTFLAGS="-C target-feature=-bulk-memory,-bulk-memory-opt" \
+  ODRA_MODULE=OutcomeFeed \
+  RUSTC_BOOTSTRAP=1 \
+  rustup run nightly-2026-01-01-aarch64-apple-darwin cargo rustc \
+    --release --target wasm32-unknown-unknown \
+    --bin ligis_contracts_casper_build_contract \
+    -Zbuild-std=core,alloc \
+    -- -C linker=rust-lld
+cp target/wasm32-unknown-unknown/release/ligis_contracts_casper_build_contract.wasm wasm/OutcomeFeed.wasm
+
+# PolicyGuard (M3 spend/policy enforcement; init arg: credential_registry Address):
+RUSTFLAGS="-C target-feature=-bulk-memory,-bulk-memory-opt" \
+  ODRA_MODULE=PolicyGuard \
+  RUSTC_BOOTSTRAP=1 \
+  rustup run nightly-2026-01-01-aarch64-apple-darwin cargo rustc \
+    --release --target wasm32-unknown-unknown \
+    --bin ligis_contracts_casper_build_contract \
+    -Zbuild-std=core,alloc \
+    -- -C linker=rust-lld
+cp target/wasm32-unknown-unknown/release/ligis_contracts_casper_build_contract.wasm wasm/PolicyGuard.wasm
+
 # GatedVault (credential-gated escrow DeFi primitive):
 RUSTFLAGS="-C target-feature=-bulk-memory,-bulk-memory-opt" \
   ODRA_MODULE=GatedVault \
@@ -65,6 +87,21 @@ Key points:
 - `-C target-feature=-bulk-memory,-bulk-memory-opt` is required — Casper's WASM runtime doesn't support bulk memory operations
 - `-C linker=/usr/local/bin/wasm-ld` is needed because the nightly toolchain doesn't include `rust-lld` for wasm32
 - `RUSTC_BOOTSTRAP=1` allows using `-Zbuild-std` on nightly
+
+### Testnet budget policy (resource-constrained dev machine)
+
+- **Dev loop = Odra test-vm, not testnet.** `cargo test` deploys and
+  exercises contracts in-process (deploy, issue, cross-contract calls) —
+  no node, no CSPR. Iterate there.
+- **Testnet is a demo budget, not a dev budget.** Deploy each contract
+  once per WASM change; batch deploys in one session; keep
+  `standardPayment=false` so failed deploys cost gas-consumed only.
+- **No localnet** (`nctl` too heavy for this machine).
+- **Prefer admin ops over redeploys** (`set_namespace_policy`,
+  `set_issuer_accreditation`, `set_policy`, `set_admin`).
+- **Funding**: deployer `0203f6ff…2c0552` via
+  https://testnet.cspr.live/tools/faucet; durable fix is a one-time
+  testnet allocation ask under Casper Forward "builder support".
 
 ### Deploying to Testnet
 

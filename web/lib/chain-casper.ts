@@ -1,4 +1,5 @@
 import "server-only";
+import { claimHash, canonicalizeClaim } from "@ligis/core";
 import { CasperAdapter } from "@ligis/adapter-casper";
 import { loadCasperConfig } from "@ligis/adapter-casper";
 import { buildCasperClient } from "@ligis/adapter-casper";
@@ -39,10 +40,14 @@ export const capabilities: ReadonlyArray<CapabilityRef> =
 
 export type CredentialView = {
   issuer: Hex;
+  claim?: string;
   issuedAt: bigint;
   expiresAt: bigint;
   revoked: boolean;
   valid: boolean;
+  /** v2: issuer accreditation standing (null = unknown/not v2). */
+  issuerAccredited?: boolean | null;
+  accreditationRequired?: boolean | null;
 };
 
 export type HeldCredential = {
@@ -158,12 +163,21 @@ export async function readCredential(
       subject,
       capability: capId,
     });
+    const standing = await (adapter() as any)
+      .credentialStanding?.({
+        subject,
+        claim: capId,
+      })
+      .catch(() => null);
     return {
       issuer: result.latest.issuer as Hex,
+      claim: result.latest.claim || undefined,
       issuedAt: BigInt(result.latest.issuedAt),
       expiresAt: BigInt(result.latest.expiresAt),
       revoked: result.latest.revoked,
       valid: result.latest.valid,
+      issuerAccredited: standing?.issuerAccredited ?? null,
+      accreditationRequired: standing?.accreditationRequired ?? null,
     };
   } catch {
     return {
@@ -437,6 +451,7 @@ export async function readCapabilityHistory(
 
             let subjectBytes: Uint8Array | null = null;
             let capHashBytes: Uint8Array | null = null;
+            let claimStr: string | null = null;
 
             if (args instanceof Map) {
               const subjectArg = args.get("subject");
@@ -445,24 +460,39 @@ export async function readCapabilityHistory(
                   subjectArg.value?.data ?? subjectArg.data ?? subjectArg;
                 if (data instanceof Uint8Array) subjectBytes = data;
               }
-              const capArg = args.get("capability_hash");
-              if (capArg) {
-                const data = capArg.value?.data ?? capArg.data ?? capArg;
+              // v2: issue carries `claim` (CLString); revoke carries
+              // `claim_hash` (bytes). v1 issue/revoke carried
+              // `capability_hash` (bytes) — keep as fallback.
+              const claimArg = args.get("claim");
+              if (claimArg) {
+                const v = claimArg.value?.data ?? claimArg.data ?? claimArg;
+                if (typeof v === "string") claimStr = v;
+                else if (typeof v === "object" && v !== null && "toString" in v)
+                  claimStr = String(v);
+              }
+              const hashArg =
+                args.get("claim_hash") ?? args.get("capability_hash");
+              if (hashArg) {
+                const data = hashArg.value?.data ?? hashArg.data ?? hashArg;
                 if (data instanceof Uint8Array) capHashBytes = data;
               }
             }
 
-            if (!subjectBytes || !capHashBytes) continue;
+            if (!subjectBytes || (!capHashBytes && !claimStr)) continue;
 
             const subjectHex = Array.from(subjectBytes)
               .map((b: number) => b.toString(16).padStart(2, "0"))
               .join("");
             if (subjectHex.toLowerCase() !== subjectLower) continue;
 
-            const capHashHex = ("0x" +
-              Array.from(capHashBytes)
-                .map((b: number) => b.toString(16).padStart(2, "0"))
-                .join("")) as Hex;
+            const capHashHex = (
+              capHashBytes
+                ? "0x" +
+                  Array.from(capHashBytes)
+                    .map((b: number) => b.toString(16).padStart(2, "0"))
+                    .join("")
+                : claimHash(canonicalizeClaim(claimStr!))
+            ) as Hex;
             const blockNum = BigInt(block.header.height);
 
             changes.push({
