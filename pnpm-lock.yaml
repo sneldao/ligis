@@ -494,8 +494,8 @@ importers:
         specifier: ^6.13.1
         version: 6.17.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       framer-motion:
-        specifier: ^13.1.1
-        version: 13.1.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^14.14.0
+        version: 14.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       genlayer-js:
         specifier: ^1.1.8
         version: 1.1.8(bufferutil@4.1.0)(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.7)
@@ -6670,18 +6670,21 @@ packages:
       }
     engines: { node: ">= 0.6" }
 
-  framer-motion@13.1.1:
+  framer-motion@14.14.0:
     resolution:
       {
-        integrity: sha512-B/xn2TPS4f61cEBLFjiYlQFnBZUW1YVj/LM+C+N4OP8Rs95VLEI2ot/RlfBg111la/EiyECFaJJi/A3FWA8MUA==,
+        integrity: sha512-fidRX0VzkZdA9OovFiBSzJtt9/jLcJpna78Z+KCqQQZIWoIpN3tOhEXAhhAw/FObUUh+o3Y18yx1F4BP0mVJ8Q==,
       }
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
+      remix: ^3.1.0
     peerDependenciesMeta:
       react:
         optional: true
       react-dom:
+        optional: true
+      remix:
         optional: true
 
   fresh@0.5.2:
@@ -8245,16 +8248,16 @@ packages:
       typescript:
         optional: true
 
-  motion-dom@13.1.1:
+  motion-dom@14.14.0:
     resolution:
       {
-        integrity: sha512-XSf8VYWSB6G/0IY3rWVbyLcxWXtAVHkN1PQE2agTaCv3u8RGvbwu56TyyR/MNzBqqNavEBTZzErcxI1TxBrjcA==,
+        integrity: sha512-IAxcKhYkuQA2W0Tlx1AvVgImfqEoF3/t3IovbPQJlYkefmGsmrXjn967lMII5VmFmLpQEab4+ZkHo/ijJ4Esig==,
       }
 
-  motion-utils@13.0.0:
+  motion-utils@14.7.0:
     resolution:
       {
-        integrity: sha512-7DnN7TmbLcYXcG4RVadXIihWlyuM9afoUww8Y5Agg431kGKiuL2/OMyP4mJ5wLz+pvN3t5ySClLOaVXJ+wekRQ==,
+        integrity: sha512-woO0/Nb7ys75f94fjvQi/6leiHGvZUYkeHUPEZ3vxsV+9OpEVhkxp01x8MlRwX0zt31EqgXsKDAoBoJLC148Tw==,
       }
 
   ms@2.0.0:
@@ -12909,7 +12912,7 @@ snapshots:
       "@noble/hashes": 1.8.0
       "@scure/base": 1.2.6
       "@types/debug": 4.1.13
-      debug: 4.3.4
+      debug: 4.4.3(supports-color@8.1.1)
       pony-cause: 2.1.11
       semver: 7.8.6
       uuid: 9.0.1
@@ -17334,7 +17337,7 @@ snapshots:
 
   extension-port-stream@3.0.0:
     dependencies:
-      readable-stream: 3.6.2
+      readable-stream: 4.8.0
       webextension-polyfill: 0.10.0
 
   fast-copy@3.1.0: {}
@@ -17460,11 +17463,11 @@ snapshots:
 
   forwarded@0.2.0: {}
 
-  framer-motion@13.1.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+  framer-motion@14.14.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
-      motion-dom: 13.1.1
-      motion-utils: 13.0.0
-      tslib: 2.8.1
+      motion-dom: 14.14.0
+      motion-utils: 14.7.0
+      tslib: 2.9.1
     optionalDependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
@@ -18317,11 +18320,11 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
-  motion-dom@13.1.1:
+  motion-dom@14.14.0:
     dependencies:
-      motion-utils: 13.0.0
+      motion-utils: 14.7.0
 
-  motion-utils@13.0.0: {}
+  motion-utils@14.7.0: {}
 
   ms@2.0.0: {}
 
@@ -19840,7 +19843,7 @@ snapshots:
 
   typedjson@1.8.0:
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
 
   typescript-parsec@0.3.4: {}
 
