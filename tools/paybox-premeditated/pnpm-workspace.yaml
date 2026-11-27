@@ -3,3 +3,6 @@ packages:
 
 allowBuilds:
   esbuild: true
+
+overrides:
+  zod: ">=4.6.6"

@@ -1,12 +1,13 @@
 # Ligis — Product Strategy & Roadmap
 
-> **A spend firewall for AI agents: every payment is checked against the
-> job before money moves.** Ligis aggregates external verification signals
-> into portable on-chain credentials, then uses them — alongside intent
-> checks — as one signal (verified payee) inside that decision. Distribution:
-> CROO Agent Store today for agent-to-agent, a direct API for agent owners;
-> OKX.AI is a planned second channel (Phase 3, not live). Built on 0G Compute
-> and 0G Storage.
+> **Evidence-based payment control for autonomous finance: an agent pays
+> for what the business actually authorized, not simply what it requests.**
+> The order-bound controller (Airwallex first) is the lead product. The
+> on-chain credential layer aggregates external verification signals into
+> portable credentials and feeds one signal (verified payee) into the
+> decision. Distribution: CROO Agent Store today for agent-to-agent, a
+> direct API for agent owners; OKX.AI is a planned second channel (Phase 3,
+> not live). Built on 0G Compute and 0G Storage.
 >
 > Positioning, glossary, and measured claims live in
 > [`docs/positioning.md`](./positioning.md). This doc covers strategy,

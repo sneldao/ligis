@@ -99,7 +99,7 @@
       "fast-uri": ">=4.2.3",
       "zod": ">=4.6.6",
       "brace-expansion": ">=5.0.12",
-      "@hono/node-server": ">=2.0.5",
+      "@hono/node-server": ">=2.1.6",
       "hono": ">=4.13.7",
       "axios": ">=1.20.0",
       "follow-redirects": ">=1.16.2",
