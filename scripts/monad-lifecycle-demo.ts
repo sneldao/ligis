@@ -28,7 +28,7 @@
  *   LIGIS_MONAD_SUBJECT      credential subject (default 0x…decaf demo address)
  *   LIGIS_MONAD_RPC_URL      RPC override (default from assets/networks.json)
  *
- * Tx hashes are written to scripts/monad-lifecycle-demo.lastrun.txt so a
+ * Tx hashes are written to scripts/lastrun/monad-lifecycle-demo.lastrun.txt so a
  * submission document can link to verified explorer pages. Exits 0 on
  * success, 1 on any checked failure.
  */
@@ -299,6 +299,7 @@ async function main(): Promise<void> {
 
   const outPath = resolve(
     import.meta.dirname,
+    "lastrun",
     "monad-lifecycle-demo.lastrun.txt",
   );
   writeFileSync(

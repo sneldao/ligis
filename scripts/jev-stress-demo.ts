@@ -18,7 +18,7 @@
  *     the Jev verdict lands on the 401 regardless, which is the point.
  *
  * Output: per-request verdict table + totals, and a lastrun file at
- * scripts/jev-stress-demo.lastrun.txt.
+ * scripts/lastrun/jev-stress-demo.lastrun.txt.
  */
 
 const GATE_URL = process.env.LIGIS_GATE_URL ?? "http://localhost:4040";
@@ -237,10 +237,10 @@ async function main() {
   ].join("\n");
   const { writeFileSync } = await import("node:fs");
   writeFileSync(
-    new URL("./jev-stress-demo.lastrun.txt", import.meta.url),
+    new URL("./lastrun/jev-stress-demo.lastrun.txt", import.meta.url),
     lastrun + "\n",
   );
-  console.log(`\nlastrun → scripts/jev-stress-demo.lastrun.txt`);
+  console.log(`\nlastrun → scripts/lastrun/jev-stress-demo.lastrun.txt`);
 }
 
 main().catch((err) => {

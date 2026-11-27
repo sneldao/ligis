@@ -13,7 +13,7 @@ for the explorer-link field.
 > **Interface freeze:** aligned to [`docs/genlayer-interface-v1.md`](../../docs/genlayer-interface-v1.md)
 > (Stream 0, LOCKED). Method names, status enum, `GateReceipt` schema, and default
 > capability (`agent.commerce.escrow`) match the freeze exactly. Shared TS types
-> live in `@ligis/core` → `genlayer.ts`.
+> live in `@ligis/adapter-genlayer` → `interface.ts`.
 
 ## Contract
 
@@ -104,7 +104,7 @@ python deploy.py --stop              # also show the STOP gate path
 ```
 
 `deploy.py` targets `studio_devnet` (chain 61997) via `genlayer-py` and writes
-`scripts/genlayer-agent-tank-demo.lastrun.txt` with the contract address, job id,
+`scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt` with the contract address, job id,
 and explorer URL for Stream 3's one-command demo.
 
 ## Test
@@ -135,7 +135,7 @@ set -a && source .env.d/casper.env && set +a
 cd packages/contracts-genlayer
 pip install -r requirements.txt
 python deploy.py
-# -> scripts/genlayer-agent-tank-demo.lastrun.txt
+# -> scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt
 # -> explorer: https://explorer-studio-dev.genlayer.com/address/0x...
 ```
 

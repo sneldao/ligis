@@ -16,7 +16,7 @@ Target: Shielded Payments track. Recorded against `pnpm demo:zcash-web` → http
 ## Recording notes
 
 - Use the recorded fallback for step 3 only if `bb` isn't available locally — the UI labels it, say so on camera if used.
-- Show the lastrun files (`scripts/zcash-zk-demo.lastrun.txt`, `scripts/zcash-shielded-demo.lastrun.txt`, post-GO receipt) for 2–3 seconds each; judges check receipts.
+- Show the lastrun files (`scripts/lastrun/zcash-zk-demo.lastrun.txt`, `scripts/lastrun/zcash-shielded-demo.lastrun.txt`, post-GO receipt) for 2–3 seconds each; judges check receipts.
 - Fill in the actual block height and txid from the post-GO run before recording shot 5 — never quote a number not in a receipt.
 - 2:00 hard cap; if over, cut shot 6 to one sentence.
 

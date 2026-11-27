@@ -15,7 +15,7 @@
  * `--transferred-value` does not work because Odra reads attached_value
  * from the cargo_purse runtime arg, not from the native transfer.
  *
- * Output: tx hashes written to `scripts/casper-gated-vault-demo.lastrun.txt`.
+ * Output: tx hashes written to `scripts/lastrun/casper-gated-vault-demo.lastrun.txt`.
  *
  * Usage:
  *   set -a && source .env.d/casper.env && set +a
@@ -57,7 +57,9 @@ function sleep(ms: number): Promise<void> {
  * Format: u32 LE count, then for each: u32 LE name_len, name bytes, CLValue bytes.
  * CLValue = CLType bytes + u32 LE data_length + data bytes.
  */
-function serializeRuntimeArgs(args: Array<{ name: string; clType: Buffer; data: Buffer }>): Buffer {
+function serializeRuntimeArgs(
+  args: Array<{ name: string; clType: Buffer; data: Buffer }>,
+): Buffer {
   const parts: Buffer[] = [];
   const count = Buffer.alloc(4);
   count.writeUInt32LE(args.length, 0);
@@ -103,18 +105,29 @@ async function callViaProxyCaller(params: {
   entryPointArgs: Array<{ name: string; clType: Buffer; data: Buffer }>;
   attachedValue: string; // motes as string
 }): Promise<string> {
-  const rpcUrl = process.env.LIGIS_CASPER_RPC_URL ?? "https://node.testnet.casper.network/rpc";
+  const rpcUrl =
+    process.env.LIGIS_CASPER_RPC_URL ??
+    "https://node.testnet.casper.network/rpc";
   const chainName = process.env.LIGIS_CASPER_CHAIN_NAME ?? "casper-test";
-  const keyPath = process.env.LIGIS_CASPER_KEY_PATH ?? ".env.d/casper-deployer.pem";
+  const keyPath =
+    process.env.LIGIS_CASPER_KEY_PATH ?? ".env.d/casper-deployer.pem";
   const vaultPkg = process.env.LIGIS_CASPER_GATED_VAULT!;
-  const wasmPath = resolve(process.cwd(), "packages/contracts-casper/wasm/proxy_caller.wasm");
+  const wasmPath = resolve(
+    process.cwd(),
+    "packages/contracts-casper/wasm/proxy_caller.wasm",
+  );
 
   if (!existsSync(wasmPath)) {
-    throw new Error(`proxy_caller.wasm not found at ${wasmPath}. Download from Odra repo.`);
+    throw new Error(
+      `proxy_caller.wasm not found at ${wasmPath}. Download from Odra repo.`,
+    );
   }
 
   // Extract raw 32-byte package hash
-  const pkgHashHex = vaultPkg.replace(/^contract-package-/, "").replace(/^hash-/, "").replace(/^0x/, "");
+  const pkgHashHex = vaultPkg
+    .replace(/^contract-package-/, "")
+    .replace(/^hash-/, "")
+    .replace(/^0x/, "");
   const pkgHashBytes = Buffer.from(pkgHashHex, "hex");
 
   // Serialize the entry point args as RuntimeArgs (for the proxy_caller's `args` param)
@@ -135,14 +148,22 @@ async function callViaProxyCaller(params: {
   const u512ClType = Buffer.from([CLTYPE_U512]);
 
   const argv = [
-    "put-transaction", "session",
-    "--node-address", rpcUrl,
-    "--chain-name", chainName,
-    "--secret-key", keyPath,
-    "--wasm-path", wasmPath,
-    "--payment-amount", PAYMENT_AMOUNT,
-    "--gas-price-tolerance", "1",
-    "--standard-payment", "true",
+    "put-transaction",
+    "session",
+    "--node-address",
+    rpcUrl,
+    "--chain-name",
+    chainName,
+    "--secret-key",
+    keyPath,
+    "--wasm-path",
+    wasmPath,
+    "--payment-amount",
+    PAYMENT_AMOUNT,
+    "--gas-price-tolerance",
+    "1",
+    "--standard-payment",
+    "true",
     // proxy_caller args
     `--session-arg=contract_package_hash:byte_array_32='${pkgHashHex}'`,
     `--session-arg=entry_point:string='${params.entryPoint}'`,
@@ -161,10 +182,14 @@ async function callViaProxyCaller(params: {
   } catch (e: any) {
     const stderr = e.stderr?.toString() ?? "";
     const stdout = e.stdout?.toString() ?? "";
-    throw new Error(`proxy_caller ${params.entryPoint} failed: ${stderr || stdout || e.message}`);
+    throw new Error(
+      `proxy_caller ${params.entryPoint} failed: ${stderr || stdout || e.message}`,
+    );
   }
 
-  const hashMatch = output.match(/"transaction_hash":\s*\{[^}]*"Version1":\s*"([a-f0-9]+)"/);
+  const hashMatch = output.match(
+    /"transaction_hash":\s*\{[^}]*"Version1":\s*"([a-f0-9]+)"/,
+  );
   const txHash = hashMatch ? hashMatch[1] : "";
   if (!txHash) {
     throw new Error(`No transaction hash in output: ${output.slice(0, 500)}`);
@@ -180,12 +205,15 @@ async function callViaProxyCaller(params: {
         { encoding: "utf-8", timeout: 15_000, stdio: ["pipe", "pipe", "pipe"] },
       );
       const info = JSON.parse(infoOutput);
-      const execResult = info.execution_result?.result || info.execution_results?.[0]?.result;
+      const execResult =
+        info.execution_result?.result || info.execution_results?.[0]?.result;
       if (execResult?.Success) {
         return txHash;
       }
       if (execResult?.Failure) {
-        throw new Error(`${params.entryPoint} failed on-chain: ${JSON.stringify(execResult.Failure).slice(0, 500)}`);
+        throw new Error(
+          `${params.entryPoint} failed on-chain: ${JSON.stringify(execResult.Failure).slice(0, 500)}`,
+        );
       }
     } catch (e: any) {
       if (e.message?.includes("failed on-chain")) throw e;
@@ -193,7 +221,9 @@ async function callViaProxyCaller(params: {
     }
     await sleep(10000);
   }
-  console.log(`  (polling timed out, check explorer: ${EXPLORER}/transaction/${txHash})`);
+  console.log(
+    `  (polling timed out, check explorer: ${EXPLORER}/transaction/${txHash})`,
+  );
   return txHash;
 }
 
@@ -207,23 +237,32 @@ async function main() {
 
   const adapter = new CasperAdapter();
   if (!adapter.hasWallet()) {
-    console.error("Missing Casper wallet. Set LIGIS_CASPER_KEY_PATH + LIGIS_CASPER_DEPLOYER_PRIVATE_KEY.");
+    console.error(
+      "Missing Casper wallet. Set LIGIS_CASPER_KEY_PATH + LIGIS_CASPER_DEPLOYER_PRIVATE_KEY.",
+    );
     process.exit(1);
   }
 
   const controller = adapter.walletAddress()!;
-  console.log("╔═════════════════════════════════════════════════════════════╗");
+  console.log(
+    "╔═════════════════════════════════════════════════════════════╗",
+  );
   console.log("║  Ligis GatedVault — credential-gated escrow on Casper     ║");
-  console.log("╚═════════════════════════════════════════════════════════════╝\n");
+  console.log(
+    "╚═════════════════════════════════════════════════════════════╝\n",
+  );
   console.log(`Controller:     ${controller}`);
   console.log(`Vault:          ${vaultPkg}`);
-  console.log(`Capability:     ${CAP_REQUIRED} (${capabilityHash(CAP_REQUIRED)})`);
+  console.log(
+    `Capability:     ${CAP_REQUIRED} (${capabilityHash(CAP_REQUIRED)})`,
+  );
 
   const txRecords: TxRecord[] = [];
 
   // --- Step 1: Issue credential (needed so the gate allows withdrawal) ---
   console.log("\n[1] Self-issuing rwa.accredited credential on Casper...");
-  const issuerKey = process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY ?? process.env.PRIVATE_KEY;
+  const issuerKey =
+    process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY ?? process.env.PRIVATE_KEY;
   if (!issuerKey) {
     console.error("Missing LIGIS_CASPER_DEPLOYER_PRIVATE_KEY.");
     process.exit(1);
@@ -247,14 +286,18 @@ async function main() {
     capability: CAP_REQUIRED,
   });
   if (!check.capable) {
-    console.error("Credential did not register as capable. Aborting before deposit/withdraw.");
+    console.error(
+      "Credential did not register as capable. Aborting before deposit/withdraw.",
+    );
     writeOutputs(txRecords, false);
     process.exit(1);
   }
   console.log("  ✓ isCapable(rwa.accredited) = true");
 
   // --- Step 3: Deposit 1 CSPR (payable via proxy_caller) ---
-  console.log(`\n[2] Depositing 1 CSPR into GatedVault (via proxy_caller.wasm)...`);
+  console.log(
+    `\n[2] Depositing 1 CSPR into GatedVault (via proxy_caller.wasm)...`,
+  );
   try {
     const depositTx = await callViaProxyCaller({
       entryPoint: "deposit",
@@ -274,7 +317,9 @@ async function main() {
   }
 
   // --- Step 4: Withdraw 0.5 CSPR (gated by is_capable cross-contract) ---
-  console.log(`\n[3] Withdrawing 0.5 CSPR via GatedVault.withdraw (cross-contract gate)...`);
+  console.log(
+    `\n[3] Withdrawing 0.5 CSPR via GatedVault.withdraw (cross-contract gate)...`,
+  );
   try {
     // Serialize the withdraw args (amount: U512) as RuntimeArgs for the proxy_caller
     const u512ClType = Buffer.from([CLTYPE_U512]);
@@ -302,7 +347,10 @@ async function main() {
 }
 
 function writeOutputs(txRecords: TxRecord[], ok: boolean) {
-  const outPath = resolve(process.cwd(), "scripts/casper-gated-vault-demo.lastrun.txt");
+  const outPath = resolve(
+    process.cwd(),
+    "scripts/lastrun/casper-gated-vault-demo.lastrun.txt",
+  );
   const lines = [
     `# Casper GatedVault demo ${new Date().toISOString()}`,
     `# ok: ${ok}`,

@@ -44,10 +44,10 @@ Before an agent releases shielded ZEC to a `utest1…` / `u1…` address, the pa
 pnpm demo:zcash-web          # open http://localhost:3000/zcash (or visit https://ligis.vercel.app/zcash)
 
 # 2. One-command CLI ZK gate demo (publish root → prove → GO → replay/redirect/revoke STOP)
-pnpm demo:zcash-zk           # writes scripts/zcash-zk-demo.lastrun.txt
+pnpm demo:zcash-zk           # writes scripts/lastrun/zcash-zk-demo.lastrun.txt
 
 # 3. Viewing-key selective disclosure & live Zcash Testnet memo decryption demo
-pnpm demo:zcash              # writes scripts/zcash-shielded-demo.lastrun.txt
+pnpm demo:zcash              # writes scripts/lastrun/zcash-shielded-demo.lastrun.txt
 ```
 
 See [`../zecathon-entry.md`](../zecathon-entry.md) for the circuit spec, Monad root-anchor transaction ([`0x91f64222...`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f), block `74058241`), live Zcash Testnet transaction ([`d2b389c8...`](https://fauzec.com/api/v1/status/testnet/01M5SKS8EGMJ3MK633ED1ZJ02P), block `4,540,356`), and honest risks.

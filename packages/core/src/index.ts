@@ -15,7 +15,6 @@ export * from "./reasoner.js";
 export * from "./evidence.js";
 export * from "./attestations.js";
 export * from "./trust.js";
-export * from "./genlayer.js";
 export * from "./jev.js";
 export * from "./openai-compat-reasoner.js";
 export * from "./chain-reasoner.js";

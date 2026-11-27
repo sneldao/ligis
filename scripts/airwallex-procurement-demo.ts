@@ -24,7 +24,7 @@ import {
   type TransferSimulator,
 } from "../packages/procurement/src/index.js";
 
-const LASTRUN = "scripts/airwallex-procurement-demo.lastrun.txt";
+const LASTRUN = "scripts/lastrun/airwallex-procurement-demo.lastrun.txt";
 
 function loadEnvFiles(...paths: string[]) {
   for (const p of paths) {

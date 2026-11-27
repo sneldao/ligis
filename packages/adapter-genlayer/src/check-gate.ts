@@ -15,15 +15,14 @@
  * to submit `create_job` when `capable === false` — the contract also
  * asserts the boolean, so a bypass would revert anyway.
  */
+import { capabilityHash, type VerifyResult } from "@ligis/core";
 import {
   buildGateReceipt,
-  capabilityHash,
   GENLAYER_DEFAULT_CAPABILITY,
   GENLAYER_DEFAULT_LIGIS_CHAIN,
   type CheckLigisGateInput,
   type GateReceipt,
-  type VerifyResult,
-} from "@ligis/core";
+} from "./interface.js";
 import { CasperAdapter } from "@ligis/adapter-casper";
 import { EvmAdapter } from "@ligis/adapter-evm";
 

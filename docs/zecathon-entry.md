@@ -110,7 +110,7 @@ rewritten.
 One-command demo (offline, keyless): `pnpm demo:zcash-zk` — publishes a
 registry root manifest, proves twice, and drives the real `/api/gate` wiring
 through GO → replay STOP → redirect-to-other-payee STOP → verifier-missing
-UNKNOWN → revoke + republish STOP (`scripts/zcash-zk-demo.lastrun.txt`).
+UNKNOWN → revoke + republish STOP (`scripts/lastrun/zcash-zk-demo.lastrun.txt`).
 
 **Guided UI demo (the judge path):** `pnpm demo:zcash-web`, then open
 `/zcash` (also linked from the landing hero, `/gate`, and ⌘K). Four one-click
@@ -218,7 +218,7 @@ In accordance with Zecathon rules (_"All code written during the build window. L
 - [x] ZK proof verified in `/api/gate` — optional `zkProof` on `POST`, `bb verify` against the committed vk, trusted roots from `LIGIS_ZK_TRUSTED_ROOTS`, (context, nullifier) replay → `STOP`, missing toolchain → explicit `unverified`/`UNKNOWN`; result shown as `Decision.zkCredential` and on `/gate`. See `docs/decide-api.md` § ZK credential proofs
 - [x] Payee bound into the circuit — leaf = `H(identity_commitment, payee_hash, capability_hash, issuer, expires_at, nonce)`, `payee_hash` public; gate `STOP`s a proof for another payee (`bb` rejects a rewritten `payee_hash`)
 - [x] Published registry root the gate can trust — `build-root` (CredentialRegistry events via read-only `eth_getLogs`, or fixture) → manifest; gate trusts `LIGIS_ZK_ROOT_MANIFEST` (root re-derived, staleness → `UNKNOWN`) or pinned roots; `GET /api/zk/root`; subject → identity-commitment mapping by EIP-191-signed registration
-- [x] Offline end-to-end ZK gate demo — `pnpm demo:zcash-zk` (`scripts/zcash-zk-demo.lastrun.txt`)
+- [x] Offline end-to-end ZK gate demo — `pnpm demo:zcash-zk` (`scripts/lastrun/zcash-zk-demo.lastrun.txt`)
 - [x] On-chain root anchor & steward-signed root manifest — `signRootManifest()` + `checkManifest()` EIP-191 verification (`LIGIS_ZK_ROOT_SIGNER`), anchored on Monad Testnet at block `74058241` ([`0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f))
 - [x] Guided 4-step credential demo (`/zcash`); recorded fallback is labelled
 - [ ] Wallet-controlled post-GO shielded transfer (the faucet receipt is separate)

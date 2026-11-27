@@ -18,4 +18,4 @@ private shielded spend:
   and unverified shielded address → `none`).
 - **Demo script:** `pnpm demo:zcash` (or `npx tsx scripts/zcash-shielded-demo.ts`)
   walks through viewing-key selective disclosure → gate `GO` → shielded transfer
-  → nullifier replay attempt → gate `STOP`, writing `scripts/zcash-shielded-demo.lastrun.txt`.
+  → nullifier replay attempt → gate `STOP`, writing `scripts/lastrun/zcash-shielded-demo.lastrun.txt`.

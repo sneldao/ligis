@@ -317,7 +317,7 @@ async function main() {
   }
 
   writeFileSync(
-    resolve(import.meta.dirname, "monad-x402-demo.lastrun.txt"),
+    resolve(import.meta.dirname, "lastrun", "monad-x402-demo.lastrun.txt"),
     [
       `network=monad-testnet`,
       `chainId=${monadTestnet.id}`,

@@ -64,7 +64,11 @@ async function main(): Promise<void> {
     ];
     const receipt = `${lines.join("\n")}\n`;
     writeFileSync(
-      resolve(import.meta.dirname, "zcash-shielded-demo.lastrun.txt"),
+      resolve(
+        import.meta.dirname,
+        "lastrun",
+        "zcash-shielded-demo.lastrun.txt",
+      ),
       receipt,
     );
     console.log(receipt);

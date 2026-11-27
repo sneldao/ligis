@@ -6,7 +6,7 @@ The GenLayer `JobEscrow` contract lives in `packages/contracts-genlayer/` and is
 the adjudication half of the Ligis × GenLayer compose story. It targets
 **Studio Next (studio_devnet, chain ID 61997)** — the network the Agent Tank
 portal requires for the explorer-link field. Interface is frozen in
-`docs/genlayer-interface-v1.md`; shared TS types in `@ligis/core` → `genlayer.ts`.
+`docs/genlayer-interface-v1.md`; shared TS types in `@ligis/adapter-genlayer` → `interface.ts`.
 
 **Setup (one-time, in a venv):**
 
@@ -42,7 +42,7 @@ export GENLAYER_PRIVATE_KEY=0x...   # optional; fresh account created if unset
 python deploy.py                     # deploy + create -> deliver -> dispute -> resolve -> claim
 python deploy.py --stop              # also show the STOP gate path
 python deploy.py --no-deploy         # reuse existing contract (set JOBEscrow_ADDRESS)
-# -> scripts/genlayer-agent-tank-demo.lastrun.txt (address, job id, explorer URL)
+# -> scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt (address, job id, explorer URL)
 ```
 
 **Live deployment (2026-09-16):**
@@ -129,4 +129,4 @@ Key points:
   → resolve → claim) is owned by `pnpm demo:genlayer` (Stream 3, shells to
   `deploy.py`).
 - Contract address resolution: `GENLAYER_JOBEscrow_ADDRESS` env var →
-  `scripts/genlayer-agent-tank-demo.lastrun.txt` → null (shows fallback).
+  `scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt` → null (shows fallback).

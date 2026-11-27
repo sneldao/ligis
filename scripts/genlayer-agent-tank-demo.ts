@@ -5,7 +5,7 @@
  *   1. checkLigisGate(seller) on Casper (or Pharos)
  *   2. create_job (payable) + GateReceipt JSON on Studio Next 61997
  *   3. submit_delivery → open_dispute → resolve (AI jury) → claim
- *   4. write scripts/genlayer-agent-tank-demo.lastrun.txt
+ *   4. write scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt
  *
  * GenLayer half shells to packages/contracts-genlayer/deploy.py (studio_devnet).
  *
@@ -31,14 +31,12 @@ import { resolve } from "node:path";
 import {
   GENLAYER_DEFAULT_CAPABILITY,
   GENLAYER_STUDIO_NEXT,
-  buildGateReceipt,
-  type GateReceipt,
-} from "@ligis/core";
-import {
   GateRefusedError,
+  buildGateReceipt,
   checkLigisGate,
   refuseIfNotCapable,
   runJobEscrowDemoViaPython,
+  type GateReceipt,
 } from "@ligis/adapter-genlayer";
 
 function loadEnvFile(path: string): void {

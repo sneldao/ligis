@@ -75,7 +75,7 @@ while every verdict silently becomes `SKIPPED`. `scripts/jev-transport-smoke.ts`
 (`pnpm smoke:jev`) calls `evaluatePaymentIntent` directly — no gate server, no
 chain RPC, no credential — with two probes (legit → GO, misdirected → STOP)
 and exits non-zero the moment Jev stops answering, printing the resolved route
-and the fix. Run it in CI or a cron; `scripts/jev-transport-smoke.lastrun.txt`
+and the fix. Run it in CI or a cron; `scripts/lastrun/jev-transport-smoke.lastrun.txt`
 records the last run, including billed USD (a non-zero cost on the real
 gateway means the promo is over).
 
@@ -196,7 +196,7 @@ Two days before the promo closes, the transport still answers: legit probe GO
 conf 0.950 in 1323ms (cold, first call), misdirected probe STOP conf 0.970 in
 443ms with `payee-mismatch`, `scope-mismatch`, and `abnormal-pattern` flags —
 cost reported as $0.00, so the free window was still open. Recorded in
-`scripts/jev-transport-smoke.lastrun.txt`. Re-run the smoke test on or after
+`scripts/lastrun/jev-transport-smoke.lastrun.txt`. Re-run the smoke test on or after
 2026-09-25: a non-zero billed cost there means billing started, an exit 1 means
 the route is dead and the gate is quietly credential-only.
 

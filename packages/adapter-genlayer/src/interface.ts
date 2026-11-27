@@ -5,7 +5,7 @@
  * Matches packages/contracts-genlayer/contracts/JobEscrow.py
  */
 
-import { capabilityHash } from "./hash.js";
+import { capabilityHash } from "@ligis/core/hash";
 
 /** Agent Tank / Studio Next targets. */
 export const GENLAYER_STUDIO_NEXT = {

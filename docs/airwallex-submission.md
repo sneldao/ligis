@@ -110,7 +110,7 @@ Airwallex sandbox when `AWX_CLIENT_ID` / `AWX_API_KEY` are set; see
 `.env.d/airwallex.env.example`. For each scenario the demo prints the
 proposed action, the evidence checked, the decision, and the sandbox
 outcome. The output is written to
-`scripts/airwallex-procurement-demo.lastrun.txt`.
+`scripts/lastrun/airwallex-procurement-demo.lastrun.txt`.
 
 **A. The supplier that changed its terms.** An order for $500 from
 Supplier A, with 10% tolerance.

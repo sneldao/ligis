@@ -7,7 +7,7 @@
  *
  * The contract address is resolved from:
  *   1. `GENLAYER_JOBEscrow_ADDRESS` env var (set after deploy)
- *   2. `scripts/genlayer-agent-tank-demo.lastrun.txt` (written by deploy.py)
+ *   2. `scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt` (written by deploy.py)
  *
  * Reads use `readContract` (no signing, no value). Writes are NOT wired here —
  * the demo flow (create → deliver → dispute → resolve → claim) is owned by
@@ -22,7 +22,7 @@ import {
   type JobView,
   type GateReceipt,
   GENLAYER_STUDIO_NEXT,
-} from "@ligis/core";
+} from "@ligis/adapter-genlayer/interface";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -65,6 +65,7 @@ export const LASTRUN_PATH = resolve(
   process.cwd(),
   "..",
   "scripts",
+  "lastrun",
   "genlayer-agent-tank-demo.lastrun.txt",
 );
 

@@ -23,7 +23,7 @@
  * resolved route and the remedy printed); 2 = a probe answered but the
  * verdict was not what the scenario predicts.
  *
- * Output: scripts/jev-transport-smoke.lastrun.txt
+ * Output: scripts/lastrun/jev-transport-smoke.lastrun.txt
  */
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -249,7 +249,7 @@ async function main(): Promise<void> {
         : {}),
     })),
   };
-  const out = join(__dirname, "jev-transport-smoke.lastrun.txt");
+  const out = join(__dirname, "lastrun", "jev-transport-smoke.lastrun.txt");
   writeFileSync(out, JSON.stringify(lastrun, null, 2));
 
   console.log("");
@@ -262,7 +262,7 @@ async function main(): Promise<void> {
       `note: gateway billed $${billed.toFixed(8)} — the promo is over.`,
     );
   }
-  console.log(`lastrun → scripts/jev-transport-smoke.lastrun.txt`);
+  console.log(`lastrun → scripts/lastrun/jev-transport-smoke.lastrun.txt`);
 
   if (skipped.length > 0) {
     remedy(config);

@@ -8,31 +8,28 @@ two axes: **what depends on a particular chain** (chain-neutral logic in
 
 ## Package tiers
 
-| Package                                  | Tier             | Role                                                                                                                    |
-| ---------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `procurement`                            | Product          | Order-bound payment controller on the Airwallex transfers rail                                                          |
-| `core`                                   | Product          | Chain-neutral primitives, `decide()` inputs, reasoner chain, Jev client. Also currently holds GenLayer types (see note) |
-| `x402-server`                            | Product          | Credential-gated x402 resource server (the gate over HTTP)                                                              |
-| `wallet-plugin`                          | Product          | Guarded payment adapter — signs only on a fresh GO                                                                      |
-| `metamask-plugin`                        | Product          | MetaMask Agent Wallet packaging of `wallet-plugin`                                                                      |
-| `web`                                    | Product          | Next.js app: `/gate`, `/api/gate`, issuer desk; also hosts showcase routes                                              |
-| `adapter-evm`, `contracts-evm`           | Credential layer | Pharos, Monad and other EVM chains                                                                                      |
-| `adapter-casper`, `contracts-casper`     | Credential layer | Casper                                                                                                                  |
-| `adapter-0g`                             | Credential layer | 0G Chain (wraps `adapter-evm`)                                                                                          |
-| `zerog`                                  | Credential layer | 0G Compute reasoner + 0G Storage evidence                                                                               |
-| `agent-logic`                            | Credential layer | Trust Steward loop                                                                                                      |
-| `cli`, `mcp-server`                      | Credential layer | Operator and agent entry points                                                                                         |
-| `croo-adapter`                           | Credential layer | CROO Agent Store distribution                                                                                           |
-| `envio-indexer`                          | Credential layer | Monad `CredentialRegistry` indexer                                                                                      |
-| `adapter-genlayer`, `contracts-genlayer` | Showcase         | GenLayer JobEscrow (Agent Tank)                                                                                         |
-| `adapter-zcash`                          | Showcase         | Zcash shielded presentation channel: `ZcashChainAdapter`, address + memo codecs, lightwalletd client                    |
-| `circuits-zcash`                         | Showcase         | Noir circuit for the Zcash shielded gate (Zecathon)                                                                     |
+| Package                                  | Tier             | Role                                                                                                 |
+| ---------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `procurement`                            | Product          | Order-bound payment controller on the Airwallex transfers rail                                       |
+| `core`                                   | Product          | Chain-neutral primitives, `decide()` inputs, reasoner chain, Jev client                              |
+| `x402-server`                            | Product          | Credential-gated x402 resource server (the gate over HTTP)                                           |
+| `wallet-plugin`                          | Product          | Guarded payment adapter — signs only on a fresh GO                                                   |
+| `metamask-plugin`                        | Product          | MetaMask Agent Wallet packaging of `wallet-plugin`                                                   |
+| `web`                                    | Product          | Next.js app: `/gate`, `/api/gate`, issuer desk; also hosts showcase routes                           |
+| `adapter-evm`, `contracts-evm`           | Credential layer | Pharos, Monad and other EVM chains                                                                   |
+| `adapter-casper`, `contracts-casper`     | Credential layer | Casper                                                                                               |
+| `adapter-0g`                             | Credential layer | 0G Chain (wraps `adapter-evm`)                                                                       |
+| `zerog`                                  | Credential layer | 0G Compute reasoner + 0G Storage evidence                                                            |
+| `agent-logic`                            | Credential layer | Trust Steward loop                                                                                   |
+| `cli`, `mcp-server`                      | Credential layer | Operator and agent entry points                                                                      |
+| `croo-adapter`                           | Credential layer | CROO Agent Store distribution                                                                        |
+| `envio-indexer`                          | Credential layer | Monad `CredentialRegistry` indexer                                                                   |
+| `adapter-genlayer`, `contracts-genlayer` | Showcase         | GenLayer JobEscrow (Agent Tank)                                                                      |
+| `adapter-zcash`                          | Showcase         | Zcash shielded presentation channel: `ZcashChainAdapter`, address + memo codecs, lightwalletd client |
+| `circuits-zcash`                         | Showcase         | Noir circuit for the Zcash shielded gate (Zecathon)                                                  |
 
-**Note on `core`.** `core` imports no chain SDKs, and after the Zcash
-move it is nearly chain-neutral again: only `genlayer.ts` (GenLayer
-interface types) remains chain-specific and is a candidate to move into
-its own package. New event-specific work should go in an adapter or
-example package, not in `core`.
+**Note on `core`.** `core` holds no chain-specific code. New
+event-specific work goes in an adapter or example package, not in `core`.
 
 ## Layout
 
@@ -125,7 +122,7 @@ ligis/
 ## Dependency graph
 
 ```
-@ligis/core               (zero chain SDKs; see note on core above)
+@ligis/core               (zero chain SDKs)
    ↑
    ├── @ligis/adapter-evm     (viem)
    ├── @ligis/adapter-casper  (casper-js-sdk + @casper-ecosystem/casper-eip-712)

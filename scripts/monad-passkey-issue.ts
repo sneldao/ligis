@@ -334,6 +334,7 @@ async function main() {
 
   const outPath = resolve(
     import.meta.dirname,
+    "lastrun",
     "monad-passkey-issue.lastrun.txt",
   );
   writeFileSync(

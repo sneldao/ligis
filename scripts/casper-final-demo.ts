@@ -13,7 +13,7 @@
  *   8. WITHDRAW    — GatedVault.withdraw (gated by is_capable)  (if deployed)
  *
  * Output: a single "SUCCESS" verdict plus a list of on-chain tx hashes.
- * Tx hashes are written to `scripts/casper-final-demo.lastrun.txt` so the
+ * Tx hashes are written to `scripts/lastrun/casper-final-demo.lastrun.txt` so the
  * BUIDL can link to verified explorer pages.
  *
  * Required env (.env.d/casper.env):
@@ -30,7 +30,12 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { CasperAdapter } from "@ligis/adapter-casper";
 import { TrustSteward, LocalReasoner } from "@ligis/agent-logic";
-import { ZeroGCompute, ZeroGStorage, loadZeroGConfig, loadZeroGStorageConfig } from "@ligis/zerog";
+import {
+  ZeroGCompute,
+  ZeroGStorage,
+  loadZeroGConfig,
+  loadZeroGStorageConfig,
+} from "@ligis/zerog";
 import { capabilityHash, type Reasoner } from "@ligis/core";
 
 const EXPLORER = "https://testnet.cspr.live";
@@ -49,9 +54,13 @@ interface TxRecord {
 }
 
 async function main() {
-  console.log("╔═════════════════════════════════════════════════════════════╗");
+  console.log(
+    "╔═════════════════════════════════════════════════════════════╗",
+  );
   console.log("║  Ligis — Casper Final Demo (boot → gate → vault → anchor)  ║");
-  console.log("╚═════════════════════════════════════════════════════════════╝\n");
+  console.log(
+    "╚═════════════════════════════════════════════════════════════╝\n",
+  );
 
   const adapter = new CasperAdapter();
   if (!adapter.hasWallet()) {
@@ -76,7 +85,9 @@ async function main() {
     const zerog = new ZeroGCompute(loadZeroGConfig());
     await Promise.race([
       zerog.reason('{"capabilities":[],"reasoning":"ok"}'),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000)),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 8000),
+      ),
     ]);
     reasoner = zerog;
     console.log("Reasoner:   0G Compute (TEE-verified)");
@@ -90,7 +101,10 @@ async function main() {
     store = new ZeroGStorage(loadZeroGStorageConfig());
     console.log("Storage:    0G Storage (live)");
   } catch {
-    store = { store: async () => ({ rootHash: "0x0", txHash: "0x0" }), retrieve: async () => null } as any;
+    store = {
+      store: async () => ({ rootHash: "0x0", txHash: "0x0" }),
+      retrieve: async () => null,
+    } as any;
     console.log("Storage:    (in-memory — 0G Storage unavailable)");
   }
 
@@ -98,7 +112,8 @@ async function main() {
   console.log("\n[1-6] Running Trust Steward loop on Casper Testnet...");
   const steward = new TrustSteward(adapter, reasoner, store);
   const result = await steward.run(GOAL, {
-    issuerKey: process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY ?? process.env.PRIVATE_KEY,
+    issuerKey:
+      process.env.LIGIS_CASPER_DEPLOYER_PRIVATE_KEY ?? process.env.PRIVATE_KEY,
   });
 
   const txRecords: TxRecord[] = [];
@@ -139,7 +154,9 @@ async function main() {
     process.exit(1);
   }
   if (!result.gated) {
-    console.error("Steward completed but the agent is NOT gated (missing capabilities).");
+    console.error(
+      "Steward completed but the agent is NOT gated (missing capabilities).",
+    );
     for (const cap of result.capabilities) {
       if (cap.error) console.error(`  ${cap.name}: ${cap.error}`);
     }
@@ -156,16 +173,26 @@ async function main() {
   if (vaultPkg) {
     console.log("\n[7] GatedVault deposit (1 CSPR)...");
     console.log(`  vault: ${vaultPkg}`);
-    console.log("  → run scripts/casper-gated-vault-demo.ts to exercise deposit + gated-withdraw.");
-    console.log("  → record its tx hashes in scripts/casper-final-demo.lastrun.txt.");
+    console.log(
+      "  → run scripts/casper-gated-vault-demo.ts to exercise deposit + gated-withdraw.",
+    );
+    console.log(
+      "  → record its tx hashes in scripts/lastrun/casper-final-demo.lastrun.txt.",
+    );
   } else {
-    console.log("\n[7-8] GatedVault not deployed — skipping. Set LIGIS_CASPER_GATED_VAULT to enable.");
+    console.log(
+      "\n[7-8] GatedVault not deployed — skipping. Set LIGIS_CASPER_GATED_VAULT to enable.",
+    );
   }
 
   // --- Final verdict ---
-  console.log("\n══════════════════════════════════════════════════════════════");
+  console.log(
+    "\n══════════════════════════════════════════════════════════════",
+  );
   console.log("  ✅ SUCCESS — Agent is autonomous and authorized on Casper.");
-  console.log("══════════════════════════════════════════════════════════════\n");
+  console.log(
+    "══════════════════════════════════════════════════════════════\n",
+  );
 
   for (const tx of txRecords) {
     console.log(`  ${tx.step}: ${tx.explorerUrl}`);
@@ -175,7 +202,10 @@ async function main() {
 }
 
 function writeOutputs(txRecords: TxRecord[], ok: boolean) {
-  const outPath = resolve(process.cwd(), "scripts/casper-final-demo.lastrun.txt");
+  const outPath = resolve(
+    process.cwd(),
+    "scripts/lastrun/casper-final-demo.lastrun.txt",
+  );
   const lines = [
     `# Casper final demo ${new Date().toISOString()}`,
     `# ok: ${ok}`,

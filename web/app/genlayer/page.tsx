@@ -2,7 +2,10 @@ import Link from "next/link";
 import { Rule } from "@/components/Rule";
 import { CopyButton } from "@/components/CopyButton";
 import { truncateAddress } from "@/lib/format";
-import { GENLAYER_STUDIO_NEXT, JOB_STATUSES } from "@ligis/core";
+import {
+  GENLAYER_STUDIO_NEXT,
+  JOB_STATUSES,
+} from "@ligis/adapter-genlayer/interface";
 import { readJobEscrowAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -338,9 +341,7 @@ pnpm demo:genlayer --dry-run       # Ligis gate only`}
                     <p className="mt-3 display text-3xl">
                       <span
                         className={
-                          result.gateReceipt.capable
-                            ? "text-good"
-                            : "text-loss"
+                          result.gateReceipt.capable ? "text-good" : "text-loss"
                         }
                       >
                         {result.gateReceipt.capable ? "✓ GO" : "✗ STOP"}

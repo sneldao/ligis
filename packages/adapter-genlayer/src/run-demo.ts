@@ -14,7 +14,7 @@ import {
   GENLAYER_STUDIO_NEXT,
   gateReceiptToJsonString,
   type GateReceipt,
-} from "@ligis/core";
+} from "./interface.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, "../../..");
@@ -24,7 +24,7 @@ const DEFAULT_DEPLOY_PY = join(
 );
 const DEFAULT_LASTRUN = join(
   REPO_ROOT,
-  "scripts/genlayer-agent-tank-demo.lastrun.txt",
+  "scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt",
 );
 
 export interface RunJobEscrowDemoOptions {
@@ -84,7 +84,7 @@ function parseLastrun(raw: string, path: string): JobEscrowLastrun {
 
 /**
  * Spawn `deploy.py` with the Ligis receipt injected and wait for exit 0.
- * On success, parse and return `scripts/genlayer-agent-tank-demo.lastrun.txt`.
+ * On success, parse and return `scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt`.
  */
 export async function runJobEscrowDemoViaPython(
   opts: RunJobEscrowDemoOptions,

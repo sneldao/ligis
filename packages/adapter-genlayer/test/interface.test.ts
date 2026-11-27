@@ -8,8 +8,8 @@ import {
   gateReceiptFromJson,
   gateReceiptToJsonString,
   jobViewFromContract,
-} from "../src/genlayer.js";
-import { capabilityHash } from "../src/hash.js";
+} from "../src/interface.js";
+import { capabilityHash } from "@ligis/core/hash";
 
 describe("genlayer interface freeze v1", () => {
   it("locks Studio Next chain id 61997", () => {
