@@ -13,9 +13,8 @@ CI blocks `main` on any remaining **high/critical** npm advisory:
 - **Unfixable transitive** (no reachable patch) → dismiss by policy in BOTH
   `.github/dependabot.yml` (`ignore`) and `scripts/security-audit.mjs`
   (`DISMISSED`) — the lists are mirrored; CI blocks on a dismissal that
-  exists in only one file. Current dismissals: uuid (GHSA-w5hq-g745-h8pq),
-  decode-uri-component (GHSA-vcc3-ghjq-m6fr) — wallet-SDK client-side
-  transitives.
+  exists in only one file. Current dismissal: uuid (GHSA-w5hq-g745-h8pq) —
+  wallet-SDK client-side transitive.
 
 ## 0G Compute
 
