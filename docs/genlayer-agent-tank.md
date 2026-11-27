@@ -177,7 +177,7 @@ Deliverables:
       `casper-testnet`, default capability `agent.commerce.escrow`)
 - [x] Uses live Casper (`CasperAdapter.verifyCapability`) by default; Pharos via
       `ligisChain` argument or `LIGIS_GENLAYER_GATE_CHAIN` env var. Same env vars
-      as the rest of the Ligis Casper integration (see AGENTS.md § Casper).
+      as the rest of the Ligis Casper integration (see [`docs/agent-notes/casper.md`](agent-notes/casper.md)).
 - [x] `refuseIfNotCapable` throws `GateRefusedError` on STOP with the receipt
       attached — Stream 3 wraps `create_job` with this and gets a hard refusal
       before any IC transaction is sent. Contract also asserts `capable=true`,
