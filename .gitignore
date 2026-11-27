@@ -151,6 +151,9 @@ __pycache__/
 /packages/contracts-genlayer/.env
 
 # Ad-hoc run captures from manual shell sessions (non-standard naming).
-# Canonical receipts — scripts/*.lastrun.txt — stay committable as evidence.
+# Canonical receipts — scripts/lastrun/*.lastrun.txt — stay committable as evidence.
 /scripts/*-laun.txt
 
+
+# Perch agent workspace (local tool config)
+.perch/

@@ -20,7 +20,13 @@ import { blake2b } from "@noble/hashes/blake2b";
 import casperSdk from "casper-js-sdk";
 import type { CLValue as CLValueType } from "casper-js-sdk";
 const { CLValue, PublicKey, PurseIdentifier } = casperSdk;
-import { capabilityHash, parseCapability } from "@ligis/core";
+import {
+  canonicalizeClaim,
+  capabilityHash,
+  claimHash,
+  namespaceHash,
+  namespaceHashOf,
+} from "@ligis/core";
 import type { CasperClientContext } from "./client.js";
 import {
   buildCredentialDigest,
@@ -38,6 +44,13 @@ import {
 const DEFAULT_EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 /** Convert an 0x-prefixed hex string to bytes. */
+/** Minimal-length even hex for EIP-712 uint fields (padStart(2) alone leaves
+ * odd-length strings for values >= 0x100, which the encoder rejects). */
+function evenHex(v: bigint): string {
+  const h = v.toString(16);
+  return h.length % 2 ? `0${h}` : h;
+}
+
 function hexToBytes(hex: string): Uint8Array {
   const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
   const out = new Uint8Array(clean.length / 2);
@@ -65,7 +78,7 @@ function addressFromSecpKey(privateKeyHex: string): string {
 /** Require a deployed contract, throw with a clear message if missing. */
 function requireDeployment(
   ctx: CasperClientContext,
-  which: "agentId" | "credentialRegistry",
+  which: "agentId" | "credentialRegistry" | "outcomeFeed" | "policyGuard",
 ): string {
   const hash = ctx.config.deployment[which];
   if (!hash) {
@@ -267,6 +280,7 @@ export async function verifyCapability(
   capabilityHash: `0x${string}`;
   latest: {
     issuer: string;
+    claim: string;
     issuedAt: string;
     expiresAt: string;
     revoked: boolean;
@@ -274,7 +288,10 @@ export async function verifyCapability(
   };
 }> {
   const packageHash = requireDeployment(ctx, "credentialRegistry");
-  const capHash = parseCapability(opts.capability) as `0x${string}`;
+  // v2: opts.capability is a claim string; canonicalize before hashing so
+  // "a.b:x=1" and "a.b:x=1" (any param order) land on the same hash.
+  const claim = canonicalizeClaim(opts.capability);
+  const capHash = claimHash(claim) as `0x${string}`;
 
   // Pad subject to 32 bytes — EVM addresses (20 bytes) must be left-padded
   // to match the 32-byte key used by the on-chain CredentialRegistry.
@@ -392,6 +409,7 @@ export async function verifyCapability(
       capabilityHash: capHash,
       latest: {
         issuer: "0x0000000000000000000000000000000000000000",
+        claim: "",
         issuedAt: "0",
         expiresAt: "0",
         revoked: false,
@@ -401,13 +419,162 @@ export async function verifyCapability(
   }
 }
 
-/** Parse a CredentialView stored as List<U8> bytes.
+/**
+ * Read the full issuer standing for a (subject, claim) pair — the off-chain
+ * mirror of the contract's `credential_standing` entry point, reconstructed
+ * from raw dictionary reads (Casper entry points can only run in a deploy).
  *
- * The bytes (after the 4-byte length prefix) are:
- *   issuer: [u8; 20] | subject: [u8; 32] | issued_at: u64 LE | expires_at: u64 LE | revoked: bool | valid: bool
+ * Field indices follow the struct order in credential_registry.rs:
+ *   issuer_nonce=1, latest=2, admin=3, issuer_accreditation=4,
+ *   namespace_policy=5, domain_separator=6
  */
-function parseCredentialViewBytes(clValue: any): {
+export async function credentialStanding(
+  ctx: CasperClientContext,
+  opts: { subject: string; claim: string },
+): Promise<{
+  view: ReturnType<typeof parseCredentialViewBytes> | null;
+  accreditationRequired: boolean | null;
+  issuerAccredited: boolean | null;
+  /** true only when standing requirements are met (fail-closed). */
+  standing: boolean;
+}> {
+  const packageHash = requireDeployment(ctx, "credentialRegistry");
+  const claim = canonicalizeClaim(opts.claim);
+  const capHash = claimHash(claim) as `0x${string}`;
+  const nsHash = namespaceHash(claim);
+
+  const subjectRaw = stripAccountHashPrefix(opts.subject);
+  const subjectBytes = hexToBytes(
+    subjectRaw.length === 64 ? subjectRaw : subjectRaw.padStart(64, "0"),
+  );
+
+  try {
+    const rpcUrl = ctx.config.network.rpcUrl;
+    const { execFileSync } = await import("node:child_process");
+    const pkgHash = `hash-${stripPrefix(packageHash)}`;
+
+    const pkgOutput = execFileSync(
+      "casper-client",
+      ["query-global-state", "--node-address", rpcUrl, "--key", pkgHash],
+      { encoding: "utf-8", timeout: 15_000 },
+    );
+    const versions =
+      JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage?.versions ??
+      [];
+    const contractHashRaw = versions[versions.length - 1]?.contract_hash ?? "";
+    if (!contractHashRaw) throw new Error("No contract hash found");
+    const contractHash = `hash-${contractHashRaw.replace(/^contract-/, "")}`;
+
+    const contractOutput = execFileSync(
+      "casper-client",
+      ["query-global-state", "--node-address", rpcUrl, "--key", contractHash],
+      { encoding: "utf-8", timeout: 15_000 },
+    );
+    const stateUref = JSON.parse(
+      contractOutput,
+    )?.result?.stored_value?.Contract?.named_keys?.find(
+      (k: any) => k.name === "state",
+    )?.key;
+    if (!stateUref) throw new Error("state URef not found");
+
+    const srOutput = execFileSync(
+      "casper-client",
+      ["get-state-root-hash", "--node-address", rpcUrl],
+      { encoding: "utf-8", timeout: 15_000 },
+    );
+    const stateRoot = srOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/)?.[1];
+    if (!stateRoot) throw new Error("No state root hash");
+
+    const readItem = (index: number, keyBytes: Uint8Array): Buffer | null => {
+      const indexBytes = Buffer.alloc(4);
+      indexBytes.writeUInt32BE(index, 0);
+      const dictItemKey = Buffer.from(
+        blake2b(Buffer.concat([indexBytes, Buffer.from(keyBytes)]), {
+          dkLen: 32,
+        }),
+      ).toString("hex");
+      try {
+        const out = execFileSync(
+          "casper-client",
+          [
+            "get-dictionary-item",
+            "--node-address",
+            rpcUrl,
+            "--state-root-hash",
+            stateRoot,
+            "--seed-uref",
+            stateUref,
+            "--dictionary-item-key",
+            dictItemKey,
+          ],
+          { encoding: "utf-8", timeout: 15_000 },
+        );
+        const cl = JSON.parse(out)?.result?.stored_value?.CLValue;
+        return cl?.bytes ? Buffer.from(cl.bytes, "hex") : null;
+      } catch {
+        return null;
+      }
+    };
+
+    // latest[subject, claim_hash] → CredentialView
+    const viewBytes = readItem(
+      2,
+      new Uint8Array([...subjectBytes, ...hexToBytes(capHash)]),
+    );
+    const view = viewBytes
+      ? parseCredentialViewBytes({ bytes: viewBytes.toString("hex") })
+      : null;
+
+    // namespace_policy[ns_hash] → bool (u32 len prefix + 1 byte)
+    const policyBytes = readItem(5, hexToBytes(nsHash));
+    const accreditationRequired =
+      policyBytes && policyBytes.length >= 5 ? policyBytes[4] !== 0 : null;
+
+    // issuer_accreditation[issuer, ns_hash] → AccreditationView{active, granted_at}
+    let issuerAccredited: boolean | null = null;
+    if (view) {
+      const accBytes = readItem(
+        4,
+        new Uint8Array([...hexToBytes(view.issuer), ...hexToBytes(nsHash)]),
+      );
+      issuerAccredited =
+        accBytes && accBytes.length >= 5 ? accBytes[4] !== 0 : false;
+    }
+
+    const standing =
+      accreditationRequired === false ||
+      (accreditationRequired === true && issuerAccredited === true);
+
+    return { view, accreditationRequired, issuerAccredited, standing };
+  } catch (err) {
+    if (process.env.LIGIS_CASPER_DEBUG) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ligis-casper] credentialStanding lookup failed: ${msg}`);
+    }
+    return {
+      view: null,
+      accreditationRequired: null,
+      issuerAccredited: null,
+      standing: false,
+    };
+  }
+}
+
+/** Parse a CredentialView stored as List<U8> bytes (v1 and v2 layouts).
+ *
+ * v2 bytes (after the 4-byte length prefix):
+ *   issuer: [u8; 20] | subject: [u8; 32] | claim: String (u32 LE len ++ utf8)
+ *   | issued_at: u64 LE | expires_at: u64 LE | revoked: bool | valid: bool
+ *   — at least 74 bytes.
+ * v1 stores no `claim` field:
+ *   issuer: [u8; 20] | subject: [u8; 32] | issued_at: u64 LE
+ *   | expires_at: u64 LE | revoked: bool | valid: bool
+ *   — exactly 70 bytes, decoded with `claim: ""` so the adapter can keep
+ *   reading credentials issued by a v1 registry package.
+ */
+export function parseCredentialViewBytes(clValue: any): {
   issuer: string;
+  claim: string;
   issuedAt: string;
   expiresAt: string;
   revoked: boolean;
@@ -418,20 +585,36 @@ function parseCredentialViewBytes(clValue: any): {
   // First 4 bytes = length prefix (u32 LE)
   const len = allBytes.readUInt32LE(0);
   const data = allBytes.subarray(4, 4 + len);
-  if (data.length < 70) {
-    return {
-      issuer: "0x" + "00".repeat(20),
-      issuedAt: "0",
-      expiresAt: "0",
-      revoked: false,
-      valid: false,
-    };
-  }
+  const empty = {
+    issuer: "0x" + "00".repeat(20),
+    claim: "",
+    issuedAt: "0",
+    expiresAt: "0",
+    revoked: false,
+    valid: false,
+  };
   let offset = 0;
   const issuer = "0x" + data.subarray(offset, offset + 20).toString("hex");
   offset += 20;
   // subject (32 bytes) — skip, not needed for verification
   offset += 32;
+  if (data.length === 70) {
+    // v1 layout — no claim field
+    const issuedAt = data.readBigUInt64LE(offset).toString();
+    offset += 8;
+    const expiresAt = data.readBigUInt64LE(offset).toString();
+    offset += 8;
+    const revoked = data[offset] !== 0;
+    offset += 1;
+    const valid = data[offset] !== 0;
+    return { issuer, claim: "", issuedAt, expiresAt, revoked, valid };
+  }
+  if (data.length < 74) return empty;
+  const claimLen = data.readUInt32LE(offset);
+  offset += 4;
+  if (offset + claimLen + 18 > data.length) return empty;
+  const claim = data.subarray(offset, offset + claimLen).toString("utf8");
+  offset += claimLen;
   const issuedAt = data.readBigUInt64LE(offset).toString();
   offset += 8;
   const expiresAt = data.readBigUInt64LE(offset).toString();
@@ -439,7 +622,7 @@ function parseCredentialViewBytes(clValue: any): {
   const revoked = data[offset] !== 0;
   offset += 1;
   const valid = data[offset] !== 0;
-  return { issuer, issuedAt, expiresAt, revoked, valid };
+  return { issuer, claim, issuedAt, expiresAt, revoked, valid };
 }
 
 /**
@@ -460,6 +643,7 @@ export async function signCredential(
 ): Promise<{
   issuer: string;
   subject: string;
+  claim: string;
   capabilityHash: `0x${string}`;
   issuedAt: string;
   expiresAt: string;
@@ -467,7 +651,8 @@ export async function signCredential(
   digest: `0x${string}`;
   signature: string;
 }> {
-  const capHash = parseCapability(opts.capability) as `0x${string}`;
+  const claim = canonicalizeClaim(opts.capability);
+  const capHash = claimHash(claim) as `0x${string}`;
   const issuer = addressFromSecpKey(opts.issuerKey);
   const issuedAt = BigInt(Math.floor(Date.now() / 1000));
   const expiresAt =
@@ -573,10 +758,10 @@ export async function signCredential(
   const message: CredentialMessage = {
     issuer,
     subject: `0x${subjectPadded}`,
-    capabilityHash: capHash,
-    issuedAt: BigInt(issuedAt).toString(16).padStart(2, "0"),
-    expiresAt: BigInt(expiresAt).toString(16).padStart(2, "0"),
-    nonce: BigInt(nonce).toString(16).padStart(2, "0"),
+    claim,
+    issuedAt: evenHex(issuedAt),
+    expiresAt: evenHex(expiresAt),
+    nonce: evenHex(BigInt(nonce)),
   };
 
   const digest = buildCredentialDigest(ctx.config, message);
@@ -594,6 +779,7 @@ export async function signCredential(
   return {
     issuer,
     subject: opts.subject,
+    claim,
     capabilityHash: capHash,
     issuedAt: issuedAt.toString(),
     expiresAt: expiresAt.toString(),
@@ -605,14 +791,16 @@ export async function signCredential(
 
 /**
  * Submit a signed credential to the CredentialRegistry contract.
- * Calls CredentialRegistry.issue(issuer, subject, cap_hash, issued_at, expires_at, nonce, digest, signature).
+ * Calls CredentialRegistry.issue(issuer, subject, claim, issued_at, expires_at, nonce, digest, signature).
+ * v2: the contract derives claim_hash from the canonical `claim` string and
+ * recomputes the digest, so `digest` must match the exact typed data.
  */
 export async function submitCredential(
   ctx: CasperClientContext,
   signed: {
     issuer: string;
     subject: string;
-    capabilityHash: `0x${string}`;
+    claim: string;
     issuedAt: string;
     expiresAt: string;
     nonce: string;
@@ -629,14 +817,13 @@ export async function submitCredential(
   const subjectPadded =
     subjectRaw.length === 64 ? subjectRaw : subjectRaw.padStart(64, "0");
   const subjectBytes = hexToBytes(subjectPadded);
-  const capHashBytes = hexToBytes(signed.capabilityHash);
   const digestBytes = hexToBytes(signed.digest);
   const sigBytes = hexToBytes(signed.signature);
 
   const args = new Map<string, CLValueType>();
   args.set("issuer", CLValue.newCLByteArray(issuerBytes));
   args.set("subject", CLValue.newCLByteArray(subjectBytes));
-  args.set("capability_hash", CLValue.newCLByteArray(capHashBytes));
+  args.set("claim", CLValue.newCLString(canonicalizeClaim(signed.claim)));
   args.set("issued_at", CLValue.newCLUint64(BigInt(signed.issuedAt)));
   args.set("expires_at", CLValue.newCLUint64(BigInt(signed.expiresAt)));
   args.set("nonce", CLValue.newCLUint64(BigInt(signed.nonce)));
@@ -700,7 +887,8 @@ export async function revokeCredential(
     );
   }
 
-  const capHash = parseCapability(opts.capability) as `0x${string}`;
+  const claim = canonicalizeClaim(opts.capability);
+  const capHash = claimHash(claim) as `0x${string}`;
   // Pad subject to 32 bytes for consistency with issue/verify.
   const subjectRaw = stripAccountHashPrefix(opts.subject);
   const subjectPadded =
@@ -711,7 +899,7 @@ export async function revokeCredential(
   const message: RevocationMessage = {
     subject: `0x${subjectPadded}`,
     capabilityHash: capHash,
-    nonce: BigInt(opts.nonce).toString(16).padStart(2, "0"),
+    nonce: opts.nonce,
   };
   const digest = buildRevokeDigest(ctx.config, message);
 
@@ -725,8 +913,8 @@ export async function revokeCredential(
 
   const args = new Map<string, CLValueType>();
   args.set("subject", CLValue.newCLByteArray(subjectBytes));
-  args.set("capability_hash", CLValue.newCLByteArray(capHashBytes));
-  args.set("_nonce", CLValue.newCLUint64(BigInt(opts.nonce)));
+  args.set("claim_hash", CLValue.newCLByteArray(capHashBytes));
+  args.set("nonce", CLValue.newCLUint64(BigInt(opts.nonce)));
   args.set("digest", CLValue.newCLByteArray(hexToBytes(digest)));
   args.set("signature", CLValue.newCLByteArray(hexToBytes(signature)));
 
@@ -760,6 +948,110 @@ export async function revokeCredential(
     }
     throw sdkErr;
   }
+}
+
+// ---------- v2 admin ops ----------
+
+async function callRegistry(
+  ctx: CasperClientContext,
+  entryPoint: string,
+  args: Map<string, CLValueType>,
+): Promise<{ txHash: string; blockNumber: string }> {
+  const packageHash = requireDeployment(ctx, "credentialRegistry");
+  const signer = requireSigner();
+  try {
+    return await callStoredContractViaSdk({
+      chainName: ctx.config.network.chainName,
+      signer,
+      packageHash,
+      entryPoint,
+      args,
+      rpcUrl: ctx.config.network.rpcUrl,
+    });
+  } catch (sdkErr) {
+    if (process.env.LIGIS_CASPER_KEY_PATH) {
+      try {
+        return await callStoredContractViaCli({
+          chainName: ctx.config.network.chainName,
+          signer,
+          packageHash,
+          entryPoint,
+          args,
+          rpcUrl: ctx.config.network.rpcUrl,
+        });
+      } catch (cliErr) {
+        throw new Error(
+          `SDK submission failed: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}\n` +
+            `CLI fallback also failed: ${cliErr instanceof Error ? cliErr.message : cliErr}`,
+        );
+      }
+    }
+    throw sdkErr;
+  }
+}
+
+/**
+ * Set the on-chain EIP-712 domain separator (admin only). Must be called once
+ * after deploy — issue() reverts until it is set. Compute with
+ * buildDomainSeparator(config) once the package hash is known.
+ */
+export async function setDomainSeparator(
+  ctx: CasperClientContext,
+  domainSeparator: `0x${string}`,
+): Promise<{ txHash: string; blockNumber: string }> {
+  const args = new Map<string, CLValueType>();
+  args.set(
+    "domain_separator",
+    CLValue.newCLByteArray(hexToBytes(domainSeparator)),
+  );
+  return callRegistry(ctx, "set_domain_separator", args);
+}
+
+/** Enable/disable the accreditation requirement for a claim namespace (admin). */
+export async function setNamespacePolicy(
+  ctx: CasperClientContext,
+  namespace: string,
+  accreditationRequired: boolean,
+): Promise<{ txHash: string; blockNumber: string }> {
+  const args = new Map<string, CLValueType>();
+  args.set(
+    "namespace_hash",
+    CLValue.newCLByteArray(hexToBytes(namespaceHashOf(namespace))),
+  );
+  args.set("required", CLValue.newCLValueBool(accreditationRequired));
+  return callRegistry(ctx, "set_namespace_policy", args);
+}
+
+/** Accredit (or de-accredit) an issuer for a claim namespace (admin). */
+export async function setIssuerAccreditation(
+  ctx: CasperClientContext,
+  issuer: string,
+  namespace: string,
+  accredited: boolean,
+): Promise<{ txHash: string; blockNumber: string }> {
+  const args = new Map<string, CLValueType>();
+  args.set("issuer", CLValue.newCLByteArray(hexToBytes(issuer)));
+  args.set(
+    "namespace_hash",
+    CLValue.newCLByteArray(hexToBytes(namespaceHashOf(namespace))),
+  );
+  args.set("active", CLValue.newCLValueBool(accredited));
+  return callRegistry(ctx, "set_issuer_accreditation", args);
+}
+
+/** Transfer registry admin to a new Casper native account (admin only). */
+export async function setRegistryAdmin(
+  ctx: CasperClientContext,
+  newAdminAccountHash: string,
+): Promise<{ txHash: string; blockNumber: string }> {
+  const args = new Map<string, CLValueType>();
+  args.set(
+    "new_admin",
+    CLValue.newCLByteArray(
+      hexToBytes(stripAccountHashPrefix(newAdminAccountHash)),
+    ),
+  );
+  return callRegistry(ctx, "set_admin", args);
 }
 
 // ---------- evidence anchoring ----------
@@ -820,3 +1112,146 @@ export async function getBalance(
 
 // Re-exports for tests / sibling modules
 export { capabilityHash };
+
+// ---------- M2: OutcomeFeed (reputation receipts) ----------
+
+async function callContractByDeployment(
+  ctx: CasperClientContext,
+  which: "outcomeFeed" | "policyGuard",
+  entryPoint: string,
+  args: Map<string, CLValueType>,
+): Promise<{ txHash: string; blockNumber: string }> {
+  const packageHash = requireDeployment(ctx, which);
+  const signer = requireSigner();
+  try {
+    return await callStoredContractViaSdk({
+      chainName: ctx.config.network.chainName,
+      signer,
+      packageHash,
+      entryPoint,
+      args,
+      rpcUrl: ctx.config.network.rpcUrl,
+    });
+  } catch (sdkErr) {
+    if (process.env.LIGIS_CASPER_KEY_PATH) {
+      try {
+        return await callStoredContractViaCli({
+          chainName: ctx.config.network.chainName,
+          signer,
+          packageHash,
+          entryPoint,
+          args,
+          rpcUrl: ctx.config.network.rpcUrl,
+        });
+      } catch (cliErr) {
+        throw new Error(
+          `SDK submission failed: ${sdkErr instanceof Error ? sdkErr.message : sdkErr}\n` +
+            `CLI fallback also failed: ${cliErr instanceof Error ? cliErr.message : cliErr}`,
+        );
+      }
+    }
+    throw sdkErr;
+  }
+}
+
+export const OUTCOME_SETTLED = 0;
+export const OUTCOME_DISPUTED = 1;
+export const OUTCOME_REJECTED = 2;
+export const OUTCOME_OTHER = 3;
+
+/**
+ * Anchor an outcome receipt on OutcomeFeed (M2 history axis).
+ * `receiptHash` commits to off-chain evidence (payment tx, adjudication
+ * verdict, delivery attestation); heavy data stays off-chain.
+ */
+export async function recordOutcome(
+  ctx: CasperClientContext,
+  opts: {
+    subject: string; // 32-byte account hash hex (with or without prefix)
+    claimHash: `0x${string}`; // keccak256(claim) — use claimHash() from @ligis/core
+    kind: number; // OUTCOME_*
+    receiptHash: `0x${string}`;
+  },
+): Promise<{ txHash: string; blockNumber: string }> {
+  const args = new Map<string, CLValueType>();
+  args.set(
+    "subject",
+    CLValue.newCLByteArray(hexToBytes(stripAccountHashPrefix(opts.subject))),
+  );
+  args.set("claim_hash", CLValue.newCLByteArray(hexToBytes(opts.claimHash)));
+  args.set("kind", CLValue.newCLUint8(opts.kind));
+  args.set(
+    "receipt_hash",
+    CLValue.newCLByteArray(hexToBytes(opts.receiptHash)),
+  );
+  return callContractByDeployment(ctx, "outcomeFeed", "record_outcome", args);
+}
+
+// ---------- M3: PolicyGuard (enforceable spend/policy checks) ----------
+
+/**
+ * Set a subject's spending policy on PolicyGuard (admin only).
+ * `requiredClaimHash` zero disables the credential leg.
+ * `budget` is in motes per `windowSecs` rolling window.
+ */
+export async function setPolicyGuardPolicy(
+  ctx: CasperClientContext,
+  opts: {
+    subject: string;
+    windowSecs: bigint;
+    budget: bigint; // motes
+    requiredClaimHash?: `0x${string}`;
+    enabled?: boolean;
+  },
+): Promise<{ txHash: string; blockNumber: string }> {
+  const args = new Map<string, CLValueType>();
+  args.set(
+    "subject",
+    CLValue.newCLByteArray(hexToBytes(stripAccountHashPrefix(opts.subject))),
+  );
+  args.set("window_secs", CLValue.newCLUint64(opts.windowSecs));
+  args.set("budget", CLValue.newCLUInt512(opts.budget));
+  args.set(
+    "required_claim_hash",
+    CLValue.newCLByteArray(
+      hexToBytes(opts.requiredClaimHash ?? `0x${"00".repeat(32)}`),
+    ),
+  );
+  args.set("enabled", CLValue.newCLValueBool(opts.enabled ?? true));
+  return callContractByDeployment(ctx, "policyGuard", "set_policy", args);
+}
+
+/** Transfer PolicyGuard admin (admin only). */
+export async function setPolicyGuardAdmin(
+  ctx: CasperClientContext,
+  newAdminAccountHash: string,
+): Promise<{ txHash: string; blockNumber: string }> {
+  const args = new Map<string, CLValueType>();
+  args.set(
+    "new_admin",
+    CLValue.newCLByteArray(
+      hexToBytes(stripAccountHashPrefix(newAdminAccountHash)),
+    ),
+  );
+  return callContractByDeployment(ctx, "policyGuard", "set_admin", args);
+}
+
+/**
+ * Evaluate + record a spend against a subject's policy (M3).
+ * Returns the deploy result; the boolean verdict is in the tx effects —
+ * callers that need the value should read it via a follow-up query or
+ * treat the tx as the enforcement record. Cross-contract callers (e.g.
+ * vaults) read the return value on-chain directly.
+ */
+export async function checkAndRecordSpend(
+  ctx: CasperClientContext,
+  opts: { subject: string; amount: bigint },
+): Promise<{ txHash: string; blockNumber: string }> {
+  const args = new Map<string, CLValueType>();
+  args.set(
+    "subject",
+    CLValue.newCLByteArray(hexToBytes(stripAccountHashPrefix(opts.subject))),
+  );
+  args.set("amount", CLValue.newCLUInt512(opts.amount));
+  return callContractByDeployment(ctx, "policyGuard", "check_and_record", args);
+}

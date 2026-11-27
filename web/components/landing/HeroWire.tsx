@@ -111,7 +111,7 @@ export function HeroWire() {
             </div>
             <span
               className={`shrink-0 font-mono text-5xl font-medium tracking-tight sm:text-6xl ${
-                stop ? "text-stop" : "text-go"
+                stop ? "text-loss" : "text-good"
               }`}
             >
               {current.verdict}
@@ -130,7 +130,7 @@ export function HeroWire() {
               {item.vendor} ·{" "}
               <span className="tabular text-fog">{item.amount}</span>
             </span>
-            <span className={item.verdict === "STOP" ? "text-stop" : "text-go"}>
+            <span className={item.verdict === "STOP" ? "text-loss" : "text-good"}>
               {item.verdict}
             </span>
           </li>

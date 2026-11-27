@@ -13,12 +13,12 @@ import {
   GateRefusedError,
   gateFromVerifyResult,
 } from "../src/check-gate.js";
+import type { VerifyResult } from "@ligis/core";
 import {
   GENLAYER_DEFAULT_CAPABILITY,
   GENLAYER_DEFAULT_LIGIS_CHAIN,
   type GateReceipt,
-  type VerifyResult,
-} from "@ligis/core";
+} from "../src/interface.js";
 
 function fakeVerify(overrides: Partial<VerifyResult> = {}): VerifyResult {
   return {
@@ -39,7 +39,7 @@ function fakeVerify(overrides: Partial<VerifyResult> = {}): VerifyResult {
 
 describe("DEFAULT_GATE_CHAIN + DEFAULT_GATE_CAPABILITY", () => {
   it("match the frozen GenLayer defaults", () => {
-    // Same constants live in @ligis/core/src/genlayer.ts. Asserting here so a
+    // Same constants live in src/interface.ts. Asserting here so a
     // drift in either side breaks loudly.
     assert.equal(DEFAULT_GATE_CHAIN, GENLAYER_DEFAULT_LIGIS_CHAIN);
     assert.equal(DEFAULT_GATE_CAPABILITY, GENLAYER_DEFAULT_CAPABILITY);

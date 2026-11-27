@@ -1,0 +1,110 @@
+name: ligis
+version: 0.1.0
+manifest_version: 2
+api_version: 1
+description: >-
+  Verify that a payee holds a live, third-party-issued, revocable on-chain
+  capability credential before your agent pays them. Hermes agents pay other
+  agents, and the destination address comes from the HTTP answer asking for
+  the money — nothing in the x402 flow ties that address to anything the
+  payee has proven about itself. ligis reads the credential registry
+  directly over read-only JSON-RPC and answers the question the payment
+  flow leaves open: is this counterparty entitled to this? Five tools
+  (ligis_check_capability, ligis_capability_hash, ligis_verify_payee,
+  ligis_verify_payment, ligis_chains) plus two surfaces: a pre_tool_call
+  gate that intercepts payment-shaped tool calls and escalates to
+  Hermes's approval prompt when the payee cannot be credentialed, and a
+  transform_tool_result hook that annotates an x402 402 challenge with the
+  payee's credential verdict before the agent signs anything. A capability
+  is indexed by the keccak-256 hash of its name, so the same capability
+  resolves to the same bytes on every chain.
+  Disclosure — makes read-only HTTPS JSON-RPC eth_call requests to the
+  configured RPC endpoint (default https://testnet-rpc.monad.xyz for
+  monad-testnet and https://atlantic.dplabs-internal.com for
+  pharos-atlantic); the RPC operator sees the caller's IP and the queried
+  registry and subject addresses; it holds no keys, signs nothing, sends no
+  transactions, reads no files outside its own plugin data directory, runs
+  no background processes, and has no telemetry. The pre_tool_call hook
+  escalates to Hermes's approval prompt — what that prompt does is
+  Hermes's approvals policy, not the plugin's: --yolo and
+  approvals.mode: off auto-approve plugin escalations, and cron follows
+  approvals.cron_mode. Set mode: enforce to block the call outright
+  regardless of approvals configuration. If the credential registry
+  cannot be read, the hook does not gate — an unreachable registry is not
+  a finding. The registry lets anyone issue a credential for any subject,
+  so a live credential only counts when its issuer is in trusted_issuers —
+  the operator's setting is the only root of trust (tool arguments can
+  narrow it, never widen it). Before its first read against an endpoint the
+  plugin probes eth_chainId and eth_getCode on the registry address, so an
+  endpoint serving the wrong chain or a registry address with no contract
+  reads as unknown rather than an answer; reads are at the "latest" block,
+  not a finalized one. Registry reads reveal the queried subject addresses
+  to the RPC operator. The pre_tool_call gate checks every destination
+  address a call names — inside nested arguments and signed x402 payment
+  payloads — not just the first, and stops when its time budget
+  (hook_time_budget_seconds, default 10s) is spent: unchecked payees are
+  reported, never assumed. A verified credential means a trusted issuer
+  vouches for the payee's capability — it is not a guarantee of honesty or
+  of settlement. The transform_tool_result hook only appends a note to a
+  result that already contains an x402 payment challenge; it never blocks
+  and never rewrites the result's content.
+author: snel
+license: MIT
+homepage: https://github.com/sneldao/ligis
+tags: [security, payments, x402, credentials, guardrails, verification]
+provides_tools:
+  - ligis_check_capability
+  - ligis_capability_hash
+  - ligis_verify_payee
+  - ligis_verify_payment
+  - ligis_chains
+provides_hooks:
+  - pre_tool_call
+  - transform_tool_result
+config_schema:
+  mode:
+    type: str
+    default: escalate
+    description: >-
+      What to do when a payment-shaped tool call names a payee that does
+      not hold the required credential: escalate (ask through Hermes's own
+      approval prompt — the default), enforce (block the call outright),
+      or off (never gate).
+  capability:
+    type: str
+    default: ""
+    description: >-
+      The capability a payee must hold, e.g. agent.commerce.escrow. Empty
+      means the gate uses the capability named in the tool call's own
+      arguments, and stays silent when there is none.
+  trusted_issuers:
+    type: str
+    default: ""
+    description: >-
+      Comma-separated issuer addresses whose credentials count — the only
+      root of trust. The registry lets anyone issue a credential for any
+      subject — a payee can issue its own — so a live credential only
+      counts when one of these issuers signed it. Tool arguments can
+      narrow this set for a single call but cannot add to it. Empty means
+      no issuer is trusted: a present credential is reported as issuer
+      not verified and gated like a missing one.
+  chain:
+    type: str
+    default: monad-testnet
+    description: >-
+      Which chain's credential registry to read: monad-testnet or
+      pharos-atlantic. The capability hash is identical on both.
+  hook_time_budget_seconds:
+    type: float
+    default: 10.0
+    description: >-
+      Total wall-clock budget for the registry reads a single hook
+      invocation may spend, shared across every payee it checks. A slow
+      or stalling endpoint cannot stretch a hook past this; payees that
+      did not fit the budget are reported as unchecked.
+  amount_tolerance_pct:
+    type: float
+    default: 10.0
+    description: >-
+      Percentage drift allowed between the amount asked for and the
+      expected amount in the right-amount signal.

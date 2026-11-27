@@ -297,7 +297,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
               disabled={running}
               onClick={() => setLive((v) => !v)}
               className={`font-mono text-xs tabular transition-colors disabled:opacity-50 ${
-                live ? "text-sage" : "text-ink-quiet"
+                live ? "text-good" : "text-ink-quiet"
               }`}
             >
               {live ? "● live · on-chain writes" : "○ simulated · no writes"}
@@ -319,7 +319,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
               <button
                 type="button"
                 onClick={stop}
-                className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-revoke hover:decoration-revoke"
+                className="text-sm text-ink-soft underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-loss hover:decoration-loss"
               >
                 stop
               </button>
@@ -357,7 +357,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
         {state.error ? (
           <div role="alert" className="space-y-3">
             <Rule />
-            <p className="font-serif text-base italic text-revoke">
+            <p className="font-serif text-base italic text-loss">
               {state.error}
             </p>
             {!running ? (
@@ -398,7 +398,7 @@ export function StewardRunner({ defaultGoal }: { defaultGoal: string }) {
                         0G Compute · {state.reasonModel ?? "unknown model"}
                       </span>
                       {state.reasonVerified ? (
-                        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-sage">
+                        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-good">
                           TEE-verified ✓
                         </span>
                       ) : null}

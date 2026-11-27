@@ -302,8 +302,8 @@ export function UnifiedWalletChip() {
       : !connected
         ? "bg-terra"
         : funded
-          ? "bg-sage"
-          : "bg-sky";
+          ? "bg-good"
+          : "bg-progress";
 
     label = isHydrating
       ? "—"
@@ -321,7 +321,7 @@ export function UnifiedWalletChip() {
           ? `Casper wallet — ${formatMotes(casperWallet.balanceMotes)} CSPR, funded`
           : "Casper wallet — fund the testnet faucet to continue";
   } else {
-    dot = !pharosAccount ? "bg-terra" : onPharos ? "bg-sage" : "bg-sky";
+    dot = !pharosAccount ? "bg-terra" : onPharos ? "bg-good" : "bg-progress";
 
     label = pharosBusy
       ? "…"
@@ -488,7 +488,7 @@ function PharosPanelContent({
       )}
       {error ? (
         <p
-          className="mt-3 font-serif text-xs leading-relaxed text-revoke"
+          className="mt-3 font-serif text-xs leading-relaxed text-loss"
           role="alert"
         >
           {error}

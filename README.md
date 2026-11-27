@@ -3,9 +3,8 @@
 > **Evidence-based payment control for autonomous finance.**
 > **Ligis makes sure finance agents pay for what the business actually authorized, not simply what an agent requests.**
 > **Order-bound checks (supplier destination, price tolerance, duplicate invoice, unresolved retry, mandate) enforced on the Airwallex payout path.**
-> **Airwallex hackathon:** see [`docs/airwallex-submission.md`](docs/airwallex-submission.md).
 > **Also live:** the stateless pre-payment gate on Pharos + Casper + Monad (right payee, right amount, in scope, verified payee).
-> **PayBox Ch.1:** see [`docs/paybox-ch1.md`](docs/paybox-ch1.md) — money-with-a-conscience vision.
+> **Hackathon and program entries:** indexed in [`docs/hackathons/`](docs/hackathons/README.md); evidence in [`docs/proofs.md`](docs/proofs.md).
 
 [![CI](https://github.com/sneldao/ligis/actions/workflows/ci.yml/badge.svg)](https://github.com/sneldao/ligis/actions/workflows/ci.yml)
 
@@ -48,42 +47,28 @@ PRIVATE_KEY=0x... ZEROG_PRIVATE_KEY=0x... \
 **Try the live gate:** <https://ligis.vercel.app/gate> — the same
 decision service, exposed as a UI with measured verdict headers.
 
-### Zecathon — Shielded Zcash Gate & Zero-Knowledge Credentials
-
-Current implementation and limits: [Zcash live status](docs/zcash-live-status.md).
-Live note decryption works; the faucet receipt is not a post-GO payment.
-An opt-in UltraHonk WASM verifier passes local tests; deployment verification
-and a wallet executor remain pending.
-
-> Intended track: Shielded Payments. Grand Prize is an additional award.
-> Eligibility requires organizer confirmation because Ligis predates the build window.
-> **Build Window:** Sep 28 – Oct 28, 2026 · 23:59 UTC  
-> **Net-new Zcash code authored during the build window:** `packages/circuits-zcash/` (Noir UltraHonk circuit, Poseidon Merkle tree, verifier), `packages/core/src/zcash.ts` (ZIP-316 Bech32m/F4Jumble, lightwalletd client, Pallas ECDH note trial-decryption, 512B memo codec), and `web/app/zcash/` (guided 4-step privacy demo). Pre-existing EVM/Casper registries serve strictly as upstream libraries.
-
-Before an agent releases shielded ZEC to a `utest1…` / `u1…` address, the payee proves in zero knowledge (Noir + Barretenberg UltraHonk, depth-16 Poseidon Merkle tree) that it holds an unexpired, unrevoked Ligis credential bound to its own Zcash address inside a steward-signed, on-chain-anchored `CredentialRegistry` root — without revealing its EVM/Casper wallet, which issuer vouched for it, or which leaf it owns.
-
-```bash
-# 1. Guided 4-step web demo (/zcash): no proof STOP → UltraHonk proof GO → replay STOP → revoked STOP
-pnpm demo:zcash-web          # open http://localhost:3000/zcash (or visit https://ligis.vercel.app/zcash)
-
-# 2. One-command CLI ZK gate demo (publish root → prove → GO → replay/redirect/revoke STOP)
-pnpm demo:zcash-zk           # writes scripts/zcash-zk-demo.lastrun.txt
-
-# 3. Viewing-key selective disclosure & live Zcash Testnet memo decryption demo
-pnpm demo:zcash              # writes scripts/zcash-shielded-demo.lastrun.txt
-```
-
-See [`docs/zecathon-entry.md`](docs/zecathon-entry.md) for the circuit spec, Monad root-anchor transaction ([`0x91f64222...`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f), block `74058241`), live Zcash Testnet transaction ([`d2b389c8...`](https://fauzec.com/api/v1/status/testnet/01M5SKS8EGMJ3MK633ED1ZJ02P), block `4,540,356`), and honest risks.
-
 ## What this is
 
-Ligis is a pre-payment decision service for AI agents. The wedge is the
-gate; credentials, cross-chain portability, the Steward loop, CROO
-distribution, and the OKX.AI listing are the moat that makes one of the
-four signals — _verified payee_ — hold up under scrutiny. The full
-positioning (what we say, what we don't, what the words mean) lives in
+Ligis is a payment authorization and execution layer for finance agents.
+The product we lead with is the order-bound controller
+(`packages/procurement`, Airwallex payout path). The stateless gate
+(`POST /api/gate`) is the entry point for agent wallets and x402
+merchants. Credentials, cross-chain portability, the Steward loop and
+CROO distribution exist to make one of the gate's four signals —
+_verified payee_ — hold up under scrutiny. The full positioning (what we
+say, what we don't, what the words mean) lives in
 [`docs/positioning.md`](docs/positioning.md). This README is the
 operational entry point — install, run, deploy.
+
+### What is core and what is showcase
+
+| Tier                 | What it is                                                                 | Where                                                                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Product**          | Order-bound payment controller; stateless gate and its signing boundary    | `packages/procurement`, `packages/core`, `web` (`/gate`, `/api/gate`), `packages/x402-server`, `packages/wallet-plugin`, `packages/metamask-plugin`                                     |
+| **Credential layer** | The _verified payee_ signal: registries, adapters, steward, distribution   | Pharos / Monad / 0G via `adapter-evm` + `contracts-evm`, Casper via `adapter-casper` + `contracts-casper`, `agent-logic`, `cli`, `mcp-server`, `zerog`, `croo-adapter`, `envio-indexer` |
+| **Showcase**         | Event-specific demos built on the layers above; kept working, not extended | GenLayer (`adapter-genlayer`, `contracts-genlayer`, `/genlayer`), Zcash (`circuits-zcash`, `adapter-zcash`, `/zcash`), `/arena`                                                         |
+
+Per-package tiers: [`MONOREPO_STRUCTURE.md`](MONOREPO_STRUCTURE.md).
 
 ### Jev intent layer — the gate has reflexes
 
@@ -162,12 +147,12 @@ Ligis is **chain-agnostic by design.** Every chain implements the same
 `ChainAdapter` interface from `@ligis/core`; the Trust Steward, CLI, and
 MCP server consume the interface, not the implementation.
 
-| Chain                     | Adapter                             | Contracts                                                | Status                                                                                                              |
-| ------------------------- | ----------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                      | Live — deployed, tested, steward running                                                                            |
-| **Casper Testnet**        | `@ligis/adapter-casper`             | `packages/contracts-casper` (Odra)                       | **Live** — contracts deployed, smoke test passing, web UI live                                                      |
-| **Monad Testnet**         | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                      | Live — passkey issuer demo, GateStates walk                                                                         |
-| **Zcash Testnet**         | `@ligis/core` (`ZcashChainAdapter`) | `packages/circuits-zcash` (Noir + UltraHonk) + 512B memo | **Live** — `/zcash` guided demo, payee-bound ZK membership + nullifier, viewing-key disclosure (Zecathon Weeks 1–3) |
+| Chain                     | Adapter                                      | Contracts                                                | Status                                                                                                                  |
+| ------------------------- | -------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`                         | `packages/contracts-evm` (Solidity)                      | Live — deployed, tested, steward running                                                                                |
+| **Casper Testnet**        | `@ligis/adapter-casper`                      | `packages/contracts-casper` (Odra)                       | **Live** — contracts deployed, smoke test passing, web UI live                                                          |
+| **Monad Testnet**         | `@ligis/adapter-evm`                         | `packages/contracts-evm` (Solidity)                      | Live — passkey issuer demo, GateStates walk                                                                             |
+| **Zcash Testnet**         | `@ligis/adapter-zcash` (`ZcashChainAdapter`) | `packages/circuits-zcash` (Noir + UltraHonk) + 512B memo | **Showcase** — `/zcash` guided demo, payee-bound ZK membership + nullifier, viewing-key disclosure (Zecathon Weeks 1–3) |
 
 **Why this works across chains:**
 
@@ -220,7 +205,7 @@ All five services are live and tested end-to-end. **`ligis.qualify`
 collapses the funnel into one order** — payment alone never mints
 trust, every issuance is evidence-gated or allowlist-gated, and a refusal
 is a structured deliverable (`{ issued: false, reason, detail }`), not
-an error. See [`AGENTS.md`](AGENTS.md) "CROO Provider Deployment" for
+an error. See [`AGENTS.md`](docs/agent-notes/croo.md) "CROO Provider Deployment" for
 the refusal shape and the `LIGIS_SELF_ISSUABLE_CAPABILITIES` semantics.
 
 A `fail` verdict doesn't dead-end the buyer: `ligis.risk` returns a
@@ -248,12 +233,11 @@ outcome trail that backs every measured claim in
 | [Positioning](docs/positioning.md)                               | Source of truth: pitch, signals, glossary, claims, privacy, pricing                                           |
 | [Strategy](docs/strategy.md)                                     | Product strategy, competitive landscape, differentiation, roadmap, business model                             |
 | [Architecture](docs/architecture.md)                             | Contract design, module structure, repository layout                                                          |
-| [Agent Arena](docs/agent-arena.md)                               | Vultr Agent Arena submission: `/arena` demo, judges, env vars, checklist                                      |
+| [Hackathon entries](docs/hackathons/README.md)                   | Index of hackathon and program entries and which docs belong to each                                          |
 | [CROO Integration](docs/croo-integration.md)                     | CAP adapter, Agent Store listing, provider/requester usage                                                    |
 | [OKX.AI Integration](docs/okx-ai.md)                             | ASP strategy, services, demo plan, and submission checklist                                                   |
 | [Proofs](docs/proofs.md)                                         | Hackathon submissions, demo videos, on-chain deployment evidence                                              |
 | [Attestation integrations](docs/attestation-integrations.md)     | Self Protocol and EAS provenance, privacy boundaries, and rollout                                             |
-| [Zecathon entry](docs/zecathon-entry.md)                         | Zecathon submission: Shielded Payments track, viewing-key selective disclosure, ZK presentation, demo spec    |
 | [Zcash shielded credentials](docs/zcash-shielded-credentials.md) | Additive primitive: shielded credential presentation, costs, risks, and architecture                          |
 | [ZK reputation evidence](docs/zk-reputation-evidence.md)         | Research note: private, ZK-proven counterparty history as a second evidence mode — **not built, not claimed** |
 | [Monorepo structure](MONOREPO_STRUCTURE.md)                      | Package layout, dependency graph, ChainAdapter interface, adding a new chain                                  |

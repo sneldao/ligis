@@ -10,9 +10,9 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./zcash-lwd": {
-      "types": "./dist/zcash-lwd.d.ts",
-      "import": "./dist/zcash-lwd.js"
+    "./claim": {
+      "import": "./dist/claim.js",
+      "types": "./dist/claim.d.ts"
     },
     "./hash": {
       "import": "./dist/hash.js",
@@ -29,7 +29,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@noble/curves": "^1.9.7",
     "@noble/hashes": "^1.4.0"
   },
   "devDependencies": {

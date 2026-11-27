@@ -28,6 +28,10 @@ export interface CasperDeployment {
   credentialRegistry?: string;
   /** Hex package hash of the agent identity contract. */
   agentId?: string;
+  /** Hex package hash of the outcome feed (reputation receipts). */
+  outcomeFeed?: string;
+  /** Hex package hash of the policy guard (spend enforcement). */
+  policyGuard?: string;
   /** CEP-18 token used for x402 payments, if any. */
   x402Token?: string;
   /** Hex account hash of the deployer. */
@@ -76,6 +80,8 @@ export function loadCasperConfig(): CasperConfig {
   const deployment: CasperDeployment = {
     credentialRegistry: process.env.LIGIS_CASPER_CREDENTIAL_REGISTRY,
     agentId: process.env.LIGIS_CASPER_AGENT_ID,
+    outcomeFeed: process.env.LIGIS_CASPER_OUTCOME_FEED,
+    policyGuard: process.env.LIGIS_CASPER_POLICY_GUARD,
     x402Token: process.env.LIGIS_CASPER_X402_TOKEN,
     deployer: process.env.LIGIS_CASPER_DEPLOYER,
   };

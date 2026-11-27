@@ -4,7 +4,7 @@ import {
   ZCASH_DEMO_REPLAYED_SUBJECT,
   ZCASH_DEMO_UNVERIFIED_SUBJECT,
   ZCASH_DEMO_VERIFIED_SUBJECT,
-} from "@ligis/core";
+} from "@ligis/adapter-zcash";
 import { runGateDecision } from "../lib/gate-run.js";
 import { zecAmount } from "../lib/payment-asset.js";
 import { MONAD_TESTNET, ZCASH_TESTNET, chainById } from "../lib/network.js";

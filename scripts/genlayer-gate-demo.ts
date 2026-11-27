@@ -12,16 +12,13 @@
  *   pnpm demo:genlayer-gate
  *   npx tsx scripts/genlayer-gate-demo.ts
  */
+import { capabilityHash, type VerifyResult } from "@ligis/core";
 import {
-  capabilityHash,
-  gateReceiptToJsonString,
-  type VerifyResult,
-} from "@ligis/core";
-import {
+  DEFAULT_GATE_CAPABILITY,
   GateRefusedError,
   gateFromVerifyResult,
+  gateReceiptToJsonString,
   refuseIfNotCapable,
-  DEFAULT_GATE_CAPABILITY,
 } from "@ligis/adapter-genlayer";
 
 const SUBJECT =

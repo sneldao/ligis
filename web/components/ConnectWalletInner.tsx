@@ -262,7 +262,7 @@ function ConnectPanel() {
               connect →
             </button>
             {wallet.error ? (
-              <span className="font-serif text-xs italic text-revoke">
+              <span className="font-serif text-xs italic text-loss">
                 {typeof wallet.error === "string"
                   ? wallet.error
                   : "Invalid key format — expected 64 hex chars (with or without 0x prefix)"}
@@ -299,11 +299,11 @@ function ConnectedPanel({
       aria-label="Wallet connected"
     >
       <header className="flex items-baseline justify-between">
-        <p className="eyebrow text-sky">● Connected</p>
+        <p className="eyebrow text-progress">● Connected</p>
         <button
           type="button"
           onClick={onDisconnect}
-          className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-revoke hover:decoration-revoke"
+          className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-loss hover:decoration-loss"
         >
           disconnect
         </button>
@@ -376,9 +376,9 @@ function FaucetPanel({
     <div
       className={`space-y-3 border px-4 py-3 ${
         funded
-          ? "border-sage bg-sage/5"
+          ? "border-good bg-good/5"
           : pollPaused
-            ? "border-revoke bg-revoke/5"
+            ? "border-loss bg-loss/5"
             : "border-terra bg-terra/5"
       }`}
       style={{ borderRadius: 0 }}
@@ -407,7 +407,7 @@ function FaucetPanel({
       {!funded ? (
         <div className="space-y-2">
           {pollPaused ? (
-            <p className="font-serif text-sm leading-relaxed text-revoke">
+            <p className="font-serif text-sm leading-relaxed text-loss">
               Balance check failed {consecutiveErrors} times. The RPC endpoint
               may be temporarily unavailable.
             </p>
@@ -437,7 +437,7 @@ function FaucetPanel({
           </div>
         </div>
       ) : (
-        <p className="font-serif text-sm italic leading-relaxed text-sage">
+        <p className="font-serif text-sm italic leading-relaxed text-good">
           The Steward loop will sign and submit every transaction from this
           browser wallet — no server custodian.
         </p>

@@ -29,7 +29,7 @@ The video shows:
 2. Full CAP lifecycle: negotiate → pay USDC → deliver JSON verdict
 3. On-chain proof: `CredentialRegistry.isCapable` read on **Casper Testnet** (same contracts as our Casper Buildathon submission)
 
-Composition source: [`videos/ligis-croo-hackathon/`](../videos/ligis-croo-hackathon/)
+Composition source formerly at `videos/ligis-croo-hackathon/` (removed from the repo; in git history before 2026-11-27)
 
 ## Repo
 

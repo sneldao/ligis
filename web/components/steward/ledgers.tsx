@@ -17,7 +17,7 @@ export function CapabilityLedger({
         <div key={c.name}>
           <div className="grid grid-cols-[auto_1fr_auto_auto] items-baseline gap-x-4 py-3 text-sm">
             <span
-              className={`text-base ${c.capable ? "text-sage" : "text-ink-quiet"}`}
+              className={`text-base ${c.capable ? "text-good" : "text-ink-quiet"}`}
               aria-hidden
             >
               {c.capable ? "✓" : "✕"}
@@ -31,7 +31,7 @@ export function CapabilityLedger({
               ) : null}
             </div>
             <span
-              className={`font-mono text-[11px] uppercase tracking-[0.16em] ${c.capable ? "text-sage" : "text-ink-quiet"}`}
+              className={`font-mono text-[11px] uppercase tracking-[0.16em] ${c.capable ? "text-good" : "text-ink-quiet"}`}
             >
               {c.capable ? "held" : "not held"}
             </span>

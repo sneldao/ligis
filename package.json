@@ -1,7 +1,7 @@
 {
   "name": "ligis",
   "version": "0.1.0",
-  "description": "Ligis — Chain-agnostic Identity & Verifiable Credentials Skill for AI agents. Portable agent IDs, signed capability credentials, key rotation, and revocation. Pluggable chain adapters (EVM/Pharos today; Casper next), with 0G Compute for reasoning and 0G Storage for verifiable evidence.",
+  "description": "Ligis — evidence-based payment control for autonomous finance. Order-bound payment authorization (GO / STOP / REVIEW) on the Airwallex payout path, plus a stateless pre-payment gate backed by chain-agnostic agent credentials (Pharos, Casper, Monad).",
   "license": "MIT",
   "type": "module",
   "private": true,
@@ -72,7 +72,11 @@
     "erc-721",
     "mcp",
     "ai-agent",
-    "web3"
+    "web3",
+    "payments",
+    "agent-payments",
+    "x402",
+    "airwallex"
   ],
   "devDependencies": {
     "@noble/curves": "^1.9.0",
@@ -98,8 +102,8 @@
       "@hono/node-server": ">=2.0.5",
       "hono": ">=4.13.7",
       "axios": ">=1.20.0",
-      "follow-redirects": ">=1.16.1",
-      "next": ">=16.4.3",
+      "follow-redirects": ">=1.16.2",
+      "decode-uri-component": ">=0.5.1",
       "postcss": ">=8.5.18",
       "ws": ">=8.21.0",
       "elliptic": ">=6.6.1",

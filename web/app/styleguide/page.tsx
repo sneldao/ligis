@@ -87,7 +87,7 @@ async function ChainProbe() {
               `token #${result.tokenId}`
             )
           ) : (
-            <span className="text-revoke">{result.error}</span>
+            <span className="text-loss">{result.error}</span>
           )}
         </span>
       </div>
@@ -191,9 +191,9 @@ export default async function StyleguidePage({
               { name: "rule-soft", hex: "#E7E2D9", bg: "bg-rule-soft" },
               { name: "terra", hex: "#9F4C2F", bg: "bg-terra" },
               { name: "terra-soft", hex: "#E8C9BD", bg: "bg-terra-soft" },
-              { name: "sage", hex: "#5A6D53", bg: "bg-sage" },
-              { name: "revoke", hex: "#A13A2A", bg: "bg-revoke" },
-              { name: "sky", hex: "#356584", bg: "bg-sky" },
+              { name: "sage", hex: "#5A6D53", bg: "bg-good" },
+              { name: "revoke", hex: "#A13A2A", bg: "bg-loss" },
+              { name: "sky", hex: "#356584", bg: "bg-progress" },
             ].map((t) => (
               <div key={t.name} className="space-y-2">
                 <div className={`h-20 w-full ${t.bg}`} aria-hidden />
@@ -205,9 +205,9 @@ export default async function StyleguidePage({
             ))}
           </div>
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-quiet">
-            <span className="text-sage">sage</span> GO ·{" "}
-            <span className="text-revoke">revoke</span> STOP ·{" "}
-            <span className="text-sky">sky</span> in progress ·{" "}
+            <span className="text-good">sage</span> GO ·{" "}
+            <span className="text-loss">revoke</span> STOP ·{" "}
+            <span className="text-progress">sky</span> in progress ·{" "}
             <span className="text-terra">terra</span> ceremony
           </p>
         </section>
@@ -433,8 +433,8 @@ export default async function StyleguidePage({
           <Rule />
           <p className="max-w-prose font-serif text-sm leading-relaxed text-ink-soft">
             Verdict semantics are shared; the colors differ by theme.
-            <code className="font-mono text-ink"> text-go </code> and
-            <code className="font-mono text-ink"> text-sage </code> both mean
+            <code className="font-mono text-ink"> text-good </code> and
+            <code className="font-mono text-ink"> text-good </code> both mean
             &ldquo;the payee is acceptable&rdquo;; only the value differs. The
             mapping is documented in
             <code className="font-mono text-ink"> docs/positioning.md</code>.
@@ -450,18 +450,18 @@ export default async function StyleguidePage({
               night · /arena · HeroStage
             </span>
             <span className="font-serif text-sm text-ink-soft">GO</span>
-            <span className="font-mono text-base text-sage">GO</span>
+            <span className="font-mono text-base text-good">GO</span>
             <span
               data-mode="incident"
-              className="rounded bg-night px-4 py-2 font-mono text-base text-go"
+              className="rounded bg-night px-4 py-2 font-mono text-base text-good"
             >
               GO
             </span>
             <span className="font-serif text-sm text-ink-soft">STOP</span>
-            <span className="font-mono text-base text-revoke">STOP</span>
+            <span className="font-mono text-base text-loss">STOP</span>
             <span
               data-mode="incident"
-              className="rounded bg-night px-4 py-2 font-mono text-base text-stop"
+              className="rounded bg-night px-4 py-2 font-mono text-base text-loss"
             >
               STOP
             </span>
@@ -477,7 +477,7 @@ export default async function StyleguidePage({
             <code className="font-mono text-ink"> text-ink-soft</code>,
             <code className="font-mono text-ink"> text-ink-quiet</code>,
             <code className="font-mono text-ink"> text-terra</code>, and
-            <code className="font-mono text-ink"> text-sky</code> are used. The
+            <code className="font-mono text-ink"> text-progress</code> are used. The
             verdict colors stay reserved for the wedges that earn them.
           </p>
         </section>

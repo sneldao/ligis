@@ -21,3 +21,13 @@ export { buildCasperClient, type CasperClientContext } from "./client.js";
 export { loadSigner, callStoredContractViaCli, type Signer } from "./signer.js";
 
 export { getBalance } from "./operations.js";
+export {
+  recordOutcome,
+  setPolicyGuardPolicy,
+  setPolicyGuardAdmin,
+  checkAndRecordSpend,
+  OUTCOME_SETTLED,
+  OUTCOME_DISPUTED,
+  OUTCOME_REJECTED,
+  OUTCOME_OTHER,
+} from "./operations.js";

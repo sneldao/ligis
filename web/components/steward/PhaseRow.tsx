@@ -17,9 +17,9 @@ export function PhaseRow({
     status === "running"
       ? "bg-terra animate-pulse"
       : status === "done"
-        ? "bg-sage"
+        ? "bg-good"
         : status === "error"
-          ? "bg-revoke"
+          ? "bg-loss"
           : "bg-rule";
   const indexColor = status === "idle" ? "text-ink-quiet" : "text-ink";
 
@@ -46,7 +46,7 @@ export function PhaseRow({
         </header>
         <Rule />
         <p
-          className={`font-serif text-sm italic transition-colors duration-500 ${status === "running" ? "text-terra" : status === "done" ? "text-sage" : "text-ink-quiet"}`}
+          className={`font-serif text-sm italic transition-colors duration-500 ${status === "running" ? "text-terra" : status === "done" ? "text-good" : "text-ink-quiet"}`}
         >
           {phase.gloss}.
         </p>

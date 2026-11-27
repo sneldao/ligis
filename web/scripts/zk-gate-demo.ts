@@ -18,7 +18,7 @@
  *   6. NO BB    verifier unavailable                                    → UNKNOWN
  *   7. REVOKE   issuer revokes; new root published; old-root proof      → STOP
  *
- * Writes scripts/zcash-zk-demo.lastrun.txt at the repo root. Exits 1 on any
+ * Writes scripts/lastrun/zcash-zk-demo.lastrun.txt at the repo root. Exits 1 on any
  * unexpected verdict.
  */
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -221,7 +221,13 @@ expect("old-root proof", rv.verdict, "STOP", rv.reason);
 log();
 log(failures ? `FAILED (${failures})` : "ALL CHECKS PASSED");
 writeFileSync(
-  path.resolve(process.cwd(), "..", "scripts", "zcash-zk-demo.lastrun.txt"),
+  path.resolve(
+    process.cwd(),
+    "..",
+    "scripts",
+    "lastrun",
+    "zcash-zk-demo.lastrun.txt",
+  ),
   `${lines.join("\n")}\n`,
 );
 process.exit(failures ? 1 : 0);

@@ -22,3 +22,5 @@ extern crate alloc;
 pub mod agent_id;
 pub mod credential_registry;
 pub mod gated_vault;
+pub mod outcome_feed;
+pub mod policy_guard;

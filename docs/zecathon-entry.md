@@ -110,7 +110,7 @@ rewritten.
 One-command demo (offline, keyless): `pnpm demo:zcash-zk` — publishes a
 registry root manifest, proves twice, and drives the real `/api/gate` wiring
 through GO → replay STOP → redirect-to-other-payee STOP → verifier-missing
-UNKNOWN → revoke + republish STOP (`scripts/zcash-zk-demo.lastrun.txt`).
+UNKNOWN → revoke + republish STOP (`scripts/lastrun/zcash-zk-demo.lastrun.txt`).
 
 **Guided UI demo (the judge path):** `pnpm demo:zcash-web`, then open
 `/zcash` (also linked from the landing hero, `/gate`, and ⌘K). Four one-click
@@ -178,7 +178,7 @@ In accordance with Zecathon rules (_"All code written during the build window. L
    - Proof pipeline: UltraHonk proving via Barretenberg (`bb`), committed verification key (`src/vk.ts`), and server-side verification (`src/verify.ts`).
    - Root builder (`src/registry.ts`): Poseidon tree generation from credential events, EIP-191 subject-to-identity-commitment registrations, and manifest signing.
    - On-chain anchor: steward-signed root manifest anchored on Monad Testnet at block `74058241` ([`0x91f64222...`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f)).
-2. **`packages/core/src/zcash.ts` and `zcash-lwd.ts` (build-window work):**
+2. **`packages/adapter-zcash/src/zcash.ts` and `zcash-lwd.ts` (build-window work):**
    - ZIP-316 Bech32m and F4Jumble decoder for Unified Addresses (`utest1...`) and Unified Incoming Viewing Keys (`uivktest1...`).
    - 512-byte `LIGIS:v1:` memo encoder/decoder for encrypted Zcash note memos.
    - Zero-dependency HTTP/2 gRPC lightclient connecting to `https://testnet.zec.rocks:443` (`CompactTxStreamer`).
@@ -211,14 +211,14 @@ In accordance with Zecathon rules (_"All code written during the build window. L
 
 ## Submission checklist
 
-- [x] `ZcashChainAdapter` in `@ligis/core` behind `ChainAdapter` boundary (`packages/core/src/zcash.ts`)
+- [x] `ZcashChainAdapter` in `@ligis/adapter-zcash` behind `ChainAdapter` boundary (`packages/adapter-zcash/src/zcash.ts`)
 - [x] Shielded ZEC payment readable via viewing key / light client (`z_listreceivedbyaddress` 512-byte memo codec + nullifier replay store)
 - [x] Gate returns `GO` / `STOP` / `UNKNOWN` for shielded ZEC intents (`web/lib/chain-zcash.ts`, `web/lib/resolve.ts`, `/gate` presets)
 - [x] ZK circuit compiling — `packages/circuits-zcash` (Noir + UltraHonk; Poseidon Merkle membership + nullifier; sample proof verifies locally)
 - [x] ZK proof verified in `/api/gate` — optional `zkProof` on `POST`, `bb verify` against the committed vk, trusted roots from `LIGIS_ZK_TRUSTED_ROOTS`, (context, nullifier) replay → `STOP`, missing toolchain → explicit `unverified`/`UNKNOWN`; result shown as `Decision.zkCredential` and on `/gate`. See `docs/decide-api.md` § ZK credential proofs
 - [x] Payee bound into the circuit — leaf = `H(identity_commitment, payee_hash, capability_hash, issuer, expires_at, nonce)`, `payee_hash` public; gate `STOP`s a proof for another payee (`bb` rejects a rewritten `payee_hash`)
 - [x] Published registry root the gate can trust — `build-root` (CredentialRegistry events via read-only `eth_getLogs`, or fixture) → manifest; gate trusts `LIGIS_ZK_ROOT_MANIFEST` (root re-derived, staleness → `UNKNOWN`) or pinned roots; `GET /api/zk/root`; subject → identity-commitment mapping by EIP-191-signed registration
-- [x] Offline end-to-end ZK gate demo — `pnpm demo:zcash-zk` (`scripts/zcash-zk-demo.lastrun.txt`)
+- [x] Offline end-to-end ZK gate demo — `pnpm demo:zcash-zk` (`scripts/lastrun/zcash-zk-demo.lastrun.txt`)
 - [x] On-chain root anchor & steward-signed root manifest — `signRootManifest()` + `checkManifest()` EIP-191 verification (`LIGIS_ZK_ROOT_SIGNER`), anchored on Monad Testnet at block `74058241` ([`0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f`](https://testnet.monadscan.com/tx/0x91f64222c9e2f1c8d31668a3dd4688f6717f0a719668573998861f932e6ad49f))
 - [x] Guided 4-step credential demo (`/zcash`); recorded fallback is labelled
 - [ ] Wallet-controlled post-GO shielded transfer (the faucet receipt is separate)

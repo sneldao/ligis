@@ -175,13 +175,13 @@ landing line, sales answer, or meta description may imply it.
 Every number we print must trace to a file in the repo. When the
 underlying measurement changes, the claim here changes with it.
 
-| Claim                                               | Measured                                                                                       | Source                                                   |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Jev intent check latency                            | 75–160 ms on production (`direct`)                                                             | `pnpm watchdog:jev` provenance line, 2026-10-18          |
-| Jev intent check cost                               | ~$0.00005 per call                                                                             | same                                                     |
-| End-to-end gate cold start (Casper credential read) | ~2–3 s, first call after process start                                                         | `AGENTS.md` "Live verification (2026-09-23, AI Gateway)" |
-| Fail-open on missing intent model                   | `SKIPPED`, never silent GO                                                                     | `web/lib/arena/judge.ts` (`skipped` reason is required)  |
-| Privacy posture                                     | server-aggregate only, no client SDK, no tracking, no database between visitor and chain state | `web/app/embed/page.tsx` — same promise carried forward  |
+| Claim                                               | Measured                                                                                       | Source                                                                         |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Jev intent check latency                            | 75–160 ms on production (`direct`)                                                             | `pnpm watchdog:jev` provenance line, 2026-10-18                                |
+| Jev intent check cost                               | ~$0.00005 per call                                                                             | same                                                                           |
+| End-to-end gate cold start (Casper credential read) | ~2–3 s, first call after process start                                                         | [`AGENTS.md`](agent-notes/jev.md) "Live verification (2026-09-23, AI Gateway)" |
+| Fail-open on missing intent model                   | `SKIPPED`, never silent GO                                                                     | `web/lib/arena/judge.ts` (`skipped` reason is required)                        |
+| Privacy posture                                     | server-aggregate only, no client SDK, no tracking, no database between visitor and chain state | `web/app/embed/page.tsx` — same promise carried forward                        |
 
 Banned: any unmeasured latency claim, "sub-second" without a source,
 "verifiable credentials" in taglines and meta descriptions. The next
@@ -281,7 +281,7 @@ difference reflects who is buying and through what channel.
 These numbers are live as of the Phase 5 pricing update. They move
 together in `SERVICE_PRICE_USD` (`packages/croo-adapter/src/services.ts`),
 `croo-store-manifest.json`, and the live CROO Dashboard
-(AGENTS.md requires the three stay in lockstep).
+([`AGENTS.md`](agent-notes/croo.md) requires the three stay in lockstep).
 
 ## Downstream copy not yet updated
 

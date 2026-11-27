@@ -2,7 +2,7 @@
 
 > **Status:** LOCKED (Stream 0) · 2026-09-16  
 > **Canonical implementation sketch:** `packages/contracts-genlayer/contracts/JobEscrow.py`  
-> **Shared types:** `@ligis/core` → `genlayer.ts`  
+> **Shared types:** `@ligis/adapter-genlayer` → `interface.ts`  
 > **Workboard:** [`docs/genlayer-streams.md`](genlayer-streams.md)  
 > **Parent plan:** [`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md)  
 > **Breaking changes:** require a v1.1+ bump and Stream 0 re-approval.
@@ -122,7 +122,7 @@ checkLigisGate({
 
 ### Demo (Stream 3)
 
-`pnpm demo:genlayer` → gate → `create_job` (with value) → `submit_delivery` → `open_dispute` → `resolve` → `claim` → `scripts/genlayer-agent-tank-demo.lastrun.txt`
+`pnpm demo:genlayer` → gate → `create_job` (with value) → `submit_delivery` → `open_dispute` → `resolve` → `claim` → `scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt`
 
 ### UI (Stream 4)
 
@@ -153,11 +153,11 @@ Stream 3 owns fixture hosting under this repo or a gist.
 
 ## Package layout
 
-| Path                                  | Owner                                                    |
-| ------------------------------------- | -------------------------------------------------------- |
-| `docs/genlayer-interface-v1.md`       | Stream 0                                                 |
-| `packages/core/src/genlayer.ts`       | Stream 0                                                 |
-| `packages/contracts-genlayer/`        | Stream 1 (impl largely started — finish deploy + harden) |
-| `packages/adapter-genlayer/`          | Streams 2 + 3                                            |
-| `scripts/genlayer-agent-tank-demo.ts` | Stream 3                                                 |
-| Thin web UI                           | Stream 4                                                 |
+| Path                                         | Owner                                                    |
+| -------------------------------------------- | -------------------------------------------------------- |
+| `docs/genlayer-interface-v1.md`              | Stream 0                                                 |
+| `packages/adapter-genlayer/src/interface.ts` | Stream 0                                                 |
+| `packages/contracts-genlayer/`               | Stream 1 (impl largely started — finish deploy + harden) |
+| `packages/adapter-genlayer/`                 | Streams 2 + 3                                            |
+| `scripts/genlayer-agent-tank-demo.ts`        | Stream 3                                                 |
+| Thin web UI                                  | Stream 4                                                 |

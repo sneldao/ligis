@@ -31,7 +31,6 @@ import { spawnSync } from "node:child_process";
  */
 const DISMISSED = new Set([
   "GHSA-w5hq-g745-h8pq", // uuid — pinned ^8 by @metamask/sdk; advisory needs v3/v5/v6 + explicit buffer
-  "GHSA-vcc3-ghjq-m6fr", // decode-uri-component — pinned ^0.2.0 by query-string@7; client-side only
 ]);
 
 const FAIL_SEVERITIES = new Set(["high", "critical"]);

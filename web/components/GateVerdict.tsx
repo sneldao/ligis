@@ -40,8 +40,8 @@ export function GateVerdict({
   issuerNote?: React.ReactNode;
 }) {
   const go = verdict.capable;
-  const tone = go ? "border-sage" : "border-revoke";
-  const verdictColor = go ? "text-sage" : "text-revoke";
+  const tone = go ? "border-good" : "border-loss";
+  const verdictColor = go ? "text-good" : "text-loss";
 
   const subjectNode = explorerUrl ? (
     <a
@@ -74,7 +74,7 @@ export function GateVerdict({
         <p className="mt-3 display text-3xl sm:text-4xl">
           <span className={verdictColor}>{go ? "GO" : "STOP"}</span>
           {!go && (reason.kind === "revoked" || reason.kind === "expired") ? (
-            <span className="ml-3 align-middle font-mono text-[11px] uppercase tracking-[0.16em] text-revoke/80 border border-revoke/30 px-2 py-0.5">
+            <span className="ml-3 align-middle font-mono text-[11px] uppercase tracking-[0.16em] text-loss/80 border border-loss/30 px-2 py-0.5">
               {reason.kind}
             </span>
           ) : null}

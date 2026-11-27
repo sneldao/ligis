@@ -49,7 +49,11 @@ const STATE_FILE = resolve(
   import.meta.dirname,
   "../assets/erc8004-monad-testnet.json",
 );
-const LASTRUN_FILE = resolve(import.meta.dirname, "monad-erc8004.lastrun.txt");
+const LASTRUN_FILE = resolve(
+  import.meta.dirname,
+  "lastrun",
+  "monad-erc8004.lastrun.txt",
+);
 
 const networks = JSON.parse(
   readFileSync(resolve(import.meta.dirname, "../assets/networks.json"), "utf8"),

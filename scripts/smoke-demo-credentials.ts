@@ -14,7 +14,7 @@
  * Public RPCs from assets/networks.json — no deployer keys required.
  */
 import { readFileSync, existsSync } from "node:fs";
-import { ZcashChainAdapter } from "@ligis/core";
+import { ZcashChainAdapter } from "@ligis/adapter-zcash";
 import { EvmAdapter } from "@ligis/adapter-evm";
 import { CasperAdapter } from "@ligis/adapter-casper";
 

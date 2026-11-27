@@ -47,7 +47,7 @@ export PRIVATE_KEY=$LIGIS_CASPER_DEPLOYER_PRIVATE_KEY
 npx tsx scripts/casper-final-demo.ts
 ```
 
-This runs the full `boot → reason → gate → act → record` loop on Casper Testnet and writes the on-chain tx hashes to `scripts/casper-final-demo.lastrun.txt`. The BUIDL's tx-hash table is regenerated from this file. Exit 0 means success.
+This runs the full `boot → reason → gate → act → record` loop on Casper Testnet and writes the on-chain tx hashes to `scripts/lastrun/casper-final-demo.lastrun.txt`. The BUIDL's tx-hash table is regenerated from this file. Exit 0 means success.
 
 Live verification: open **`https://ligis.vercel.app/gate?chain=casper-testnet&subject=account-hash-...&capability=kyc.basic`** — server-side reads of Casper Testnet global state, no Ligis-side trust.
 
@@ -55,15 +55,15 @@ Live verification: open **`https://ligis.vercel.app/gate?chain=casper-testnet&su
 
 ## 4. On-chain proof (currently live)
 
-The fresh-deploy tx hashes printed by `scripts/casper-final-demo.ts` are committed to `scripts/casper-final-demo.lastrun.txt`; the README / BUIDL link to those. The structure is:
+The fresh-deploy tx hashes printed by `scripts/casper-final-demo.ts` are committed to `scripts/lastrun/casper-final-demo.lastrun.txt`; the README / BUIDL link to those. The structure is:
 
-| Step | Entry-point                                                | Tx hash (live)                          |
-| ---- | ---------------------------------------------------------- | --------------------------------------- |
-| 1    | `AgentId.mint_self`                                        | `scripts/casper-final-demo.lastrun.txt` |
-| 2    | `CredentialRegistry.issue` (rwa.accredited, self-attested) | `scripts/casper-final-demo.lastrun.txt` |
-| 3    | `AgentId.set_token_uri` (0G Storage root anchor)           | `scripts/casper-final-demo.lastrun.txt` |
+| Step | Entry-point                                                | Tx hash (live)                                  |
+| ---- | ---------------------------------------------------------- | ----------------------------------------------- |
+| 1    | `AgentId.mint_self`                                        | `scripts/lastrun/casper-final-demo.lastrun.txt` |
+| 2    | `CredentialRegistry.issue` (rwa.accredited, self-attested) | `scripts/lastrun/casper-final-demo.lastrun.txt` |
+| 3    | `AgentId.set_token_uri` (0G Storage root anchor)           | `scripts/lastrun/casper-final-demo.lastrun.txt` |
 
-GatedVault tx hashes, once deployed, are recorded in `scripts/casper-gated-vault-demo.lastrun.txt`.
+GatedVault tx hashes, once deployed, are recorded in `scripts/lastrun/casper-gated-vault-demo.lastrun.txt`.
 
 A new canonical run replaces the contents of those files. The BUIDL pre-cites historical hashes from the buildathon run on 2026-07-22, but the live demo path is the `lastrun.txt` file.
 

@@ -30,8 +30,8 @@ export function HeroStage() {
           >
             Ligis checks every payment against what the agent was actually hired
             to do: right payee, right amount, in scope, plus a verified-payee
-            credential read. <span className="text-go">GO</span> or{" "}
-            <span className="text-stop">STOP</span> before money moves.
+            credential read. <span className="text-good">GO</span> or{" "}
+            <span className="text-loss">STOP</span> before money moves.
           </p>
           <div
             className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2"

@@ -391,16 +391,16 @@ export default async function VerifyPage({
             <>
               <span className="text-ink">{situation.role}</span>
               <span className="mx-2 text-ink-quiet">·</span>
-              <span className="text-revoke">Blind:</span> {situation.without}{" "}
-              <span className="text-sage">Gated:</span> {situation.withLigis}
+              <span className="text-loss">Blind:</span> {situation.without}{" "}
+              <span className="text-good">Gated:</span> {situation.withLigis}
             </>
           ) : (
             <>
               {scoped
                 ? `One on-chain read on ${chain.name}.`
                 : "One read across every live registry."}{" "}
-              <span className="text-sage">GO</span> or{" "}
-              <span className="text-revoke">STOP</span> before money moves.
+              <span className="text-good">GO</span> or{" "}
+              <span className="text-loss">STOP</span> before money moves.
             </>
           )}
         </p>
@@ -607,7 +607,7 @@ async function Result({
       : null;
     return (
       <div className="space-y-3">
-        <p role="alert" className="font-serif text-base text-revoke">
+        <p role="alert" className="font-serif text-base text-loss">
           {outcome.error}
         </p>
         {outcome.mismatch && href ? (
@@ -634,7 +634,7 @@ async function Result({
       source={`${chain.name} state`}
       issuerNote={
         selfIssued ? (
-          <p className="text-revoke">
+          <p className="text-loss">
             Self-issued credential (issuer === subject). Not trustworthy.
           </p>
         ) : passkeyIssuer ? (
@@ -669,12 +669,12 @@ function ProvenanceRow({
   const state = !outcome.ok ? (
     <span className="text-ink-quiet">read unreachable</span>
   ) : outcome.capable ? (
-    <span className="text-sage">
+    <span className="text-good">
       vouched
       {isPasskeyIssuer(outcome.issuer, chain.id) ? " · passkey" : ""}
     </span>
   ) : outcome.revoked ? (
-    <span className="text-revoke">revoked</span>
+    <span className="text-loss">revoked</span>
   ) : (
     <span className="text-ink-quiet">no credential</span>
   );
@@ -711,7 +711,7 @@ async function Resolved({
 
   if (!res.ok) {
     return (
-      <p role="alert" className="font-serif text-base text-revoke">
+      <p role="alert" className="font-serif text-base text-loss">
         {res.error}
       </p>
     );
@@ -738,7 +738,7 @@ async function Resolved({
         source={`${primary.chain.name} state`}
         issuerNote={
           selfIssued ? (
-            <p className="text-revoke">
+            <p className="text-loss">
               Self-issued credential (issuer === subject). Not trustworthy.
             </p>
           ) : passkeyIssuer ? (

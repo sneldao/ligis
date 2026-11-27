@@ -54,7 +54,7 @@ function FirewallSection({ status }: { status: GateStatus }) {
         <p className="eyebrow">Firewall · trust gate</p>
         <span
           className={`flex items-center gap-2 font-mono text-[11px] tabular uppercase tracking-[0.16em] ${
-            status.online ? "text-sage" : "text-revoke"
+            status.online ? "text-good" : "text-loss"
           }`}
         >
           {status.online ? (
@@ -139,8 +139,8 @@ function CountersSection({ counts }: { counts: Record<string, number> }) {
       </div>
       <Rule className="mt-3" />
       <div className="mt-5 grid grid-cols-2 gap-x-10 gap-y-6 sm:grid-cols-4">
-        {stat("api · go", counts["api:go"] ?? 0, "text-sage")}
-        {stat("api · stop", counts["api:stop"] ?? 0, "text-revoke")}
+        {stat("api · go", counts["api:go"] ?? 0, "text-good")}
+        {stat("api · stop", counts["api:stop"] ?? 0, "text-loss")}
         {stat("api · unknown", counts["api:unknown"] ?? 0, "text-ink-quiet")}
         {stat("api · total", apiCalls)}
       </div>
@@ -182,7 +182,7 @@ export default async function OperatorPage({
           </Link>
         </header>
         <h1 className="mt-20 display text-3xl text-ink">Operator console</h1>
-        <p className="mt-4 font-serif text-lg text-revoke" role="alert">
+        <p className="mt-4 font-serif text-lg text-loss" role="alert">
           You need an operator token to see this page.
         </p>
         <p className="mt-2 font-serif text-base text-ink-soft">

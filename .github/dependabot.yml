@@ -11,27 +11,25 @@ updates:
     # security *floors* (`>=`), not pins, so Dependabot proposing a newer
     # version is legitimate work and must not be suppressed.
     #
-    # What is ignored is two specific advisories that Dependabot cannot resolve:
-    # both are client-side transitives of wallet-connector SDKs, neither is in
+    # What is ignored is one specific advisory that Dependabot cannot resolve:
+    # it is a client-side transitive of wallet-connector SDKs, not in
     # our dependency surface, and the upstream ranges make no fix reachable.
-    # These remain open, dismissed-by-policy alerts — not fixed ones.
+    # It remains an open, dismissed-by-policy alert — not a fixed one.
     #
     # ⚠️ This list is MIRRORED in scripts/security-audit.mjs (DISMISSED), which
     # enforces the high/critical floor in CI. Add an ignore here and the same
     # GHSAs there, or CI will block on the dismissed advisory.
+    #
+    # dependabot.yml cannot ignore a single advisory (an `advisory-id` key
+    # makes the whole file invalid and stops Dependabot), so the entry ignores
+    # the dependency and the GHSA it stands for is recorded in the comment.
     ignore:
       # uuid: missing buffer bounds check in v3/v5/v6 when `buf` is provided.
       # Pinned to ^8 by @metamask/sdk (via @gemini-wallet/core -> wagmi
       # connectors). We call uuid.v4 only; the advisory needs v3/v5/v6 with an
       # explicit buffer. Forcing >=14 across six majors of a wallet SDK is a
-      # worse risk than the advisory.
+      # worse risk than the advisory. Dismissed advisory: GHSA-w5hq-g745-h8pq.
       - dependency-name: "uuid"
-        advisory-id: "GHSA-w5hq-g745-h8pq"
-      # decode-uri-component: DoS via exponential decoding of malformed
-      # percent-encoded input. Pinned to ^0.2.0 by query-string@7 (WalletConnect
-      # -> @reown/appkit -> wagmi connectors). Client-side only.
-      - dependency-name: "decode-uri-component"
-        advisory-id: "GHSA-vcc3-ghjq-m6fr"
   - package-ecosystem: "cargo"
     directory: "/packages/contracts-casper"
     schedule:

@@ -8,8 +8,8 @@
  * - {@link createJobEscrowClient} validates config and throws with the
  *   judge-repro path so Stream 4 does not silently call a stub.
  */
-import type { CreateJobArgs, GateReceipt, JobView } from "@ligis/core";
-import { GENLAYER_STUDIO_NEXT } from "@ligis/core";
+import type { CreateJobArgs, GateReceipt, JobView } from "./interface.js";
+import { GENLAYER_STUDIO_NEXT } from "./interface.js";
 
 export interface GenLayerAdapterConfig {
   jobEscrowAddress: string;

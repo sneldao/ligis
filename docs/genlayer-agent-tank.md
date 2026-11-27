@@ -132,7 +132,7 @@ Deliverables:
 - [x] `GateReceipt` schema locked (JSON keys for IC)
 - [x] Studio Next target confirmed: chain ID **61997**
 - [x] Shared workboard with stream owners + done-when checks
-- [x] Shared TS types in `@ligis/core` (`genlayer.ts`) + adapter stubs
+- [x] Shared TS types in `@ligis/adapter-genlayer` (`interface.ts`) + adapter stubs
 
 `GateReceipt` (v1) — JSON into `create_job`:
 
@@ -177,7 +177,7 @@ Deliverables:
       `casper-testnet`, default capability `agent.commerce.escrow`)
 - [x] Uses live Casper (`CasperAdapter.verifyCapability`) by default; Pharos via
       `ligisChain` argument or `LIGIS_GENLAYER_GATE_CHAIN` env var. Same env vars
-      as the rest of the Ligis Casper integration (see AGENTS.md § Casper).
+      as the rest of the Ligis Casper integration (see [`docs/agent-notes/casper.md`](agent-notes/casper.md)).
 - [x] `refuseIfNotCapable` throws `GateRefusedError` on STOP with the receipt
       attached — Stream 3 wraps `create_job` with this and gets a hard refusal
       before any IC transaction is sent. Contract also asserts `capable=true`,
@@ -205,7 +205,7 @@ Owner: scripting / DX.
 Deliverables:
 
 - [x] `scripts/genlayer-agent-tank-demo.ts` — Ligis gate then GenLayer lifecycle
-- [x] Writes `scripts/genlayer-agent-tank-demo.lastrun.txt` (via `deploy.py`)
+- [x] Writes `scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt` (via `deploy.py`)
 - [x] One-command judge path: `pnpm demo:genlayer`
 - [x] `runJobEscrowDemoViaPython` in `@ligis/adapter-genlayer` (Studio Next = genlayer-py)
 - [x] Flags: `--mock-gate`, `--dry-run`, `--stop`, `--no-deploy`
@@ -316,7 +316,7 @@ pnpm demo:genlayer --mock-gate
 
 `pnpm demo:genlayer` runs Stream 2 `checkLigisGate`, injects `LIGIS_GATE_RECEIPT_JSON` into
 `packages/contracts-genlayer/deploy.py`, and writes
-`scripts/genlayer-agent-tank-demo.lastrun.txt`.
+`scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt`.
 
 Live Ligis half (already works):  
 https://ligis.vercel.app/gate?chain=casper-testnet

@@ -7,23 +7,7 @@
  *           supports Studio Next (61997) per-method calls
  */
 
-import {
-  GENLAYER_DEFAULT_CAPABILITY,
-  GENLAYER_DEFAULT_LIGIS_CHAIN,
-  GENLAYER_STUDIO_NEXT,
-  createJobCallArgs,
-  gateReceiptToJsonString,
-  jobViewFromContract,
-} from "@ligis/core";
-
-export {
-  GENLAYER_DEFAULT_CAPABILITY,
-  GENLAYER_DEFAULT_LIGIS_CHAIN,
-  GENLAYER_STUDIO_NEXT,
-  createJobCallArgs,
-  gateReceiptToJsonString,
-  jobViewFromContract,
-};
+export * from "./interface.js";
 
 export {
   checkLigisGate,
@@ -33,14 +17,12 @@ export {
   DEFAULT_GATE_CAPABILITY,
   DEFAULT_GATE_CHAIN,
 } from "./check-gate.js";
-export type { CheckLigisGateInput, GateReceipt, JobView } from "@ligis/core";
 
 export {
   createJobEscrowClient,
   type GenLayerAdapterConfig,
   type JobEscrowClient,
 } from "./jobescrow-client.js";
-export type { CreateJobArgs } from "@ligis/core";
 
 export {
   runJobEscrowDemoViaPython,

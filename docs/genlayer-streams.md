@@ -56,7 +56,7 @@ pnpm demo:genlayer                 # live Ligis + GenLayer
 - [x] `web/app/genlayer/page.tsx` — thin observer UI: contract address, job state, lifecycle visualization, gate receipt, verdict, architecture walkthrough
 - [x] `web/app/genlayer/actions.ts` — server action with graceful fallback (shows "deploy pending" + demo instructions when no contract deployed)
 - [x] Deep-links to explorer + `/gate?chain=casper-testnet` for the Ligis half
-- [x] Reads `scripts/genlayer-agent-tank-demo.lastrun.txt` for contract address + last run summary
+- [x] Reads `scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt` for contract address + last run summary
 - [x] Navigation: "Escrow" added to GlobalDock + CommandPalette (⌘K)
 - [x] `genlayer-js@^1.1.8` dependency; Studio Next chain defined inline (genlayer-js ships `studionet`, not 61997)
 - [x] Typecheck passes

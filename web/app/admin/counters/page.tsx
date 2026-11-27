@@ -61,7 +61,7 @@ export default async function CountersPage({
             ← Home
           </Link>
         </header>
-        <p className="mt-20 font-serif text-xl text-revoke">
+        <p className="mt-20 font-serif text-xl text-loss">
           Unauthorized — pass ?token= to access.
         </p>
       </main>

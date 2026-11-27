@@ -111,7 +111,7 @@ export function WalletGate() {
         ) : (
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
             <span
-              className={`font-mono text-[11px] uppercase tracking-[0.16em] ${funded ? "text-sage" : "text-sky"}`}
+              className={`font-mono text-[11px] uppercase tracking-[0.16em] ${funded ? "text-good" : "text-progress"}`}
               aria-live="polite"
             >
               {funded ? `● ready · ${balanceLabel} cspr` : "○ awaiting funding"}

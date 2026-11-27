@@ -1,0 +1,35 @@
+{
+  "name": "@ligis/adapter-zcash",
+  "version": "0.1.0",
+  "description": "Zcash shielded presentation channel for Ligis — ZcashChainAdapter, ZIP-316 address codec, memo codec, lightwalletd client (showcase)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./lwd": {
+      "import": "./dist/zcash-lwd.js",
+      "types": "./dist/zcash-lwd.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@ligis/core": "workspace:*",
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

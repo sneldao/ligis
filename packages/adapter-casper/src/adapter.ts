@@ -115,10 +115,15 @@ export class CasperAdapter implements ChainAdapter {
   }
 
   async submitCredential(signed: SignedCredential): Promise<{ tx: TxRef }> {
+    if (!signed.claim) {
+      throw new Error(
+        "CasperAdapter.submitCredential: signed.claim is required (registry v2)",
+      );
+    }
     const res = await ops.submitCredential(this.ctx, {
       issuer: signed.issuer,
       subject: signed.subject,
-      capabilityHash: signed.capabilityHash,
+      claim: signed.claim,
       issuedAt: signed.issuedAt,
       expiresAt: signed.expiresAt,
       nonce: signed.nonce,
@@ -143,6 +148,16 @@ export class CasperAdapter implements ChainAdapter {
       issuerKey: opts.issuerKey,
     });
     return { tx: this.tx(res.txHash, res.blockNumber) };
+  }
+
+  /** v2 issuer standing for a (subject, claim) — accreditation read-time. */
+  async credentialStanding(opts: { subject: string; claim: string }): Promise<{
+    view: VerifyResult["latest"] | null;
+    accreditationRequired: boolean | null;
+    issuerAccredited: boolean | null;
+    standing: boolean;
+  }> {
+    return ops.credentialStanding(this.ctx, opts);
   }
 
   // ---------- evidence anchoring ----------
@@ -176,6 +191,37 @@ export class CasperAdapter implements ChainAdapter {
         "CasperAdapter.getBalance: no public key configured and none provided",
       );
     return ops.getBalance(this.ctx, key);
+  }
+
+  // ---------- M2/M3: outcome feed + policy guard ----------
+
+  async recordOutcome(opts: {
+    subject: string;
+    claimHash: `0x${string}`;
+    kind: number;
+    receiptHash: `0x${string}`;
+  }): Promise<{ tx: TxRef }> {
+    const res = await ops.recordOutcome(this.ctx, opts);
+    return { tx: { hash: res.txHash, blockNumber: res.blockNumber } };
+  }
+
+  async setPolicyGuardPolicy(opts: {
+    subject: string;
+    windowSecs: bigint;
+    budget: bigint;
+    requiredClaimHash?: `0x${string}`;
+    enabled?: boolean;
+  }): Promise<{ tx: TxRef }> {
+    const res = await ops.setPolicyGuardPolicy(this.ctx, opts);
+    return { tx: { hash: res.txHash, blockNumber: res.blockNumber } };
+  }
+
+  async checkAndRecordSpend(opts: {
+    subject: string;
+    amount: bigint;
+  }): Promise<{ tx: TxRef }> {
+    const res = await ops.checkAndRecordSpend(this.ctx, opts);
+    return { tx: { hash: res.txHash, blockNumber: res.blockNumber } };
   }
 
   // ---------- internals ----------

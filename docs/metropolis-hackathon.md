@@ -209,7 +209,7 @@ verification, and Monad-native differentiators (ERC-8004, P256/WebAuthn).
 
 `pnpm demo:monad` (→ `scripts/monad-lifecycle-demo.ts`) runs mint → issue →
 gate → revoke → re-gate against the addresses above and exits non-zero on any
-mismatch. Canonical recorded run (`scripts/monad-lifecycle-demo.lastrun.txt`):
+mismatch. Canonical recorded run (`scripts/lastrun/monad-lifecycle-demo.lastrun.txt`):
 
 | Step       | Transaction                                                          |
 | ---------- | -------------------------------------------------------------------- |
@@ -283,7 +283,7 @@ pnpm demo:monad            # issue → GO → revoke → STOP
 pnpm demo:monad-steward    # full steward loop (mint/gate/issue/anchor)
 ```
 
-Canonical revocation run (`scripts/monad-lifecycle-demo.lastrun.txt`):
+Canonical revocation run (`scripts/lastrun/monad-lifecycle-demo.lastrun.txt`):
 
 | Step   | Tx                                                                                                                           |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------- |

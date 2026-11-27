@@ -41,6 +41,20 @@ export function AgentPortrait({ address, className = "" }: Props) {
     );
   })();
 
+  // A printed bar: a laid rectangle, slightly off-square, rotated by the
+  // same angle the arc would use. Reads as ink on paper, not as a shape.
+  const bar =
+    p.secondary.shape === "bar" ? (
+      <rect
+        x={sx - sr * 1.7}
+        y={sy - sr * 0.45}
+        width={sr * 3.4}
+        height={sr * 0.9}
+        fill={p.deck.secondary}
+        transform={`rotate(${((p.arcAngle * 180) / Math.PI).toFixed(1)} ${sx.toFixed(1)} ${sy.toFixed(1)})`}
+      />
+    ) : null;
+
   const filterId = `grain-${address.slice(2, 10)}`;
 
   return (
@@ -78,6 +92,7 @@ export function AgentPortrait({ address, className = "" }: Props) {
         <circle cx={sx.toFixed(1)} cy={sy.toFixed(1)} r={sr.toFixed(1)} fill={p.deck.secondary} />
       ) : null}
       {arc}
+      {bar}
       <rect width={W} height={H} filter={`url(#${filterId})`} />
     </svg>
   );

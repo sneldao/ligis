@@ -42,8 +42,8 @@ export function TranscriptStep({
           </span>
           <span className="text-fog">{step.result}</span>
           {step.injected ? (
-            <div className="flex flex-col gap-1.5 border border-dashed border-stop/60 bg-stop/10 p-2.5">
-              <span className={`${LABEL} text-stop`}>Hidden text in page</span>
+            <div className="flex flex-col gap-1.5 border border-dashed border-loss/60 bg-loss/10 p-2.5">
+              <span className={`${LABEL} text-loss`}>Hidden text in page</span>
               <span className="text-pretty text-fog">{step.injected}</span>
             </div>
           ) : null}
@@ -64,8 +64,8 @@ export function TranscriptStep({
     }
     case "halt":
       return (
-        <div className="flex flex-col gap-1.5 border border-stop/40 bg-stop/10 p-3">
-          <span className={`${LABEL} text-stop`}>Halted</span>
+        <div className="flex flex-col gap-1.5 border border-loss/40 bg-loss/10 p-3">
+          <span className={`${LABEL} text-loss`}>Halted</span>
           <p className="text-pretty text-[15px] leading-relaxed text-fog">
             {step.text}
           </p>

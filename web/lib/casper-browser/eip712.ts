@@ -16,6 +16,7 @@ import {
   hashTypedData,
   verifySignature,
 } from "@casper-ecosystem/casper-eip-712";
+import { keccak_256 } from "@noble/hashes/sha3";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { evmAddressFromSecpKey } from "./keypair";
 
@@ -23,7 +24,7 @@ const CREDENTIAL_TYPES = {
   Credential: [
     { name: "issuer", type: "address" },
     { name: "subject", type: "bytes32" },
-    { name: "capabilityHash", type: "bytes32" },
+    { name: "claim", type: "string" },
     { name: "issuedAt", type: "uint64" },
     { name: "expiresAt", type: "uint64" },
     { name: "nonce", type: "uint256" },
@@ -37,6 +38,7 @@ const REVOCATION_TYPES = {
     { name: "nonce", type: "uint256" },
   ],
 } as const;
+void REVOCATION_TYPES; // legacy v1 reference; v2 revoke uses raw-keccak
 
 export interface CasperEip712Domain {
   name: string;
@@ -48,7 +50,7 @@ export interface CasperEip712Domain {
 export interface CredentialMessage {
   issuer: string; // 0x-prefixed 20-byte EVM address
   subject: string; // 0x-prefixed 32-byte bytes32
-  capabilityHash: string;
+  claim: string; // canonical claim string (registry v2)
   issuedAt: string; // uint64 (decimal or hex; we'll coerce)
   expiresAt: string;
   nonce: string; // uint256
@@ -69,7 +71,7 @@ export function buildCredentialDomain(params: {
 }): CasperEip712Domain {
   return {
     name: params.domainName ?? "Ligis CredentialRegistry",
-    version: params.domainVersion ?? "1",
+    version: params.domainVersion ?? "2",
     chain_name: `casper:${params.chainName}`,
     contract_package_hash: `0x${params.contractPackageHashHex}`,
   };
@@ -89,7 +91,10 @@ export function buildCredentialDigest(
 ): `0x${string}` {
   const digest = hashTypedData(
     domain as unknown as Record<string, string>,
-    CREDENTIAL_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
+    CREDENTIAL_TYPES as unknown as Record<
+      string,
+      Array<{ name: string; type: string }>
+    >,
     "Credential",
     toMessage(message),
     { domainTypes: CASPER_DOMAIN_TYPES },
@@ -97,19 +102,33 @@ export function buildCredentialDigest(
   return ("0x" + bufferToHex(digest)) as `0x${string}`;
 }
 
-/** Compute the EIP-712 digest for a revocation. (See safety note above.) */
+/** Compute the revocation digest the v2 contract binds to:
+ *   keccak256(subject(32B) || claim_hash(32B) || nonce(u64 BE, 8B))
+ * Raw-keccak packed — NOT an EIP-712 typed-data hash. `keccak_revoke_digest`
+ * in the contract re-derives this exact value. */
 export function buildRevokeDigest(
-  domain: CasperEip712Domain,
+  _domain: CasperEip712Domain,
   message: RevocationMessage,
 ): `0x${string}` {
-  const digest = hashTypedData(
-    domain as unknown as Record<string, string>,
-    REVOCATION_TYPES as unknown as Record<string, Array<{ name: string; type: string }>>,
-    "Revocation",
-    toRevocationMessage(message),
-    { domainTypes: CASPER_DOMAIN_TYPES },
-  );
-  return ("0x" + bufferToHex(digest)) as `0x${string}`;
+  const clean = (h: string) =>
+    h.replace(/^account-hash-/, "").replace(/^0x/, "");
+  const subject = new Uint8Array(32);
+  const sHex = clean(message.subject).padStart(64, "0");
+  for (let i = 0; i < 32; i++)
+    subject[i] = parseInt(sHex.slice(i * 2, i * 2 + 2), 16);
+  const claimHash = new Uint8Array(32);
+  const cHex = clean(message.capabilityHash).padStart(64, "0");
+  for (let i = 0; i < 32; i++)
+    claimHash[i] = parseInt(cHex.slice(i * 2, i * 2 + 2), 16);
+  const buf = new Uint8Array(72);
+  buf.set(subject, 0);
+  buf.set(claimHash, 32);
+  let nonce = BigInt(message.nonce);
+  for (let i = 7; i >= 0; i--) {
+    buf[64 + i] = Number(nonce & 0xffn);
+    nonce >>= 8n;
+  }
+  return ("0x" + bufferToHex(keccak_256(buf))) as `0x${string}`;
 }
 
 /**
@@ -120,8 +139,12 @@ export function signDigest(
   digestHex: `0x${string}`,
   privateKeyHex: string,
 ): `0x${string}` {
-  const cleanPriv = privateKeyHex.startsWith("0x") ? privateKeyHex.slice(2) : privateKeyHex;
-  const cleanDigest = digestHex.startsWith("0x") ? digestHex.slice(2) : digestHex;
+  const cleanPriv = privateKeyHex.startsWith("0x")
+    ? privateKeyHex.slice(2)
+    : privateKeyHex;
+  const cleanDigest = digestHex.startsWith("0x")
+    ? digestHex.slice(2)
+    : digestHex;
   const privBytes = new Uint8Array(cleanPriv.length / 2);
   const digestBytes = new Uint8Array(cleanDigest.length / 2);
   for (let i = 0; i < privBytes.length; i++) {
@@ -173,7 +196,9 @@ export function verifyIssuer(
   expectedIssuer: `0x${string}`,
 ): boolean {
   const sigBytes = new Uint8Array(65 * 2); // fallback
-  const sigClean = signatureHex.startsWith("0x") ? signatureHex.slice(2) : signatureHex;
+  const sigClean = signatureHex.startsWith("0x")
+    ? signatureHex.slice(2)
+    : signatureHex;
   const arr = new Uint8Array(sigClean.length / 2);
   for (let i = 0; i < arr.length; i++) {
     arr[i] = parseInt(sigClean.slice(i * 2, i * 2 + 2), 16);
@@ -182,7 +207,9 @@ export function verifyIssuer(
   const digestBytes = new Uint8Array(
     (digestHex.startsWith("0x") ? digestHex.slice(2) : digestHex).length / 2,
   );
-  const digestClean = digestHex.startsWith("0x") ? digestHex.slice(2) : digestHex;
+  const digestClean = digestHex.startsWith("0x")
+    ? digestHex.slice(2)
+    : digestHex;
   for (let i = 0; i < digestBytes.length; i++) {
     digestBytes[i] = parseInt(digestClean.slice(i * 2, i * 2 + 2), 16);
   }
@@ -191,14 +218,16 @@ export function verifyIssuer(
 
 // ---------- internal helpers ----------
 
-function toMessage(m: CredentialMessage): Record<string, string> {
+function toMessage(m: CredentialMessage): Record<string, unknown> {
+  // uint fields are passed as bigint, not decimal strings: the encoder
+  // treats string values as HEX, so "1000" would silently become 0x1000.
   return {
     issuer: m.issuer,
     subject: m.subject,
-    capabilityHash: m.capabilityHash,
-    issuedAt: BigInt(m.issuedAt).toString(),
-    expiresAt: BigInt(m.expiresAt).toString(),
-    nonce: BigInt(m.nonce).toString(),
+    claim: m.claim,
+    issuedAt: BigInt(m.issuedAt),
+    expiresAt: BigInt(m.expiresAt),
+    nonce: BigInt(m.nonce),
   };
 }
 
@@ -209,6 +238,7 @@ function toRevocationMessage(m: RevocationMessage): Record<string, string> {
     nonce: BigInt(m.nonce).toString(),
   };
 }
+void toRevocationMessage;
 
 function bufferToHex(buf: Uint8Array): string {
   let h = "";

@@ -7,6 +7,7 @@
  */
 export * from "./types.js";
 export * from "./hash.js";
+export * from "./claim.js";
 export * from "./did.js";
 export * from "./config.js";
 export * from "./adapter.js";
@@ -14,10 +15,7 @@ export * from "./reasoner.js";
 export * from "./evidence.js";
 export * from "./attestations.js";
 export * from "./trust.js";
-export * from "./genlayer.js";
 export * from "./jev.js";
 export * from "./openai-compat-reasoner.js";
 export * from "./chain-reasoner.js";
 export * from "./reasoner-select.js";
-export * from "./zcash.js";
-// Node-only light-client APIs are exposed via ./zcash-lwd.

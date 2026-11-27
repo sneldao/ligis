@@ -10,7 +10,7 @@ import {
   explorerUrl,
   type LastrunSummary,
 } from "@/lib/genlayer";
-import type { JobView, GateReceipt } from "@ligis/core";
+import type { JobView, GateReceipt } from "@ligis/adapter-genlayer/interface";
 
 export type GenLayerReadResult =
   | {

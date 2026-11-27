@@ -69,8 +69,8 @@ bridge). Schema locked in
 
 - Ligis gate on Casper → GenLayer JobEscrow → dispute → AI-jury verdict,
   with live captures of the deployed contract UI and the Studio Next
-  explorer. Source:
-  [`videos/ligis-genlayer-tank/`](https://github.com/sneldao/ligis/tree/main/videos/ligis-genlayer-tank).
+  explorer. Composition source formerly at `videos/ligis-genlayer-tank/`
+  (removed from the repo; in git history before 2026-11-27).
 
 ### Casper Agentic Buildathon (on-chain identity + x402)
 
@@ -81,14 +81,16 @@ bridge). Schema locked in
 ### CROO Agent Hackathon (CAP commerce + verification)
 
 [Watch the CROO walkthrough](https://github.com/sneldao/ligis/releases/download/croo-hackathon-2026/ligis-croo-demo.mp4)
-— CAP negotiate → pay → deliver, with Casper on-chain proof. Source:
-[`videos/ligis-croo-hackathon/`](https://github.com/sneldao/ligis/tree/main/videos/ligis-croo-hackathon).
+— CAP negotiate → pay → deliver, with Casper on-chain proof. Composition
+source formerly at `videos/ligis-croo-hackathon/` (removed from the repo;
+in git history before 2026-11-27).
 
-The Casper video is composed in
-[`videos/ligis-buildathon-2026/`](https://github.com/sneldao/ligis/tree/main/videos/ligis-buildathon-2026/)
-using [HyperFrames](https://github.com/heygen-com/hyperframes) with live
+The Casper video was composed using
+[HyperFrames](https://github.com/heygen-com/hyperframes) with live
 terminal captures of `casper-e2e-demo.ts` and `casper-x402-demo.ts`,
-real cspr.live transaction screenshots, and a 10-segment TTS voiceover.
+real cspr.live transaction screenshots, and a 10-segment TTS voiceover —
+composition source formerly at `videos/ligis-buildathon-2026/` (removed
+from the repo; in git history before 2026-11-27).
 
 ## On-chain deployment evidence
 
@@ -99,12 +101,12 @@ time of writing. When the live numbers shift (e.g., a new GatedVault
 deployment, a Casper upgrade), this doc moves with them so the measured
 claims in `docs/positioning.md` stay backed.
 
-| Chain               | Contracts                                                                        | Source of truth                                                                    |
-| ------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Pharos Atlantic** | `PharosAgentID`, `CredentialRegistry`                                            | `packages/contracts-evm/` + Vercel env vars                                        |
-| **Casper Testnet**  | `AgentId`, `CredentialRegistry`, `GatedVault`                                    | `packages/contracts-casper/wasm/`, deploy recipe in `AGENTS.md`                    |
-| **Monad Testnet**   | `CredentialRegistry`, `AgentId`, `PasskeyIssuer`, ERC-8004 registries, x402 USDC | `assets/networks.json` → `deployment["monad-testnet"]` + `docs/integrate-monad.md` |
-| **GenLayer Studio** | `JobEscrow` (Intelligent Contract)                                               | `packages/contracts-genlayer/` + `docs/genlayer-interface-v1.md`                   |
+| Chain               | Contracts                                                                        | Source of truth                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Pharos Atlantic** | `PharosAgentID`, `CredentialRegistry`                                            | `packages/contracts-evm/` + Vercel env vars                                                               |
+| **Casper Testnet**  | `AgentId`, `CredentialRegistry`, `GatedVault`                                    | `packages/contracts-casper/wasm/`, deploy recipe in [`docs/agent-notes/casper.md`](agent-notes/casper.md) |
+| **Monad Testnet**   | `CredentialRegistry`, `AgentId`, `PasskeyIssuer`, ERC-8004 registries, x402 USDC | `assets/networks.json` → `deployment["monad-testnet"]` + `docs/integrate-monad.md`                        |
+| **GenLayer Studio** | `JobEscrow` (Intelligent Contract)                                               | `packages/contracts-genlayer/` + `docs/genlayer-interface-v1.md`                                          |
 
 ## How to add a new proof
 

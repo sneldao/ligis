@@ -39,19 +39,19 @@ end-to-end x402 payment flow. Featured tx hashes (view on testnet.cspr.live):
 ### Fresh testnet transactions (re-runnable)
 
 The canonical source of truth for live tx hashes is
-`scripts/casper-final-demo.lastrun.txt` and
-`scripts/casper-gated-vault-demo.lastrun.txt`. These are regenerated
+`scripts/lastrun/casper-final-demo.lastrun.txt` and
+`scripts/lastrun/casper-gated-vault-demo.lastrun.txt`. These are regenerated
 every time the canonical demo scripts run — judges can re-run them
 and see the new hashes in the same file.
 
 **Latest run (2026-07-25):**
 
-**E2E Steward Loop (`scripts/casper-final-demo.lastrun.txt`):**
+**E2E Steward Loop (`scripts/lastrun/casper-final-demo.lastrun.txt`):**
 
 - `7562e636a6512d6f426456dbaceef6cac62af3c6ec783d4444b9820210e5c5a7` — `AgentId.mint_self` (boot)
 - `a47be6e2019c99e5bf321c03915e66125930594c240e2c8cc3c92602915a94a7` — `AgentId.set_token_uri` (evidence anchor)
 
-**GatedVault credential issue (`scripts/casper-gated-vault-demo.lastrun.txt`):**
+**GatedVault credential issue (`scripts/lastrun/casper-gated-vault-demo.lastrun.txt`):**
 
 - `79538c0106b66b1c1f59ab2a8162d8ca4ad80cb72bf8f35d686eaf7606fd730d` — `CredentialRegistry.issue(rwa.accredited)` (verified by `is_capable` cross-contract)
 
@@ -67,7 +67,7 @@ and see the new hashes in the same file.
 > **Note on tx-hash freshness.** The numbers above are the historical
 > hashes from the buildathon run on 2026-07-22. The canonical live
 > verification path is `scripts/casper-final-demo.ts` → writes the
-> fresh hashes to `scripts/casper-final-demo.lastrun.txt`. Run that
+> fresh hashes to `scripts/lastrun/casper-final-demo.lastrun.txt`. Run that
 > script and you'll see the new hashes with the same entry-point
 > labels.
 

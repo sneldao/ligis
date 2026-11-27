@@ -60,7 +60,7 @@ export function TreasuryMeter({
               initial={reduce ? false : { opacity: 0, scale: 1.6, y: -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ type: "spring", stiffness: 420, damping: 16 }}
-              className="tabular font-mono text-xs font-medium text-go"
+              className="tabular font-mono text-xs font-medium text-good"
             >
               {formatUsd(blocked)} saved
             </motion.span>
@@ -71,7 +71,7 @@ export function TreasuryMeter({
               animate={{ opacity: [1, 0.45, 1] }}
               exit={{ opacity: 0, transition: { duration: 0.12 } }}
               transition={{ duration: 1.1, repeat: Infinity }}
-              className="tabular font-mono text-xs text-stop"
+              className="tabular font-mono text-xs text-loss"
             >
               −{formatUsd(pending)} at the gate
             </motion.span>

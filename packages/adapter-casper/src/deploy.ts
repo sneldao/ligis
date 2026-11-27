@@ -111,7 +111,7 @@ function buildInstallTransaction(params: {
   // Name under which the package hash is stored in account's named keys
   odraArgs.set(
     "odra_cfg_package_hash_key_name",
-    CLValue.newCLString(`ligis_${contractName.toLowerCase()}_v5`),
+    CLValue.newCLString(`ligis_${contractName.toLowerCase()}_v8`),
   );
   // Entry point to call during install — Odra uses "init"
   odraArgs.set("entry_point", CLValue.newCLString("init"));
@@ -218,7 +218,9 @@ async function deployContract(params: {
   const keyPath =
     process.env.LIGIS_CASPER_KEY_PATH ?? ".env.d/casper-deployer.pem";
   const paymentAmount = "800000000000"; // 800 CSPR max (refund for unused)
-  const keyName = `ligis_${contractName.toLowerCase()}_v7`;
+  // v8: the v7 named key holds the v1 CredentialRegistry package — keep it
+  // intact instead of overwriting via odra_cfg_allow_key_override.
+  const keyName = `ligis_${contractName.toLowerCase()}_v8`;
 
   console.log(`  Deploying ${contractName} from ${wasmPath}...`);
 
@@ -429,6 +431,43 @@ async function main() {
       writeFileSync(envPath, appendContent, { mode: 0o600 });
     }
     console.log(`  Contract hashes written to ${envPath}`);
+  }
+
+  // CredentialRegistry v2: the issue digest is recomputed on-chain against a
+  // stored domain separator, so it must be configured after deploy (it commits
+  // to the new package hash). issue() reverts until this succeeds.
+  if (credRegHash) {
+    try {
+      const { loadSigner, callStoredContractViaSdk } =
+        await import("./signer.js");
+      const { hashDomainSeparator, CASPER_DOMAIN_TYPES } =
+        await import("@casper-ecosystem/casper-eip-712");
+      const domain = {
+        name: "Ligis CredentialRegistry",
+        version: "2",
+        chain_name: `casper:${chainName}`,
+        contract_package_hash: `0x${credRegHash.replace(/^contract-package-/, "")}`,
+      };
+      const sep = hashDomainSeparator(domain as never, CASPER_DOMAIN_TYPES);
+      const args = new Map<string, CLValueType>();
+      args.set("domain_separator", CLValue.newCLByteArray(sep));
+      const res = await callStoredContractViaSdk({
+        chainName,
+        signer: loadSigner(),
+        packageHash: credRegHash,
+        entryPoint: "set_domain_separator",
+        args,
+        rpcUrl,
+      });
+      console.log(
+        `  CredentialRegistry v2 domain separator set: ${res.txHash}`,
+      );
+    } catch (e) {
+      console.warn(
+        `  WARNING: set_domain_separator failed — call it manually before issuing credentials.\n` +
+          `  (${e instanceof Error ? e.message : String(e)})`,
+      );
+    }
   }
 
   console.log();

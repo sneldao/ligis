@@ -31,7 +31,7 @@
  *   CROO_BUYER_SUBJECT    — subject override for the credential check
  *   REQUIREMENTS_VARIANT  — "misdirected" (default) | "legit"
  *
- * Output: scripts/croo-gate-test-order.lastrun.txt
+ * Output: scripts/lastrun/croo-gate-test-order.lastrun.txt
  * Exit 0 on delivered receipt, 1 otherwise.
  */
 import * as fs from "node:fs";
@@ -201,7 +201,11 @@ async function main(): Promise<void> {
           orderToDeliveryMs: paidAt ? Date.now() - paidAt : null,
           deliverable: JSON.parse(delivery.deliverableText),
         };
-        const out = join(__dirname, "croo-gate-test-order.lastrun.txt");
+        const out = join(
+          __dirname,
+          "lastrun",
+          "croo-gate-test-order.lastrun.txt",
+        );
         fs.writeFileSync(out, JSON.stringify(receipt, null, 2));
         console.log(`\n\n[test-order] receipt saved → ${out}\n`);
         console.log(JSON.stringify(receipt.deliverable, null, 2));

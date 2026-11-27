@@ -16,7 +16,7 @@ Usage:
   python deploy.py --no-deploy             # skip deploy, reuse JOBEscrow_ADDRESS
   python deploy.py --stop                  # also demonstrate the STOP gate path
 
-Writes ../scripts/genlayer-agent-tank-demo.lastrun.txt with addresses, job id,
+Writes ../scripts/lastrun/genlayer-agent-tank-demo.lastrun.txt with addresses, job id,
 and explorer URLs so Stream 3's one-command demo can pick it up.
 """
 
@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover - import path varies across SDK patch vers
 
 
 CONTRACT_FILE = pathlib.Path(__file__).parent / "contracts" / "JobEscrow.py"
-LASTRUN_FILE = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "genlayer-agent-tank-demo.lastrun.txt"
+LASTRUN_FILE = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "lastrun" / "genlayer-agent-tank-demo.lastrun.txt"
 EXPLORER_BASE = "https://explorer-studio-dev.genlayer.com/address"
 STUDIO_RPC = "https://studio-dev.genlayer.com/api"
 CHAIN_ID = 61997

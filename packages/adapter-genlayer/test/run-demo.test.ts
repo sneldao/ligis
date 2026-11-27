@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 import { parseLastrun } from "../src/run-demo.js";
 import { createJobEscrowClient } from "../src/jobescrow-client.js";
-import { GENLAYER_STUDIO_NEXT } from "@ligis/core";
+import { GENLAYER_STUDIO_NEXT } from "../src/interface.js";
 
 describe("parseLastrun", () => {
   it("extracts explorer fields from deploy.py output", () => {
