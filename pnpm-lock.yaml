@@ -147,6 +147,25 @@ importers:
         specifier: ^5.6.0
         version: 5.9.3
 
+  packages/adapter-zcash:
+    dependencies:
+      "@ligis/core":
+        specifier: workspace:*
+        version: link:../core
+      "@noble/curves":
+        specifier: ^1.9.7
+        version: 1.9.7
+      "@noble/hashes":
+        specifier: ^1.4.0
+        version: 1.8.0
+    devDependencies:
+      "@types/node":
+        specifier: ^26.4.0
+        version: 26.4.0
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   packages/agent-logic:
     dependencies:
       "@ligis/core":
@@ -227,9 +246,6 @@ importers:
 
   packages/core:
     dependencies:
-      "@noble/curves":
-        specifier: ^1.9.7
-        version: 1.9.7
       "@noble/hashes":
         specifier: ^1.4.0
         version: 1.8.0
@@ -431,6 +447,9 @@ importers:
       "@ligis/adapter-evm":
         specifier: workspace:*
         version: link:../packages/adapter-evm
+      "@ligis/adapter-zcash":
+        specifier: workspace:*
+        version: link:../packages/adapter-zcash
       "@ligis/agent-logic":
         specifier: workspace:*
         version: link:../packages/agent-logic

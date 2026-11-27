@@ -11,8 +11,8 @@ import {
   ZCASH_DEMO_CONFIRMED_TXID,
   ZCASH_DEMO_VERIFIED_SUBJECT,
   ZCASH_DEMO_VERIFIED_UIVK,
-} from "../packages/core/src/index.js";
-import { LightwalletdClient } from "../packages/core/src/zcash-lwd.js";
+} from "@ligis/adapter-zcash";
+import { LightwalletdClient } from "@ligis/adapter-zcash/lwd";
 
 async function main(): Promise<void> {
   const endpoint =

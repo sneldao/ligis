@@ -16,26 +16,26 @@
  *      and `capable: false` so replay attempts always STOP)
  *   3. Week 2 ZK proof envelope hook (`ZcashZkPresentation`)
  */
-import type {
-  AnchorEvidenceOpts,
-  CapabilityRef,
-  ChainAdapter,
-  IssueAgentIdOpts,
-  IssueAgentIdResult,
-  RevokeOpts,
-  SignCredentialOpts,
-  VerifyResult,
-} from "./adapter.js";
-import { formatDid } from "./did.js";
+import {
+  capabilityHash,
+  formatDid,
+  isHexBytes32,
+  parseCapability,
+  type AnchorEvidenceOpts,
+  type Bytes32,
+  type CapabilityHash,
+  type CapabilityRef,
+  type ChainAdapter,
+  type CredentialView,
+  type IssueAgentIdOpts,
+  type IssueAgentIdResult,
+  type RevokeOpts,
+  type SignCredentialOpts,
+  type SignedCredential,
+  type TxRef,
+  type VerifyResult,
+} from "@ligis/core";
 import type { LiveAttestation, ZcashLightClient } from "./zcash-lwd.js";
-import { capabilityHash, isHexBytes32, parseCapability } from "./hash.js";
-import type {
-  Bytes32,
-  CapabilityHash,
-  CredentialView,
-  SignedCredential,
-  TxRef,
-} from "./types.js";
 
 // ─── Address & viewing-key format validation ────────────────────────────
 

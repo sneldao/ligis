@@ -66,7 +66,7 @@ operational entry point — install, run, deploy.
 | -------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Product**          | Order-bound payment controller; stateless gate and its signing boundary    | `packages/procurement`, `packages/core`, `web` (`/gate`, `/api/gate`), `packages/x402-server`, `packages/wallet-plugin`, `packages/metamask-plugin`                                     |
 | **Credential layer** | The _verified payee_ signal: registries, adapters, steward, distribution   | Pharos / Monad / 0G via `adapter-evm` + `contracts-evm`, Casper via `adapter-casper` + `contracts-casper`, `agent-logic`, `cli`, `mcp-server`, `zerog`, `croo-adapter`, `envio-indexer` |
-| **Showcase**         | Event-specific demos built on the layers above; kept working, not extended | GenLayer (`adapter-genlayer`, `contracts-genlayer`, `/genlayer`), Zcash (`circuits-zcash`, `core/src/zcash*.ts`, `/zcash`), `/arena`                                                    |
+| **Showcase**         | Event-specific demos built on the layers above; kept working, not extended | GenLayer (`adapter-genlayer`, `contracts-genlayer`, `/genlayer`), Zcash (`circuits-zcash`, `adapter-zcash`, `/zcash`), `/arena`                                                         |
 
 Per-package tiers: [`MONOREPO_STRUCTURE.md`](MONOREPO_STRUCTURE.md).
 
@@ -147,12 +147,12 @@ Ligis is **chain-agnostic by design.** Every chain implements the same
 `ChainAdapter` interface from `@ligis/core`; the Trust Steward, CLI, and
 MCP server consume the interface, not the implementation.
 
-| Chain                     | Adapter                             | Contracts                                                | Status                                                                                                                  |
-| ------------------------- | ----------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                      | Live — deployed, tested, steward running                                                                                |
-| **Casper Testnet**        | `@ligis/adapter-casper`             | `packages/contracts-casper` (Odra)                       | **Live** — contracts deployed, smoke test passing, web UI live                                                          |
-| **Monad Testnet**         | `@ligis/adapter-evm`                | `packages/contracts-evm` (Solidity)                      | Live — passkey issuer demo, GateStates walk                                                                             |
-| **Zcash Testnet**         | `@ligis/core` (`ZcashChainAdapter`) | `packages/circuits-zcash` (Noir + UltraHonk) + 512B memo | **Showcase** — `/zcash` guided demo, payee-bound ZK membership + nullifier, viewing-key disclosure (Zecathon Weeks 1–3) |
+| Chain                     | Adapter                                      | Contracts                                                | Status                                                                                                                  |
+| ------------------------- | -------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Pharos Atlantic** (EVM) | `@ligis/adapter-evm`                         | `packages/contracts-evm` (Solidity)                      | Live — deployed, tested, steward running                                                                                |
+| **Casper Testnet**        | `@ligis/adapter-casper`                      | `packages/contracts-casper` (Odra)                       | **Live** — contracts deployed, smoke test passing, web UI live                                                          |
+| **Monad Testnet**         | `@ligis/adapter-evm`                         | `packages/contracts-evm` (Solidity)                      | Live — passkey issuer demo, GateStates walk                                                                             |
+| **Zcash Testnet**         | `@ligis/adapter-zcash` (`ZcashChainAdapter`) | `packages/circuits-zcash` (Noir + UltraHonk) + 512B memo | **Showcase** — `/zcash` guided demo, payee-bound ZK membership + nullifier, viewing-key disclosure (Zecathon Weeks 1–3) |
 
 **Why this works across chains:**
 
@@ -205,7 +205,7 @@ All five services are live and tested end-to-end. **`ligis.qualify`
 collapses the funnel into one order** — payment alone never mints
 trust, every issuance is evidence-gated or allowlist-gated, and a refusal
 is a structured deliverable (`{ issued: false, reason, detail }`), not
-an error. See [`AGENTS.md`](AGENTS.md) "CROO Provider Deployment" for
+an error. See [`AGENTS.md`](docs/agent-notes/croo.md) "CROO Provider Deployment" for
 the refusal shape and the `LIGIS_SELF_ISSUABLE_CAPABILITIES` semantics.
 
 A `fail` verdict doesn't dead-end the buyer: `ligis.risk` returns a

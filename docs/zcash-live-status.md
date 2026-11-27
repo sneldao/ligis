@@ -7,9 +7,9 @@ TL;DR: Live shielded note retrieval and decryption work on testnet. The pinned U
 ## Reproduce the live read
 
 ```bash
-pnpm --filter @ligis/core build
+pnpm --filter @ligis/adapter-zcash build
 pnpm demo:zcash
-LIGIS_ZCASH_LIVE=1 node --import tsx --test packages/core/test/zcash-lwd.test.ts
+LIGIS_ZCASH_LIVE=1 node --import tsx --test packages/adapter-zcash/test/zcash-lwd.test.ts
 ```
 
 The Node light client uses `CompactTxStreamer` over TLS/HTTP2 at
@@ -40,7 +40,7 @@ not be published for real users.
   prototype, not a complete payment-proof verifier.
 - The action's input nullifier identifies a spent input, not the new received
   note's future nullifier. It is unrelated to the Ligis application replay tag.
-- Node-only APIs are exported under `@ligis/core/zcash-lwd`.
+- Node-only APIs are exported under `@ligis/adapter-zcash/lwd`.
 - Web reads disable built-in credential fixtures unless
   `LIGIS_ZCASH_DEMO_FIXTURES=1` is explicitly set. Live block-height reads do not
   make fixture credentials live or discover a wallet's notes.

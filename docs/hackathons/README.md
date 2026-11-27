@@ -35,7 +35,7 @@ and a wallet executor remain pending.
 > Intended track: Shielded Payments. Grand Prize is an additional award.
 > Eligibility requires organizer confirmation because Ligis predates the build window.
 > **Build Window:** Sep 28 – Oct 28, 2026 · 23:59 UTC  
-> **Net-new Zcash code authored during the build window:** `packages/circuits-zcash/` (Noir UltraHonk circuit, Poseidon Merkle tree, verifier), `packages/core/src/zcash.ts` (ZIP-316 Bech32m/F4Jumble, lightwalletd client, Pallas ECDH note trial-decryption, 512B memo codec), and `web/app/zcash/` (guided 4-step privacy demo). Pre-existing EVM/Casper registries serve strictly as upstream libraries.
+> **Net-new Zcash code authored during the build window:** `packages/circuits-zcash/` (Noir UltraHonk circuit, Poseidon Merkle tree, verifier), `packages/adapter-zcash/src/zcash.ts` (ZIP-316 Bech32m/F4Jumble, lightwalletd client, Pallas ECDH note trial-decryption, 512B memo codec), and `web/app/zcash/` (guided 4-step privacy demo). Pre-existing EVM/Casper registries serve strictly as upstream libraries.
 
 Before an agent releases shielded ZEC to a `utest1…` / `u1…` address, the payee proves in zero knowledge (Noir + Barretenberg UltraHonk, depth-16 Poseidon Merkle tree) that it holds an unexpired, unrevoked Ligis credential bound to its own Zcash address inside a steward-signed, on-chain-anchored `CredentialRegistry` root — without revealing its EVM/Casper wallet, which issuer vouched for it, or which leaf it owns.
 

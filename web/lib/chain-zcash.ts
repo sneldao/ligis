@@ -1,5 +1,8 @@
 import "server-only";
-import { isZcashShieldedAddress, ZcashChainAdapter } from "@ligis/core";
+import {
+  isZcashShieldedAddress,
+  ZcashChainAdapter,
+} from "@ligis/adapter-zcash";
 import {
   capabilities,
   type AgentSnapshot,
@@ -9,7 +12,7 @@ import {
   type IssuanceLog,
 } from "./chain";
 import type { Hex } from "./chain-casper";
-import { LightwalletdClient } from "@ligis/core/zcash-lwd";
+import { LightwalletdClient } from "@ligis/adapter-zcash/lwd";
 
 let _adapter: ZcashChainAdapter | null = null;
 

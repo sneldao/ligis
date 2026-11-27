@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { JevIntentInput } from "@ligis/core";
-import { ZCASH_DEMO_VERIFIED_SUBJECT } from "@ligis/core";
+import { ZCASH_DEMO_VERIFIED_SUBJECT } from "@ligis/adapter-zcash";
 import { decide, type PaymentIntent } from "@/lib/decide";
 import { bodyToIntent, fromBadRequest, queryToIntent } from "@/lib/gate-intent";
 import {

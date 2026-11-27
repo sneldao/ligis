@@ -20,5 +20,3 @@ export * from "./jev.js";
 export * from "./openai-compat-reasoner.js";
 export * from "./chain-reasoner.js";
 export * from "./reasoner-select.js";
-export * from "./zcash.js";
-// Node-only light-client APIs are exposed via ./zcash-lwd.
