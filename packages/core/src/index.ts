@@ -8,6 +8,7 @@
 export * from "./types.js";
 export * from "./hash.js";
 export * from "./claim.js";
+export * from "./credential-view.js";
 export * from "./did.js";
 export * from "./config.js";
 export * from "./adapter.js";

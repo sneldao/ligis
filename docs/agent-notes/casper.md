@@ -1,5 +1,25 @@
 # Casper — contract build, deploy, demos
 
+## Registry v2 (current deployment)
+
+- v2 registry package:
+  `contract-package-8ae8673028fa19ef7f75d582d9493dd80aeb98cd659af0a8ae8d2cc811629f12`
+  (self-describing claims, digest binding, issuer accreditation; spec:
+  `docs/credential-registry-v2.md`). v1 package
+  `contract-package-6edde3cf…262aa37` still reads fine — the decoder is
+  dual-format.
+- **State reads are direct JSON-RPC** (`packages/adapter-casper/src/state-reads.ts`)
+  — no `casper-client` CLI for reads. The CLI abbreviates large byte strings
+  (`[174 hex chars]`) in normal mode and prepends the request envelope in
+  `-vv` mode, so neither output mode is machine-parseable; v2 credentials
+  with claims silently failed to verify through it. Writes still use the
+  SDK/CLI. If you add a new read path, use the helpers in `state-reads.ts`.
+- The byte decoder is shared: `parseCredentialViewHex` in
+  `@ligis/core/credential-view` — dependency-free, used by both the Node
+  adapter and the browser adapter. Never reimplement it per-side.
+- Odra field indices: issuer_nonce=1, latest=2, admin=3,
+  issuer_accreditation=4, namespace_policy=5, domain_separator=6.
+
 ## Casper Contract Build
 
 The Casper contracts use Odra 2.8.1 and require a nightly Rust toolchain.

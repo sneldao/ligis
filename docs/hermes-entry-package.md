@@ -1,7 +1,7 @@
 # ligis — Hermes entry package
 
-> **Status:** submitted. Demo posted to X, typeform received, catalog PR open
-> and awaiting re-review after the security fixes.
+> **Status:** merged. Catalog PR merged 2026-11-13 09:08 UTC — ligis is live
+> in the Hermes catalog alongside the sibling entries.
 > **Deadline:** was 5:00 PM EST, Tue Nov 11 2026 — submission made before it.
 > **Catalog PR:** https://github.com/NousResearch/hermes-agent/pull/153409
 > **Sibling entries:** `elcaro` (#149503) — **merged** 2026-11-11 21:42 UTC,
@@ -120,15 +120,15 @@ Fill in:
 
 ## 4. Where everything lives
 
-| Thing              | Where                                                       |
-| ------------------ | ----------------------------------------------------------- |
-| Plugin source      | `sneldao/ligis` → `hermes-plugin/`                          |
-| Pinned commit      | `b7f80a38fd20616650e6de8e6cbcab3f97a3de3a`                  |
-| Catalog PR         | https://github.com/NousResearch/hermes-agent/pull/153409    |
-| Catalog entry file | `plugin-catalog/ligis.yaml` in the PR                       |
-| Demo video         | `~/Downloads/ligis-hermes-demo.mp4`                         |
+| Thing              | Where                                                                    |
+| ------------------ | ------------------------------------------------------------------------ |
+| Plugin source      | `sneldao/ligis` → `hermes-plugin/`                                       |
+| Pinned commit      | `b7f80a38fd20616650e6de8e6cbcab3f97a3de3a`                               |
+| Catalog PR         | https://github.com/NousResearch/hermes-agent/pull/153409                 |
+| Catalog entry file | `plugin-catalog/ligis.yaml` in the PR                                    |
+| Demo video         | `~/Downloads/ligis-hermes-demo.mp4`                                      |
 | Film source        | ephemeral (`/tmp`) — the mp4 is the receipt; tokens/faces are `web/app/` |
-| Build plan         | `docs/hermes-plugin-plan.md` in `sneldao/ligis`             |
+| Build plan         | `docs/hermes-plugin-plan.md` in `sneldao/ligis`                          |
 
 **To rebuild the video:** recreate the composition per the beat sheet above
 (tokens from `web/app/globals.css`, faces from `web/app/fonts/`), then
@@ -143,7 +143,7 @@ Fill in:
 | `hermes plugins validate --install-deps hermes-plugin`   | **passed**, no warnings, "security scan — safe", no Python dependencies                                                                                                 |
 | `hermes plugins doctor hermes-plugin --ci`               | **passed** — 5 tools, 2 hooks                                                                                                                                           |
 | `tests/test_ligis.py`                                    | **140/140** pass, offline (hermetic — a fixture registry answers the RPC, no network)                                                                                   |
-| `fixtures/selftest.py`                                   | **5/5** fixtures reproduce live from raw JSON-RPC, on Monad + Pharos                                                                                                   |
+| `fixtures/selftest.py`                                   | **5/5** fixtures reproduce live from raw JSON-RPC, on Monad + Pharos                                                                                                    |
 | Catalog CI simulation on a clean clone at the pinned sha | **all four gates pass** (validate, payload scan, self-updater grep, confinement)                                                                                        |
 | `validate_plugin_catalog.py` on the entry file           | **valid**                                                                                                                                                               |
 | **Live Hermes session**                                  | 402 challenge annotated with the payee's verdict (both directions); payment to an uncredentialed payee **blocked**; payment to a credentialed payee **allowed through** |
@@ -207,13 +207,13 @@ that distinction rather than claiming portable credentials.
 commit `b7f80a3` is now the pinned sha. What changed:
 
 **1. Self-issued credentials were possible — the important one.** `isCapable`
-accepts a credential from *any* issuer and the registry lets anyone issue
+accepts a credential from _any_ issuer and the registry lets anyone issue
 for any subject, so a payee could self-issue for its own `payTo` and the
 gate would stay silent while the note claimed it held a live credential.
 Now `read_capability` takes `trusted_issuers` and confirms with the
 contract's `isCapableFromIssuer(subject, cap, issuer)`. With none
 configured or none matching, a present credential reports
-`unverified_issuer` — *present, but the issuer is not verified* — and
+`unverified_issuer` — _present, but the issuer is not verified_ — and
 escalates like an uncredentialed payee.
 
 **2. The unverified-TLS retry is gone.** The old code retried any TLS error
@@ -234,7 +234,7 @@ control characters and newlines are stripped, whitespace collapsed, lengths
 capped, and values quoted as data.
 
 **5. The approval claim was wrong.** The docs said unattended runs refuse;
-in Hermes `--yolo` and `approvals.mode: off` *auto-approve* plugin
+in Hermes `--yolo` and `approvals.mode: off` _auto-approve_ plugin
 escalations, and cron follows `approvals.cron_mode`. Corrected in the
 README, `plugin.yaml`, the skill and the docstring. It now also says that an
 unreadable registry does **not** gate.
@@ -245,7 +245,7 @@ chain: the operator's `trusted_issuers` setting is the **sole** root of trust
 the model — cannot whitelist an issuer of its choosing); an endpoint probe
 checks `eth_chainId` and `eth_getCode` before the first read, so a
 wrong-chain endpoint or a codeless registry reads as `unknown`; the gate
-checks *every* destination a call names, not just the first; a
+checks _every_ destination a call names, not just the first; a
 `hook_time_budget_seconds` bounds total RPC wall-clock; and the unit suite
 is hermetic (140 offline tests, no network).
 

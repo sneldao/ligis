@@ -324,10 +324,10 @@ app.get("/premium", async (c) => {
     c.req.header("PAYMENT-SIGNATURE") ?? c.req.header("X-PAYMENT");
 
   // 1. Credential read + Jev intent, concurrently. The credential check
-  //    shells out synchronously to the casper-client CLI (which blocks the
-  //    event loop), so Jev dispatches first and its ~100ms latency stays
-  //    honest. The verdict still lands on every gate decision, including
-  //    401s for uncredentialed agents.
+  //    is direct JSON-RPC (adapter-casper state-reads.ts), so Jev
+  //    dispatches first and its ~100ms latency stays honest. The verdict
+  //    still lands on every gate decision, including 401s for
+  //    uncredentialed agents.
   const jevPromise = evaluatePaymentIntent(
     {
       subject,
@@ -506,10 +506,9 @@ function applyJevHeaders(c: Context, jev: JevIntentResult): void {
 }
 
 /**
- * Short-TTL in-memory cache for credential checks. The Casper read path
- * shells out to the casper-client CLI synchronously (slow + loop-blocking),
- * so repeated checks for the same subject — demos, polling clients — are
- * served from cache. Default TTL 0 = disabled; set
+ * Short-TTL in-memory cache for credential checks. Repeated checks for the
+ * same subject — demos, polling clients — are served from cache. Default
+ * TTL 0 = disabled; set
  * LIGIS_GATE_CREDENTIAL_TTL_MS to enable (e.g. 30000 for the stress demo).
  * A cached GO can lag a revocation by up to the TTL.
  */

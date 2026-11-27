@@ -1,5 +1,7 @@
 # Agent Arena demo
 
+> **Status:** Showcase — kept working, not extended. See the [tier table](../../README.md#what-is-core-and-what-is-showcase).
+
 ## Agent Arena demo (`/arena`, Vultr hackathon)
 
 Submission doc: `docs/agent-arena.md`. Scenario data lives in

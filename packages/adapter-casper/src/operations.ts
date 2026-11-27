@@ -26,6 +26,7 @@ import {
   claimHash,
   namespaceHash,
   namespaceHashOf,
+  parseCredentialViewHex,
 } from "@ligis/core";
 import type { CasperClientContext } from "./client.js";
 import {
@@ -40,6 +41,12 @@ import {
   callStoredContractViaSdk,
   type Signer,
 } from "./signer.js";
+import {
+  getDictionaryItemByContractNamedKey,
+  getDictionaryItemByURef,
+  getStateRootHash,
+  resolveContractState,
+} from "./state-reads.js";
 
 const DEFAULT_EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
@@ -139,44 +146,25 @@ export async function getAgentId(
     const dictItemKey = Buffer.from(controllerBytes).toString("hex");
 
     const rpcUrl = ctx.config.network.rpcUrl;
-    const { execFileSync } = await import("node:child_process");
-    const contractHash = `hash-${stripPrefix(packageHash)}`;
+    const authToken = ctx.config.network.authToken;
 
-    // Get state root hash
-    const stateRootOutput = execFileSync(
-      "casper-client",
-      ["get-state-root-hash", "--node-address", rpcUrl],
-      { encoding: "utf-8", timeout: 15_000 },
+    const stateRoot = await getStateRootHash(rpcUrl, authToken);
+    const { contractHash } = await resolveContractState(
+      rpcUrl,
+      packageHash,
+      authToken,
     );
-    const srMatch = stateRootOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/);
-    if (!srMatch) return null;
-    const stateRoot = srMatch[1];
-
-    // Query the dictionary — argv array, no shell interpolation
-    const output = execFileSync(
-      "casper-client",
-      [
-        "get-dictionary-item",
-        "--node-address",
-        rpcUrl,
-        "--state-root-hash",
-        stateRoot,
-        "--contract-hash",
-        contractHash,
-        "--dictionary-name",
-        "wallet_of_agent",
-        "--dictionary-item-key",
-        dictItemKey,
-      ],
-      { encoding: "utf-8", timeout: 15_000 },
+    const cl = await getDictionaryItemByContractNamedKey(
+      rpcUrl,
+      stateRoot,
+      contractHash,
+      "wallet_of_agent",
+      dictItemKey,
+      authToken,
     );
-
-    const parsedMatch = output.match(/"parsed":\s*"?(\d+)"?/);
-    if (parsedMatch) {
-      const tokenId = parsedMatch[1];
-      if (tokenId === "0") return null;
-      return tokenId;
-    }
+    const parsed = cl?.parsed;
+    if (typeof parsed === "string" && parsed !== "0") return parsed;
+    if (typeof parsed === "number" && parsed !== 0) return String(parsed);
     return null;
   } catch (err) {
     // Dictionary query failed — contract may not have the mapping yet.
@@ -311,36 +299,14 @@ export async function verifyCapability(
   // - The dictionary URef is the contract's `state` URef
   try {
     const rpcUrl = ctx.config.network.rpcUrl;
-    const { execFileSync } = await import("node:child_process");
-    const pkgHash = `hash-${stripPrefix(packageHash)}`;
+    const authToken = ctx.config.network.authToken;
 
-    // 1. Query the contract package to get the latest contract hash
-    const pkgOutput = execFileSync(
-      "casper-client",
-      ["query-global-state", "--node-address", rpcUrl, "--key", pkgHash],
-      { encoding: "utf-8", timeout: 15_000 },
-    );
-    const pkgData =
-      JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
-    const versions = pkgData?.versions ?? [];
-    const latestVersion = versions[versions.length - 1];
-    const contractHashRaw = latestVersion?.contract_hash ?? "";
-    if (!contractHashRaw) throw new Error("No contract hash found");
-    const contractHash = `hash-${contractHashRaw.replace(/^contract-/, "")}`;
-
-    // 2. Get the contract's named keys to find the `state` URef
-    const contractOutput = execFileSync(
-      "casper-client",
-      ["query-global-state", "--node-address", rpcUrl, "--key", contractHash],
-      { encoding: "utf-8", timeout: 15_000 },
-    );
-    const contractData =
-      JSON.parse(contractOutput)?.result?.stored_value?.Contract;
-    if (!contractData) throw new Error("Contract not found");
-    const stateUref = contractData.named_keys?.find(
-      (k: any) => k.name === "state",
-    )?.key;
-    if (!stateUref) throw new Error("state URef not found");
+    // 1. Resolve the package to its latest contract + state URef, and
+    //    fetch the state root — direct JSON-RPC, no CLI output parsing.
+    const [{ stateUref }, stateRoot] = await Promise.all([
+      resolveContractState(rpcUrl, packageHash, authToken),
+      getStateRootHash(rpcUrl, authToken),
+    ]);
 
     // 2. Compute the Odra dictionary item key
     const indexBytes = Buffer.alloc(4);
@@ -354,36 +320,16 @@ export async function verifyCapability(
       "hex",
     );
 
-    // 3. Get state root hash
-    const stateRootOutput = execFileSync(
-      "casper-client",
-      ["get-state-root-hash", "--node-address", rpcUrl],
-      { encoding: "utf-8", timeout: 15_000 },
+    // 3. Query the dictionary item — Odra stores CredentialView as
+    //    List<U8> (raw bytes). A missing key means no credential.
+    const clValue = await getDictionaryItemByURef(
+      rpcUrl,
+      stateRoot,
+      stateUref,
+      dictItemKey,
+      authToken,
     );
-    const srMatch = stateRootOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/);
-    if (!srMatch) throw new Error("No state root hash");
-    const stateRoot = srMatch[1];
-
-    // 4. Query the dictionary item — argv array, no shell interpolation
-    const output = execFileSync(
-      "casper-client",
-      [
-        "get-dictionary-item",
-        "--node-address",
-        rpcUrl,
-        "--state-root-hash",
-        stateRoot,
-        "--seed-uref",
-        stateUref,
-        "--dictionary-item-key",
-        dictItemKey,
-      ],
-      { encoding: "utf-8", timeout: 15_000 },
-    );
-
-    // Parse the CLValue — Odra stores CredentialView as List<U8> (raw bytes)
-    const clValue = JSON.parse(output)?.result?.stored_value?.CLValue;
-    if (!clValue) throw new Error("No CLValue in response");
+    if (!clValue?.bytes) throw new Error("No CLValue in response");
 
     const view = parseCredentialViewBytes(clValue);
     const now = BigInt(Math.floor(Date.now() / 1000));
@@ -450,42 +396,17 @@ export async function credentialStanding(
 
   try {
     const rpcUrl = ctx.config.network.rpcUrl;
-    const { execFileSync } = await import("node:child_process");
-    const pkgHash = `hash-${stripPrefix(packageHash)}`;
+    const authToken = ctx.config.network.authToken;
 
-    const pkgOutput = execFileSync(
-      "casper-client",
-      ["query-global-state", "--node-address", rpcUrl, "--key", pkgHash],
-      { encoding: "utf-8", timeout: 15_000 },
-    );
-    const versions =
-      JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage?.versions ??
-      [];
-    const contractHashRaw = versions[versions.length - 1]?.contract_hash ?? "";
-    if (!contractHashRaw) throw new Error("No contract hash found");
-    const contractHash = `hash-${contractHashRaw.replace(/^contract-/, "")}`;
+    const [{ stateUref }, stateRoot] = await Promise.all([
+      resolveContractState(rpcUrl, packageHash, authToken),
+      getStateRootHash(rpcUrl, authToken),
+    ]);
 
-    const contractOutput = execFileSync(
-      "casper-client",
-      ["query-global-state", "--node-address", rpcUrl, "--key", contractHash],
-      { encoding: "utf-8", timeout: 15_000 },
-    );
-    const stateUref = JSON.parse(
-      contractOutput,
-    )?.result?.stored_value?.Contract?.named_keys?.find(
-      (k: any) => k.name === "state",
-    )?.key;
-    if (!stateUref) throw new Error("state URef not found");
-
-    const srOutput = execFileSync(
-      "casper-client",
-      ["get-state-root-hash", "--node-address", rpcUrl],
-      { encoding: "utf-8", timeout: 15_000 },
-    );
-    const stateRoot = srOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/)?.[1];
-    if (!stateRoot) throw new Error("No state root hash");
-
-    const readItem = (index: number, keyBytes: Uint8Array): Buffer | null => {
+    const readItem = async (
+      index: number,
+      keyBytes: Uint8Array,
+    ): Promise<Buffer | null> => {
       const indexBytes = Buffer.alloc(4);
       indexBytes.writeUInt32BE(index, 0);
       const dictItemKey = Buffer.from(
@@ -493,31 +414,18 @@ export async function credentialStanding(
           dkLen: 32,
         }),
       ).toString("hex");
-      try {
-        const out = execFileSync(
-          "casper-client",
-          [
-            "get-dictionary-item",
-            "--node-address",
-            rpcUrl,
-            "--state-root-hash",
-            stateRoot,
-            "--seed-uref",
-            stateUref,
-            "--dictionary-item-key",
-            dictItemKey,
-          ],
-          { encoding: "utf-8", timeout: 15_000 },
-        );
-        const cl = JSON.parse(out)?.result?.stored_value?.CLValue;
-        return cl?.bytes ? Buffer.from(cl.bytes, "hex") : null;
-      } catch {
-        return null;
-      }
+      const cl = await getDictionaryItemByURef(
+        rpcUrl,
+        stateRoot,
+        stateUref,
+        dictItemKey,
+        authToken,
+      );
+      return cl?.bytes ? Buffer.from(cl.bytes, "hex") : null;
     };
 
     // latest[subject, claim_hash] → CredentialView
-    const viewBytes = readItem(
+    const viewBytes = await readItem(
       2,
       new Uint8Array([...subjectBytes, ...hexToBytes(capHash)]),
     );
@@ -526,14 +434,14 @@ export async function credentialStanding(
       : null;
 
     // namespace_policy[ns_hash] → bool (u32 len prefix + 1 byte)
-    const policyBytes = readItem(5, hexToBytes(nsHash));
+    const policyBytes = await readItem(5, hexToBytes(nsHash));
     const accreditationRequired =
       policyBytes && policyBytes.length >= 5 ? policyBytes[4] !== 0 : null;
 
     // issuer_accreditation[issuer, ns_hash] → AccreditationView{active, granted_at}
     let issuerAccredited: boolean | null = null;
     if (view) {
-      const accBytes = readItem(
+      const accBytes = await readItem(
         4,
         new Uint8Array([...hexToBytes(view.issuer), ...hexToBytes(nsHash)]),
       );
@@ -562,15 +470,10 @@ export async function credentialStanding(
 
 /** Parse a CredentialView stored as List<U8> bytes (v1 and v2 layouts).
  *
- * v2 bytes (after the 4-byte length prefix):
- *   issuer: [u8; 20] | subject: [u8; 32] | claim: String (u32 LE len ++ utf8)
- *   | issued_at: u64 LE | expires_at: u64 LE | revoked: bool | valid: bool
- *   — at least 74 bytes.
- * v1 stores no `claim` field:
- *   issuer: [u8; 20] | subject: [u8; 32] | issued_at: u64 LE
- *   | expires_at: u64 LE | revoked: bool | valid: bool
- *   — exactly 70 bytes, decoded with `claim: ""` so the adapter can keep
- *   reading credentials issued by a v1 registry package.
+ * Delegates to the dependency-free shared decoder in @ligis/core — the
+ * same code the browser adapter uses — and preserves this adapter's
+ * historical contract of returning the zeroed "empty" view instead of
+ * null for malformed input (callers treat valid:false as not capable).
  */
 export function parseCredentialViewBytes(clValue: any): {
   issuer: string;
@@ -580,12 +483,11 @@ export function parseCredentialViewBytes(clValue: any): {
   revoked: boolean;
   valid: boolean;
 } {
-  const hexBytes = clValue.bytes ?? "";
-  const allBytes = Buffer.from(hexBytes, "hex");
-  // First 4 bytes = length prefix (u32 LE)
-  const len = allBytes.readUInt32LE(0);
-  const data = allBytes.subarray(4, 4 + len);
-  const empty = {
+  const view = parseCredentialViewHex(clValue?.bytes ?? "");
+  if (view) {
+    return { ...view, claim: view.claim ?? "" };
+  }
+  return {
     issuer: "0x" + "00".repeat(20),
     claim: "",
     issuedAt: "0",
@@ -593,36 +495,6 @@ export function parseCredentialViewBytes(clValue: any): {
     revoked: false,
     valid: false,
   };
-  let offset = 0;
-  const issuer = "0x" + data.subarray(offset, offset + 20).toString("hex");
-  offset += 20;
-  // subject (32 bytes) — skip, not needed for verification
-  offset += 32;
-  if (data.length === 70) {
-    // v1 layout — no claim field
-    const issuedAt = data.readBigUInt64LE(offset).toString();
-    offset += 8;
-    const expiresAt = data.readBigUInt64LE(offset).toString();
-    offset += 8;
-    const revoked = data[offset] !== 0;
-    offset += 1;
-    const valid = data[offset] !== 0;
-    return { issuer, claim: "", issuedAt, expiresAt, revoked, valid };
-  }
-  if (data.length < 74) return empty;
-  const claimLen = data.readUInt32LE(offset);
-  offset += 4;
-  if (offset + claimLen + 18 > data.length) return empty;
-  const claim = data.subarray(offset, offset + claimLen).toString("utf8");
-  offset += claimLen;
-  const issuedAt = data.readBigUInt64LE(offset).toString();
-  offset += 8;
-  const expiresAt = data.readBigUInt64LE(offset).toString();
-  offset += 8;
-  const revoked = data[offset] !== 0;
-  offset += 1;
-  const valid = data[offset] !== 0;
-  return { issuer, claim, issuedAt, expiresAt, revoked, valid };
 }
 
 /**
@@ -667,78 +539,35 @@ export async function signCredential(
     const packageHash = ctx.config.deployment.credentialRegistry;
     if (packageHash) {
       const rpcUrl = ctx.config.network.rpcUrl;
-      const { execFileSync } = await import("node:child_process");
-      const pkgHash = `hash-${stripPrefix(packageHash)}`;
+      const authToken = ctx.config.network.authToken;
 
-      // Query the contract package to get the latest contract hash
-      const pkgOutput = execFileSync(
-        "casper-client",
-        ["query-global-state", "--node-address", rpcUrl, "--key", pkgHash],
-        { encoding: "utf-8", timeout: 15_000 },
+      const { stateUref } = await resolveContractState(
+        rpcUrl,
+        packageHash,
+        authToken,
       );
-      const pkgData =
-        JSON.parse(pkgOutput)?.result?.stored_value?.ContractPackage;
-      const versions = pkgData?.versions ?? [];
-      // Get the latest enabled version's contract hash
-      const latestVersion = versions[versions.length - 1];
-      const contractHashRaw = latestVersion?.contract_hash ?? "";
-      if (!contractHashRaw) throw new Error("No contract hash found");
-      // contractHashRaw is like "contract-b50e044687d471c0b3472db990070169eddefc4275cd0eb9e7700d4d75cc9595"
-      // Convert to hash- format for query
-      const contractHash = `hash-${contractHashRaw.replace(/^contract-/, "")}`;
 
-      // Get the contract's state URef
-      const contractOutput = execFileSync(
-        "casper-client",
-        ["query-global-state", "--node-address", rpcUrl, "--key", contractHash],
-        { encoding: "utf-8", timeout: 15_000 },
+      // Compute dictionary item key for issuer_nonce mapping (index 1)
+      const issuerBytes = Buffer.from(stripPrefix(issuer), "hex");
+      const indexBytes = Buffer.alloc(4);
+      indexBytes.writeUInt32BE(1, 0); // field index 1 for `issuer_nonce`
+      const finalKey = Buffer.concat([indexBytes, issuerBytes]);
+      const dictItemKey = Buffer.from(
+        blake2b(finalKey, { dkLen: 32 }),
+      ).toString("hex");
+
+      const stateRoot = await getStateRootHash(rpcUrl, authToken);
+      const clValue = await getDictionaryItemByURef(
+        rpcUrl,
+        stateRoot,
+        stateUref,
+        dictItemKey,
+        authToken,
       );
-      const contractData =
-        JSON.parse(contractOutput)?.result?.stored_value?.Contract;
-      const stateUref = contractData?.named_keys?.find(
-        (k: any) => k.name === "state",
-      )?.key;
-      if (stateUref) {
-        // Compute dictionary item key for issuer_nonce mapping (index 1)
-        const issuerBytes = Buffer.from(stripPrefix(issuer), "hex");
-        const indexBytes = Buffer.alloc(4);
-        indexBytes.writeUInt32BE(1, 0); // field index 1 for `issuer_nonce`
-        const finalKey = Buffer.concat([indexBytes, issuerBytes]);
-        const dictItemKey = Buffer.from(
-          blake2b(finalKey, { dkLen: 32 }),
-        ).toString("hex");
-
-        // Get state root hash
-        const srOutput = execFileSync(
-          "casper-client",
-          ["get-state-root-hash", "--node-address", rpcUrl],
-          { encoding: "utf-8", timeout: 15_000 },
-        );
-        const srMatch = srOutput.match(/"state_root_hash":\s*"([a-f0-9]+)"/);
-        if (srMatch) {
-          const stateRoot = srMatch[1];
-          const dictOutput = execFileSync(
-            "casper-client",
-            [
-              "get-dictionary-item",
-              "--node-address",
-              rpcUrl,
-              "--state-root-hash",
-              stateRoot,
-              "--seed-uref",
-              stateUref,
-              "--dictionary-item-key",
-              dictItemKey,
-            ],
-            { encoding: "utf-8", timeout: 15_000 },
-          );
-          const clValue = JSON.parse(dictOutput)?.result?.stored_value?.CLValue;
-          if (clValue?.bytes) {
-            // Odra stores U64 as List<U8>: 4-byte length prefix + 8-byte LE value
-            const buf = Buffer.from(clValue.bytes, "hex");
-            nonce = buf.readBigUInt64LE(4).toString();
-          }
-        }
+      if (clValue?.bytes) {
+        // Odra stores U64 as List<U8>: 4-byte length prefix + 8-byte LE value
+        const buf = Buffer.from(clValue.bytes, "hex");
+        nonce = buf.readBigUInt64LE(4).toString();
       }
     }
   } catch (err) {

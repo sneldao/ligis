@@ -102,4 +102,20 @@ describe("parseCredentialViewBytes", () => {
     assert.equal(v.valid, false);
     assert.equal(v.issuer, "0x" + "00".repeat(20));
   });
+
+  it("decodes the real v2 testnet fixture through the adapter wrapper", () => {
+    // Regression: bytes as stored on-chain in v2 package
+    // contract-package-8ae86730…629f12. Guards the full hex pipeline the
+    // verifyCapability read path depends on.
+    const v = parseCredentialViewBytes({
+      bytes:
+        "5300000047e9b13e467e2db34b1aa145758b253bbd9ffa40c76927ed08eb9a3a2cca7ee0b730fb4cefa22551d3e5914e4d44d693762a8326090000006b79632e6261736963bbc7096b000000003bfbea6c000000000001",
+    });
+    assert.equal(v.issuer, "0x47e9b13e467e2db34b1aa145758b253bbd9ffa40");
+    assert.equal(v.claim, "kyc.basic");
+    assert.equal(v.issuedAt, "1795803067");
+    assert.equal(v.expiresAt, "1827339067");
+    assert.equal(v.revoked, false);
+    assert.equal(v.valid, true);
+  });
 });

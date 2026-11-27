@@ -1,5 +1,7 @@
 # @ligis/circuits-zcash
 
+> **Status:** Showcase — kept working, not extended. See the [tier table](../../README.md#what-is-core-and-what-is-showcase).
+
 Zecathon Weeks 2–3 — **private, payee-bound credential presentation**. A Noir circuit that
 proves:
 

@@ -1,5 +1,7 @@
 # @ligis/contracts-genlayer
 
+> **Status:** Showcase — kept working, not extended. See the [tier table](../../README.md#what-is-core-and-what-is-showcase).
+
 GenLayer Intelligent Contract for the [Agent Tank](../../docs/genlayer-agent-tank.md) submission —
 the **adjudication** half of the Ligis × GenLayer compose story.
 

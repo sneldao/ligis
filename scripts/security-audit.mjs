@@ -18,11 +18,18 @@
  * version is a transitive the project cannot bump directly; direct deps
  * get a normal version bump.
  *
+ * Coverage extends beyond the workspace lockfile: standalone lockfiles
+ * (tools/<name>/pnpm-lock.yaml — outside the pnpm workspace) are audited in the
+ * same run, each reported with its own source label. GitHub's Dependabot
+ * scanner is no longer the only thing watching them.
+ *
  * Usage:
  *   node scripts/security-audit.mjs            # audit the lockfile, fail on remaining high/critical
  *   node scripts/security-audit.mjs --self-test # verify the parser + verdict logic offline
  */
 import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * Documented policy dismissals — mirror of .github/dependabot.yml `ignore`.
@@ -194,28 +201,56 @@ function selfTest() {
   console.log("\nself-test: all checks passed");
 }
 
-function main() {
+/** Standalone lockfile roots outside the pnpm workspace (tools dir). */
+function standaloneLockfileDirs(root) {
+  const toolsDir = join(root, "tools");
+  if (!existsSync(toolsDir)) return [];
+  return readdirSync(toolsDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => join(toolsDir, e.name))
+    .filter((dir) => existsSync(join(dir, "pnpm-lock.yaml")));
+}
+
+function auditDir(dir) {
   const result = spawnSync("pnpm", ["audit", "--json"], {
+    cwd: dir,
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
   });
   if (result.error) {
-    console.error(`security-audit: could not run pnpm audit — ${result.error.message}`);
-    process.exit(1);
+    throw new Error(`could not run pnpm audit in ${dir} — ${result.error.message}`);
   }
-  let auditJson;
   try {
-    auditJson = JSON.parse(result.stdout);
+    return JSON.parse(result.stdout);
   } catch (err) {
-    console.error(
-      `security-audit: could not parse pnpm audit output — ${err.message}\n${(result.stdout ?? "").slice(0, 500)}`,
+    throw new Error(
+      `could not parse pnpm audit output in ${dir} — ${err.message}\n${(result.stdout ?? "").slice(0, 500)}`,
     );
+  }
+}
+
+function main() {
+  const root = process.cwd();
+  const dirs = [root, ...standaloneLockfileDirs(root)];
+  const findings = [];
+  let dismissed = 0;
+  try {
+    for (const dir of dirs) {
+      const label = dir === root ? "workspace" : dir.slice(root.length + 1);
+      const auditJson = auditDir(dir);
+      const all = Object.keys(auditJson?.advisories ?? {}).length;
+      const dirFindings = auditFindings(auditJson).map((f) => ({
+        ...f,
+        module: `${f.module} (${label})`,
+      }));
+      dismissed += all - dirFindings.length;
+      findings.push(...dirFindings);
+    }
+  } catch (err) {
+    console.error(`security-audit: ${err.message}`);
     process.exit(1);
   }
-  const all = Object.keys(auditJson?.advisories ?? {}).length;
-  const findings = auditFindings(auditJson);
   const blockers = blockingFindings(findings);
-  const dismissed = all - findings.length;
   console.log(renderReport(findings, blockers, dismissed));
   process.exit(blockers.length > 0 ? 1 : 0);
 }
