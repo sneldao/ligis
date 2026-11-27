@@ -16,6 +16,13 @@
 > (`packages/adapter-casper/src/state-reads.ts`); do not reintroduce
 > casper-client CLI parsing for reads — its output abbreviates large byte
 > strings and broke v2 verification.
+>
+> **Accreditation live:** `kyc` is accredited-only and the demo issuer
+> `0x47e9…a40` is accredited for it (2026-11-27). `credentialStanding` reads
+> `accreditationRequired=true, issuerAccredited=true, standing=true` for the
+> first credential. Note the off-chain bool-arg bug fixed in `ad72439` —
+> the first accreditation transactions had to be re-sent because the CLI
+> encoder silently serialized bools as false.
 
 ## What v2 changes, in one paragraph
 

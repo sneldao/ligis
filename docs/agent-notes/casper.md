@@ -20,6 +20,35 @@
 - Odra field indices: issuer_nonce=1, latest=2, admin=3,
   issuer_accreditation=4, namespace_policy=5, domain_separator=6.
 
+### Accreditation posture (live since 2026-11-27)
+
+- `kyc` namespace is **accredited-only** (tx `cbe91392…`); issuer
+  `0x47e9b13e467e2db34b1aa145758b253bbd9ffa40` is accredited for `kyc`
+  (tx `714116ba…`). New `kyc.*` issuance from unaccredited issuers is
+  rejected by the contract. `rwa`/`demo` namespaces are still open —
+  flip them only after accrediting an issuer or you brick issuance there.
+- `is_capable`/`verifyCapability` do NOT check accreditation — standing is
+  advisory via `credentialStanding`. If a gate should enforce accreditation
+  off-chain, wire it into the gate decision explicitly.
+
+### Write-path warnings (hard-won)
+
+- **Bool args**: SDK 5.x stores the bare boolean on `.bool` — there is no
+  `.boolVal` and `.parsed` is undefined. The CLI arg encoder once read those
+  missing fields and silently submitted every bool as `false`. Extraction
+  now goes through `getValueByType().getValue()`; never reintroduce
+  field-name guesses without a roundtrip test against live chain args
+  (`info_get_deploy` shows the transmitted values).
+- **SDK submission is broken** (`Cannot read properties of undefined
+(reading 'toBytes')` in `callStoredContractViaSdk`) — every write falls
+  back to the casper-client CLI path, so `casper-client` must be installed
+  wherever writes happen (it is on the Vultr server). Fix the SDK path or
+  accept the CLI dependency; check `LIGIS_CASPER_DEBUG` output to see which
+  path a write took.
+- A reverted transaction is still included in a block. Inclusion is not
+  success — `pollTransactionWithCli` now throws on revert/timeout; keep it
+  that way.
+
 ## Casper Contract Build
 
 The Casper contracts use Odra 2.8.1 and require a nightly Rust toolchain.
