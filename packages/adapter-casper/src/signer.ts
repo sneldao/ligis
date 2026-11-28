@@ -34,6 +34,8 @@ const {
   TransactionEntryPointEnum,
   TransactionTarget,
   TransactionRuntime,
+  TransactionInvocationTarget,
+  ContractCallBuilder,
   ByPackageHashInvocationTarget,
   StoredTarget,
   PricingMode,
@@ -236,63 +238,37 @@ export async function callStoredContractViaSdk(params: {
     .replace(/^hash-/, "")
     .replace(/^0x/, "");
 
-  // Build the invocation target
-  const byPackageHash = new ByPackageHashInvocationTarget();
-  (byPackageHash as any).packageHash = Hash.fromHex(hashHex);
-  (byPackageHash as any).entryPoint = entryPoint;
+  // Use the SDK's official ContractCallBuilder — hand-assembling the target
+  // graph once produced structurally invalid transactions (invented field
+  // names, wrong entry point kind), so stay on the supported API surface.
+  const tx = new ContractCallBuilder()
+    .from(signer.publicKey)
+    .chainName(chainName)
+    .byPackageHash(hashHex)
+    .entryPoint(entryPoint)
+    .runtimeArgs(new Args(args))
+    .payment(paymentAmount, DEFAULT_GAS_PRICE_TOLERANCE)
+    .ttl(ttlMs)
+    .build();
 
-  const storedTarget = new StoredTarget();
-  (storedTarget as any).byPackageHash = byPackageHash;
-
-  const target = new TransactionTarget(
-    undefined,
-    storedTarget as any,
-    undefined,
-  );
-
-  // Build args
-  const argsObj = new Args(args);
-
-  const initiatorAddr = new InitiatorAddr(signer.publicKey);
-  const ttl = new Duration(ttlMs);
-  const timestamp = new Timestamp(new Date());
-  const txnEntryPoint = new TransactionEntryPoint(
-    TransactionEntryPointEnum.Call,
-  );
-
-  const pricingMode = new PricingMode();
-  pricingMode.paymentLimited = new PaymentLimitedMode();
-  pricingMode.paymentLimited.gasPriceTolerance = 1;
-  pricingMode.paymentLimited.paymentAmount = paymentAmount;
-  pricingMode.paymentLimited.standardPayment = false;
-
-  const scheduling = new TransactionScheduling();
-  scheduling.standard = {};
-
-  const payload = TransactionV1Payload.build({
-    initiatorAddr,
-    args: argsObj,
-    ttl,
-    entryPoint: txnEntryPoint,
-    pricingMode,
-    timestamp,
-    transactionTarget: target,
-    scheduling,
-    chainName,
-  });
-
-  const v1 = TransactionV1.makeTransactionV1(payload);
-  v1.sign(signer.privateKey);
-  const tx = Transaction.fromTransactionV1(v1);
+  tx.sign(signer.privateKey);
 
   // Submit via RPC
   const handler = new casperSdk.HttpHandler(rpcUrl, "fetch");
   const rpc = new casperSdk.RpcClient(handler);
   const putResult: any = await rpc.putTransaction(tx);
-  const txHash =
-    putResult.transactionHash ??
-    putResult.deployHash ??
-    (tx as any).hash?.transactionV1?.toHex?.() ??
+  const hashObj = putResult.transactionHash;
+  const txHash: string =
+    (hashObj?.transactionV1 &&
+      (typeof hashObj.transactionV1.toHex === "function"
+        ? hashObj.transactionV1.toHex()
+        : String(hashObj.transactionV1))) ||
+    (hashObj?.deploy &&
+      (typeof hashObj.deploy.toHex === "function"
+        ? hashObj.deploy.toHex()
+        : String(hashObj.deploy))) ||
+    (typeof hashObj === "string" ? hashObj : "") ||
+    (tx as any).hash?.transactionV1?.toHex?.() ||
     "";
   if (!txHash) {
     throw new Error(
@@ -300,8 +276,8 @@ export async function callStoredContractViaSdk(params: {
     );
   }
 
-  // Poll for confirmation
-  const blockNumber = await pollTransactionWithCli(txHash, 120_000);
+  // Poll for confirmation — direct JSON-RPC, no casper-client CLI needed.
+  const blockNumber = await pollTransactionWithRpc(txHash, rpcUrl, 120_000);
   return { txHash, blockNumber };
 }
 
@@ -447,6 +423,58 @@ async function pollTransactionWithCli(
       ) {
         throw err;
       }
+    }
+  }
+  throw new Error(`transaction ${txHash} not confirmed within ${timeoutMs}ms`);
+}
+
+/**
+ * Poll `info_get_transaction` over direct JSON-RPC until the transaction is
+ * included. The transaction_hash param is a tagged variant — Version1 for
+ * TransactionV1 hashes. Throws on on-chain revert (inclusion is not success)
+ * and on timeout. Used by the SDK submission path so it stays free of the
+ * casper-client CLI entirely.
+ */
+async function pollTransactionWithRpc(
+  txHash: string,
+  rpcUrl: string,
+  timeoutMs: number,
+): Promise<string> {
+  const maxAttempts = Math.floor(timeoutMs / 5000);
+  for (let i = 0; i < maxAttempts; i++) {
+    await sleep(5000);
+    try {
+      const resp = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "info_get_transaction",
+          params: { transaction_hash: { Version1: txHash } },
+        }),
+      });
+      const json: any = await resp.json();
+      const execInfo = json?.result?.execution_info;
+      const height = execInfo?.block_height;
+      if (height != null) {
+        const errMsg =
+          execInfo?.execution_result?.Version2?.error_message ??
+          execInfo?.execution_result?.Version1?.error_message ??
+          null;
+        if (errMsg) {
+          throw new Error(`transaction reverted on-chain: ${errMsg}`);
+        }
+        return String(height);
+      }
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        err.message.startsWith("transaction reverted")
+      ) {
+        throw err;
+      }
+      // Not yet included or transient RPC error — keep polling.
     }
   }
   throw new Error(`transaction ${txHash} not confirmed within ${timeoutMs}ms`);
