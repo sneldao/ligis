@@ -1,7 +1,7 @@
 {
   "name": "ligis",
   "version": "0.1.0",
-  "description": "Ligis — evidence-based payment control for autonomous finance. Order-bound payment authorization (GO / STOP / REVIEW) on the Airwallex payout path, plus a stateless pre-payment gate backed by chain-agnostic agent credentials (Pharos, Casper, Monad).",
+  "description": "Ligis \u2014 evidence-based payment control for autonomous finance. Order-bound payment authorization (GO / STOP / REVIEW) on the Airwallex payout path, plus a stateless pre-payment gate backed by chain-agnostic agent credentials (Pharos, Casper, Monad).",
   "license": "MIT",
   "type": "module",
   "private": true,
@@ -100,7 +100,7 @@
       "zod": ">=4.6.6",
       "brace-expansion": ">=5.0.12",
       "@hono/node-server": ">=2.1.6",
-      "hono": ">=4.13.7",
+      "hono": ">=4.13.16",
       "axios": ">=1.20.0",
       "follow-redirects": ">=1.16.2",
       "decode-uri-component": ">=0.5.1",
@@ -109,7 +109,7 @@
       "elliptic": ">=6.6.1",
       "ip-address": ">=10.7.4",
       "nanoid": ">=3.3.18",
-      "qs": ">=6.16.0",
+      "qs": ">=6.16.1",
       "fflate": ">=0.6.11",
       "baseline-browser-mapping": ">=2.11.0",
       "pbkdf2": ">=3.1.7",
@@ -122,7 +122,8 @@
       "cookie@<1": ">=0.7.2",
       "path-to-regexp@<0.1.13": "^0.1.13",
       "body-parser@<2": "^1.20.9",
-      "body-parser@>=2": ">=2.4.0"
+      "body-parser@>=2": ">=2.4.0",
+      "minimatch@^10.0.0": ">=11.0.1"
     }
   }
 }
