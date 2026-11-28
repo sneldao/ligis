@@ -134,7 +134,25 @@ export async function isCapable(
       subject,
       capability: capId,
     });
-    return result.capable;
+    if (!result.capable) {
+      return false;
+    }
+    // Accreditation enforcement, matching the namespace owner's intent:
+    // where the namespace requires accreditation, a credential only counts
+    // if the issuer is accredited NOW — not merely at issue time. This is
+    // what makes accreditation revocation meaningful. In open namespaces
+    // (policy unset or false) plain validity suffices. Fail-open only when
+    // the standing read itself is unavailable (unknown = pre-v2 registry).
+    const standing = await (adapter() as any)
+      .credentialStanding?.({ subject, claim: capId })
+      .catch(() => null);
+    if (
+      standing?.accreditationRequired === true &&
+      standing?.issuerAccredited === false
+    ) {
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
