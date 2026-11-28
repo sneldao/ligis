@@ -72,11 +72,7 @@ export interface Decision {
 }
 
 export type AttemptState =
-  | "SUBMITTED"
-  | "UNKNOWN"
-  | "IN_FLIGHT"
-  | "PAID"
-  | "CANCELLED";
+  "SUBMITTED" | "UNKNOWN" | "IN_FLIGHT" | "PAID" | "CANCELLED";
 
 export interface PaymentAttempt {
   attemptId: string;

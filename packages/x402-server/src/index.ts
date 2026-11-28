@@ -480,8 +480,7 @@ const CAPABILITY_DESCRIPTION =
 function decodePaymentInfo(
   paymentHeader: string | undefined,
 ):
-  | { scheme?: string; amountSmallestUnit?: string; payTo?: string }
-  | undefined {
+  { scheme?: string; amountSmallestUnit?: string; payTo?: string } | undefined {
   if (!paymentHeader) return undefined;
   try {
     const p = JSON.parse(Buffer.from(paymentHeader, "base64").toString());
