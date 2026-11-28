@@ -61,12 +61,17 @@
   now goes through `getValueByType().getValue()`; never reintroduce
   field-name guesses without a roundtrip test against live chain args
   (`info_get_deploy` shows the transmitted values).
-- **SDK submission is broken** (`Cannot read properties of undefined
-(reading 'toBytes')` in `callStoredContractViaSdk`) — every write falls
-  back to the casper-client CLI path, so `casper-client` must be installed
-  wherever writes happen (it is on the Vultr server). Fix the SDK path or
-  accept the CLI dependency; check `LIGIS_CASPER_DEBUG` output to see which
-  path a write took.
+- **SDK submission is fixed** (2026-11-28): writes no longer need
+  casper-client. Root cause was hand-assembled transaction targets with
+  invented field names (`.packageHash` instead of `.addr`, missing the
+  `TransactionInvocationTarget`/`StoredTarget.id`/`runtime` nesting),
+  entry point kind `Call` instead of `Custom`, `transactionHash` treated
+  as a string when it is a tagged object, and CLI-based polling inside
+  the supposedly CLI-free path. The write path now uses the SDK's
+  `ContractCallBuilder` and polls `info_get_transaction` over JSON-RPC —
+  stay on that supported API surface. Proven live on testnet (tx
+  `535f0ff4…`, block 9978475). The CLI fallback still exists but should
+  never fire; check `LIGIS_CASPER_DEBUG` to see which path a write took.
 - A reverted transaction is still included in a block. Inclusion is not
   success — `pollTransactionWithCli` now throws on revert/timeout; keep it
   that way.
