@@ -20,7 +20,7 @@
  *     casper-client CLI entirely.
  */
 import * as casperSdk from "casper-js-sdk";
-import { blake2b } from "@noble/hashes/blake2b";
+import { blake2b } from "@noble/hashes/blake2.js";
 import {
   getBalanceMotes,
   getLatestBlockInfo,

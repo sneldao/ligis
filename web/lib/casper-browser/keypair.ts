@@ -14,7 +14,7 @@
  */
 import * as casperSdk from "casper-js-sdk";
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 
 const { PrivateKey, PublicKey, KeyAlgorithm } = casperSdk;
 
@@ -80,7 +80,9 @@ export function keyPairFromHexPrivateKey(hex: string): CasperKeyPair {
  * under — the address submitted as `Credential.issuer` on-chain.
  */
 export function evmAddressFromSecpKey(privateKeyHex: string): `0x${string}` {
-  const clean = privateKeyHex.startsWith("0x") ? privateKeyHex.slice(2) : privateKeyHex;
+  const clean = privateKeyHex.startsWith("0x")
+    ? privateKeyHex.slice(2)
+    : privateKeyHex;
   if (!/^[0-9a-fA-F]{64}$/.test(clean)) {
     throw new Error("evmAddressFromSecpKey: invalid hex private key");
   }
@@ -97,9 +99,16 @@ export function evmAddressFromSecpKey(privateKeyHex: string): `0x${string}` {
 }
 
 /** Classify a public-key hex by its leading algorithm byte. */
-export function classifyAlgorithm(publicKeyHex: string): "ed25519" | "secp256k1" | "unknown" {
+export function classifyAlgorithm(
+  publicKeyHex: string,
+): "ed25519" | "secp256k1" | "unknown" {
   const c = publicKeyHex[0];
-  if (c === "0" && (publicKeyHex[1] === "1" || publicKeyHex[1] === "2" || publicKeyHex[1] === "3")) {
+  if (
+    c === "0" &&
+    (publicKeyHex[1] === "1" ||
+      publicKeyHex[1] === "2" ||
+      publicKeyHex[1] === "3")
+  ) {
     return publicKeyHex[1] === "1" ? "ed25519" : "secp256k1";
   }
   // The Casper public-key hex always starts with `0` (algorithm byte)
@@ -120,7 +129,9 @@ export function accountHashFromPublicKeyHex(publicKeyHex: string): string {
 
 /** Validate that a hex string looks like a Casper public key. */
 export function isPublicKeyHex(hex: string): boolean {
-  return /^0[1-3][a-fA-F0-9]{64}$/.test(hex) || /^0x0[1-3][a-fA-F0-9]{64}$/.test(hex);
+  return (
+    /^0[1-3][a-fA-F0-9]{64}$/.test(hex) || /^0x0[1-3][a-fA-F0-9]{64}$/.test(hex)
+  );
 }
 
 // Re-export for callers who want to keep using PublicKey directly.

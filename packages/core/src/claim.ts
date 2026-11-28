@@ -22,7 +22,7 @@
  * same grammar on-chain at issue() — this module is the chain-neutral
  * reference both sides conform to.
  */
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import type { Bytes32 } from "./types.js";
 
 export const MAX_CLAIM_LEN = 192;

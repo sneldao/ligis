@@ -15,8 +15,8 @@
  *   - CredentialRegistry: issue, revoke, issuer_nonce_of, latest_credential, is_capable
  */
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { keccak_256 } from "@noble/hashes/sha3";
-import { blake2b } from "@noble/hashes/blake2b";
+import { keccak_256 } from "@noble/hashes/sha3.js";
+import { blake2b } from "@noble/hashes/blake2.js";
 import casperSdk from "casper-js-sdk";
 import type { CLValue as CLValueType } from "casper-js-sdk";
 const { CLValue, PublicKey, PurseIdentifier } = casperSdk;

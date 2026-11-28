@@ -2,7 +2,7 @@
  * Pure field helpers shared by the prover side and the gate's verifier.
  * No Poseidon/circomlibjs and no Node built-ins — safe to bundle anywhere.
  */
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 
 /** BN254 scalar field modulus. Every circuit input is reduced into it. */
 export const FIELD_MODULUS =

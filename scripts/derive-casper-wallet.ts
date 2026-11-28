@@ -14,7 +14,7 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import sdk from "casper-js-sdk";
 
 const { PrivateKey, KeyAlgorithm, PublicKey } = sdk;
@@ -83,7 +83,10 @@ function appendToEnv(file: string, derived: Derived[]): void {
   // Remove any prior derived block we wrote.
   const marker = "# Derived addresses (computed from _PRIVATE_KEY)";
   const idx = existing.indexOf(marker);
-  const base = idx >= 0 ? existing.slice(0, idx).trimEnd() + "\n\n" : existing.trimEnd() + "\n\n";
+  const base =
+    idx >= 0
+      ? existing.slice(0, idx).trimEnd() + "\n\n"
+      : existing.trimEnd() + "\n\n";
   const block =
     `${marker}\n` +
     `# safe to share, used for funding, on-chain lookups, and cross-chain verification.\n` +
@@ -111,7 +114,11 @@ function main(): void {
   const envFile = process.env.CASPER_ENV_FILE ?? ".env.d/casper.env";
 
   const env = loadEnv(envFile);
-  const labels = ["LIGIS_CASPER_DEPLOYER", "LIGIS_CASPER_AGENT", "LIGIS_CASPER_ISSUER"];
+  const labels = [
+    "LIGIS_CASPER_DEPLOYER",
+    "LIGIS_CASPER_AGENT",
+    "LIGIS_CASPER_ISSUER",
+  ];
   const derived: Derived[] = [];
   for (const label of labels) {
     const pkKey = `${label}_PRIVATE_KEY`;
@@ -125,8 +132,8 @@ function main(): void {
   }
 
   if (filter) {
-    const match = derived.find(
-      (d) => d.label.toLowerCase().endsWith(filter.toLowerCase())
+    const match = derived.find((d) =>
+      d.label.toLowerCase().endsWith(filter.toLowerCase()),
     );
     if (!match) throw new Error(`No wallet matching ${filter}`);
     console.log(formatDerived(match));
@@ -143,10 +150,10 @@ function main(): void {
       const sshTarget = process.env.SERVER_HOST ?? "nuncio-vultr";
       // Pipe the block via stdin so we never write the secret to a temp file
       // on the remote host. The block contains only public addresses.
-      const proc = execSync(
-        `ssh ${sshTarget} "cat >> ${remote}"`,
-        { input: block, stdio: ["pipe", "inherit", "inherit"] }
-      );
+      const proc = execSync(`ssh ${sshTarget} "cat >> ${remote}"`, {
+        input: block,
+        stdio: ["pipe", "inherit", "inherit"],
+      });
       console.log(`Appended to ${sshTarget}:${remote}`);
     }
   }

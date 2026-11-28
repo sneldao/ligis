@@ -8,7 +8,7 @@
  * and an anchored receipt. New providers plug in via {@link RiskProvider}
  * without touching the decision logic.
  */
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import type { EvidenceManifest } from "./evidence.js";
 
 // ---------- Signals ----------

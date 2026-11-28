@@ -53,7 +53,7 @@
   },
   "dependencies": {
     "@aztec/bb.js": "5.0.0-nightly.20260522",
-    "@noble/hashes": "^1.7.0",
+    "@noble/hashes": "^2.4.0",
     "circomlibjs": "^0.1.7",
     "viem": "^2.58.6"
   },

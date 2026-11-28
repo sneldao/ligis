@@ -6,7 +6,7 @@
  * on Pharos and a capability minted on Casper for the same name are
  * referentially identical at the protocol level.
  */
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import type { Bytes32, CapabilityHash } from "./types.js";
 
 const BYTES32_RE = /^0x[0-9a-fA-F]{64}$/;

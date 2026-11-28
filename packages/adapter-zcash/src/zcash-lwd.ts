@@ -17,7 +17,7 @@
 import { createDecipheriv } from "node:crypto";
 import { connect, type ClientHttp2Session } from "node:http2";
 import { pallas } from "@noble/curves/pasta";
-import { blake2b } from "@noble/hashes/blake2b";
+import { blake2b } from "@noble/hashes/blake2.js";
 
 // ─── ZIP-316: Bech32m + F4Jumble ────────────────────────────────────────
 

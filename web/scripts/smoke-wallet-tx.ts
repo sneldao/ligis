@@ -15,7 +15,7 @@
  */
 import casperSdk from "casper-js-sdk";
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 
 const {
   Args,
@@ -43,17 +43,28 @@ const {
 
 // 1) Generate a fresh scalar via @noble (mirror of keypair.ts browser path).
 const scalar = secp256k1.utils.randomSecretKey();
-const scalarHex = "0x" + Array.from(scalar).map((b) => b.toString(16).padStart(2, "0")).join("");
+const scalarHex =
+  "0x" +
+  Array.from(scalar)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 
 const pk = PrivateKey.fromHex(scalarHex.slice(2), KeyAlgorithm.SECP256K1);
 const publicKey = pk.publicKey;
-const evmAddr = "0x" + Array.from(keccak_256(secp256k1.getPublicKey(scalar, false).slice(1)).slice(-20))
-  .map((b) => b.toString(16).padStart(2, "0"))
-  .join("");
+const evmAddr =
+  "0x" +
+  Array.from(
+    keccak_256(secp256k1.getPublicKey(scalar, false).slice(1)).slice(-20),
+  )
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 
 console.log("=== Ligis browser TransactionV1 dry-run smoke ===");
 console.log("publicKeyHex :", publicKey.toHex());
-console.log("accountHash  :", "account-hash-" + publicKey.accountHash().toHex());
+console.log(
+  "accountHash  :",
+  "account-hash-" + publicKey.accountHash().toHex(),
+);
 console.log("EVM addr (issuer):", evmAddr);
 console.log("privateKey   :", scalarHex);
 
@@ -95,7 +106,9 @@ if (entryPointFlag.type !== TransactionEntryPointEnum.Custom) {
   throw new Error(`entry-point wasn't Custom: ${String(entryPointFlag.type)}`);
 }
 if (entryPointFlag.customEntryPoint !== "mint_self") {
-  throw new Error(`entry-point name mismatch: ${String(entryPointFlag.customEntryPoint)}`);
+  throw new Error(
+    `entry-point name mismatch: ${String(entryPointFlag.customEntryPoint)}`,
+  );
 }
 
 const payload = TransactionV1Payload.build({
@@ -116,9 +129,15 @@ const tx = Transaction.fromTransactionV1(v1);
 
 const txBytes = (tx as unknown as { toBytes?: () => Uint8Array }).toBytes?.();
 if (!txBytes) {
-  throw new Error("Transaction.toBytes() returned nothing — SDK shape may have drifted.");
+  throw new Error(
+    "Transaction.toBytes() returned nothing — SDK shape may have drifted.",
+  );
 }
-const txHex = "0x" + Array.from(txBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+const txHex =
+  "0x" +
+  Array.from(txBytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 const bytesStr = new TextDecoder("latin1").decode(txBytes);
 
 console.log("");
@@ -126,15 +145,33 @@ console.log("=== ENCODING CHECKS ===");
 const hasMintSelf = bytesStr.includes("mint_self");
 const hasCallOnly = !bytesStr.includes("mint_self") && !hasMintSelf;
 console.log("wire bytes length :", txBytes.length);
-console.log("wire hex (truncated):", txHex.slice(0, 64) + "..." + txHex.slice(-32));
-console.log("contains \"mint_self\":", hasMintSelf ? "YES ✓" : "NO (would NoSuchMethod)");
+console.log(
+  "wire hex (truncated):",
+  txHex.slice(0, 64) + "..." + txHex.slice(-32),
+);
+console.log(
+  'contains "mint_self":',
+  hasMintSelf ? "YES ✓" : "NO (would NoSuchMethod)",
+);
 if (!hasMintSelf) {
-  console.error("❌ FAIL: SDK did not serialize the entry-point name into the wire payload.");
-  console.error("Inspect bytesStr around the deployment area to find what got written instead.");
+  console.error(
+    "❌ FAIL: SDK did not serialize the entry-point name into the wire payload.",
+  );
+  console.error(
+    "Inspect bytesStr around the deployment area to find what got written instead.",
+  );
   process.exit(1);
 }
-console.log("✅ entry-point name is on the wire; wire-format valid for Casper 2.0 stored-contract call");
+console.log(
+  "✅ entry-point name is on the wire; wire-format valid for Casper 2.0 stored-contract call",
+);
 console.log("");
-console.log("(Do NOT submit this smoke — the placeholder package hash would fail on chain regardless.)");
-console.log("To do a real testnet dry-run, set NEXT_PUBLIC_LIGIS_CASPER_AGENT_ID to your deployed package hash,");
-console.log("fund the wallet at https://testnet.cspr.live/tools/faucet, then click Run Steward in the browser.");
+console.log(
+  "(Do NOT submit this smoke — the placeholder package hash would fail on chain regardless.)",
+);
+console.log(
+  "To do a real testnet dry-run, set NEXT_PUBLIC_LIGIS_CASPER_AGENT_ID to your deployed package hash,",
+);
+console.log(
+  "fund the wallet at https://testnet.cspr.live/tools/faucet, then click Run Steward in the browser.",
+);

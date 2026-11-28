@@ -17,7 +17,7 @@ import {
   buildDomain,
 } from "@casper-ecosystem/casper-eip-712";
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 
 /** x402 PaymentRequirements from the 402 response. */
 export interface PaymentRequirements {

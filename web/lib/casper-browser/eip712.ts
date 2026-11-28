@@ -16,7 +16,7 @@ import {
   hashTypedData,
   verifySignature,
 } from "@casper-ecosystem/casper-eip-712";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { evmAddressFromSecpKey } from "./keypair";
 

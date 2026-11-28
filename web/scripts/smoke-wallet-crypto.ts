@@ -8,7 +8,7 @@
  * No Casper RPC. No funding. Pure Node + @noble/curves + ethers.
  */
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import { ethers } from "ethers";
 
 // Use a deterministic test vector so the run is reproducible.
@@ -38,7 +38,10 @@ function browserSign(digest: Uint8Array, priv: Uint8Array): Uint8Array {
 function browserRecoverPubkey(digest: Uint8Array, sig: Uint8Array): Uint8Array {
   const recovery = sig[64] - 27;
   const compact = sig.slice(0, 64);
-  return secp256k1.Signature.fromCompact(compact).addRecoveryBit(recovery).recoverPublicKey(digest).toRawBytes(false);
+  return secp256k1.Signature.fromCompact(compact)
+    .addRecoveryBit(recovery)
+    .recoverPublicKey(digest)
+    .toRawBytes(false);
 }
 
 // ---------- SERVER PATH (mirror of packages/adapter-casper operations.ts) ----------
@@ -49,9 +52,7 @@ function serverSign(digest: Uint8Array, priv: Uint8Array): Uint8Array {
   const r = sig.r.slice(2).padStart(64, "0");
   const s = sig.s.slice(2).padStart(64, "0");
   const v = (sig.v ?? 27).toString(16).padStart(2, "0");
-  return Uint8Array.from(
-    Buffer.from(r + s + v, "hex"),
-  );
+  return Uint8Array.from(Buffer.from(r + s + v, "hex"));
 }
 
 // ---------- run ----------
@@ -102,10 +103,13 @@ console.log("✓ s matches between browser (@noble) and server (ethers)");
 // Recover public key from the browser signature and verify recovered address.
 const recoveredPub = browserRecoverPubkey(digest, browserSig);
 const recoveredHash = keccak_256(recoveredPub.slice(1));
-const recoveredAddr = "0x" + Buffer.from(recoveredHash.slice(-20)).toString("hex");
+const recoveredAddr =
+  "0x" + Buffer.from(recoveredHash.slice(-20)).toString("hex");
 console.log("[recover] addr    :", recoveredAddr);
 if (recoveredAddr.toLowerCase() !== browserAddr.toLowerCase()) {
-  console.error("FAIL: signature recovery does not round-trip to the same address");
+  console.error(
+    "FAIL: signature recovery does not round-trip to the same address",
+  );
   process.exit(1);
 }
 console.log("✓ signature recovery round-trips to the same EVM address");

@@ -33,7 +33,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { serve } from "@hono/node-server";
 import { CasperAdapter } from "@ligis/adapter-casper";
-import { keccak_256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 import { execFileSync } from "node:child_process";
 import {
   capabilityHash,
