@@ -31,6 +31,28 @@
   advisory via `credentialStanding`. If a gate should enforce accreditation
   off-chain, wire it into the gate decision explicitly.
 
+### Vercel production env (hard-won)
+
+- `LIGIS_CASPER_CREDENTIAL_REGISTRY` on Vercel is **plain type, not
+  secret/sensitive** — the registry hash is public on-chain data, and plain
+  type means the stored value can be read back and verified in the dashboard
+  or API. Sensitive vars are write-only; you cannot confirm an edit landed.
+- Env values are snapshotted into each deployment at build time. Editing
+  the var does nothing to running deployments, and **a redeploy started
+  before the edit finished saving silently bakes the old value** — sequence
+  env edits first, verify via API, then redeploy or push.
+- `/api/casper-config` is `force-static` + `revalidate=300`, so the hash is
+  baked at build time AND edge-cached 5 min. Verify a cutover against the
+  deployment-direct URL (`ligis-<hash>-snel.vercel.app`) before trusting the
+  production domain, and expect the domain to lag.
+- Dashboard same-origin API for scripted env work (browser session cookies):
+  `GET/POST /api/v9/projects/ligis/env?teamId=team_d9QHRz4UVSLz24MMqisKi3jl`,
+  `DELETE /api/v9/projects/ligis/env/<id>?teamId=...`. Far more reliable
+  than driving the env-var UI.
+- 2026-11-28 cutover: production had been serving a stale legacy registry
+  hash (`e8ab657b…`, not in the repo at all) since before the v2 migration.
+  v2 value went live with the fresh build after the env fix.
+
 ### Write-path warnings (hard-won)
 
 - **Bool args**: SDK 5.x stores the bare boolean on `.bool` — there is no
