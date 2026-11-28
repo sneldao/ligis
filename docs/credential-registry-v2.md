@@ -9,6 +9,20 @@
 > Scope: Casper (`packages/contracts-casper`). EVM registries adopt the same
 > claim grammar and accreditation semantics in a later pass; the hash layer
 > in `@ligis/core` is already chain-neutral so v2 claims port unchanged.
+>
+> **Testnet deployment:** `contract-package-8ae8673028fa19ef7f75d582d9493dd80aeb98cd659af0a8ae8d2cc811629f12`
+> — first credential (`kyc.basic`, subject `account-hash-c769…8326`) issued
+> and verified end-to-end 2026-11-27. Adapter reads are direct JSON-RPC
+> (`packages/adapter-casper/src/state-reads.ts`); do not reintroduce
+> casper-client CLI parsing for reads — its output abbreviates large byte
+> strings and broke v2 verification.
+>
+> **Accreditation live:** `kyc` is accredited-only and the demo issuer
+> `0x47e9…a40` is accredited for it (2026-11-27). `credentialStanding` reads
+> `accreditationRequired=true, issuerAccredited=true, standing=true` for the
+> first credential. Note the off-chain bool-arg bug fixed in `ad72439` —
+> the first accreditation transactions had to be re-sent because the CLI
+> encoder silently serialized bools as false.
 
 ## What v2 changes, in one paragraph
 

@@ -1,5 +1,7 @@
 # Zcash — shielded presentation channel
 
+> **Status:** Showcase — kept working, not extended. See the [tier table](../../README.md#what-is-core-and-what-is-showcase).
+
 ### Zcash Shielded Presentation Channel (Zecathon 2026)
 
 `ZcashChainAdapter` in `@ligis/adapter-zcash` (`packages/adapter-zcash/src/zcash.ts`) implements

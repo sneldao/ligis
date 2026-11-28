@@ -4,7 +4,9 @@
 
 CI blocks `main` on any remaining **high/critical** npm advisory:
 `node scripts/security-audit.mjs` (self-test: `--self-test`, raw list:
-`pnpm run audit:deps:all`). Fix rules:
+`pnpm run audit:deps:all`). Coverage includes standalone lockfiles outside
+the workspace (`tools/<name>/pnpm-lock.yaml`, e.g. paybox-premeditated) —
+they are audited in the same run and reported with their own label. Fix rules:
 
 - **Direct dep** → normal version bump.
 - **Transitive** → add a `pnpm.overrides` floor (root `package.json`), e.g.

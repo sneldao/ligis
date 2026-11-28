@@ -1,5 +1,7 @@
 # GenLayer — JobEscrow contract and web UI
 
+> **Status:** Showcase — kept working, not extended. See the [tier table](../../README.md#what-is-core-and-what-is-showcase).
+
 ### GenLayer Intelligent Contract (Agent Tank)
 
 The GenLayer `JobEscrow` contract lives in `packages/contracts-genlayer/` and is

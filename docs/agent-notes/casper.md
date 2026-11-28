@@ -1,5 +1,76 @@
 # Casper — contract build, deploy, demos
 
+## Registry v2 (current deployment)
+
+- v2 registry package:
+  `contract-package-8ae8673028fa19ef7f75d582d9493dd80aeb98cd659af0a8ae8d2cc811629f12`
+  (self-describing claims, digest binding, issuer accreditation; spec:
+  `docs/credential-registry-v2.md`). v1 package
+  `contract-package-6edde3cf…262aa37` still reads fine — the decoder is
+  dual-format.
+- **State reads are direct JSON-RPC** (`packages/adapter-casper/src/state-reads.ts`)
+  — no `casper-client` CLI for reads. The CLI abbreviates large byte strings
+  (`[174 hex chars]`) in normal mode and prepends the request envelope in
+  `-vv` mode, so neither output mode is machine-parseable; v2 credentials
+  with claims silently failed to verify through it. Writes still use the
+  SDK/CLI. If you add a new read path, use the helpers in `state-reads.ts`.
+- The byte decoder is shared: `parseCredentialViewHex` in
+  `@ligis/core/credential-view` — dependency-free, used by both the Node
+  adapter and the browser adapter. Never reimplement it per-side.
+- Odra field indices: issuer_nonce=1, latest=2, admin=3,
+  issuer_accreditation=4, namespace_policy=5, domain_separator=6.
+
+### Accreditation posture (live since 2026-11-27)
+
+- `kyc` namespace is **accredited-only** (tx `cbe91392…`); issuer
+  `0x47e9b13e467e2db34b1aa145758b253bbd9ffa40` is accredited for `kyc`
+  (tx `714116ba…`). New `kyc.*` issuance from unaccredited issuers is
+  rejected by the contract. `rwa`/`demo` namespaces are still open —
+  flip them only after accrediting an issuer or you brick issuance there.
+- `is_capable`/`verifyCapability` do NOT check accreditation — standing is
+  advisory via `credentialStanding`. If a gate should enforce accreditation
+  off-chain, wire it into the gate decision explicitly.
+
+### Vercel production env (hard-won)
+
+- `LIGIS_CASPER_CREDENTIAL_REGISTRY` on Vercel is **plain type, not
+  secret/sensitive** — the registry hash is public on-chain data, and plain
+  type means the stored value can be read back and verified in the dashboard
+  or API. Sensitive vars are write-only; you cannot confirm an edit landed.
+- Env values are snapshotted into each deployment at build time. Editing
+  the var does nothing to running deployments, and **a redeploy started
+  before the edit finished saving silently bakes the old value** — sequence
+  env edits first, verify via API, then redeploy or push.
+- `/api/casper-config` is `force-static` + `revalidate=300`, so the hash is
+  baked at build time AND edge-cached 5 min. Verify a cutover against the
+  deployment-direct URL (`ligis-<hash>-snel.vercel.app`) before trusting the
+  production domain, and expect the domain to lag.
+- Dashboard same-origin API for scripted env work (browser session cookies):
+  `GET/POST /api/v9/projects/ligis/env?teamId=team_d9QHRz4UVSLz24MMqisKi3jl`,
+  `DELETE /api/v9/projects/ligis/env/<id>?teamId=...`. Far more reliable
+  than driving the env-var UI.
+- 2026-11-28 cutover: production had been serving a stale legacy registry
+  hash (`e8ab657b…`, not in the repo at all) since before the v2 migration.
+  v2 value went live with the fresh build after the env fix.
+
+### Write-path warnings (hard-won)
+
+- **Bool args**: SDK 5.x stores the bare boolean on `.bool` — there is no
+  `.boolVal` and `.parsed` is undefined. The CLI arg encoder once read those
+  missing fields and silently submitted every bool as `false`. Extraction
+  now goes through `getValueByType().getValue()`; never reintroduce
+  field-name guesses without a roundtrip test against live chain args
+  (`info_get_deploy` shows the transmitted values).
+- **SDK submission is broken** (`Cannot read properties of undefined
+(reading 'toBytes')` in `callStoredContractViaSdk`) — every write falls
+  back to the casper-client CLI path, so `casper-client` must be installed
+  wherever writes happen (it is on the Vultr server). Fix the SDK path or
+  accept the CLI dependency; check `LIGIS_CASPER_DEBUG` output to see which
+  path a write took.
+- A reverted transaction is still included in a block. Inclusion is not
+  success — `pollTransactionWithCli` now throws on revert/timeout; keep it
+  that way.
+
 ## Casper Contract Build
 
 The Casper contracts use Odra 2.8.1 and require a nightly Rust toolchain.

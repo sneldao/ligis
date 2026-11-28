@@ -21,6 +21,10 @@
     "./trust": {
       "import": "./dist/trust.js",
       "types": "./dist/trust.d.ts"
+    },
+    "./credential-view": {
+      "import": "./dist/credential-view.js",
+      "types": "./dist/credential-view.d.ts"
     }
   },
   "scripts": {

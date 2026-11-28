@@ -1,5 +1,7 @@
 # `@ligis/adapter-genlayer`
 
+> **Status:** Showcase — kept working, not extended. See the [tier table](../../README.md#what-is-core-and-what-is-showcase).
+
 Ligis gate + GenLayer JobEscrow demo runner for Agent Tank.
 
 ## Exports

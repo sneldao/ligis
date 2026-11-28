@@ -1,5 +1,12 @@
 # CROO provider deployment
 
+**Current state (2026-11-27):** serving release `20261127_224757` at commit
+`ad72439`, on the **v2 registry** (`contract-package-8ae86730…629f12`) with
+`LIGIS_CHAIN=casper`. Server-side v2 verify passes. Rollback target:
+`20260920_155016` (v1 registry, pre-JSON-RPC reads — rolling back restores
+the v1 env requirement; the v2 env value stays in `/opt/ligis-croo/.env`).
+Older release `20260920_151844` is safe to prune.
+
 The CROO provider runs on the Vultr server (`nuncio-vultr`) under PM2.
 
 **Layout:**
