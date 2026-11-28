@@ -175,8 +175,7 @@ export async function resolveContractState(
   const pkgKey = `hash-${packageHashHex.replace(/^(contract-package-|hash-|0x)/, "")}`;
   const pkgValue = await queryGlobalState(rpcUrl, pkgKey, authToken);
   const pkg = pkgValue?.ContractPackage as
-    | { versions?: Array<{ contract_hash?: string }> }
-    | undefined;
+    { versions?: Array<{ contract_hash?: string }> } | undefined;
   const versions = pkg?.versions ?? [];
   const contractHashRaw = versions[versions.length - 1]?.contract_hash ?? "";
   if (!contractHashRaw) {
@@ -186,8 +185,7 @@ export async function resolveContractState(
 
   const contractValue = await queryGlobalState(rpcUrl, contractHash, authToken);
   const contract = contractValue?.Contract as
-    | { named_keys?: Array<{ name: string; key: string }> }
-    | undefined;
+    { named_keys?: Array<{ name: string; key: string }> } | undefined;
   if (!contract) throw new CasperRpcError("contract not found", -32603);
   const stateUref = contract.named_keys?.find((k) => k.name === "state")?.key;
   if (!stateUref) throw new CasperRpcError("state URef not found", -32603);

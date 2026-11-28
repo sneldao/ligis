@@ -22,8 +22,7 @@ const run = promisify(execFile);
 export const PINNED_BB = "5.0.0-nightly.20260522";
 
 export type BbResolution =
-  | { ok: true; bb: string; version: string }
-  | { ok: false; reason: string };
+  { ok: true; bb: string; version: string } | { ok: false; reason: string };
 
 const cache = new Map<string, BbResolution>();
 
