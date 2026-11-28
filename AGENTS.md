@@ -94,3 +94,13 @@ Read the ones relevant to your task before you start.
 
 New event-specific work goes in an adapter or example package and its
 notes go in `docs/agent-notes/`, not in `packages/core` or this file.
+
+## Build-order gotcha (learned 2026-11-28)
+
+Web typecheck (`cd web && npx tsc --noEmit`) depends on the workspace
+packages' built `dist/` output — it resolves `@ligis/*` imports to
+`dist/*.d.ts`, not source. After any cleanup of dist artifacts,
+`pnpm run build` at root MUST come before typechecking or you will chase
+dozens of phantom TS2307 errors in perfectly healthy code. There is no
+showcase typecheck debt — the errors reported through 2026-11 were
+stale-dist artifacts all along.
