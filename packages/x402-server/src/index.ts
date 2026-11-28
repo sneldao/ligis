@@ -754,7 +754,9 @@ async function settleLocally(
       encoding: "utf-8",
       timeout: 30_000,
     });
-    const hashMatch = output.match(/"deploy_hash":\s*"([a-f0-9]+)"/);
+    const hashMatch = output.match(
+      /"(?:deploy_hash|transaction_hash)":\s*"([a-f0-9]+)"/,
+    );
     const txHash = hashMatch ? hashMatch[1] : "";
 
     if (!txHash) {
