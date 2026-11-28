@@ -21,6 +21,13 @@ export const DEMO_GATE_SAMPLES: Record<string, DemoGateSample[]> = {
       expect: "go",
     },
     {
+      label: "rwa accredited",
+      subject:
+        "account-hash-c76927ed08eb9a3a2cca7ee0b730fb4cefa22551d3e5914e4d44d693762a8326",
+      capability: "rwa.accredited",
+      expect: "go",
+    },
+    {
       label: "unverified wallet",
       subject:
         "account-hash-0000000000000000000000000000000000000000000000000000000000000001",
