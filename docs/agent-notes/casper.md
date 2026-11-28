@@ -248,3 +248,7 @@ npx tsx scripts/cross-chain-credential-demo.ts
 The script auto-loads `.env.d/casper.env` (Casper deployer + contracts) and
 `.env.d/deployer.env` (Pharos deployer key + RPC). Output shows both chains
 with identical capability hash and issuer EVM address.
+
+## rwa/demo accreditation (2026-11-28)
+
+All three demo namespaces now enforce accreditation: `kyc` (txs `714116ba`/`cbe91392`), `rwa` (txs `98a8234d`/`b35574f9`), `demo` (txs `9fe498cd`/`e6e9c182`). Issuer `0x47e9b13e467e2db34b1aa145758b253bbd9ffa40` is accredited for all three. Gates enforce accreditation where the namespace policy requires it — now everywhere in the demo surface, so credentials from non-accredited issuers read as not-standing in gate decisions.
