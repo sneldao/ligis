@@ -71,7 +71,7 @@ export default async function HomePage({
             "@type": "WebApplication",
             name: "Ligis",
             description:
-              "A spend firewall for AI agents: every payment is checked against the job before money moves. Right payee, right amount, in scope, plus a verified-payee credential read.",
+              "Evidence-based payment control for autonomous finance: every payment is checked against what the agent was actually hired to do before money moves. Right payee, right amount, in scope, plus a verified-payee credential read — one call returns GO or STOP with full provenance.",
             applicationCategory: "DeveloperApplication",
             operatingSystem: "Web",
             offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

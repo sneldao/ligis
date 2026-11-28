@@ -45,18 +45,18 @@ export function HeroStage() {
               Try the gate →
             </HeroCtaCounter>
             <HeroCtaCounter
-              bucket="hero:arena"
-              href="/arena"
+              bucket="hero:field"
+              href="/field"
               className="font-mono text-xs uppercase tracking-[0.14em] text-fog-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-fog hover:decoration-terra"
             >
-              Watch an attack stopped
+              Browse the live registry
             </HeroCtaCounter>
             <HeroCtaCounter
-              bucket="hero:zcash"
-              href="/zcash"
+              bucket="hero:proofs"
+              href="/proofs"
               className="font-mono text-xs uppercase tracking-[0.14em] text-fog-quiet underline decoration-rule decoration-1 underline-offset-4 transition-colors hover:text-fog hover:decoration-terra"
             >
-              Pay a shielded Zcash payee privately
+              Inspect the evidence
             </HeroCtaCounter>
           </div>
           <p

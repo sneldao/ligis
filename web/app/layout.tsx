@@ -42,7 +42,7 @@ const jetbrains = localFont({
 
 const TITLE = "Ligis — gate the payment before your agent makes it";
 const DESCRIPTION =
-  "A spend firewall for AI agents: every payment is checked against the job before money moves. Right payee, right amount, in scope, plus a verified-payee credential read — one call returns GO or STOP with full provenance.";
+  "Evidence-based payment control for autonomous finance: every payment is checked against what the agent was actually hired to do before money moves. Right payee, right amount, in scope, plus a verified-payee credential read — one call returns GO or STOP with full provenance.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   keywords: [
     "Ligis",
     "agent payments",
-    "spend firewall",
+    "payment control",
     "AI agents",
     "x402",
     "Pharos",

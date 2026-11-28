@@ -40,15 +40,14 @@ import { join } from "node:path";
 import { resolveBackend } from "./counters-backend";
 
 export type CounterCategory =
-  | "hero_cta_click"
-  | "gate_run"
-  | "share_link_open"
-  | "api_call";
+  "hero_cta_click" | "gate_run" | "share_link_open" | "api_call";
 
 export type CounterBucket =
   | "hero:gate"
   | "hero:arena"
   | "hero:zcash"
+  | "hero:field"
+  | "hero:proofs"
   | "hero:proofs"
   | "share:gate"
   | "share:arena"
@@ -65,6 +64,8 @@ const ALLOWED_BUCKETS: ReadonlySet<CounterBucket> = new Set<CounterBucket>([
   "hero:gate",
   "hero:arena",
   "hero:zcash",
+  "hero:field",
+  "hero:proofs",
   "hero:proofs",
   "share:gate",
   "share:arena",
