@@ -1,4 +1,12 @@
 /**
+ * ⚠ KNOWN BROKEN 2026-11-28 — do not run expecting success, do not cite
+ * its output as evidence. The deposit/withdraw path fails at the protocol
+ * level: the 1.x proxy_caller pattern is dead on the Casper 2.x runtime
+ * (Mint error 21) and native transferred-value calls trap in the pre-2.x
+ * Odra vault build. The script's polling also treats timeout as success.
+ * Repair path in docs/agent-notes/casper.md. The credential issuance and
+ * verification steps (1-2) do work and exercise the fixed SDK write path.
+ *
  * Casper GatedVault Demo — deposit + gated-withdraw on Casper Testnet.
  *
  * Requires `LIGIS_CASPER_GATED_VAULT` to be set in `.env.d/casper.env`.

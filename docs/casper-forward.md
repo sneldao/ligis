@@ -131,7 +131,7 @@ scoring stays off-chain, so most of this axis is not contract risk.
 
 ## Axis 3 — Enforcement: from advice to on-chain policy
 
-**What exists:** `GatedVault` proves the pattern (cross-contract
+**What exists:** `GatedVault` demonstrates the pattern shape but is currently broken at the protocol level (pre-2.x Odra vs Casper 2.x value semantics — see `docs/agent-notes/casper.md`); it proves the pattern on paper, not yet as a runnable demo (cross-contract
 `is_capable` gate on withdrawal) but is a single-purpose demo. The
 `/api/gate` decision is advisory. GenLayer `JobEscrow` adjudicates disputes
 on Studio Next and already stores Ligis `GateReceipt`s.

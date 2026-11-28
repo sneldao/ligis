@@ -138,8 +138,11 @@ First deployment is live on **Pharos Atlantic testnet** (chainId 688689):
 | `CredentialRegistry` | `0x9E6eC93200E185c11423eb3A5150449D49d3473A` |
 
 Casper Testnet: `AgentId` + `CredentialRegistry` + `GatedVault` —
-deployed and smoke-tested. See [`docs/setup.md`](docs/setup.md) for the
-deploy recipe.
+deployed. Note: the GatedVault deposit/withdraw demo is broken at the
+protocol level (pre-2.x Odra build incompatible with the Casper 2.x
+runtime's value semantics; see `docs/agent-notes/casper.md`) — the
+credential registry and gate flow are the working evidence. See
+[`docs/setup.md`](docs/setup.md) for the deploy recipe.
 
 ## Chain support
 

@@ -21,7 +21,7 @@
   `ligis.qualify` $2.50 — one order saves vs. risk + verify + issue at $2.75
   across three negotiations), provider under PM2, idempotent delivery with
   retry.
-- **On-chain:** `AgentId` + `CredentialRegistry` + `GatedVault` on Casper
+- **On-chain:** `AgentId` + `CredentialRegistry` + `GatedVault` on Casper (vault demo broken at protocol level since the Casper 2.x migration — registry + gate are the working evidence, see `docs/agent-notes/casper.md`)
   Testnet; `PharosAgentID` + `CredentialRegistry` on Pharos Atlantic;
   `CredentialRegistry` on Monad testnet; GenLayer `JobEscrow` on Studio Next
   (61997).
