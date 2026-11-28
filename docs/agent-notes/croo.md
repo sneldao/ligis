@@ -5,7 +5,7 @@
 `LIGIS_CHAIN=casper`. Server-side v2 verify passes. Rollback target:
 `20260920_155016` (v1 registry, pre-JSON-RPC reads — rolling back restores
 the v1 env requirement; the v2 env value stays in `/opt/ligis-croo/.env`).
-Release `20260920_151844` pruned 2026-11-28. `20260920_155016` still on disk — prune candidate, not yet confirmed with the owner.
+Both September releases (`20260920_151844`, `20260920_155016`) pruned 2026-11-28; only the current release remains on disk.
 
 The CROO provider runs on the Vultr server (`nuncio-vultr`) under PM2.
 
