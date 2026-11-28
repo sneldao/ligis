@@ -374,4 +374,4 @@ worth auditing until it exists.
   `docs/zcash-shielded-credentials.md`, `docs/zk-reputation-evidence.md`
 - Contract design and module layout → `docs/architecture.md`
 - What's actually deployed today → `docs/archive/casper-final-round.md`
-- GenLayer adjudication plan → `docs/genlayer-agent-tank.md`
+- GenLayer adjudication plan → `docs/archive/genlayer-agent-tank.md`

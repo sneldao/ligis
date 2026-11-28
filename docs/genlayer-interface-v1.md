@@ -4,7 +4,7 @@
 > **Canonical implementation sketch:** `packages/contracts-genlayer/contracts/JobEscrow.py`  
 > **Shared types:** `@ligis/adapter-genlayer` → `interface.ts`  
 > **Workboard:** [`docs/genlayer-streams.md`](genlayer-streams.md)  
-> **Parent plan:** [`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md)  
+> **Parent plan:** [`docs/archive/genlayer-agent-tank.md`](archive/genlayer-agent-tank.md)  
 > **Breaking changes:** require a v1.1+ bump and Stream 0 re-approval.
 
 This freeze matches the GenLayer-idiomatic shape already in `JobEscrow.py`:

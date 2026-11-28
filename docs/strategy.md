@@ -21,6 +21,16 @@
   `ligis.qualify` $2.50 — one order saves vs. risk + verify + issue at $2.75
   across three negotiations), provider under PM2, idempotent delivery with
   retry.
+
+> **Shape lesson (2026-11-28, post-hackathon postmortem):** Zecathon,
+> GenLayer Agent Tank, and Metropolis all closed without wins. Winner
+> analysis (Metropolis grand champion Corpus, Monad's prior AI hackathon):
+> winners are products with users and loops, never trust infrastructure —
+> and x402 appears in winners as an ingredient, never the pitch. Ligis's
+> commercial shape is therefore product-first per positioning.md; the
+> credential layer is a moat ingredient, never again the demo subject.
+> Full analysis: `docs/consolidation-2026-11.md`.
+
 - **On-chain:** `AgentId` + `CredentialRegistry` + `GatedVault` on Casper (vault demo broken at protocol level since the Casper 2.x migration — registry + gate are the working evidence, see `docs/agent-notes/casper.md`)
   Testnet; `PharosAgentID` + `CredentialRegistry` on Pharos Atlantic;
   `CredentialRegistry` on Monad testnet; GenLayer `JobEscrow` on Studio Next
@@ -282,7 +292,7 @@ future aggregation signal into Ligis risk — same pattern as EAS / Self /
 World ID.
 
 Full Agent Tank plan (parallel workstreams, portal requirements, non-goals):
-[`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md).
+[`docs/archive/genlayer-agent-tank.md`](archive/genlayer-agent-tank.md).
 
 ## Market structure and the canonical question (researched 2026-10-21)
 
@@ -507,7 +517,7 @@ Direct-API wallet plans ($29 / $99 / $499 per month, see
       live at `0x64eF9e556B0E564fbC6162bE17fd9be992D0cB0F`, 5 SUCCESS txs
 - [x] Ligis pre-flight `GateReceipt` stored in job state (Casper/Pharos `isCapable` remains source of truth)
 - [x] Demo + observer UI shipped — [60s video](https://youtu.be/goACAqXjUxY), `ligis.vercel.app/genlayer`
-- [ ] Portal submission for Agent Tank — see [`docs/genlayer-agent-tank.md`](genlayer-agent-tank.md)
+- [ ] Portal submission for Agent Tank — see [`docs/archive/genlayer-agent-tank.md`](archive/genlayer-agent-tank.md)
 - [ ] Post-hackathon: map dispute terminal states into Ligis risk / `reputation.dispute_*` signals
 - [ ] Do **not** migrate CredentialRegistry to GenLayer; GenLayer stays a consumer + signal source
 

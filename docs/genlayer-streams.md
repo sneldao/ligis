@@ -1,7 +1,7 @@
 # GenLayer Agent Tank — Parallel Workboard
 
 > **Interface freeze:** [`genlayer-interface-v1.md`](genlayer-interface-v1.md) **(LOCKED)**  
-> Product plan: [`genlayer-agent-tank.md`](genlayer-agent-tank.md)
+> Product plan: [`archive/genlayer-agent-tank.md`](archive/genlayer-agent-tank.md)
 
 | Stream | Focus                   | Owner | Status                         | Done when                                                 |
 | ------ | ----------------------- | ----- | ------------------------------ | --------------------------------------------------------- |

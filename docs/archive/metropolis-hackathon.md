@@ -88,15 +88,15 @@ Public rules confirmed from monad.xyz/metropolis + hackathon.monad.xyz:
   the Fit table below keeps the buckets only and drops the numbers.
 - **Sponsor bounties** (verified on the public page). Do **not** chase all of
   them — that dilutes the track win. Rank:
-  | Priority | Bounty | $ | Angle |
-  | --- | --- | --- | --- |
-  | **Ship** | Best use of Envio | 1k | HyperIndex solves the public-RPC `eth_getLogs` gap — real fix, free bounty |
-  | **Ship one of** | Best use of Dynamic / Privy | 5k each | agent/operator passkey accounts, sponsored txs (also unlocks spectacle #6) |
-  | Opportunistic | MetaMask agent-wallet plugin | 2.5k | the gate as a plugin in the wallet an agent pays from |
-  | Opportunistic | Mera: One Passkey, Many Keys | 2.5k | one operator key → many agent wallets; maps to issuer-key hygiene |
-  | Opportunistic | Best use of Nansen | 5k | gate-decision + agent-spend analytics |
-  | Opportunistic | Chainlink CRE | 3k | gate enriched with offchain signals |
-  | Opportunistic | Best Community Team Project | 5k | second-team integration push, done in the open |
+  | Priority        | Bounty                       | $       | Angle                                                                      |
+  | --------------- | ---------------------------- | ------- | -------------------------------------------------------------------------- |
+  | **Ship**        | Best use of Envio            | 1k      | HyperIndex solves the public-RPC `eth_getLogs` gap — real fix, free bounty |
+  | **Ship one of** | Best use of Dynamic / Privy  | 5k each | agent/operator passkey accounts, sponsored txs (also unlocks spectacle #6) |
+  | Opportunistic   | MetaMask agent-wallet plugin | 2.5k    | the gate as a plugin in the wallet an agent pays from                      |
+  | Opportunistic   | Mera: One Passkey, Many Keys | 2.5k    | one operator key → many agent wallets; maps to issuer-key hygiene          |
+  | Opportunistic   | Best use of Nansen           | 5k      | gate-decision + agent-spend analytics                                      |
+  | Opportunistic   | Chainlink CRE                | 3k      | gate enriched with offchain signals                                        |
+  | Opportunistic   | Best Community Team Project  | 5k      | second-team integration push, done in the open                             |
 - **After the event** is arguably the bigger prize: top teams get Nitro
   Accelerator / DeltaV residency access, and "the trust gate for autonomous
   payments" is a pitchable company. DeltaV Demo Day is **6 Oct, Open in

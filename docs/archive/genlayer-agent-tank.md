@@ -3,9 +3,9 @@
 > **Hackathon**: [Agent Tank](https://portal.genlayer.foundation/agent-tank/hackathon/)
 > **Portal submit**: https://portal.genlayer.foundation/agent-tank/hackathon/submit
 > **Primary track**: Agent launch and commerce infra  
->  (“payments, escrow, identity and insurance for agents”)
+> (“payments, escrow, identity and insurance for agents”)
 > **Secondary framing** (if the form forces a single idea pick): Agentic marketplace disputes  
->  — only if the demo leads with adjudication; do not recenter the product there
+> — only if the demo leads with adjudication; do not recenter the product there
 > **Build window**: 3–17 September 2026 · **Winners**: 25 September  
 > **Prize**: 5% of all GenLayer Points  
 > **Status**: Stream 0 interface **LOCKED** — see [`docs/genlayer-interface-v1.md`](genlayer-interface-v1.md) · workboard [`docs/genlayer-streams.md`](genlayer-streams.md)  
