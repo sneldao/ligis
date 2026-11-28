@@ -42,6 +42,11 @@ are leading with.
   already provide them, and Ligis sits in front of them, not instead of
   them.
 - A settlement rail. Airwallex moves the money.
+- An agent payment rail. Skyfire, Nevermined, Payman and the x402
+  facilitators race to move agent money. Ligis is rail-agnostic
+  authorization evidence: it decides whether a payment should happen,
+  and the rail moves it. Every rail that adopts x402 widens the gate's
+  distribution rather than competing with it.
 - A credential registry, identity product, KYC provider, or issuer
   platform. On-chain credentials are one source of supplier-identity
   evidence. They are the reason Ligis's evidence holds up under scrutiny,
@@ -86,6 +91,31 @@ discovery fails, a direct finance-team product is the fallback.
 The existing buyers of the stateless gate (agent-wallet teams, and paid
 APIs through CROO) remain a distribution channel. They are not the target
 of the commercial case.
+
+## Why now
+
+Three external shifts make this the moment for payment control rather
+than payment rails (market context, not product claims — the measured
+claims table below stays repo-sourced):
+
+- **Agent payment protocols consolidated in production.** x402 — backed
+  by the Cloudflare + Coinbase foundation, integrated by Stripe on Base
+  (Feb 2026), folded into Google's AP2 — is becoming the default way
+  agents pay for web resources. Every merchant that adopts it needs a
+  trust decision in front of the payment. That is the gate's slot.
+- **B2B spend is forecast to go agent-intermediated at scale.** Industry
+  forecasts put most B2B buying through agents within a few years, with
+  trillions of dollars of procurement in flow. Procurement spend is
+  exactly the spend that carries orders, invoices, and payout
+  destinations — the evidence Ligis binds. The larger that flow gets,
+  the more expensive duplicate payment, changed-destination payout, and
+  overpayment become.
+- **"Know Your Agent" is crystallizing as a category.** DIF adopted an
+  open agentic-identity specification in late 2026; Experian, Entrust
+  and others publish on it. KYA asks who the agent is. Ligis's
+  credential layer answers the adjacent question — what the counterparty
+  is accredited to do, and who vouched for it — and carries that answer
+  across chains. Ligis positions inside that category, not outside it.
 
 ## The three questions
 
