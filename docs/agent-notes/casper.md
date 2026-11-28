@@ -254,3 +254,30 @@ with identical capability hash and issuer EVM address.
 All three demo namespaces now enforce accreditation: `kyc` (txs `714116ba`/`cbe91392`), `rwa` (txs `98a8234d`/`b35574f9`), `demo` (txs `9fe498cd`/`e6e9c182`). Issuer `0x47e9b13e467e2db34b1aa145758b253bbd9ffa40` is accredited for all three. Gates enforce accreditation where the namespace policy requires it — now everywhere in the demo surface, so credentials from non-accredited issuers read as not-standing in gate decisions.
 
 Issuer accreditation extended 2026-11-28: the deployer address (`0x5288665a…`) is now also accredited for `rwa`/`demo` (txs `2b1f812c`/`9595cf34`) because demo scripts self-issue with the deployer key — without this their credentials would read as not-standing under enforcement. A persistent `rwa.accredited` credential was issued to the verified-agent subject by the canonical issuer (tx `dc6f70ac`); `verifyCapability` returns capable=true end-to-end under enforcement.
+
+## GatedVault demo broken at protocol level (2026-11-28)
+
+The demo has never verifiably completed end-to-end: the July artifact says
+`ok: true` but records only the ISSUE step — no deposit/withdraw hashes.
+Root-caused with live test transactions:
+
+1. The script passes `contract_package_hash` but proxy_caller.wasm expects
+   `package_hash` (arg names recovered via strings on the wasm) — this alone
+   broke every deposit since whenever the drift was introduced.
+2. Even with correct args + length-prefixed empty args (`00000000`, not zero
+   bytes), the proxy fails with `Mint error: 21` — the 1.x-era proxy_caller
+   pattern (cargo purse funded from session context) is dead on the Casper
+   2.x runtime, with or without native `--transferred-value`.
+3. The obvious modern path — direct `put-transaction package` with native
+   `--transferred-value`, no proxy — reaches the contract but traps with
+   `Unreachable`: the Odra build of GatedVault predates Casper 2.x value
+   semantics and cannot receive native transfers.
+
+Repair requires: rebuild GatedVault + proxy with a Casper-2.x-compatible
+Odra release, redeploy, rewrite the demo deposit/withdraw to native
+transferred-value calls, and replace the script's stale polling (it reads
+pre-v1 execution-result shapes, polls up to 5 min per tx, and treats
+timeout as SUCCESS — it would have recorded the failed deposit as passed;
+the run was killed before it wrote false evidence). Until then, do not cite
+the vault demo as working evidence in any submission. Cost of diagnosis:
+3 reverted test transactions (~small testnet gas).
