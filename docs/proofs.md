@@ -36,16 +36,20 @@ continuous — green runs daily through 2026-11-27.
 
 ## The honest ledger — what does not work
 
-| What                                                          | State                                                                                                                                                | Since                 |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| GatedVault deposit/withdraw demo                              | Broken at protocol level (pre-2.x Odra vs Casper 2.x value semantics). Never verifiably completed end-to-end. Repair path documented, not scheduled. | discovered 2026-11-28 |
-| x402-server                                                   | Runs nowhere — no hosted instance. Dev-local only (`pnpm x402:dev`). Merchants cannot integrate against a live endpoint.                             | always                |
-| GenLayer / Zcash / arena showcase surfaces                    | Frozen — venues closed without wins. Kept for the code, removed from the active proof bench.                                                         | 2026-11-28            |
-| Monad/Pharos demo evidence                                    | Fixtures pass in smoke, but the demo scripts' lastrun artifacts are 2+ months stale. Not citation-grade.                                             | since ~2026-09        |
-| `adapter-genlayer/interface`, `circuits-zcash/demo` typecheck | Broken builds excluded from the critical path (showcase freeze).                                                                                     | 2026-11-28            |
+| What                                       | State                                                                                                                                                | Since                 |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| GatedVault deposit/withdraw demo           | Broken at protocol level (pre-2.x Odra vs Casper 2.x value semantics). Never verifiably completed end-to-end. Repair path documented, not scheduled. | discovered 2026-11-28 |
+| x402-server                                | Runs nowhere — no hosted instance. Dev-local only (`pnpm x402:dev`). Merchants cannot integrate against a live endpoint.                             | always                |
+| GenLayer / Zcash / arena showcase surfaces | Frozen — venues closed without wins. Kept for the code, removed from the active proof bench.                                                         | 2026-11-28            |
+| Monad/Pharos demo evidence                 | Fixtures pass in smoke, but the demo scripts' lastrun artifacts are 2+ months stale. Not citation-grade.                                             | since ~2026-09        |
 
 If anything above is wrong, the ledger is wrong — fix the ledger first,
 then the thing.
+
+_Correction 2026-11-28: a row claiming `adapter-genlayer/interface` and
+`circuits-zcash/demo` typecheck breakage was removed the day it was written —
+the errors were missing `dist` artifacts after a cleanup, not broken code.
+Full workspace typecheck is clean. Lesson recorded in `AGENTS.md`.
 
 ## Venue history
 

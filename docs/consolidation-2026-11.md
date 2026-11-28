@@ -123,7 +123,13 @@ each with a freshness date:
 1. **Mechanical consolidation** (one session, reversible): freeze showcase
    packages out of the build critical path, prune web navigation to the
    product path, archive hackathon docs, rewrite `docs/proofs.md` as the
-   three-artifact bench.
+   three-artifact bench. **DONE 2026-11-28** — with two corrections to the
+   original framing: the showcase typecheck debt was a phantom (missing
+   `dist` artifacts, not broken code — no freeze needed), and the navigation
+   was already collapsed to the two-item dock. What actually landed: docs
+   archive + bench rewrite (`b246d4f`), hero funnel repointed to the product
+   path, copy unified on the positioning line, `/proofs` rebuilt as the
+   bench + honest ledger surface (`7ab1423`).
 2. **The product-shape decision** (a conversation, not code): the
    positioning doc says product-first — payment control for platforms
    running finance agents. Confirm or amend. Everything below assumes

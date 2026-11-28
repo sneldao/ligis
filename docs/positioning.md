@@ -313,12 +313,18 @@ together in `SERVICE_PRICE_USD` (`packages/croo-adapter/src/services.ts`),
 `croo-store-manifest.json`, and the live CROO Dashboard
 ([`AGENTS.md`](agent-notes/croo.md) requires the three stay in lockstep).
 
-## Downstream copy not yet updated
+## Downstream copy state
 
-The web landing (`web/app`), `/gate` copy, and the OKX.AI / CROO listings
-still lead with "spend firewall". That describes the stateless gate and is
-accurate for it. It moves to the new line when the procurement controller
-gets a web surface.
+The web meta and schema.org copy moved to the positioning line on
+2026-11-28 — not because the controller shipped a web surface, but because
+the consolidation (`docs/consolidation-2026-11.md`) made the gate the
+product surface and "spend firewall" undersells the product shape. The new
+copy is gate-accurate: the four-signal check is real today.
+
+Still leading with "spend firewall": the OKX.AI integration framing
+(`docs/okx-ai.md`) and the live CROO marketplace listing. Updating external
+distribution copy is a product decision, not doc maintenance — flagged here,
+not made unilaterally.
 
 ## What defers here
 
